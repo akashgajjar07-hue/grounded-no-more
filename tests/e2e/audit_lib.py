@@ -290,6 +290,18 @@ def _operate(page, d: dict, cfg: AuditConfig, download_box: list) -> str:
     loc = page.locator(d["selector"]).first
     k = d["kind"]
     _open_rail_if_needed(page, loc)
+    # a drawer/modal already open (e.g. a deep link that opens a part drawer at load) covers controls
+    # outside it: close it first, as a user would, unless the control lives inside that overlay
+    outside = loc.evaluate("(e) => { const o = [...document.querySelectorAll('[role=dialog].is-open, .drawer.is-open, .modal-card')]"
+                           ".find((d) => !d.classList.contains('story') && d.getBoundingClientRect().width > 0"
+                           " && (d.classList.contains('is-open') || !!document.querySelector('.scrim.is-open')));"
+                           " return !!o && !o.contains(e); }")
+    if outside:
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(200)
+    # keep the control clear of the sticky top bar after earlier scrolling
+    loc.evaluate("(e) => e.scrollIntoView({block: 'center', inline: 'nearest'})")
+    page.wait_for_timeout(60)
     if loc.evaluate("(e) => e.classList.contains('skip-link')"):
         loc.focus()
         page.keyboard.press("Enter")
