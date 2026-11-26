@@ -1,0 +1,74 @@
+# AOG Response Lab + Planner Action Centre parameters (gnm.aog).
+# config/assumptions.yaml stays the single source for shared economics, transport times and
+# pool terms; this file only holds rules specific to the AOG lab and the exception generator.
+# Every entry carries a provenance tag and a rationale. All values are ASSUMED planning rules for
+# the fictional "Falcon Hub Airways (fictional)"; none is operator data.
+
+history:
+  weeks: [0, 103]
+  provenance: ASSUMED
+  rationale: "Only the realised history (weeks 0-103) is read. The holdout continuation is never opened."
+
+protection_level:                   # lateral donor rule for option (c)
+  service_level: 0.95
+  lookback_weeks: 52
+  resupply_hours_source: "network.routine_transport_days.mean (assumptions.yaml)"
+  provenance: ASSUMED
+  rationale: "A donor outstation keeps enough serviceable units to cover its OWN D0 demand while it waits for routine resupply from AUH: protection level = smallest n with P(Poisson(lambda x L) <= n - 1) >= 0.95, where lambda = the donor's D0 requests for this PN in the trailing 52 weeks before the request (history known at that moment) and L = the mean routine transport time. A donor ships only if serviceable on-hand - protection level >= requested qty. With L = 96 h, any D0 demand gives a protection level of at least 1, and more than ~4.7 D0 requests a year gives 2 (fill rate P(X < S), DOC-3); a station without D0 demand protects 0."
+
+routine_option:
+  slack_sd: 2.0
+  provenance: ASSUMED
+  rationale: "Mirrors the engine's earmark rule (engine.earmark_routine_if_slack_sd): if the deadline slack covers routine transport mean + 2 sd, transfers go by routine shipment (line cost) instead of next-flight-out."
+
+pool_exchange:
+  contracted: false
+  scope_part_classes: ["R"]
+  provenance: ASSUMED
+  rationale: "The history was run under P0, which has no pool-exchange agreement. The P3 terms in assumptions.yaml (pool_exchange_P3) are shown as an indicative, greyed-out option with reason NOT_CONTRACTED. Pools cover rotables only."
+
+repair_acceleration:
+  max_cut_share: 0.5
+  min_remaining_days: 3
+  overdue_assumed_remaining_days: 7
+  provenance: ASSUMED
+  rationale: "A shop paid to prioritise a unit can at best halve its remaining quoted time and still needs ~3 days for bench test, release certificate and dispatch. For an RO already past its quoted due date the remaining time is unknown; 7 days is assumed. Cost = days saved x repair_acceleration_cost_aed_per_day_per_unit (assumptions.yaml) + emergency logistics AUH -> station. The repair cost itself is excluded because it is spent whether or not the repair is accelerated."
+
+robbery:
+  same_station_only: true
+  work_hours: 6
+  labour_cost_aed: 2500
+  provenance: ASSUMED
+  rationale: "Robbing a serviceable unit from an aircraft already grounded or in check at the same station takes ~6 h (removal, refit, duplicate inspection, paperwork) and two installations of labour. It is never auto-recommended: it moves the shortage to the donor aircraft and needs engineering/quality and owner approval."
+
+counterfactual:
+  replan_at_quoted_due: true
+  provenance: ASSUMED
+  rationale: "Ex-post scoring of the 'await inbound order' option: if the awaited PO/RO/transfer has not arrived by its quoted date, an AOG desk escalates; the counterfactual then switches to an expedited purchase at that moment (wait = time to quoted date + expedite wait). Without this, one late repair order would be scored as a passive multi-week wait no controller would accept."
+
+showcase:
+  n: 12
+  provenance: ASSUMED
+  rationale: "About a dozen incidents fit an interview walk-through; chosen by a deterministic greedy rule maximising coverage of station, deadline class, part class, fill route and duration."
+
+actions:
+  as_of_week: 103
+  kit_horizon_weeks: 3
+  kit_urgent_within_weeks: 1
+  overdue_urgent_weeks: 4
+  condemn_review_if_po_overdue: true
+  depletion_service_level: 0.95
+  depletion_lookback_weeks: 52
+  decline_window_weeks: 26
+  decline_ratio: 0.75
+  excess_cover_weeks: 26
+  expiry_cover_share_of_shelf_life: 0.5
+  lead_drift_lookback_weeks: 34
+  lead_drift_min_pos: 2
+  lead_drift_review_ratio: 1.5
+  lead_drift_urgent_ratio: 2.0
+  quarantine_share: 0.05
+  quarantine_window_weeks: 2
+  quarantine_seed: 103
+  provenance: ASSUMED
+  rationale: "Planner exception thresholds. Kits are checked 3 weeks ahead (the 21-day kit notice). An RO more than 4 weeks past quoted due is urgent. Declining demand = last 26 weeks below 75% of the previous 26 with more than 26 weeks of network cover at the recent rate; expiry risk when that cover exceeds half the shelf life. Lead-time drift = mean realised/quoted lead of non-expedite POs received or still open in the last 34 weeks >= 1.5 (urgent >= 2.0), at least 2 POs. 34 weeks covers one long-lead order cycle (~165 d) after a supplier change. Quarantine is SIMULATED: no document data exists, so 5% of receipts in the last 2 weeks are flagged 'awaiting certificate review' by a seeded RNG to show the workflow."
