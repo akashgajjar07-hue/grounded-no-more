@@ -2,7 +2,7 @@
  * View-level motion helpers for Parts Intelligence and Rotable & Repair (v2.1 addendum). Built only on lib/motion.js
  * tokens: opacity / transform only, rAF tweens, reduced motion → instant.
  */
-import { chartTransition, tween, countUpOnce, reducedMotion } from '../../lib/motion.js';
+import { tx as txSel, chartTransition, tween, countUpOnce, reducedMotion } from '../../lib/motion.js';
 import { tooltip } from '../../ui.js';
 
 /**
@@ -16,7 +16,7 @@ export function drawIn(host, svg) {
   const node = svg.node ? svg.node() : svg;
   const sel = window.d3.select(node);
   sel.style('opacity', 0);
-  return sel.transition(chartTransition({ duration: 'slow', ease: 'enter' })).style('opacity', 1).on('end', () => node.style.removeProperty('opacity'));
+  return txSel(sel, { duration: 'slow', ease: 'enter' }).style('opacity', 1).on('end', () => node.style.removeProperty('opacity'));
 }
 
 /**

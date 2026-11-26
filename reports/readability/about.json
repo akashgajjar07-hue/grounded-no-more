@@ -1,7 +1,5 @@
 {
   "grade": 6.1,
-  "maxSentenceWords": 26,
-  "longSentences": [
-    "Model the same ideas from the repair shop's side: work orders held for parts, kit readiness, repair induction and shop queues, and customer-owned versus company-owned stock."
-  ]
+  "maxSentenceWords": 23,
+  "longSentences": []
 }

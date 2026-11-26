@@ -359,8 +359,7 @@ function drawInterior() {
     if (Math.abs(x - 15.6) < 0.5) continue;
     for (const y of [-1.58, -1.07, -0.56]) {
       const w = 0.22, zc = FLOOR_Z + 0.44, zb = FLOOR_Z + 1.12;
-      line3('SEAT', [[x - 0.04, y - w, zc], [x + 0.4, y - w, zc], [x + 0.5, y - w, zb], [x + 0.44, y + w, zb], [x + 0.36, y + w, zc], [x - 0.04, y + w, zc], [x - 0.04, y - w, zc]]);
-      line3('SEAT', [[x + 0.05, y, FLOOR_Z], [x + 0.1, y, zc]]);
+      line3('SEAT', [[x - 0.04, y - w, zc], [x + 0.4, y - w, zc], [x + 0.5, y - w, zb]]); // cushion + back (one seat-row glyph)
     }
   }
   line3('T4', range(7, 28.5, 0.5).map((x) => [x, -1.42, 1.25])); line3('T4', range(7, 28.5, 0.5).map((x) => [x, -1.05, 1.62]));
@@ -392,7 +391,9 @@ function drawInterior() {
   // keel beam + centre wing box (spars + 4 ribs) + main-gear wheel well with door hinge lines
   line3('T3', [[11.0, 0, -2.0], [21.5, 0, -2.0]]); line3('T3', [[11.0, 0, -1.8], [21.5, 0, -1.8]]);
   for (const x of range(11.4, 21.2, 0.62)) line3('T4', [[x, 0, -2.0], [x, 0, -1.8]]);
-  boxEdges('T3', [12.75, -1.7, -1.95], [16.3, 1.7, -0.95]);
+  boxEdges('T3', [12.75, -1.7, -1.95], [16.3, 1.7, -0.95]); // centre wing box (tank)
+  line3('T2b', [[12.75, -1.7, -0.95], [16.3, -1.7, -0.95], [16.3, 1.7, -0.95]]); // its upper skin, cut
+  for (const x of [12.75, 16.3]) for (const z of [-1.7, -1.2]) line3('T4', [[x, -1.7, z], [x, 1.7, z]]); // spar stiffeners
   for (const y of [-1.0, -0.33, 0.33, 1.0]) line3('T3', [[12.75, y, -1.95], [16.3, y, -1.95], [16.3, y, -0.95], [12.75, y, -0.95], [12.75, y, -1.95]]);
   const wx0 = 16.55, wx1 = 19.6, wy = 1.25; // main-gear wheel well behind the wing box
   line3('T3', [[wx0, -wy, -2.06], [wx1, -wy, -2.06], [wx1, wy, -2.06], [wx0, wy, -2.06], [wx0, -wy, -2.06]]);
@@ -403,16 +404,19 @@ function drawInterior() {
     line3('T4', [[x0, -1.3, -1.45], [x1, -1.3, -1.45]]); line3('T4', [[x0, 1.3, -1.45], [x1, 1.3, -1.45]]);
   }
   for (const [x0, x1] of [[21.0, 22.5], [22.7, 24.2], [24.4, 25.9], [10.0, 11.4]]) {
-    boxEdges('T3', [x0, -0.75, -1.45], [x1, 0.75, -0.72]);
+    boxEdges('T4', [x0, -0.75, -1.45], [x1, 0.75, -0.72]);
     line3('T4', [[x0, -0.75, -1.45], [x1, -0.75, -0.72]]);
   }
   for (const [x, y] of [[26.4, -0.6], [26.9, -0.2], [27.2, -0.75]]) boxEdges('T4', [x, y, -1.45], [x + 0.45, y + 0.3, -1.2]);
+  // belly fairing where the wing meets the fuselage (near side)
+  line3('T1b', range(10.6, 22.4, 0.3).map((x) => { const t = (x - 10.6) / 11.8; return [x, -1.45 - 0.5 * Math.sin(Math.PI * t), -2.05 - 0.3 * Math.sin(Math.PI * t) ** 0.6]; }));
   // aft bulkhead of the forward hold, radar antenna
   line3('T3', range(0, 360, 10).map((a) => [0.95, 0.62 * Math.cos(a * deg), -0.45 + 0.6 * Math.sin(a * deg)]), true);
   line3('T4', [[0.95, 0, -0.45], [1.4, 0, -0.45]]);
   // APU bay: firewalls, APU body, exhaust and inlet
   for (const x of [34.3, 37.0]) { const s = sec(x); line3('T3', range(0, 360, 8).map((a) => [x, s.ry * 0.96 * Math.cos(a * deg), s.zc + s.rz * 0.96 * Math.sin(a * deg)]), true); }
   tube('T3', [34.85, 0, 0.78], [36.6, 0, 0.8], 0.34, 32);
+  boxEdges('T3', [34.45, -0.3, 0.5], [34.85, 0.3, 1.05]); // reduction gearbox (carries the starter and fuel control)
   for (const x of [35.3, 35.8, 36.2]) line3('T4', range(0, 360, 10).map((a) => [x, 0.34 * Math.cos(a * deg), 0.79 + 0.34 * Math.sin(a * deg)]), true);
   line3('T3', [[36.6, 0.2, 0.86], [37.55, 0.1, 0.87]]); line3('T3', [[36.6, -0.2, 0.74], [37.55, -0.1, 0.83]]);
   line3('T4', [[35.4, 0, 1.12], [35.0, 0, 1.33]]); line3('T4', [[35.8, 0, 1.12], [35.6, 0, 1.36]]);
@@ -504,6 +508,7 @@ function drawFin(full) {
   line3('T1', etas.map((e) => fPt(e, 0))); line3('T1', etas.map((e) => fPt(e, 1)));
   line3('T1', [...range(0, 1, 0.05).map((f) => fPt(1, f, -1)), ...range(1, 0, -0.05).map((f) => fPt(1, f, 1))], true); // closed tip
   line3('T1b', etas.map((e) => fPt(e, 0.035, -1))); // leading-edge radius line (port side)
+  { const te = fPt(0, 1), s2 = sec(te[0]); line3('T1', [te, [te[0] + 0.25, 0, s2.zc + s2.rz]]); } // trailing edge closes into the tail cone
   const top = (x) => { const s = sec(x); return s.zc + s.rz; };
   line3('T1', range(0, 1, 0.05).map((t) => { const x = lerp(26.4, FIN.xr + 0.9, t); return [x, 0, lerp(top(26.4), fPt(0.12, 0)[2], t ** 1.8)]; }));
   if (!full) return;
@@ -573,14 +578,20 @@ function drawNacelle(s, full, near = false) {
 // ---------------------------------------------------------------- landing gear structure (legs, braces, axles)
 function drawMainGear(s, near) {
   const k = near ? 'T3' : 'T5', kb = near ? 'T1b' : 'T5';
-  const y = s * MG.y, top = [MG.x - 0.15, y, MG.zTop], knee = [MG.x - 0.05, y, MG.zTop - 1.35], ax = [MG.x, y, MG.zAx];
-  tube(kb, top, knee, 0.16, 18); // oleo cylinder
-  tube(k, knee, add(ax, [0, 0, 0.22]), 0.1, 14); // sliding piston
-  line3(k, [add(knee, [-0.12, 0, -0.05]), add(lerp3(knee, ax, 0.5), [-0.42, 0, 0]), add(ax, [-0.12, 0, 0.3])]); // torque link
-  line3(kb, [lerp3(top, knee, 0.6), [MG.x + 0.1, s * 1.35, -1.75]]); // side brace to the belly
-  line3(k, [lerp3(top, knee, 0.55), [MG.x - 0.7, s * (MG.y + 0.9), wZ(MG.y + 0.9) - 0.32]]); // drag brace to the rear spar
+  // trunnion at the rear spar, oleo (two nested cylinders), two-link side brace, drag brace, axle aft of the leg
+  const y = s * MG.y, lx = MG.x - 0.35, top = [lx, y, MG.zTop], knee = [lx + 0.05, y, MG.zTop - 1.3], ax = [MG.x, y, MG.zAx];
+  tube(kb, [lx - 0.35, y, MG.zTop], [lx + 0.3, y, MG.zTop], 0.09, 14); // trunnion
+  tube(kb, top, knee, 0.16, 18); // oleo outer cylinder
+  tube(k, knee, [lx + 0.1, y, MG.zAx + 0.18], 0.1, 14); // sliding piston
+  line3(kb, [[lx + 0.1, y, MG.zAx + 0.18], add(ax, [0, 0, 0.05])]); // bogie arm to the axle (wheels sit aft of the leg)
+  line3(k, [add(knee, [0.14, 0, -0.05]), add(lerp3(knee, ax, 0.5), [0.4, 0, 0.05]), [lx + 0.24, y, MG.zAx + 0.3]]); // torque link
+  const sb0 = lerp3(top, knee, 0.62), sbK = [lx + 0.05, s * (MG.y - 0.75), MG.zTop - 0.55], sb1 = [lx + 0.05, s * 1.35, -1.7];
+  line3(kb, [sb0, sbK, sb1]); line3(k, range(0, 360, 30).map((a) => add(sbK, [0.05 * Math.cos(a * deg), 0, 0.05 * Math.sin(a * deg)])), true); // two-link side brace
+  line3(k, [lerp3(top, knee, 0.5), [lx - 0.7, s * (MG.y + 0.9), wZ(MG.y + 0.9) - 0.32]]); // drag brace to the rear spar
   line3(kb, [add(ax, [0, -MG.dy - 0.22, 0]), add(ax, [0, MG.dy + 0.22, 0])]); // axle
-  line3(k, [[MG.x - 0.65, y - s * 0.3, MG.zTop - 0.1], [MG.x + 0.6, y - s * 0.3, MG.zTop - 0.1], [MG.x + 0.55, y - s * 0.26, -2.75], [MG.x - 0.6, y - s * 0.26, -2.75], [MG.x - 0.65, y - s * 0.3, MG.zTop - 0.1]]); // leg door
+  line3(k, [[lx - 0.55, y - s * 0.3, MG.zTop - 0.1], [lx + 0.5, y - s * 0.3, MG.zTop - 0.1], [lx + 0.45, y - s * 0.26, -2.7], [lx - 0.5, y - s * 0.26, -2.7], [lx - 0.55, y - s * 0.3, MG.zTop - 0.1]]); // leg door
+  // wheel well in the belly fairing (dashed ellipse)
+  line3('T5', range(0, 360, 10).map((a) => [MG.x + 0.9 + 1.1 * Math.cos(a * deg), s * (1.15 + 0.62 * Math.sin(a * deg)), -2.12]), true);
   if (!near) for (const dy of [-MG.dy, MG.dy]) { const c = [MG.x, y + dy, MG.zAx]; for (const yy of [-MG.w / 2, MG.w / 2]) line3('T5', circle3(add(c, [0, yy, 0]), [0, 1, 0], MG.r, 32), true); }
 }
 function drawNoseGear() {
@@ -682,16 +693,18 @@ const PART_DEFS = [
   { pn: 'GN-21-R001', label: 'Pack flow control valve', zone: 'cabin', sys: 'bleed', build() { pValve([11.0, -0.78, -1.15], [11.5, -0.78, -1.15], 0.14); return [11.25, -0.78, -1.15]; } },
   { pn: 'GN-21-R002', label: 'Air cycle machine', zone: 'cabin', sys: 'bleed', build() {
     pCyl([11.8, -0.82, -1.68], [12.45, -0.82, -1.68], 0.27, { rings: [0.3, 0.62], cap: true }); pCyl([11.6, -0.82, -1.68], [11.8, -0.82, -1.68], 0.18); pCyl([12.45, -0.82, -1.68], [12.62, -0.82, -1.68], 0.2);
+    const sp = range(0, 470, 15).map((a) => { const r = 0.12 + 0.2 * a / 470; return [11.58, -0.82 + r * Math.cos(a * deg), -1.68 + r * Math.sin(a * deg)]; }); pLine(sp); // fan-scroll volute
     return [12.1, -0.82, -1.68];
   } },
   { pn: 'GN-28-R010', label: 'Fuel boost pump', zone: 'wing', sys: 'fuel', build() {
-    for (const y of [2.6, 3.4]) { const x = wXle(y) + 0.19 * wC(y), z = wZ(y); pPump([x, -y, z - 0.38], [x, -y, z + 0.02], 0.13); }
-    const y = 3.0; return [wXle(y) + 0.19 * wC(y), -y, wZ(y) - 0.15];
+    // two pumps inside the centre wing box (tank), on the rear-spar face
+    for (const y of [-1.3, -0.62]) pPump([16.08, y, -1.85], [16.08, y, -1.32], 0.14);
+    return [16.08, -0.96, -1.55];
   } },
   { pn: 'GN-28-E006', label: 'Fuel quantity probe', zone: 'wing', sys: 'fuel', build() { for (const [y, f] of [[8.2, 0.3], [9.3, 0.45], [10.4, 0.33], [11.0, 0.5]]) { const p = wPt(-1, y, f), q = wPt(-1, y, f, -1); pCyl(add(q, [0, 0, -0.02]), add(p, [0, 0, 0.06]), 0.05, { cap: true }); } return wPt(-1, 9.3, 0.45); } },
   { pn: 'GN-24-R004', label: 'Integrated drive generator', zone: 'engine', sys: 'elec', build() { const c0 = [9.95, NY - 0.5, NAC.z - 0.82], c1 = [10.65, NY - 0.5, NAC.z - 0.82]; pCyl(c0, c1, 0.23, { rings: [0.35, 0.7], cap: true }); pCyl([9.85, NY - 0.5, NAC.z - 0.82], c0, 0.28); return lerp3(c0, c1, 0.5); } },
   { pn: 'GN-29-R011', label: 'Engine-driven hydraulic pump', zone: 'engine', sys: 'hyd', build() { pPump([10, NY - 0.22, NAC.z - 0.98], [9.82, NY - 0.22, NAC.z - 0.98], 0.13); return [9.6, NY - 0.22, NAC.z - 0.98]; } },
-  { pn: 'GN-36-R022', label: 'Bleed air valve', zone: 'engine', sys: 'bleed', build() { pValve([12.1, NY, NAC.z + 0.62], [12.1, NY, NAC.z + 1.02], 0.11); return [12.1, NY, NAC.z + 0.82]; } },
+  { pn: 'GN-36-R022', label: 'Bleed air valve', zone: 'engine', sys: 'bleed', build() { pValve([11.3, NY, NAC.z + 1.14], [11.3, NY, NAC.z + 1.5], 0.11); return [11.3, NY - 0.1, NAC.z + 1.32]; } },
   { pn: 'GN-32-R015', label: 'Main wheel and tyre', zone: 'gear', build() { pWheel([MG.x, -MG.y - MG.dy, MG.zAx], MG.r, MG.w); return [MG.x, -MG.y - MG.dy - MG.w / 2, MG.zAx + 0.2]; } },
   { pn: 'GN-32-R013', label: 'Carbon brake assembly', zone: 'gear', sys: 'hyd', build() {
     const c = [MG.x, -MG.y + MG.dy, MG.zAx];
@@ -705,13 +718,13 @@ const PART_DEFS = [
   { pn: 'GN-27-E005', label: 'Flap position sensor', zone: 'wing', sys: 'elec', build() { const p = wPt(-1, 6.55, 0.7, -1); pBox(add(p, [0, 0, 0.02]), [0.22, 0.18, 0.14]); pCyl(add(p, [0.11, 0, 0.02]), add(p, [0.26, 0, 0.02]), 0.04); return p; } },
   { pn: 'GN-27-R007', label: 'Aileron servo control', zone: 'wing', sys: 'hyd', build() { const y = 14.5, a = wPt(-1, y, 0.55, -1), b = wPt(-1, y, 0.77, -1); pActuator(add(a, [0, 0, 0.04]), add(b, [0, 0, 0.07]), 0.065); return lerp3(a, b, 0.4); } },
   { pn: 'GN-27-R006', label: 'Elevator servo control', zone: 'tail', sys: 'hyd', build() { const y = 1.75, a = tPt(-1, y, 0.48), b = tPt(-1, y, 0.7); pActuator(a, b, 0.075); return lerp3(a, b, 0.4); } },
-  { pn: 'GN-49-R023', label: 'APU starter motor', zone: 'tail', sys: 'elec', build() { pPump([34.6, -0.22, 0.45], [35.05, -0.22, 0.45], 0.12); return [34.85, -0.22, 0.45]; } },
-  { pn: 'GN-49-R024', label: 'APU fuel control unit', zone: 'tail', sys: 'fuel', build() { pLRU([35.75, -0.36, 0.6], [0.32, 0.12, 0.22]); pCyl([35.55, -0.36, 0.48], [35.55, -0.36, 0.36], 0.03); return [35.75, -0.36, 0.6]; } },
+  { pn: 'GN-49-R023', label: 'APU starter motor', zone: 'tail', sys: 'elec', build() { pPump([34.12, -0.16, 0.66], [34.45, -0.16, 0.66], 0.12); return [34.28, -0.16, 0.66]; } },
+  { pn: 'GN-49-R024', label: 'APU fuel control unit', zone: 'tail', sys: 'fuel', build() { pLRU([34.65, -0.38, 0.62], [0.3, 0.12, 0.22]); pCyl([34.55, -0.38, 0.5], [34.55, -0.38, 0.38], 0.03); return [34.65, -0.44, 0.62]; } },
 ];
 
 // ---------------------------------------------------------------- system runs (schematic routes)
 const SYSTEMS = {
-  bleed: { label: 'Bleed air', width: 1.4, dash: null, routes: [[[12.1, NY, NAC.z + 1.0], [12.5, NY, wZ(NAC.y) - 0.3], [13.9, -4.0, wZ(4.0) - 0.2], [13.2, -2.2, -1.35], [11.8, -1.0, -1.15], [11.5, -0.78, -1.15]], [[11.0, -0.78, -1.15], [10.8, -0.82, -1.4], [11.6, -0.82, -1.68]]] },
+  bleed: { label: 'Bleed air', width: 1.4, dash: null, routes: [[[11.3, NY, NAC.z + 1.5], [12.5, NY, wZ(NAC.y) - 0.3], [13.9, -4.0, wZ(4.0) - 0.2], [13.2, -2.2, -1.35], [11.8, -1.0, -1.15], [11.5, -0.78, -1.15]], [[11.0, -0.78, -1.15], [10.8, -0.82, -1.4], [11.6, -0.82, -1.68]]] },
   hyd: { label: 'Hydraulics', width: 0.9, routes: [
     { dash: null, pts: [[9.6, NY - 0.22, NAC.z - 0.98], [10.3, NY, NAC.z + 0.85], [16.6, -NAC.y + 0.3, wZ(5.6) - 0.22], [17.2, -3.0, wZ(3.0) - 0.25], [18.6, -1.0, -1.5], [18.65, -0.55, -1.55]] },
     { dash: '4 2', pts: [[17.0, -NAC.y + 0.2, wZ(5.8) - 0.2], [wXle(9.1) + 0.6 * wC(9.1), -9.1, wZ(9.1) - 0.15], [wXle(14.5) + 0.6 * wC(14.5), -14.5, wZ(14.5) - 0.1]] },
@@ -720,15 +733,15 @@ const SYSTEMS = {
     { dash: '4 2', pts: [[17.2, -2.6, -1.6], [MG.x - 0.15, -MG.y, MG.zTop - 0.6], [MG.x, -MG.y + MG.dy - 0.22, MG.zAx + 0.1]] },
   ] },
   fuel: { label: 'Fuel', width: 0.9, routes: [
-    { dash: '6 2', pts: [wPt(-1, 9.3, 0.45, -1), [wXle(6.0) + 0.2 * wC(6.0), -6.0, wZ(6.0) - 0.1], [wXle(3.4) + 0.19 * wC(3.4), -3.4, wZ(3.4) - 0.2], [wXle(3.0) + 0.19 * wC(3.0), -3.0, wZ(3.0) - 0.15]] },
-    { dash: '6 2', pts: [[wXle(3.4) + 0.19 * wC(3.4), -3.4, wZ(3.4) - 0.3], [wXle(NAC.y) + 0.1, NY, wZ(NAC.y) - 0.4], [10.9, NY, NAC.z + 0.6], [11, NY, NAC.z]] },
-    { dash: '6 2', pts: [[14.0, -1.5, -1.9], [24.0, -0.9, -1.6], [31.0, -0.5, -0.1], [35.55, -0.36, 0.36]] },
+    { dash: '6 2', pts: [wPt(-1, 9.3, 0.45, -1), [wXle(6.0) + 0.6 * wC(6.0), -6.0, wZ(6.0) - 0.1], [16.2, -2.4, -1.4], [16.08, -1.3, -1.6]] },
+    { dash: '6 2', pts: [[16.0, -0.96, -1.3], [15.2, -2.6, wZ(2.6) - 0.2], [wXle(NAC.y) + 0.1, NY, wZ(NAC.y) - 0.4], [11.0, NY, NAC.z + 1.2], [11, NY, NAC.z]] },
+    { dash: '6 2', pts: [[16.1, -0.62, -1.85], [24.0, -0.9, -1.6], [31.0, -0.5, -0.1], [34.68, -0.4, 0.5]] },
   ] },
   elec: { label: 'Electrical', width: 0.8, routes: [
     { dash: '8 2 2 2', pts: [[10.3, NY - 0.5, NAC.z - 0.82], [10, NY + 0.3, NAC.z + 0.9], [13.2, -3.6, wZ(3.6) - 0.15], [12.5, -1.3, -1.2], [9.5, -0.7, -1.3], [7.5, -0.6, -1.37]] },
     { dash: '8 2 2 2', pts: [[7.05, -0.67, -1.2], [6.45, -0.66, -1.0], [7.4, -0.66, -1.0], [8.3, -0.66, -1.0]] },
     { dash: '8 2 2 2', pts: [[6.2, -0.6, -1.3], [4.5, -0.9, -1.0], [3.3, -1.0, -1.0], [2.75, -1.6, -0.6], [1.65, -0.3, -0.95]] },
-    { dash: '8 2 2 2', pts: [[9.5, -0.6, -1.3], [20.0, -0.95, -1.15], [31.5, -0.5, 0.0], [34.85, -0.22, 0.45]] },
+    { dash: '8 2 2 2', pts: [[9.5, -0.6, -1.3], [20.0, -0.95, -1.15], [31.5, -0.5, 0.0], [34.28, -0.16, 0.6]] },
     { dash: '8 2 2 2', pts: [[13.2, -3.6, wZ(3.6) - 0.15], [wXle(6.55) + 0.7 * wC(6.55), -6.55, wZ(6.55) - 0.15]] },
   ] },
 };
@@ -745,7 +758,7 @@ function drawSystems(simple) {
 }
 
 // ================================================================= CALLOUTS (nearest side, elbow leaders)
-const LEADER_MAX = 320, LEADER_TARGET = 290; // hard cap / soft target (units at 1600 wide)
+const LEADER_MAX = 300, LEADER_TARGET = 270; // hard cap / soft target (units at 1600 wide)
 const FAIL = (m) => { if (process.env.CW_LAX) console.warn(m); else throw new Error(m); };
 const NAME_FS = 13.5, CHAR_W = 8.1, TAG_W = 30, WRAP = 18;
 function wrap(s, max) { const words = s.split(' '), lines = []; let cur = ''; for (const w of words) { if ((cur + ' ' + w).trim().length > max && cur) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); } if (cur) lines.push(cur); return lines; }
@@ -816,7 +829,10 @@ function layoutCallouts(parts, { W, H, obstacles, reserved, side }) {
     if (s.attach === 'R' && p.anchor[0] < s.elbow[0] - 4 && dy < 50) return false;
     return dx + dy > 20;
   };
-  const cost = parts.map((p) => slots.map((s) => { const L = lenOf(p, s); if (L > LEADER_MAX + 60) return 1e7; return !valid(p, s) || !okRect(rectOf(p, s)) ? 1e7 : L; }));
+  // prefer leaders that leave the airframe outline once (not across it again and again)
+  const outline = obstacles[0];
+  const crossings = (a, b) => { let c = 0; for (let i = 0; i < outline.length; i += 2) { const q = outline[(i + 2) % outline.length]; if (segX(a, b, outline[i], q)) c++; } return c; };
+  const cost = parts.map((p) => slots.map((s) => { const L = lenOf(p, s); if (L > LEADER_MAX + 60) return 1e7; if (!valid(p, s) || !okRect(rectOf(p, s))) return 1e7; return L + 45 * Math.max(0, crossings(p.anchor, s.elbow) - 1); }));
   const shr = (r) => ({ x0: r.x0 - 2, y0: r.y0 - 2, x1: r.x1 + 2, y1: r.y1 + 2 });
   // Interior U and D variants share a cell: never give one cell to two parts.
   const cellOf = (j) => `${slots[j].tag[0]},${slots[j].tag[1]}`;
@@ -1066,16 +1082,16 @@ function numberDots(parts, W, H) {
   // hit circles (≈ 32 px) sit underneath every visible dot, so a tap on a dot always picks that dot
   const hits = dots.map(({ p, x, y }) => el('circle', { class: 'cw-ndot-hit', 'data-pn': p.pn, cx: x, cy: y, r: 44, fill: 'transparent' })).join('');
   return el('g', { class: 'cw-ndot-hits', 'aria-hidden': 'true' }, hits) + dots.map(({ p, x, y }) => el('g', { class: 'cw-ndot', 'data-pn': p.pn, 'aria-hidden': 'true' },
-    el('line', { class: 'cw-tick', x1: p.anchor[0], y1: p.anchor[1], x2: x, y2: y, stroke: C.titanium, 'stroke-opacity': 0.75, 'stroke-width': 1.4 }),
+    el('line', { class: 'cw-tick', x1: p.anchor[0], y1: p.anchor[1], x2: x, y2: y, stroke: C.titanium, 'stroke-opacity': 0.75, 'stroke-width': 0.9 }),
     el('circle', { cx: x, cy: y, r: R, fill: C.midnight, stroke: TEAL, 'stroke-width': 1.8 }),
     el('text', { x, y: y + 8.5, 'text-anchor': 'middle', 'font-family': FONT_MONO, 'font-size': 25, 'font-weight': 600, fill: C.ice }, String(p.num).padStart(2, '0')))).join('');
 }
 
-const CARD_RES = { x0: 14, y0: 14, x1: 384, y1: 420 }; // the facts card docks here, over the title block
+const CARD_RES = { x0: 14, y0: 14, x1: 384, y1: 420 }; // the facts card docks here; the title block sits beside it
 function build(mode) {
   const full = mode === 'full';
   SIMPLE = !full;
-  if (full) setView(40, 29); else setView(34, 16); // the phone view is flatter, so the plane is longer than tall
+  if (full) setView(40, 29); else setView(34, 13); // the phone view is flatter, so the plane is longer than tall
   let W = full ? 1600 : 1000, H = full ? 880 : 1000;
   for (const k of Object.keys(B)) delete B[k];
   HATCH.length = 0;
@@ -1119,7 +1135,7 @@ function build(mode) {
   if (full) {
     const dimBoxes = dims.specs.map(({ a, b, dir, label, t }) => { const m = [lerp(a[0], b[0], t), lerp(a[1], b[1], t)], hw = label.length * 4.3 + 12, ux = dir[0], uy = dir[1]; return [[m[0] - ux * hw - uy * 13, m[1] - uy * hw + ux * 13], [m[0] + ux * hw - uy * 13, m[1] + uy * hw + ux * 13], [m[0] + ux * hw + uy * 13, m[1] + uy * hw - ux * 13], [m[0] - ux * hw + uy * 13, m[1] - uy * hw - ux * 13]]; });
     const obstacles = [...obstaclePolys(), ...dimBoxes, ...DIM_OBS, ...parts.map((p) => [[p.bb.x0, p.bb.y0], [p.bb.x1, p.bb.y0], [p.bb.x1, p.bb.y1], [p.bb.x0, p.bb.y1]])];
-    const reserved = [{ x0: 0, y0: 0, x1: 640, y1: 160 }, { x0: 0, y0: 0, x1: CARD_RES.x1 + 8, y1: CARD_RES.y1 + 8 }];
+    const reserved = [{ x0: 392, y0: 0, x1: 1072, y1: 160 }, { x0: 0, y0: 0, x1: CARD_RES.x1 + 8, y1: CARD_RES.y1 + 8 }];
     ordered = layoutCallouts(parts, { W, H, obstacles, reserved, side: { left: 14, right: 14, bottom: 6, colW: 196, top: 172, leftBottom: H - 56, rightBottom: H - 10, bottomLeft: 250, bottomRight: W - 14 - 196 - 12, topRow: 14, topLeft: 660, topRight: 1400 } });
     build.numbers = Object.fromEntries(ordered.map((p) => [p.pn, p.num]));
   } else parts.forEach((p) => { p.num = build.numbers[p.pn]; });
@@ -1151,7 +1167,7 @@ function build(mode) {
     full ? el('g', { class: 'cw-callouts' }, byNum.map(callout).join('')) : el('g', { class: 'cw-ndots' }, numberDots(byNum, W, H)),
     el('path', { class: 'cw-conn', d: '', fill: 'none', stroke: TEAL, 'stroke-width': 1.3, opacity: 0, 'pointer-events': 'none' }),
     el('g', { class: 'cw-focus-layer' }, full ? byNum.map(focusTarget).join('') : ''),
-    full ? el('g', { class: 'cw-sheet' }, titleBlock(24, 18), legend(LG.x + 8, 132), triad(676, 70)) : '');
+    full ? el('g', { class: 'cw-sheet' }, titleBlock(402, 18), legend(410, 132), triad(1050, 70)) : '');
   return { svg, parts: byNum };
 }
 

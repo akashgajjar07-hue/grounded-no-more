@@ -22,7 +22,7 @@
 .cw-svg .cw-part, .cw-svg .cw-callout, .cw-svg .cw-ndot { transition: opacity var(--motion-base, 250ms) var(--ease-standard, ease); }
 .cw-svg.has-active .cw-part:not(.is-active) { opacity: 0.38; }
 .cw-svg.has-active .cw-callout:not(.is-active) { opacity: 0.42; }
-.cw-svg.has-active .cw-ndot:not(.is-active) { opacity: 0.5; }
+.cw-svg.has-active .cw-ndot:not(.is-active) { opacity: 0.35; }
 .cw-svg .cw-part.is-active { filter: url(#cw-glow-hi); }
 .cw-svg .cw-part.is-active .cw-body { fill-opacity: 0.34; stroke: #7FF3E6; stroke-width: 1.8; }
 .cw-svg .cw-part.is-active .cw-detail { stroke: #7FF3E6; }

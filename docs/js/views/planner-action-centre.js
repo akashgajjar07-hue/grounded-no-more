@@ -9,7 +9,7 @@
 import { h, pageHead, card, provChip, pill, drawer, icon, segmented, intro3, scopeLine } from '../ui.js';
 import { chartFrame, responsive, svgIn, theme, fmtAED, fmtHours, fmtInt, fmtNum, fmtWeek, withTooltip, fmtEnum, plural } from '../charts/theme.js';
 import { isSimple, byMode } from '../lib/mode.js';
-import { chartTransition } from '../lib/motion.js';
+import { tx as txSel } from '../lib/motion.js';
 import { displayName, replaceCodes } from '../lib/names.js';
 import { term, termText } from '../lib/glossary.js';
 
@@ -463,10 +463,10 @@ export async function render(el, ctx) {
       const op = f.type && f.type !== r.t ? 0.35 : 0.9;
       if (fresh) {
         // draw-in: scale each bar from its left edge (transform + opacity only)
-        rect.attr('fill-opacity', op).style('transform', 'scaleX(0)').transition(chartTransition({ duration: 'slow', ease: 'enter', name: 'draw-in' })).style('transform', 'scaleX(1)');
-        g.select('text.pac-tval').attr('x', x0 + 8).style('opacity', 0).transition(chartTransition({ duration: 'slow', ease: 'enter', name: 'draw-in' })).style('opacity', 1);
+        rect.attr('fill-opacity', op).style('transform', 'scaleX(0)'); txSel(rect, { duration: 'slow', ease: 'enter', name: 'draw-in' }).style('transform', 'scaleX(1)');
+        txSel(g.select('text.pac-tval').attr('x', x0 + 8).style('opacity', 0), { duration: 'slow', ease: 'enter', name: 'draw-in' }).style('opacity', 1);
       } else {
-        rect.transition(chartTransition({ name: 'filter' })).attr('fill-opacity', op);
+        txSel(rect, { name: 'filter' }).attr('fill-opacity', op);
       }
     });
   }

@@ -17,7 +17,7 @@ FORBIDDEN = [
     "COMAC", "CFM", "Pratt", "Rolls-Royce", "Honeywell", "Safran", "Collins", "Thales", "Goodrich", "Liebherr",
 ]
 PARTS = {p["pn"]: p for p in json.loads((DOCS / "data/parts.json").read_text())["parts"]}
-LEADER_MAX = 320
+LEADER_MAX = 300
 
 
 def _open(browser, site, vp, reduced=True):  # noqa: F811

@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-26T19:59:26",
+ "generated": "2026-11-26T20:05:28",
  "label": "baseline",
  "effect_timeout_ms": 1000,
  "matrix": {
@@ -46,14 +46,16 @@
    "390x844"
   ]
  },
- "browsers_unavailable": {},
+ "browsers_unavailable": {
+  "firefox": "[pid=86274][err] Could not find profile folder."
+ },
  "totals": {
-  "cells": 178,
-  "elements": 14264,
-  "ok": 12657,
-  "failed": 760,
-  "skipped": 847,
-  "load_errors": 0
+  "cells": 202,
+  "elements": 16244,
+  "ok": 14414,
+  "failed": 865,
+  "skipped": 965,
+  "load_errors": 2
  },
  "by_browser": {
   "chromium": {
@@ -64,40 +66,40 @@
    "load_errors": 0
   },
   "webkit": {
-   "cells": 72,
-   "ok": 5111,
-   "failed": 299,
-   "skipped": 345,
-   "load_errors": 0
+   "cells": 96,
+   "ok": 6868,
+   "failed": 404,
+   "skipped": 463,
+   "load_errors": 2
   }
  },
  "by_route": {
   "about": {
-   "cells": 13,
-   "ok": 663,
-   "failed": 19,
+   "cells": 16,
+   "ok": 819,
+   "failed": 21,
    "skipped": 0,
    "load_errors": 0
   },
   "actions": {
-   "cells": 17,
-   "ok": 1078,
-   "failed": 54,
-   "skipped": 255,
+   "cells": 19,
+   "ok": 1190,
+   "failed": 71,
+   "skipped": 293,
    "load_errors": 0
   },
   "aog": {
-   "cells": 12,
-   "ok": 784,
-   "failed": 32,
-   "skipped": 24,
+   "cells": 16,
+   "ok": 1053,
+   "failed": 35,
+   "skipped": 32,
    "load_errors": 0
   },
   "capital": {
-   "cells": 14,
-   "ok": 1057,
-   "failed": 15,
-   "skipped": 34,
+   "cells": 16,
+   "ok": 1213,
+   "failed": 19,
+   "skipped": 36,
    "load_errors": 0
   },
   "forecast": {
@@ -115,17 +117,17 @@
    "load_errors": 0
   },
   "cutaway": {
-   "cells": 2,
-   "ok": 52,
-   "failed": 2,
+   "cells": 4,
+   "ok": 83,
+   "failed": 25,
    "skipped": 0,
    "load_errors": 0
   },
   "method": {
-   "cells": 13,
-   "ok": 839,
-   "failed": 85,
-   "skipped": 13,
+   "cells": 16,
+   "ok": 1050,
+   "failed": 110,
+   "skipped": 16,
    "load_errors": 0
   },
   "mission": {
@@ -136,18 +138,18 @@
    "load_errors": 0
   },
   "network": {
-   "cells": 14,
-   "ok": 1058,
+   "cells": 15,
+   "ok": 1137,
    "failed": 97,
-   "skipped": 82,
+   "skipped": 85,
    "load_errors": 0
   },
   "parts": {
-   "cells": 20,
-   "ok": 2079,
-   "failed": 174,
-   "skipped": 266,
-   "load_errors": 0
+   "cells": 24,
+   "ok": 2510,
+   "failed": 204,
+   "skipped": 316,
+   "load_errors": 2
   },
   "planner": {
    "cells": 8,
@@ -157,25 +159,25 @@
    "load_errors": 0
   },
   "rotables": {
-   "cells": 21,
-   "ok": 1998,
-   "failed": 171,
-   "skipped": 118,
+   "cells": 24,
+   "ok": 2310,
+   "failed": 172,
+   "skipped": 132,
    "load_errors": 0
   }
  },
  "failures_by_owner": {
-  "SHELL (docs/js/app.js / ui.js)": 317,
+  "SHELL (docs/js/app.js / ui.js)": 363,
   "docs/js/views/rotable-repair.js": 143,
+  "docs/js/views/data-method.js": 100,
+  "docs/js/views/parts-intelligence.js": 89,
   "docs/js/views/network-positioning.js": 79,
-  "docs/js/views/parts-intelligence.js": 79,
-  "docs/js/views/data-method.js": 75,
   "docs/js/views/mission-control.js": 29,
+  "docs/lab/cutaway.js (CUTAWAY)": 25,
   "docs/js/views/aog-response-lab.js": 15,
   "docs/js/views/forecast-lab.js": 9,
   "docs/js/views/glossary.js": 7,
-  "docs/js/views/about.js": 5,
-  "docs/lab/cutaway.js (CUTAWAY)": 2
+  "docs/js/views/about.js": 6
  },
  "failures": [
   {
@@ -7552,6 +7554,21 @@
   {
    "browser": "webkit",
    "target": "about?section=mro",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/about.js",
+   "kind": "link",
+   "label": "What real data would make this useful",
+   "selector": "#ab-mro > div:nth-of-type(2) > p:nth-of-type(7) > a:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "about?section=mro",
    "mode": "simple",
    "viewport": "1440x900",
    "owner": "SHELL (docs/js/app.js / ui.js)",
@@ -7589,6 +7606,28 @@
    "errors": [
     "pageerror: transition 3 not found",
     "pageerror: transition 4 not found"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "about?section=mro",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Network Positioning5",
+   "selector": "#nav > div:nth-of-type(3) > a:nth-of-type(1)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 45.9,
+   "note": "",
+   "errors": [
+    "pageerror: transition 106 not found",
+    "pageerror: transition 107 not found",
+    "pageerror: transition 108 not found"
    ]
   },
   {
@@ -7763,6 +7802,141 @@
   {
    "browser": "webkit",
    "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "GROUNDED NO MORE — Mission Control",
+   "selector": "#app > nav:nth-of-type(1) > a:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Planner Action Centre8",
+   "selector": "#nav > div:nth-of-type(1) > a:nth-of-type(2)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Parts Intelligence2",
+   "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Rotable & Repair4",
+   "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(3)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Capital Optimiser6",
+   "selector": "#nav > div:nth-of-type(3) > a:nth-of-type(2)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Data & Method0",
+   "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Glossary",
+   "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(3)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "toggle",
+   "label": "Simple",
+   "selector": "#mode-slot > div:nth-of-type(1) > button:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "button",
+   "label": "Keyboard shortcuts",
+   "selector": "#help-btn",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
    "mode": "simple",
    "viewport": "1440x900",
    "owner": "SHELL (docs/js/app.js / ui.js)",
@@ -7917,6 +8091,126 @@
   },
   {
    "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "GROUNDED NO MORE — Mission Control",
+   "selector": "#app > nav:nth-of-type(1) > a:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Planner Action Centre8",
+   "selector": "#nav > div:nth-of-type(1) > a:nth-of-type(2)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Parts Intelligence2",
+   "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Rotable & Repair4",
+   "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(3)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Capital Optimiser6",
+   "selector": "#nav > div:nth-of-type(3) > a:nth-of-type(2)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Data & Method0",
+   "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Glossary",
+   "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(3)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "button",
+   "label": "Open navigation",
+   "selector": "#menu-btn",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
    "target": "actions",
    "mode": "expert",
    "viewport": "1440x900",
@@ -7979,6 +8273,55 @@
   {
    "browser": "webkit",
    "target": "actions",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "overlay-esc",
+   "label": "Esc closes story",
+   "selector": ".story",
+   "action": "key:Escape",
+   "effects": [
+    "story-closed"
+   ],
+   "ms": null,
+   "note": "focus lost to <body> after Esc",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "aog?incident=AOG-0001",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "overlay-esc",
+   "label": "Esc closes story",
+   "selector": ".story",
+   "action": "key:Escape",
+   "effects": [
+    "story-closed"
+   ],
+   "ms": null,
+   "note": "focus lost to <body> after Esc",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "aog?incident=AOG-0001",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Parts Intelligence2",
+   "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "aog?incident=AOG-0001",
    "mode": "simple",
    "viewport": "390x844",
    "owner": "SHELL (docs/js/app.js / ui.js)",
@@ -8199,6 +8542,84 @@
     "pageerror: transition 72 not found",
     "pageerror: transition 73 not found"
    ]
+  },
+  {
+   "browser": "webkit",
+   "target": "capital?view=selection&point=I125",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "overlay-esc",
+   "label": "Esc closes story",
+   "selector": ".story",
+   "action": "key:Escape",
+   "effects": [
+    "story-closed"
+   ],
+   "ms": null,
+   "note": "",
+   "errors": [
+    "pageerror: transition 19 not found",
+    "pageerror: transition 20 not found"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "capital?view=selection&point=I125",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "shortcut",
+   "label": "key 3",
+   "selector": "body",
+   "action": "key:3",
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 8.7,
+   "note": "",
+   "errors": [
+    "pageerror: transition 13 not found",
+    "pageerror: transition 14 not found"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "capital?view=selection&point=I125",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "shortcut",
+   "label": "key 5",
+   "selector": "body",
+   "action": "key:5",
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 37.2,
+   "note": "",
+   "errors": [
+    "pageerror: transition 23 not found",
+    "pageerror: transition 24 not found",
+    "pageerror: transition 25 not found"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "capital?view=selection&point=I125",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "button",
+   "label": "60-second tourS",
+   "selector": "#nav > div:nth-of-type(4) > button:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
   },
   {
    "browser": "webkit",
@@ -9044,6 +9465,806 @@
     "pageerror: transition 4 not found",
     "pageerror: transition 5 not found"
    ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "02 · Fuel boost pump (GN-28-R010): comes off about 13 a year. Open part page.",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(2)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/vendor/fonts/inter/inter-latin-400-normal.woff2 cancelled",
+    "requestfailed: http://127.0.0.1:49688/assets/favicon.svg cancelled",
+    "requestfailed: http://127.0.0.1:49688/vendor/topojson-client/topojson-client.min.js cancelled"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "03 · Air cycle machine (GN-21-R002): comes off about 3 a year. Open part page.",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(3)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/js/charts/theme.js cancelled",
+    "requestfailed: http://127.0.0.1:49688/js/lib/names.js cancelled",
+    "requestfailed: http://127.0.0.1:49688/js/views/parts-intelligence/flags.js cancelled"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "04 · Pack flow control valve (GN-21-R001): comes off about 11 a year. Open part ",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(4)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/data/manifest.json cancelled",
+    "pageerror: /127.0.0.1:49688/data/parts.json due to access control checks.",
+    "pageerror: /127.0.0.1:49688/data/demand_history.json due to access control checks."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "05 · Brake control unit (GN-32-R017): comes off about 5 a year. Open part page.",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(5)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/data/manifest.json cancelled",
+    "pageerror: /127.0.0.1:49688/data/parts.json due to access control checks.",
+    "pageerror: /127.0.0.1:49688/data/demand_history.json due to access control checks."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "06 · Air data inertial reference unit (GN-34-R019): comes off about 36 a year. O",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(6)",
+   "action": "focus+Enter",
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 1.6,
+   "note": "",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/assets/svg/aircraft-narrowbody.svg cancelled",
+    "console.error: TypeError: Load failed"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "07 · Flight deck windshield (GN-30-E009): comes off about 5 a year. Open part pa",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(7)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/assets/svg/aircraft-narrowbody.svg cancelled",
+    "console.error: TypeError: Load failed"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "08 · Nose wheel steering actuator (GN-32-R014): comes off about 27 a year. Open ",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(8)",
+   "action": "focus+Enter",
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 1.4,
+   "note": "",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/data/manifest.json cancelled",
+    "pageerror: /127.0.0.1:49688/data/parts.json due to access control checks.",
+    "pageerror: /127.0.0.1:49688/data/demand_history.json due to access control checks."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "09 · Weather radar transceiver (GN-34-R020): comes off about 2 a year. Open part",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(9)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/data/demand_history.json cancelled",
+    "requestfailed: http://127.0.0.1:49688/data/parts.json cancelled",
+    "console.error: TypeError: Load failed"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "10 · Air data module (GN-34-R018): comes off about 89 a year. Open part page.",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(10)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/data/demand_history.json cancelled",
+    "requestfailed: http://127.0.0.1:49688/data/parts.json cancelled",
+    "console.error: TypeError: Load failed"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "11 · Nose wheel and tyre assembly (GN-32-R016): comes off about 15 a year. Open ",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(11)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/data/manifest.json cancelled",
+    "pageerror: /127.0.0.1:49688/data/parts.json due to access control checks.",
+    "pageerror: /127.0.0.1:49688/data/demand_history.json due to access control checks."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "12 · Elevator aileron computer (GN-27-R009): comes off about 15 a year. Open par",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(12)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/data/parts.json cancelled",
+    "requestfailed: http://127.0.0.1:49688/data/demand_history.json cancelled",
+    "console.error: TypeError: Load failed"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "13 · Pitot probe (GN-34-R021): comes off about 56 a year. Open part page.",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(13)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "pageerror: /127.0.0.1:49688/data/parts.json due to access control checks.",
+    "pageerror: /127.0.0.1:49688/data/demand_history.json due to access control checks.",
+    "console.error: TypeError: Load failed"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "14 · Transformer rectifier unit (GN-24-R005): comes off about 23 a year. Open pa",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(14)",
+   "action": "focus+Enter",
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 1.8,
+   "note": "",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/data/manifest.json cancelled",
+    "pageerror: /127.0.0.1:49688/data/parts.json due to access control checks.",
+    "pageerror: /127.0.0.1:49688/data/demand_history.json due to access control checks."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "15 · Engine-driven hydraulic pump (GN-29-R011): comes off about 7 a year. Open p",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(15)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/data/manifest.json cancelled",
+    "pageerror: /127.0.0.1:49688/data/parts.json due to access control checks.",
+    "pageerror: /127.0.0.1:49688/data/demand_history.json due to access control checks."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "16 · Integrated drive generator (GN-24-R004): comes off about 5 a year. Open par",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(16)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/assets/svg/aircraft-narrowbody.svg cancelled",
+    "console.error: TypeError: Load failed"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "17 · Bleed air valve (GN-36-R022): comes off about 29 a year. Open part page.",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(17)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/data/manifest.json cancelled",
+    "pageerror: /127.0.0.1:49688/data/parts.json due to access control checks.",
+    "pageerror: /127.0.0.1:49688/data/demand_history.json due to access control checks."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "18 · Carbon brake assembly (GN-32-R013): comes off about 56 a year. Open part pa",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(18)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "21 · Spoiler servo control (GN-27-R008): comes off about 47 a year. Open part pa",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(21)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "22 · Aileron servo control (GN-27-R007): comes off about 9 a year. Open part pag",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(22)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/assets/svg/exploded-27.svg cancelled",
+    "console.error: TypeError: Load failed"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "23 · Flap position sensor (GN-27-E005): comes off about 21 a year. Open part pag",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(23)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/data/manifest.json cancelled",
+    "pageerror: /127.0.0.1:49688/data/parts.json due to access control checks.",
+    "pageerror: /127.0.0.1:49688/data/demand_history.json due to access control checks."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "24 · APU fuel control unit (GN-49-R024): comes off about 11 a year. Open part pa",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(24)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/assets/svg/aircraft-narrowbody.svg cancelled",
+    "console.error: TypeError: Load failed"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "25 · Elevator servo control (GN-27-R006): comes off about 16 a year. Open part p",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(25)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/lab/cutaway.js (CUTAWAY)",
+   "kind": "focusable",
+   "label": "26 · APU starter motor (GN-49-R023): comes off about 3 a year. Open part page.",
+   "selector": "#cutaway > div:nth-of-type(1) > svg:nth-of-type(1) > g:nth-of-type(4) > g:nth-of-type(26)",
+   "action": "focus+Enter",
+   "effects": [],
+   "ms": null,
+   "note": "Error: Page.evaluate: Execution context was destroyed, most likely because of a navigation",
+   "errors": [
+    "requestfailed: http://127.0.0.1:49688/assets/svg/aircraft-narrowbody.svg cancelled",
+    "console.error: TypeError: Load failed"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "expander",
+   "label": "Full entry",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(2) > details:nth-of-type(1) > div:nth-of-type(1) > ol:nth-of-type(1) > li:nth-of-type(1) > details:nth-of-type(1) > summary:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "expander",
+   "label": "Full entry",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(2) > details:nth-of-type(1) > div:nth-of-type(1) > ol:nth-of-type(1) > li:nth-of-type(2) > details:nth-of-type(1) > summary:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "expander",
+   "label": "Full entry",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(2) > details:nth-of-type(1) > div:nth-of-type(1) > ol:nth-of-type(1) > li:nth-of-type(3) > details:nth-of-type(1) > summary:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "expander",
+   "label": "Full entry",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(2) > details:nth-of-type(1) > div:nth-of-type(1) > ol:nth-of-type(1) > li:nth-of-type(4) > details:nth-of-type(1) > summary:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "expander",
+   "label": "View data",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(2) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(3) > details:nth-of-type(1) > summary:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "expander",
+   "label": "View data",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(5) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(3) > details:nth-of-type(1) > summary:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "input",
+   "label": "Search assumptions",
+   "selector": "#view > section:nth-of-type(7) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > input:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.fill: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "toggle",
+   "label": "All",
+   "selector": "#view > section:nth-of-type(7) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "toggle",
+   "label": "● Real",
+   "selector": "#view > section:nth-of-type(7) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(2)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "toggle",
+   "label": "○ Assumed",
+   "selector": "#view > section:nth-of-type(7) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(3)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "toggle",
+   "label": "▲ Simulated",
+   "selector": "#view > section:nth-of-type(7) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(4)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "select",
+   "label": "Filter by group",
+   "selector": "#view > section:nth-of-type(7) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > select:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.select_option: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "expander",
+   "label": "Full entry",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(2) > details:nth-of-type(1) > div:nth-of-type(1) > ol:nth-of-type(1) > li:nth-of-type(1) > details:nth-of-type(1) > summary:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "expander",
+   "label": "Full entry",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(2) > details:nth-of-type(1) > div:nth-of-type(1) > ol:nth-of-type(1) > li:nth-of-type(2) > details:nth-of-type(1) > summary:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "expander",
+   "label": "Full entry",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(2) > details:nth-of-type(1) > div:nth-of-type(1) > ol:nth-of-type(1) > li:nth-of-type(3) > details:nth-of-type(1) > summary:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "expander",
+   "label": "Full entry",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(2) > details:nth-of-type(1) > div:nth-of-type(1) > ol:nth-of-type(1) > li:nth-of-type(4) > details:nth-of-type(1) > summary:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "button",
+   "label": "More",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(2) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "expander",
+   "label": "View data",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(2) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(3) > details:nth-of-type(1) > summary:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "expander",
+   "label": "View data",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(5) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(3) > details:nth-of-type(1) > summary:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "input",
+   "label": "Search assumptions",
+   "selector": "#view > section:nth-of-type(7) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > input:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.fill: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "toggle",
+   "label": "All",
+   "selector": "#view > section:nth-of-type(7) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "toggle",
+   "label": "● Real",
+   "selector": "#view > section:nth-of-type(7) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(2)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "toggle",
+   "label": "○ Assumed",
+   "selector": "#view > section:nth-of-type(7) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(3)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "toggle",
+   "label": "▲ Simulated",
+   "selector": "#view > section:nth-of-type(7) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(4)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/data-method.js",
+   "kind": "select",
+   "label": "Filter by group",
+   "selector": "#view > section:nth-of-type(7) > details:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > select:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.select_option: Timeout 30000ms exceeded.",
+   "errors": []
   },
   {
    "browser": "webkit",
@@ -10590,6 +11811,636 @@
     "pageerror: transition 338 not found",
     "pageerror: transition 339 not found",
     "pageerror: transition 340 not found"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/parts-intelligence.js",
+   "kind": "toggle",
+   "label": "Narrowbody",
+   "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+   "action": "click",
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 16.7,
+   "note": "",
+   "errors": [
+    "pageerror: ResizeObserver loop completed with undelivered notifications."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/parts-intelligence.js",
+   "kind": "toggle",
+   "label": "All fleet",
+   "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)",
+   "action": "click",
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 1.3,
+   "note": "",
+   "errors": [
+    "pageerror: ResizeObserver loop completed with undelivered notifications.",
+    "pageerror: ResizeObserver loop completed with undelivered notifications."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Forecast Lab3",
+   "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(2)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/parts-intelligence.js",
+   "kind": "toggle",
+   "label": "Narrowbody",
+   "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+   "action": "click",
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 1.7,
+   "note": "",
+   "errors": [
+    "pageerror: ResizeObserver loop completed with undelivered notifications."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "docs/js/views/parts-intelligence.js",
+   "kind": "toggle",
+   "label": "All fleet",
+   "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)",
+   "action": "click",
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.0,
+   "note": "",
+   "errors": [
+    "pageerror: ResizeObserver loop completed with undelivered notifications.",
+    "pageerror: ResizeObserver loop completed with undelivered notifications."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Network Positioning5",
+   "selector": "#nav > div:nth-of-type(3) > a:nth-of-type(1)",
+   "action": "click",
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 9.9,
+   "note": "",
+   "errors": [
+    "pageerror: transition 106 not found",
+    "pageerror: transition 107 not found",
+    "pageerror: transition 108 not found"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/parts-intelligence.js",
+   "kind": "toggle",
+   "label": "Narrowbody",
+   "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+   "action": "click",
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 32.3,
+   "note": "",
+   "errors": [
+    "pageerror: ResizeObserver loop completed with undelivered notifications."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "docs/js/views/parts-intelligence.js",
+   "kind": "toggle",
+   "label": "All fleet",
+   "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)",
+   "action": "click",
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 35.1,
+   "note": "",
+   "errors": [
+    "pageerror: ResizeObserver loop completed with undelivered notifications.",
+    "pageerror: ResizeObserver loop completed with undelivered notifications."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "overlay-esc",
+   "label": "Esc closes story",
+   "selector": ".story",
+   "action": "key:Escape",
+   "effects": [
+    "story-closed"
+   ],
+   "ms": null,
+   "note": "",
+   "errors": [
+    "pageerror: transition 11 not found",
+    "pageerror: transition 12 not found"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "docs/js/views/parts-intelligence.js",
+   "kind": "load",
+   "label": "page load",
+   "selector": "",
+   "note": "pageerror: Can't find variable: txSel; pageerror: Can't find variable: txSel",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "GROUNDED NO MORE — Mission Control",
+   "selector": "#app > nav:nth-of-type(1) > a:nth-of-type(1)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 11.7,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Mission Control1",
+   "selector": "#nav > div:nth-of-type(1) > a:nth-of-type(1)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 10.6,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Planner Action Centre8",
+   "selector": "#nav > div:nth-of-type(1) > a:nth-of-type(2)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 17.0,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "AOG Response Lab7",
+   "selector": "#nav > div:nth-of-type(1) > a:nth-of-type(3)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 6.1,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Parts Intelligence2",
+   "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(1)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 9.5,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Forecast Lab3",
+   "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(2)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 38.0,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Rotable & Repair4",
+   "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(3)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 8.9,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Network Positioning5",
+   "selector": "#nav > div:nth-of-type(3) > a:nth-of-type(1)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 18.8,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Capital Optimiser6",
+   "selector": "#nav > div:nth-of-type(3) > a:nth-of-type(2)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 81.9,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "button",
+   "label": "60-second tourS",
+   "selector": "#nav > div:nth-of-type(4) > button:nth-of-type(1)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "story",
+    "dom-mutation"
+   ],
+   "ms": 42.9,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Data & Method0",
+   "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(1)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 21.6,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "About",
+   "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(2)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 10.2,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Glossary",
+   "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(3)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 19.0,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "The Planner Behind the Project",
+   "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(4)",
+   "action": "open-rail+click",
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 6.4,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "button",
+   "label": "Open navigation",
+   "selector": "#menu-btn",
+   "action": "click",
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 27.6,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "focusable",
+   "label": "Simulation W104–W155",
+   "selector": "#sim-indicator",
+   "action": "focus+Enter",
+   "effects": [
+    "focus-change"
+   ],
+   "ms": 1051.1,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "docs/js/views/parts-intelligence.js",
+   "kind": "toggle",
+   "label": "Narrowbody",
+   "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+   "action": "click",
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 21.4,
+   "note": "",
+   "errors": [
+    "pageerror: ResizeObserver loop completed with undelivered notifications."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "docs/js/views/parts-intelligence.js",
+   "kind": "toggle",
+   "label": "All fleet",
+   "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)",
+   "action": "click",
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 9.6,
+   "note": "",
+   "errors": [
+    "pageerror: ResizeObserver loop completed with undelivered notifications.",
+    "pageerror: ResizeObserver loop completed with undelivered notifications."
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "docs/js/views/parts-intelligence.js",
+   "kind": "button",
+   "label": "Top-risk part in ATA 32: GN-32-R014, risk 100, Urgent. Open the part drill-down.",
+   "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > button:nth-of-type(1)",
+   "action": "click",
+   "effects": [
+    "navigation",
+    "drawer",
+    "chart-update"
+   ],
+   "ms": 16.4,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel"
+   ]
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "docs/js/views/parts-intelligence.js",
+   "kind": "button",
+   "label": "More",
+   "selector": "#view > div:nth-of-type(4) > section:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "shortcut",
+   "label": "key ?",
+   "selector": "body",
+   "action": "key:?",
+   "effects": [
+    "modal",
+    "dom-mutation",
+    "esc-closes"
+   ],
+   "ms": 10.5,
+   "note": "",
+   "errors": [
+    "pageerror: Can't find variable: txSel",
+    "pageerror: Can't find variable: txSel"
    ]
   },
   {
@@ -12967,6 +14818,21 @@
   {
    "browser": "webkit",
    "target": "rotables?view=outstation",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Network Positioning5",
+   "selector": "#nav > div:nth-of-type(3) > a:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "rotables?view=outstation",
    "mode": "simple",
    "viewport": "1440x900",
    "owner": "SHELL (docs/js/app.js / ui.js)",
@@ -14451,12 +16317,48 @@
   {
    "browser": "webkit",
    "target": "about?section=mro",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "seconds": 40.1,
+   "total": 52,
+   "ok": 51,
+   "failed": 1,
+   "skipped": 0,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "about?section=mro",
+   "mode": "expert",
+   "viewport": "390x844",
+   "seconds": 37.3,
+   "total": 53,
+   "ok": 53,
+   "failed": 0,
+   "skipped": 0,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "about?section=mro",
    "mode": "simple",
    "viewport": "1440x900",
    "seconds": 40.6,
    "total": 52,
    "ok": 50,
    "failed": 2,
+   "skipped": 0,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "about?section=mro",
+   "mode": "simple",
+   "viewport": "390x844",
+   "seconds": 46.6,
+   "total": 53,
+   "ok": 52,
+   "failed": 1,
    "skipped": 0,
    "load_errors": 0
   },
@@ -14511,12 +16413,36 @@
   {
    "browser": "webkit",
    "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "seconds": 40.7,
+   "total": 83,
+   "ok": 55,
+   "failed": 9,
+   "skipped": 19,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
    "mode": "simple",
    "viewport": "1440x900",
    "seconds": 40.2,
    "total": 83,
    "ok": 54,
    "failed": 10,
+   "skipped": 19,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "simple",
+   "viewport": "390x844",
+   "seconds": 255.6,
+   "total": 84,
+   "ok": 57,
+   "failed": 8,
    "skipped": 19,
    "load_errors": 0
   },
@@ -14570,6 +16496,54 @@
   },
   {
    "browser": "webkit",
+   "target": "aog?incident=AOG-0001",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "seconds": 32.0,
+   "total": 67,
+   "ok": 65,
+   "failed": 1,
+   "skipped": 1,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "aog?incident=AOG-0001",
+   "mode": "expert",
+   "viewport": "390x844",
+   "seconds": 46.5,
+   "total": 71,
+   "ok": 70,
+   "failed": 0,
+   "skipped": 1,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "aog?incident=AOG-0001",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "seconds": 31.5,
+   "total": 69,
+   "ok": 66,
+   "failed": 0,
+   "skipped": 3,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "aog?incident=AOG-0001",
+   "mode": "simple",
+   "viewport": "390x844",
+   "seconds": 39.6,
+   "total": 73,
+   "ok": 68,
+   "failed": 2,
+   "skipped": 3,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
    "target": "aog",
    "mode": "expert",
    "viewport": "1440x900",
@@ -14614,6 +16588,30 @@
    "ok": 67,
    "failed": 3,
    "skipped": 3,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "capital?view=selection&point=I125",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "seconds": 64.9,
+   "total": 86,
+   "ok": 82,
+   "failed": 3,
+   "skipped": 1,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "capital?view=selection&point=I125",
+   "mode": "expert",
+   "viewport": "390x844",
+   "seconds": 59.7,
+   "total": 76,
+   "ok": 74,
+   "failed": 1,
+   "skipped": 1,
    "load_errors": 0
   },
   {
@@ -14834,6 +16832,66 @@
   },
   {
    "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "seconds": 29.4,
+   "total": 27,
+   "ok": 4,
+   "failed": 23,
+   "skipped": 0,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "lab/cutaway.html",
+   "mode": "simple",
+   "viewport": "390x844",
+   "seconds": 13.1,
+   "total": 27,
+   "ok": 27,
+   "failed": 0,
+   "skipped": 0,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "seconds": 135.6,
+   "total": 96,
+   "ok": 83,
+   "failed": 12,
+   "skipped": 1,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "expert",
+   "viewport": "390x844",
+   "seconds": 121.5,
+   "total": 90,
+   "ok": 76,
+   "failed": 13,
+   "skipped": 1,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "method?section=next",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "seconds": 28.0,
+   "total": 53,
+   "ok": 52,
+   "failed": 0,
+   "skipped": 1,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
    "target": "method?section=next",
    "mode": "simple",
    "viewport": "390x844",
@@ -15014,6 +17072,18 @@
   },
   {
    "browser": "webkit",
+   "target": "network?station=LHR",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "seconds": 50.1,
+   "total": 82,
+   "ok": 79,
+   "failed": 0,
+   "skipped": 3,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
    "target": "network",
    "mode": "expert",
    "viewport": "1440x900",
@@ -15059,6 +17129,54 @@
    "failed": 2,
    "skipped": 10,
    "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "seconds": 54.1,
+   "total": 115,
+   "ok": 110,
+   "failed": 2,
+   "skipped": 3,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "expert",
+   "viewport": "390x844",
+   "seconds": 69.2,
+   "total": 137,
+   "ok": 115,
+   "failed": 3,
+   "skipped": 19,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "seconds": 82.3,
+   "total": 118,
+   "ok": 108,
+   "failed": 4,
+   "skipped": 6,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "parts?ata=32",
+   "mode": "simple",
+   "viewport": "390x844",
+   "seconds": 89.8,
+   "total": 141,
+   "ok": 98,
+   "failed": 21,
+   "skipped": 22,
+   "load_errors": 2
   },
   {
    "browser": "webkit",
@@ -15255,12 +17373,48 @@
   {
    "browser": "webkit",
    "target": "rotables?view=outstation",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "seconds": 51.0,
+   "total": 107,
+   "ok": 103,
+   "failed": 0,
+   "skipped": 4,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "rotables?view=outstation",
+   "mode": "expert",
+   "viewport": "390x844",
+   "seconds": 52.5,
+   "total": 109,
+   "ok": 104,
+   "failed": 1,
+   "skipped": 4,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "rotables?view=outstation",
    "mode": "simple",
    "viewport": "1440x900",
    "seconds": 73.3,
    "total": 110,
    "ok": 101,
    "failed": 3,
+   "skipped": 6,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "rotables?view=outstation",
+   "mode": "simple",
+   "viewport": "390x844",
+   "seconds": 86.2,
+   "total": 111,
+   "ok": 105,
+   "failed": 0,
    "skipped": 6,
    "load_errors": 0
   },
