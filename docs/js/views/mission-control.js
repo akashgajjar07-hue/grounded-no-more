@@ -165,7 +165,7 @@ export async function render(el, ctx) {
     ao && { ...ao, label: 'Expected material-related downtime h / yr' },
     sc,
     openK,
-  ].filter(Boolean).map((k) => kpiInstrument(k, baseLabel, ranked, k.recommended_id || recId || 'Rec.', actions));
+  ].filter(Boolean).map((k) => kpiInstrument(k, baseLabel, ranked, k.core_id || kpis.core_id || 'P2', actions));   // v2: tiles read P0 → P2
   el.append(h('div', { class: 'mc-kpis', dataset: { story: 'mission-kpis' }, role: 'group', 'aria-label': 'Headline indicators' }, tiles));
 
   // ================================================================ comparison + actions | map
@@ -215,6 +215,8 @@ export async function render(el, ctx) {
   // the policy comparison follows the priorities (wave A: simple bars here; the CI chart lives in Capital Optimiser)
   left.append(cmpCard);
   cleanups.push(compareStrip(cmpCard, { policies, frontier, seedText, baseLabel }));
+  const hl = findingsCard(kpis.headline);
+  if (hl) left.append(hl);
 
   // ---- network mini-map
   const mapCard = h('section', { class: 'card', dataset: { story: 'mission-map' } });
@@ -226,6 +228,7 @@ export async function render(el, ctx) {
   const nOut = stations.filter((s) => s.role !== 'hub').length;
   const topOut = byRisk.find((s) => s.role !== 'hub');
   const mf = chartFrame(mapCard, {
+      implication: 'Shortage exposure concentrates at the hub and a few outstations: position stock there first.',
     headline: topOut && topOut !== topS
       ? `${topOut.station} has the most outstation shortage exposure (${fmtPct(topOut.risk, 0)} of ${topS.role === 'hub' ? 'hub ' : ''}${topS.station})`
       : topS ? `${topS.station} carries the most grounding exposure` : 'Station risk not run',
@@ -279,6 +282,7 @@ const TYPE_STEP = {
   OUTSTATION_DEPLETION: 'Position stock', LEAD_TIME_DRIFT: 'Update lead time', OVERDUE_REPAIR: 'Chase repair shop',
   EXCESS_DECLINING_DEMAND: 'Cut min/max', CONDEMNED_AWAITING_REPLACEMENT: 'Track replacement PO', QUARANTINE_DOCS: 'Review certificate',
   EXPIRY_RISK: 'Use or rotate stock', KIT_SHORTAGE: 'Complete the kit',
+  DONOR_NOT_REINSTATED: 'Reinstate the donor', OPEN_LOAN: 'Return the loan unit', OPEN_REQUIREMENT: 'Keep recovery routes open',
 };
 
 /** Group ranked actions by PN, keeping rank order; per group: lead action, stations (by AOG h), summed AOG h, earliest due. */
@@ -316,9 +320,40 @@ function signalOf(a) {
     case 'CONDEMNED_AWAITING_REPLACEMENT':
       if (num(e.quoted_due_week)) return { k: 'Replacement due', v: `replacement ${fmtWeek(e.quoted_due_week)}`, long: `replacement due ${fmtWeek(e.quoted_due_week)}` };
       break;
+    case 'DONOR_NOT_REINSTATED':
+      if (num(e.days_waiting)) return { k: 'Donor waiting', v: `donor ${e.donor_tail || ''} · ${fmtInt(e.days_waiting)} d`, long: `robbed donor ${e.donor_tail || ''} waiting ${fmtInt(e.days_waiting)} days` };
+      break;
+    case 'OPEN_REQUIREMENT':
+      return { k: 'Open need', v: `open since ${fmtWeek(e.need_week)}${e.deadline_class ? ` · ${e.deadline_class}` : ''}`, long: `requirement open since ${fmtWeek(e.need_week)}` };
     default:
   }
   return { k: 'Summary', v: truncate(a.summary || '', 300), long: a.summary || '' };
+}
+
+// ------------------------------------------------------------------ v2 findings (computed in the exporter: kpis.headline)
+const pm = (v) => `${v < 0 ? '−' : '+'}${fmtInt(Math.abs(v))}`;
+const rng = (ci, f = fmtInt) => `[${f(ci[0])}–${f(ci[1])}]`;
+/** What holds (P2 core finding), the frontier option (I125) and the honest caveats, every number from kpis.headline. */
+function findingsCard(H) {
+  if (!H?.core) return null;
+  const c = H.core, fo = H.frontier_option, ho = H.honest || {};
+  const W = { low_stress: 'low stress', central: 'central', high_stress: 'high stress' };
+  const items = [
+    ['holds', `Holds in all three worlds: P2 vs P0 ${c.worlds.map((w) => `${pm(w.aog_hours.mean)} h (${W[w.variant] || w.variant})`).join(' · ')}.`, c.holds_all_worlds],
+    ['holds', `Holds from ×0.5 to ×2 the hourly downtime rate: total cost ${fmtAED(c.penalty_range['x0.5']?.mean)} to ${fmtAED(c.penalty_range.x2?.mean)} a year vs P0.`, c.holds_penalty_range],
+    fo ? ['option', `If you invest an additional ${fmtAED(fo.extra_capital_aed.mean)}: ${fo.id} removes a further ${fmtInt(fo.aog_reduction.mean)} h/yr ${rng(fo.aog_reduction.ci)} below P2 (paired holdout).${fo.repair_tat_x0_75 && !fo.repair_tat_x0_75.net_benefit_significant ? ' Its cost lead over P2 is not significant if repair is 25% faster.' : ''}${fo.rule_shifts?.length ? ` The rule picks ${fo.rule_shifts.map((x) => `${x.recommended} at ${String(x.setting).replace('x', '×')}`).join(' / ')} the hourly rate.` : ''}`, true] : null,
+    fo?.postplan_stress?.length ? ['option', `Post-plan stress check (added after the holdout): ${fo.id} vs P2 ${fo.postplan_stress.map((w) => `${pm(w.aog_hours.mean)} h (${W[w.variant] || w.variant})`).join(' · ')}.`, true] : null,
+    ho.forecast_cells ? ['caveat', `Forecasting: the frozen champions stayed best in ${fmtInt(ho.forecast_champions_best)} of ${fmtInt(ho.forecast_cells)} cells${ho.sba_intermittent_rotables_rank ? ` (SBA ranked ${ho.sba_intermittent_rotables_rank} of ${ho.sba_intermittent_rotables_n_methods} for intermittent rotables)` : ''}.`, false] : null,
+    num(ho.mtbur_history_error) ? ['caveat', `History-based MTBUR lands about ${fmtPct(ho.mtbur_history_error, 0)} from the truth, vendor quotes about ${fmtPct(ho.mtbur_quote_error, 0)}.`, false] : null,
+    num(ho.fill_pts_P2_vs_P0) ? ['caveat', `P1 and P2 run about ${Math.abs(ho.fill_pts_P2_vs_P0).toFixed(1)} pts lower immediate fill than P0 (leaner count-part stock).`, false] : null,
+    ho.routes_off ? ['caveat', `Every policy leans on AOG recovery routes: with them switched off, P2 rises from ${fmtHours(ho.routes_off.central_p2_aog_hours)} to ${fmtHours(ho.routes_off.p2_aog_hours)} a year (selection seeds).`, false] : null,
+  ].filter(Boolean);
+  const icon2 = { holds: 'check', option: 'capital', caveat: 'info' };
+  return card({
+    kicker: 'What holds, and what to watch', prov: H.provenance || 'SIMULATED', story: 'mission-findings',
+    title: `Network positioning is the core result; ${fo ? fo.id : 'more capital'} is an option, and the caveats stay visible`,
+    body: h('ul', { class: 'mc-findings list-reset' }, items.map(([k, t]) => h('li', { class: `is-${k}` }, icon(icon2[k]), h('span', {}, t)))),
+  });
 }
 
 // ------------------------------------------------------------------ KPI instrument
@@ -399,20 +434,20 @@ function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
   ['P0', 'P1', 'P2'].forEach((id) => {
     const p = get(id);
     const a = p?.kpi?.aog_hours;
-    if (a && num(a.mean)) rows.push({ key: id, name: id, label: p.label || id, value: a.mean, lo: a.ci_lo ?? a.mean, hi: a.ci_hi ?? a.mean, capital: p.kpi?.spare_capital_aed?.mean, role: id === 'P0' ? 'base' : 'ctx' });
+    if (a && num(a.mean)) rows.push({ key: id, name: id, label: p.label || id, value: a.mean, lo: a.ci_lo ?? a.mean, hi: a.ci_hi ?? a.mean, capital: p.kpi?.spare_capital_aed?.mean, role: id === 'P0' ? 'base' : id === 'P2' ? 'core' : 'ctx' });   // v2: P2 is the core finding
   });
   const recId = frontier?.recommended;
   const recP = (frontier?.points || []).find((p) => p.id === recId);
   const recPol = recId ? get(recId) : null;
   if (recPol?.kpi?.aog_hours && !rows.some((r) => r.key === recId)) {
     const a = recPol.kpi.aog_hours;
-    rows.push({ key: 'REC', name: `Recommended · ${recId}`, label: String(recPol.label || 'frontier point').replace(/^Recommended:\s*/, '').replace(new RegExp(`\\s*\\(${recId}\\)$`), ''), value: a.mean, lo: a.ci_lo, hi: a.ci_hi, capital: recPol.kpi?.spare_capital_aed?.mean, role: 'rec' });
+    rows.push({ key: 'REC', name: `${recId} · frontier option`, label: 'more capital', value: a.mean, lo: a.ci_lo, hi: a.ci_hi, capital: recPol.kpi?.spare_capital_aed?.mean, role: 'opt' });
   } else if (recP && num(recP.aog_hours)) {
     const ci = Array.isArray(recP.aog_ci) ? recP.aog_ci : [recP.aog_hours, recP.aog_hours];
-    rows.push({ key: 'REC', name: `Recommended · ${recId}`, label: recP.label || 'balanced frontier point', value: recP.aog_hours, lo: ci[0], hi: ci[1], capital: recP.capital_aed, role: 'rec' });
+    rows.push({ key: 'REC', name: `${recId} · frontier option`, label: 'more capital', value: recP.aog_hours, lo: ci[0], hi: ci[1], capital: recP.capital_aed, role: 'opt' });
   }
   const base = rows.find((r) => r.role === 'base');
-  const rec = rows.find((r) => r.role === 'rec');
+  const rec = rows.find((r) => r.role === 'core');
   let headline = 'Policy comparison not run';
   let ciNote = '';
   if (base && rec) {
@@ -422,9 +457,9 @@ function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
     const capTxt = dCap == null ? '' : dCap >= 0 ? ` for ${fmtAED(dCap)} more capital` : ` and frees ${fmtAED(-dCap)}`;
     const verb = pct >= 0 ? 'cuts' : 'raises';
     const cands = [
-      `The recommended plan ${verb} material AOG ${Math.abs(pct)}% vs ${baseLabel}${capTxt}${overlap ? '; the intervals overlap' : ''}`,
-      `The recommended plan ${verb} material AOG ${Math.abs(pct)}% vs ${baseLabel}${capTxt}`,
-      `The recommended plan ${verb} material AOG ${Math.abs(pct)}% vs ${baseLabel}`,
+      `Network positioning (P2) ${verb} material AOG ${Math.abs(pct)}% vs ${baseLabel}${capTxt}${overlap ? '; the intervals overlap' : ''}`,
+      `Network positioning (P2) ${verb} material AOG ${Math.abs(pct)}% vs ${baseLabel}${capTxt}`,
+      `Network positioning ${verb} material AOG ${Math.abs(pct)}% vs ${baseLabel}`,
     ];
     headline = cands.find((c) => c.length <= HEADLINE_MAX) || cands[cands.length - 1];
     ciNote = overlap ? '95% intervals overlap' : '95% intervals do not overlap';
@@ -436,6 +471,7 @@ function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
   // Wave A: simple horizontal bars of expected material AOG hours per policy, spare capital as a label. The detailed
   // mean-and-CI chart lives in Capital Optimiser only.
   const f = chartFrame(host, {
+      implication: 'Positioning the existing float beats buying more of it; extra capital is a secondary option.',
     headline: headline.replace(/; the intervals overlap$/, ''),
     subtitle: `Expected material-related downtime: material AOG h/yr, mean · ${seedText}${fSplit && !seedText.includes(fSplit) ? ` (recommended point: ${fSplit} seeds)` : ''} · label: spare capital · intervals in Capital Optimiser`,
     provenance: policies.meta?.provenance || 'SIMULATED', source: 'policies.json + frontier.json',
@@ -453,14 +489,14 @@ function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
     const svg = svgIn(f.body, w, H, 'Expected material AOG hours by policy, with spare capital');
     const max = Math.max(...rows.map((r) => r.value));
     const x = d3().scaleLinear().domain([0, max * 1.04]).range([0, iw]);
-    const color = (r) => (r.role === 'rec' ? theme.series.recommended : r.role === 'base' ? theme.series.baseline : theme.series.neutral);
+    const color = (r) => (r.role === 'core' ? theme.series.recommended : r.role === 'base' ? theme.series.baseline : theme.series.neutral);
     rows.forEach((r, i) => {
       const y0 = i * rowH + 4;
       const row = svg.append('g').attr('class', 'mc-cmp-row').datum(r);
       const by = narrow ? y0 + 26 : y0 + rowH / 2 - 7;
-      const name = r.role === 'rec' ? r.name : `${r.name} · ${shortPol(r.label)}`;
-      row.append('text').attr('class', r.role === 'rec' ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 0).attr('y', narrow ? y0 + 12 : y0 + rowH / 2).attr('dy', '0.32em').text(narrow ? name : truncate(name, lw - 16));
-      row.append('rect').attr('x', lw).attr('y', by).attr('height', 14).attr('rx', 3).attr('width', Math.max(2, x(r.value))).attr('fill', color(r)).attr('fill-opacity', r.role === 'rec' ? 0.95 : 0.8);
+      const name = r.role === 'opt' ? r.name : `${r.name} · ${shortPol(r.label)}`;
+      row.append('text').attr('class', r.role === 'core' ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 0).attr('y', narrow ? y0 + 12 : y0 + rowH / 2).attr('dy', '0.32em').text(narrow ? name : truncate(name, lw - 16));
+      row.append('rect').attr('x', lw).attr('y', by).attr('height', 14).attr('rx', 3).attr('width', Math.max(2, x(r.value))).attr('fill', color(r));
       const val = `${fmtHours(r.value)}${num(r.capital) ? ` · ${fmtAED(r.capital)}` : ''}`;
       if (narrow) row.append('text').attr('class', 'gnm-label gnm-label--mono').attr('x', w).attr('y', y0 + 12).attr('dy', '0.32em').attr('text-anchor', 'end').text(val);
       else row.append('text').attr('class', 'gnm-label gnm-label--mono').attr('x', lw + x(r.value) + 8).attr('y', by + 7).attr('dy', '0.32em').text(val);

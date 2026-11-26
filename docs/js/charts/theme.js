@@ -176,8 +176,10 @@ export const fmtByUnit = (unit) => (unit === 'AED' ? fmtAED : unit === '%' ? fmt
  * Returns {root, body, setTable(columns, rows)}. Draw your chart into `body`.
  */
 export const HEADLINE_MAX = 90;
-export function chartFrame(host, { headline, subtitle, provenance, source, table, story, minHeight } = {}) {
+export function chartFrame(host, { headline, subtitle, implication, provenance, source, table, story, minHeight } = {}) {
   const body = h('div', { class: 'chart-body', style: minHeight ? { minHeight: `${minHeight}px` } : undefined });
+  // wave B: every chart states its conclusion (headline) AND a one-line business implication ("So what")
+  const impl = h('p', { class: 'chart-implication', hidden: implication ? null : true }, h('span', { class: 'chart-implication-k' }, 'So what'), h('span', { class: 'chart-implication-t' }, implication || ''));
   const details = h('details', { class: 'chart-data' }, h('summary', {}, 'View data'));
   const sub = subtitle ? h('div', { class: 'chart-subtitle', title: String(subtitle) }, subtitle) : null;
   const more = sub ? h('button', { class: 'chart-subtitle-more', type: 'button', hidden: true, 'aria-expanded': 'false', onclick: () => {
@@ -188,6 +190,7 @@ export function chartFrame(host, { headline, subtitle, provenance, source, table
     'figure',
     { class: 'chart-frame', dataset: story ? { story } : undefined },
     h('div', { class: 'chart-head' }, h('div', {}, h('figcaption', { class: 'chart-headline' }, headline || ''), sub, more), provenance ? provChip(provenance) : null),
+    impl,
     body,
     h('div', { class: 'chart-foot' }, source ? h('span', { class: 'chart-source' }, `Source: ${source}`) : h('span'), details)
   );
@@ -214,7 +217,9 @@ export function chartFrame(host, { headline, subtitle, provenance, source, table
       if (t.length > 1) console.warn(`[chartFrame] teal on ${t.length} series (${t.join(', ')}) in "${headline}": teal = the recommended / primary result ONLY; use theme.series.neutral for other categories`);
     }, 1500);
   }
-  return { root, body, setTable };
+  const setImplication = (t) => { impl.querySelector('.chart-implication-t').textContent = t || ''; impl.hidden = !t; };
+  if (isDev() && !implication) setTimeout(() => { if (root.isConnected && impl.hidden) console.warn(`[chartFrame] no business implication for "${headline}"`); }, 1600);
+  return { root, body, setTable, setImplication };
 }
 
 /**

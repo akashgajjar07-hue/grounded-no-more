@@ -52,16 +52,19 @@ def test_recommended_point_is_flagged_and_i125(site):
 
 
 def test_mission_control_kpis_reconcile(site):
+    """v2 framing: the KPI value is the CORE finding P2 vs the P0 baseline; the reference is the frontier option (I125)."""
     fp = pd.read_csv(OUT / "holdout" / "frontier_points.csv").set_index("id")
     rid = site["kpis"]["recommended_id"]
+    core = site["kpis"]["core_id"]
+    assert core == "P2"
     k = {x["id"]: x for x in site["kpis"]["kpis"]}
     for kid, col in FRONTIER_COL.items():
         m = kid in MONEY_IDS
-        assert close(k[kid]["value"], fp.at[rid, f"{col}_mean"], m), kid
-        assert close(k[kid]["recommended"], fp.at[rid, f"{col}_mean"], m), kid
+        assert close(k[kid]["value"], fp.at[core, f"{col}_mean"], m), kid
         assert close(k[kid]["baseline"], fp.at["P0", f"{col}_mean"], m), kid
-        assert close(k[kid]["ci"][0], fp.at[rid, f"{col}_lo"], m) and close(k[kid]["ci"][1], fp.at[rid, f"{col}_hi"], m), kid
-        assert close(k[kid]["delta"], fp.at[rid, f"{col}_mean"] - fp.at["P0", f"{col}_mean"], m), kid
+        assert close(k[kid]["ci"][0], fp.at[core, f"{col}_lo"], m) and close(k[kid]["ci"][1], fp.at[core, f"{col}_hi"], m), kid
+        assert close(k[kid]["delta"], fp.at[core, f"{col}_mean"] - fp.at["P0", f"{col}_mean"], m), kid
+        assert k[kid]["reference"]["id"] == rid and close(k[kid]["reference"]["value"], fp.at[rid, f"{col}_mean"], m), kid
     # P0 in the frontier holdout run == P0 in the policy holdout run (same seeds, same frozen tables)
     ps = json.load(open(OUT / "holdout" / "policy_summary.json"))["variants"]["central"]["policies"]["P0"]
     assert close(k["aog_hours"]["baseline"], ps["aog_hours"]["mean"])
@@ -197,3 +200,46 @@ def test_meta_and_manifest(site):
 def test_total_size_under_limit():
     total = sum((SITE / f"{n}.json").stat().st_size for n in FILES)
     assert total < MAX_TOTAL_BYTES, total
+
+
+def test_v2_headline_recomputes_from_outputs(site):
+    """Every number in the site headline (kpis.headline) is recomputed here from outputs/, never typed."""
+    H = site["kpis"]["headline"]
+    ps = json.load(open(OUT / "holdout" / "policy_summary.json"))
+    pc = ps["variants"]["central"]["paired"]["P2-P0"]
+    c = H["core"]
+    assert close(c["aog_reduction"]["mean"], -pc["aog_hours"]["mean"])
+    assert close(c["aog_reduction"]["ci"][0], -pc["aog_hours"]["ci_hi"]) and close(c["aog_reduction"]["ci"][1], -pc["aog_hours"]["ci_lo"])
+    assert close(c["capital_aed"]["mean"], pc["spare_capital_aed"]["mean"], True)
+    hub = json.load(open(SITE / "network.json"))["hub"]
+    for pid in ["P0", "P2"]:
+        t = pd.read_csv(OUT / "policies" / f"{pid}_stock_params.csv")
+        assert c["outstation_rotables"][pid] == int(t[(t.part_class == "R") & (t.station != hub)].target_units.sum())
+    assert str(c["outstation_rotables"]["P0"]) in c["baseline_label"]
+    for w in c["worlds"]:
+        pr = ps["variants"][w["variant"]]["paired"]["P2-P0"]["aog_hours"]
+        assert close(w["aog_hours"]["mean"], pr["mean"]) and w["significant"] == (pr["ci_hi"] < 0)
+    assert c["holds_all_worlds"] == all(ps["variants"][v]["paired"]["P2-P0"]["aog_hours"]["ci_hi"] < 0 for v in ["low_stress", "central", "high_stress"])
+    assert c["holds_penalty_range"] == all(pc[f"total_cost_pen_{x}"]["ci_hi"] < 0 for x in ["x0.5", "x1", "x2"])
+    fp = pd.read_csv(OUT / "holdout" / "frontier_points.csv").set_index("id")
+    fo, rid = H["frontier_option"], site["kpis"]["recommended_id"]
+    assert close(fo["extra_capital_aed"]["mean"], fp.at[rid, "d_capital_vs_base_mean"], True)
+    assert close(fo["aog_reduction"]["mean"], -fp.at[rid, "d_aog_hours_vs_base_mean"])
+    pp = json.load(open(OUT / "holdout" / "postplan_i125_stress.json"))
+    for w in fo["postplan_stress"]:
+        row = next(q for q in pp["worlds"][w["variant"]] if q["id"] == rid)
+        assert close(w["aog_hours"]["mean"], row["d_aog_hours_vs_base_mean"])
+    chk = pd.read_csv(OUT / "holdout" / "forecast_champion_check.csv")
+    ho = H["honest"]
+    assert ho["forecast_champions_best"] == int((chk.champion_rank == 1).sum()) and ho["forecast_cells"] == len(chk)
+    tr = json.load(open(OUT / "holdout" / "truth_recovery.json"))["reliability"]["all"]
+    assert close(ho["mtbur_history_error"], tr["estimated_mdale"]) and close(ho["mtbur_quote_error"], tr["quoted_mdale"])
+
+
+def test_ps1_is_read_not_hard_coded(site):
+    inc = json.load(open(OUT / "aog_lab" / "incidents.json"))
+    ps1 = next(i for i in inc["incidents"] if i["id"] == inc["ps1_incident_id"])
+    assert site["aog_lab"]["ps1_incident_id"] == inc["ps1_incident_id"]
+    assert site["network"]["transfer_replay"]["focus"]["incident_id"] == ps1["id"]
+    steps = site["story"]["steps"]
+    assert any(ps1["pn"] in s["route"] for s in steps) and any(ps1["id"] in s["route"] for s in steps)

@@ -170,6 +170,7 @@ export async function render(el, ctx) {
   const topRisk = stations.filter((s) => s.role !== 'hub').sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0))[0];
   const topAll = stations.slice().sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0))[0];
   const mapF = chartFrame(mapCard, {
+      implication: 'Stock belongs where an aircraft would wait longest for it, not evenly across stations.',
     // wave 5: the headline speaks the recommended plan (node size is its units); risk stays the P0-holdout exposure
     headline: topAll && topRisk && hub?.by_policy?.[recId] && stations.every((x) => x.by_policy?.[recId])
       ? (() => {
@@ -372,6 +373,7 @@ function renderReplay(host, n, map, byId, isAlive) {
   const nEm = events.filter((e) => e.kind === 'emergency').length;
   const win = tr.window_h || [];
   const f = chartFrame(host, {
+      implication: 'Each emergency transfer is the cost of an unpositioned part: an aircraft waiting on the ground.',
     headline: featured
       ? `${featured.planted ? `${featured.planted}: ` : ''}${featured.from}→${featured.to} ${featured.kind === 'emergency' ? 'emergency' : 'routine'} transfer${featured.aog_transport_h != null ? ` took ${fmtHours(featured.aog_transport_h)}` : ''}; ${fmtInt(nEm)} of ${fmtInt(events.length)} replayed transfers were emergencies`
       : 'No transfers exported for replay',
@@ -457,7 +459,7 @@ function renderCompare(host, n, p, stations, pcBy, ctx) {
   let mk = avail.find((m) => m.key === ctx.params.metric) || avail[0];
   if (!mk) { chartFrame(host, { headline: 'Policy comparison by station: not run', subtitle: 'P0 / P1 / P2', provenance: 'SIMULATED', source: 'network.json → policy_compare' }).body.append(h('div', { class: 'state' }, 'not run')); return null; }
   const order = stations.slice().sort((a, b) => (a.role === 'hub' ? -1 : b.role === 'hub' ? 1 : 0) || a.station.localeCompare(b.station));
-  const f = chartFrame(host, { headline: 'Policy comparison by station', subtitle: 'P0 / P1 / P2', provenance: prov(n.meta), source: 'network.json → policy_compare' });
+  const f = chartFrame(host, { implication: 'Network positioning cuts downtime at the hub and the outstations without stocking every station.', headline: 'Policy comparison by station', subtitle: 'P0 / P1 / P2', provenance: prov(n.meta), source: 'network.json → policy_compare' });
   const seg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Metric' }, avail.map((m) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(m === mk), dataset: { value: m.key }, onclick: () => { mk = m; ctx.setParams({ metric: m.key }); seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.value === m.key))); draw(); } }, m.label)));
   f.body.before(h('div', { class: 'np-metric-bar' }, seg));
   let stop = null;
@@ -561,6 +563,7 @@ function renderShare(host, n, p, stations, pcBy, hub) {
   const r0 = rows.find((r) => r.pol === 'P0'), r1 = rows.find((r) => r.pol === 'P1'), r2 = rows.find((r) => r.pol === 'P2');
   const share0 = r0 ? r0.hub / (r0.hub + r0.out) : null;
   const f = chartFrame(host, {
+      implication: 'Hub shortages drive most downtime, so hub pooling and replenishment matter as much as outstation stock.',
     headline: share0 != null ? `${fmtPct(share0, 0)} of P0’s AOG hours are at the ${hub.station} hub, not the outstations` : 'Hub vs outstation AOG: not run',
     subtitle: `AOG h / yr · hub vs sum of outstations · ${splitLabel(n, p)} · means`,
     provenance: prov(n.meta), source: 'network.json → policy_compare',

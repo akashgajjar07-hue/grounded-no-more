@@ -123,6 +123,7 @@ function evidenceChart(a) {
   if (Array.isArray(e.quarterly_usage) && e.quarterly_usage.length > 1) {
     const vals = e.quarterly_usage;
     const fr = chartFrame(host, {
+      implication: 'Falling usage means stock to run down: cut the reorder level before buying more.',
       headline: `Usage fell from ${fmtInt(vals[0])} to ${fmtInt(vals.at(-1))} a quarter`,
       subtitle: 'Units issued per 13-week quarter · network · oldest → latest',
       provenance: 'DERIVED', source: 'actions.json',
@@ -147,6 +148,7 @@ function evidenceChart(a) {
       { k: `Recent POs (${fmtInt(e.n_pos)})`, v: e.mean_lead_d, hi: true },
     ].filter(Boolean);
     const fr = chartFrame(host, {
+      implication: 'A late supplier invalidates the reorder point: update the planning lead time now.',
       headline: `Recent lead time is ${fmtNum(e.ratio, 2)}× the quoted ${fmtNum(e.mean_quoted_d, 0)} d`,
       subtitle: `Days from order to receipt · non-expedite POs · last ${fmtInt(e.lookback_weeks)} weeks`,
       provenance: 'DERIVED', source: 'actions.json',
@@ -158,6 +160,7 @@ function evidenceChart(a) {
   if (e.target != null && e.on_hand != null) {
     const rows = [{ k: 'On hand + inbound', v: (e.on_hand || 0) + (e.inbound || 0) }, { k: 'P0 station target', v: e.p0_target ?? 0 }, { k: 'Target used', v: e.target, hi: true }];
     const fr = chartFrame(host, {
+      implication: 'The station is below the level its demand needs: the next D0 request there could ground an aircraft.',
       headline: `${a.station} holds ${fmtInt(rows[0].v)} against a target of ${fmtInt(e.target)}`,
       subtitle: `Serviceable units · ${a.pn} · target basis: ${e.target_basis || 'not recorded'}`,
       provenance: 'DERIVED', source: 'actions.json',
@@ -170,6 +173,7 @@ function evidenceChart(a) {
     const asOf = a.week;
     const steps = [{ k: 'Removed', w: e.removed_week }, e.shop_in_week != null ? { k: 'At shop', w: e.shop_in_week } : null, { k: 'Quoted due', w: e.quoted_due_week }, { k: 'This week', w: asOf, hi: true }].filter(Boolean);
     const fr = chartFrame(host, {
+      implication: 'An overdue repair is float the network does not have: chase the shop for a release date.',
       headline: `${fmtNum(e.weeks_overdue, 1)} weeks past the quoted due date`,
       subtitle: `Simulated weeks · ${e.ro_id != null ? `RO ${e.ro_id}` : e.po_id != null ? `PO ${e.po_id}` : 'order'} · ${e.shop ? fmtEnum(e.shop) : 'supplier'}`,
       provenance: 'DERIVED', source: 'actions.json',
@@ -282,6 +286,7 @@ export async function render(el, ctx) {
   const byType = types.map((t) => ({ t, label: typeLabel(t), ...Object.fromEntries(SEV.map((s) => [s, count((a) => a.type === t && a.severity === s)])), n: count((a) => a.type === t) }));
   const top = byType[0];
   const frame = chartFrame(chartCard, {
+      implication: 'Most planner work is repair follow-up and stock positioning: staff the desk for those queues.',
     headline: top ? `${typeLabel(topType)} is the biggest queue: ${fmtInt(top.n)} of ${fmtInt(all.length)} exceptions, ${fmtInt(top.urgent)} urgent` : 'No exceptions this week',
     subtitle: `Open exceptions by type and severity · ${asOf != null ? fmtWeek(asOf) : 'week not exported'} · click a bar to filter`,
     provenance: metaProv, source: 'actions.json',

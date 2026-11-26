@@ -136,7 +136,7 @@ export async function render(el, ctx) {
     { key: 'pn', label: 'Part number', mono: true, render: (r) => h('span', { class: 'pi-pn' }, h('span', { class: 'mono' }, r.pn), r.planted ? h('span', { class: 'chip chip-mono pi-planted', title: 'Planted situation (a scenario the models should detect)' }, r.planted) : null) },
     { key: 'desc', label: 'Description', render: (r) => h('span', { class: 'pi-desc', title: r.desc }, r.desc) },
     { key: 'cls', label: 'Class', render: (r) => h('span', { class: `pi-cls pi-cls--${r.cls}`, title: CLS_NAME[r.cls] }, r.cls) },
-    { key: 'deadline', label: 'Deadline', mono: true },
+    { key: 'deadline', label: 'Window', mono: true },
     { key: 'demand_class', label: 'Demand', format: (v) => dcLabel(v) },
     { key: 'abc', label: 'ABC', mono: true },
     // C7 (wave 4): this is the recommended plan's target (all stations), not on-hand stock
@@ -171,7 +171,9 @@ export async function render(el, ctx) {
     h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, 'Part master · demand class · stock · risk'), tableTitle), h('div', { class: 'row-wrap gap-1' }, tableCount, provChip(prov))),
     h('div', { class: 'pi-toolbar' }, search, clsSeg),
     table,
-    h('div', { class: 'card-foot' }, h('span', {}, 'Deadline classes D0 / D3 / D10 are hypothetical rectification windows, not MEL categories. Demand class from training weeks only. Click a row for the drill-down.')));
+    h('div', { class: 'card-foot pi-foot' }, h('span', {}, 'Rectification windows D0 / D3 / D10 are hypothetical (simplified analogues, not operator MEL decisions); NONE = servicing fluids, never a downtime driver. Demand class from training weeks only. Click a row for the drill-down.'),
+      // v2 brake disclosure (exporter: parts.json brake_note, from the P0 gap diagnosis)
+      P.brake_note ? h('p', { class: 'pi-brake-note', dataset: { role: 'brake-note' } }, icon('info'), h('span', {}, P.brake_note)) : null));
   el.append(h('div', { class: 'grid-12 mt-3' }, tableCard));
   function refreshTable() {
     const rows = rowsFor();
@@ -420,6 +422,7 @@ export async function render(el, ctx) {
     const counts = Object.fromEntries(['smooth', 'erratic', 'intermittent', 'lumpy'].map((c) => [c, pts.filter((p) => p.demand_class === c).length]));
     const sparse = counts.intermittent + counts.lumpy;
     const f = chartFrame(matrixCard, {
+      implication: 'Intermittent and lumpy demand needs methods built for zeros and safety stock sized on exposure.',
       headline: sparse * 2 > pts.length ? `Most PNs demand rarely: ${fmtInt(sparse)} of ${fmtInt(pts.length)} are intermittent or lumpy` : `${fmtInt(sparse)} of ${fmtInt(pts.length)} classified PNs are intermittent or lumpy`,
       subtitle: `ADI (weeks between demands, log) × CV² of demand sizes · training weeks ${fmtWeek(weeks[0])}–${fmtWeek(trainEnd)} · Syntetos–Boylan cut-offs ${ADI_CUT} / ${CV2_CUT}${nIns ? ` · ${nIns} PNs with < 3 demands not plotted` : ''}`,
       provenance: 'DERIVED', source: 'parts.json (adi, cv2, demand_class)', story: 'parts-adi-matrix',
@@ -528,6 +531,7 @@ export async function render(el, ctx) {
     const nA = aCells.reduce((s, c) => s + c.n, 0);
     const topA = aCells.slice().sort((a, b) => b.n - a.n)[0];
     const f = chartFrame(heatCard, {
+      implication: 'The costliest parts are the hardest to forecast, so they deserve the most planning attention.',
       headline: topA && nA ? (['intermittent', 'lumpy', 'erratic'].includes(topA.dc) ? `${fmtInt(topA.n)} of ${fmtInt(nA)} A-class PNs have ${dcLabel(topA.dc)} demand: costly items are the hardest to forecast` : `${fmtInt(topA.n)} of ${fmtInt(nA)} A-class PNs have ${dcLabel(topA.dc)} demand`) : 'ABC × demand class',
       subtitle: `Count of PNs · ABC by annual usage value (A = top 80%, B = next 15%) · demand class from ${fmtWeek(weeks[0])}–${fmtWeek(trainEnd)}`,
       provenance: 'DERIVED', source: 'parts.json (abc, demand_class)',
@@ -582,7 +586,7 @@ export async function render(el, ctx) {
       h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, 'Planted situations · scenario design'), h('h3', { class: 'card-title' }, pl.length ? `${pl.length} PNs carry a planted situation the models must detect from history alone` : 'No planted situations exported')), provChip('SIMULATED')),
       h('ul', { class: 'list-reset pi-planted-list' }, ...pl.map((p) => h('li', {}, h('button', { type: 'button', class: 'pi-planted-row', onclick: () => openPart(p.pn) },
         h('span', { class: 'chip chip-mono pi-planted' }, p.planted),
-        h('span', { class: 'pi-planted-main' }, h('span', { class: 'mono' }, p.pn), h('span', { class: 'faint' }, p.desc)),
+        h('span', { class: 'pi-planted-main' }, h('span', { class: 'mono' }, p.pn), h('span', { class: 'faint', title: p.desc }, p.desc)),
         riskPill(p), icon('chevron-right'))))),
       h('div', { class: 'card-foot' }, h('span', {}, 'Planted in the simulator so the planning logic can be tested against a known answer. The planner sees only the demand and repair history.')));
   }
@@ -623,13 +627,14 @@ export async function render(el, ctx) {
     if (ex && p.risk_level !== ex.severity) {
       body.append(h('p', { class: 'pi-exc-note t-12 muted', role: 'note' }, icon('info'), h('span', {}, `Risk ${riskPct(p.risk_score)} measures material shortage exposure (expected material-related downtime hours). The ${ex.severity} ${ex.type_label.toLowerCase()} action (${ex.exception_id}) is about planning data, so it ranks high on Mission and in the Action Centre while the risk score stays low.`)));
     }
+    if (p.removal_mode === 'wear_planned' && P.brake_note) body.append(h('p', { class: 'pi-brake-note', role: 'note' }, icon('info'), h('span', {}, P.brake_note)));
     if (p.planted) {
       body.append(h('div', { class: 'pi-planted-banner', role: 'note' }, icon('target'), h('div', {}, h('strong', {}, `Planted situation ${p.planted}`), h('p', { class: 'faint t-12' }, p.planted_note || 'A scenario planted in the simulator for the planning logic to detect from history alone.'))));
     }
     const chartHost = h('div');
     body.append(chartHost);
     body.append(h('dl', { class: 'meta-list' }, ...[
-      ['Description', p.desc], ['ATA', `${p.ata} · ${sysName(p.ata)}`], ['Class', `${CLS_NAME[p.cls] || p.cls} · deadline ${p.deadline} (hypothetical)`],
+      ['Description', p.desc], ['ATA', `${p.ata} · ${sysName(p.ata)}`], ['Class', `${CLS_NAME[p.cls] || p.cls} · rectification window ${p.deadline} (hypothetical)`], ['Removal', p.removal_mode === 'wear_planned' ? 'Planned (wear), known 5–10 days ahead' : p.removal_mode ? 'Unscheduled' : '—'], ['Fleet', p.applicability === 'NB' ? 'Narrowbody' : p.applicability === 'WB' ? 'Widebody' : p.applicability ? 'Both fleets' : '—'],
       ['Demand class', `${dcLabel(p.demand_class)} · ADI ${fmtNum(p.adi)} · CV² ${fmtNum(p.cv2)}`], ['ABC', p.abc], ['Unit cost', fmtAED(p.unit_cost)],
       ['Material shortage exposure', p.risk_hours != null ? `${fmtHours(p.risk_hours)}/yr of AOG (history + modelled residual)` : riskPct(p.risk_score)],
       [`${P.stock_basis_id || 'Plan'} target (all stations)`, `${fmtInt(p.stock_total)} unit${p.stock_total === 1 ? '' : 's'}`],
@@ -649,6 +654,7 @@ export async function render(el, ctx) {
     openDrawer = d;
     requestAnimationFrame(() => {
       const f = chartFrame(chartHost, {
+      implication: 'A part with long gaps between demands needs a positioning decision, not just a reorder point.',
         headline: all.nz ? `Demand in ${fmtInt(all.nz)} of ${fmtInt(all.weeks)} weeks (${fmtInt(all.total)} unit${all.total === 1 ? '' : 's'}); ${fmtPct(tr.zeroShare, 0)} of training weeks are zero` : `No demand recorded in ${fmtInt(all.weeks)} weeks`,
         subtitle: `Units per week · ${fmtWeek(weeks[0])}–${fmtWeek(weeks[1])} · training ${fmtWeek(0)}–${fmtWeek(trainEnd)} | selection ${fmtWeek(selStart)}–${fmtWeek(weeks[1])} · simulated calendar`,
         provenance: DH.meta?.provenance || 'SIMULATED', source: 'demand_history.json',

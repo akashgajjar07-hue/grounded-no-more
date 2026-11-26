@@ -123,6 +123,7 @@ export async function render(el, ctx) {
     ? `${fmtInt(removals)} removals fed the repair loop; ${fmtPct(condemned / shopOut)} of shop exits were condemned (BER)`
     : `${fmtInt(loop)} serials are removed (U/S) or in repair right now`;
   const lcF = chartFrame(lcCard, {
+      implication: 'Most rotables sit on aircraft; the repair loop is where float is gained or lost.',
     headline: lcHead,
     subtitle: `Box = serials in each state at ${now != null ? fmtWeek(Math.floor(now / HPW)) : 'end of window'} (${fmtInt(r.lifecycle?.n_serials ?? fleet)} serials) · one row per transition, dot = from, arrow = to, width = count${flowWindow ? ` over ${flowWindow}` : ''}`,
     provenance: prov(r.lifecycle, prov(r.meta)), source: 'rotables.json → lifecycle',
@@ -315,6 +316,7 @@ function renderGantt(host, ros, now, r, ctx) {
   const head = !overdue.length ? 'Every open repair order is still inside its quoted due date'
     : `${fmtInt(overdue.length)} repair orders are past quoted due${worst ? `; the worst is ${fmtDays(worst.late_d)} late at ${shopLabel(worst.shop)}` : ''}`;
   const f = chartFrame(host, {
+      implication: 'Overdue repairs eat float: chase the shops furthest past quote first.',
     headline: head,
     subtitle: `Bar = induction → return (or now) · tick = quoted due · hatched = days past due, red only beyond ${fmtInt(CRITICAL_LATE_D)} d · shops by worst delay${now != null ? ` · now ${fmtWeek(Math.floor(now / HPW))}` : ''}`,
     provenance: prov(r.meta), source: 'rotables.json → repair_queue',
@@ -436,6 +438,7 @@ function renderTatDist(host, r) {
   if (!dists.length) return null;
   const slow = dists.slice().sort((a, b) => (b.mean_d / b.quoted_mean_d) - (a.mean_d / a.quoted_mean_d))[0];
   const f = chartFrame(host, {
+      implication: 'Shop turnaround runs longer than quoted, so float sized on quotes comes up short.',
     headline: `${shopLabel(slow.shop)} averages ${fmtDays(slow.mean_d)} against ${fmtDays(slow.quoted_mean_d)} quoted; one in ten takes over ${fmtDays(slow.p90_d)}`,
     subtitle: `Share of completed ROs by shop TAT · ${slow.bin_width_d}-day bins · solid = actual mean, dashed = quoted · ${dists.map((d) => `${shopLabel(d.shop)} n=${fmtInt(d.n)}`).join(' · ')}`,
     provenance: prov(dists[0], prov(r.meta)), source: 'rotables.json → tat_distribution',
@@ -483,6 +486,7 @@ function renderTat(host, r) {
     ? `${fmtInt(late.length)} of ${fmtInt(rows.length)} PN–shop pairs run slower than quoted${worst ? `; ${worst.pn} is ${fmtDays(worst.actual_mean_d - worst.quoted_d)} over` : ''}`
     : 'TAT comparison not run';
   const f = chartFrame(host, {
+      implication: 'Plan on measured turnaround, not the quote, for the shops that run late.',
     headline,
     subtitle: `Quoted vs actual mean TAT (whisker to p90), one dot per PN × shop · ${byShop.map((b) => `${shopLabel(b.shop)} median ${fmtNum(b.ratio, 2)}×`).join(' · ')}`,
     provenance: prov(r.tat?.[0], prov(r.meta)), source: 'rotables.json → tat',
@@ -628,7 +632,7 @@ function renderFloatCalc(host, r, method, ctx) {
   host.append(h('div', { class: 'fc-basis-row' }, h('span', { class: 'fc-label' }, 'Compare at'), basisSeg), h('div', { class: 'fc-lever-controls' }, lN.el, lD.el), leverBox, verdict, assume);
   host.append(h('p', { class: 'rr-method-note mt-2' }, 'Palm’s theorem: with Poisson removals at rate λ and any repair-time distribution of mean T, the number of units in the pipeline is Poisson(λT). Availability = P(X < S); EBO = E[max(X − S, 0)]; expected wait = EBO / λ. Single site, infinite repair capacity, no condemnation — hence “METRIC-inspired”, not a full multi-echelon METRIC.'));
 
-  const frame = chartFrame(chartHost, { headline: 'Float calculator', subtitle: 'Units in the repair pipeline', provenance: 'DERIVED', source: 'lib/floatcalc.js (mirrors src/gnm/policy/analytic.py)' });
+  const frame = chartFrame(chartHost, { implication: 'Pooled availability flatters: the station\'s own units decide whether an aircraft waits.', headline: 'Float calculator', subtitle: 'Units in the repair pipeline', provenance: 'DERIVED', source: 'lib/floatcalc.js (mirrors src/gnm/policy/analytic.py)' });
   frame.root.dataset.story = 'float-pipeline';
 
   const state = { rate: null, tat: null, spares: null, cost: null, extra: 1, cut: 10 };
@@ -839,6 +843,7 @@ function renderPalmVsSim(host, r, hubId) {
     ? `Palm predicts ${fmtPct(hp)} fill at the hub; the simulation delivers ${fmtPct(hs)}`
     : `Palm predicts ${fmtPct(wavg(rows, 'palm'))} fill; the simulation delivers ${fmtPct(wavg(rows, 'sim'))}`;
   const f = chartFrame(host, {
+      implication: 'The simple formula is a good first estimate; the simulation shows where pooling and transport bite.',
     headline,
     subtitle: `Request-weighted${pol ? `, ${pol} floats` : ''}${out.length && hub.length ? ` · outstations ${fmtPct(wavg(out, 'palm'))} Palm vs ${fmtPct(wavg(out, 'sim'))} sim` : ''} · one dot per rotable × station, size = requests · ${meta.split || r.palm_vs_sim_split || 'selection'} seeds${meta.n_seeds ? ` (${meta.n_seeds})` : ''}`,
     provenance: 'SIMULATED', source: 'rotables.json → palm_vs_sim',

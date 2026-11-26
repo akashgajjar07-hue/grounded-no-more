@@ -222,3 +222,6 @@
 }
 /* scatter key: each swatch stays on the line of its label */
 .pi-key-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.pi-foot { flex-direction: column; align-items: flex-start; }
+.pi-brake-note { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: var(--fs-13); line-height: 1.5; color: var(--text-muted); }
+.pi-brake-note .icon { flex: none; width: 14px; height: 14px; margin-top: 3px; color: var(--text-faint); }

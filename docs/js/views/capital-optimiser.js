@@ -148,11 +148,13 @@ export async function render(el, ctx) {
   el.append(h('div', { class: 'grid-12 mt-3 co-hero-grid' }, mainCol, side));
   const recVsP2 = rec?.dBaseAog;
   const headline = rec && P2 && P0
-    ? fitHeadline(`${rec.id} holds material AOG to ${fmtHours(rec.aog)} a year, ${fmtHours(Math.abs(P2.aog - rec.aog))} ${rec.aog <= P2.aog ? 'below' : 'above'} ${baseId} for ${capWords(rec.cap - P2.cap)}`,
-      `${rec.id}: ${fmtHours(rec.aog)} AOG a year, ${fmtHours(Math.abs(P2.aog - rec.aog))} ${rec.aog <= P2.aog ? 'below' : 'above'} ${baseId}, ${capWords(rec.cap - P2.cap)}`)
+    // v2 framing: P2 is the core result; the rule's pick is a frontier option for additional capital
+    ? fitHeadline(`If you invest ${fmtAED(rec.cap - P2.cap)} more than ${baseId}, ${rec.id} removes a further ${fmtHours(Math.abs(P2.aog - rec.aog))} of AOG a year`,
+      `${fmtAED(rec.cap - P2.cap)} more than ${baseId} buys ${rec.id}: ${fmtHours(Math.abs(P2.aog - rec.aog))} less AOG a year`)
     : 'Frontier: capital versus material AOG hours';
   const tableRows = pts.slice().sort((a, b) => a.cap - b.cap).map((p) => ({ id: p.id, kind: KIND_LABEL[p.kind] || p.kind, cap: p.cap, aog: p.aog, lo: p.ci[0], hi: p.ci[1], sel: p.sel?.aog ?? null, front: front.includes(p) ? 'yes' : 'no' }));
   const frame = chartFrame(chartCard, {
+      implication: 'P2 is the efficient base; extra capital buys smaller downtime cuts, so a stopping rule decides how far to go.',
     headline,
     subtitle: `Spare capital (AED, simulated) vs expected material AOG h/yr (log scale) · ${seedsTxt} · central variant · mean and 95% CI`,
     provenance: prov, source: 'frontier.json',
@@ -438,6 +440,7 @@ export async function render(el, ctx) {
     const val = (r, k) => (k === 'other' ? r.other : r.c[k] || 0);
     const r0 = rows[0], rl = rows.at(-1);
     const fr = chartFrame(host, {
+      implication: 'Downtime penalties dominate the legacy cost; holding cost is the price of positioning stock.',
       headline: r0.c.aog_penalty != null && rl.c.aog_penalty != null
         ? fitHeadline(`The AOG penalty is ${fmtNum((r0.c.aog_penalty / r0.total) * 100, 0)}% of ${r0.p.id}'s annual cost; ${rl.p.id} cuts it from ${fmtAED(r0.c.aog_penalty)} to ${fmtAED(rl.c.aog_penalty)}`,
           `${rl.p.id} cuts the annual AOG penalty from ${fmtAED(r0.c.aog_penalty)} (${r0.p.id}) to ${fmtAED(rl.c.aog_penalty)}`)
@@ -496,6 +499,7 @@ export async function render(el, ctx) {
     const all = rows.flatMap((r) => r.settings);
     const minLo = d3.min(all, (s) => num(s.ci?.[0]) ?? s.v), vMin = d3.min(all, (s) => s.v), vMax = d3.max(all, (s) => s.v);
     const fr = chartFrame(host, {
+      implication: 'The case for extra capital depends on the downtime rate and repair speed: treat it as conditional, not universal.',
       headline: minLo > 0
         ? fitHeadline(`${rec.id} beats ${baseId} at every one-at-a-time setting: ${fmtAED(vMin)} to ${fmtAED(vMax)} a year net`, `${rec.id} beats ${baseId} at every one-at-a-time setting`)
         : fitHeadline(`${rec.id}'s advantage over ${baseId} is not robust everywhere: the lowest bound reaches ${fmtAED(minLo)} a year`, `${rec.id}'s edge over ${baseId} is not robust: the lowest bound reaches ${fmtAED(minLo)} a year`),
@@ -555,6 +559,7 @@ export async function render(el, ctx) {
     const top = cmp.sort((a, b) => b.red - a.red).slice(0, 8);
     const levPt = pts.find((p) => p.kind === 'lever');
     const fr = chartFrame(host, {
+      implication: 'Buying a spare is usually cheaper per downtime hour than paying for faster repair.',
       headline: buyWins >= tatWins
         ? fitHeadline(`Buying a spare is the cheaper way to avoid an AOG hour on ${fmtInt(buyWins)} of ${fmtInt(both)} rotable PNs; cutting repair TAT wins on ${fmtInt(tatWins)}`, `A spare is the cheaper lever on ${fmtInt(buyWins)} of ${fmtInt(both)} rotable PNs; cutting repair TAT wins on ${fmtInt(tatWins)}`)
         : fitHeadline(`Cutting repair TAT is the cheaper way to avoid an AOG hour on ${fmtInt(tatWins)} of ${fmtInt(both)} rotable PNs; a spare wins on ${fmtInt(buyWins)}`, `Cutting TAT is the cheaper lever on ${fmtInt(tatWins)} of ${fmtInt(both)} rotable PNs; a spare wins on ${fmtInt(buyWins)}`),

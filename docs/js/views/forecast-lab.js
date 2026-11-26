@@ -87,6 +87,7 @@ export async function render(el, ctx) {
     const zs = all.map((x) => x.s.zeroShare).sort((a, b) => a - b);
     const med = zs.length ? zs[Math.floor(zs.length / 2)] : null;
     const f = chartFrame(host, {
+      implication: 'Most parts demand rarely, so forecast accuracy alone cannot drive stocking decisions.',
       headline: med != null ? `The median part number sees no demand in ${fmtPct(med, 0)} of training weeks` : 'Weekly demand history',
       subtitle: `Units per week · ${fmtWeek(0)}–${fmtWeek(lastWeek)} · three representative PNs per demand class (20th / 50th / 80th percentile of demand weeks) · shaded = selection weeks ${fmtWeek(selStart)}–${fmtWeek(lastWeek)} · simulated`,
       provenance: DH.meta?.provenance || 'SIMULATED', source: 'demand_history.json, parts.json', story: 'forecast-demand-strip',
@@ -150,6 +151,7 @@ export async function render(el, ctx) {
       headline = rank === 1 ? fit(`On the holdout the frozen champion ${mName(champRow.method)} is still best for ${dcLabel(dc)} ${PC_NAME[pc]}`, `On the holdout the frozen champion ${mName(champRow.method)} is still best`) : fit(`On the holdout the frozen champion ${mName(champRow.method)} ranks ${rank} of ${eligible.length}; ${mName(best.method)} would have won`, `On the holdout the frozen champion ${mName(champRow.method)} ranks ${rank} of ${eligible.length}`);
     } else headline = fit(`${mName(best.method)} has the lowest eligible MASE for ${dcLabel(dc)} ${PC_NAME[pc]} (${fmtNum(best.mase)})`, `${mName(best.method)} has the lowest eligible MASE (${fmtNum(best.mase)})`);
     const f = chartFrame(boardCard, {
+      implication: 'No method wins everywhere: size stock on rates that hold up, not on the error league table.',
       headline,
       subtitle: `MASE, mean over parts with 95% bootstrap CI · ${winLabel} · ${n != null ? `${fmtInt(n)} PNs in cell` : 'cell size not exported'} · lower is better · dashed = naive scale (1.0)`,
       provenance: fprov, source: 'forecast.json (leaderboard)',
@@ -227,6 +229,7 @@ export async function render(el, ctx) {
       const held = rows.filter((r) => r.champion_rank === 1).length;
       const worst = rows.slice().sort((a, b) => b.champion_rank / b.n_methods - a.champion_rank / a.n_methods || b.n_parts - a.n_parts)[0];
       const f = chartFrame(host, {
+      implication: 'Frozen champions rarely stay best out of sample, so plans must carry forecast uncertainty.',
         headline: `${held * 2 < rows.length ? 'Only ' : ''}${fmtInt(held)} of ${fmtInt(rows.length)} frozen champions stayed best when re-scored on the holdout`,
         subtitle: `Holdout rank of each frozen champion among eligible methods (1 = best) · MASE${winText(holdWin) ? ` · ${winText(holdWin)}` : ''} · cells sized by PNs · champions were frozen before the holdout was scored`,
         provenance: fprov, source: 'forecast.json (champion_check)', story: 'forecast-holdout-check',
@@ -285,6 +288,7 @@ export async function render(el, ctx) {
       const rop = L.reorder_point ?? (sl != null ? rows.find((r) => r.cdf >= sl - 1e-9)?.q ?? rows.at(-1).q : null);
       const mean = L.mean ?? rows.reduce((s2, r) => s2 + r.q * r.p, 0);
       const f = chartFrame(frameHost, {
+      implication: 'Stocking to the service-level quantile still leaves a tail; that shortfall chance is the planning risk.',
         // C8 (wave 4): this is the service-level QUANTILE; the plans position a cost-based number (note under the chart)
         headline: rop != null ? fitN(HALF, `${L.pn}'s ${fmtPct(sl, 0)} service-level quantile${L.station ? ` at ${L.station}` : ''} is ${fmtInt(rop)} units`, `${L.pn}: ${fmtPct(sl, 0)} service-level quantile ${fmtInt(rop)} units`, `Covering ${fmtPct(sl, 0)} of lead times at ${L.station || 'the hub'} takes ${fmtInt(rop)} units of ${L.pn} (mean demand ${fmtNum(mean, 1)})`, `${fmtPct(sl, 0)} service-level quantile: ${fmtInt(rop)} units (mean demand ${fmtNum(mean, 1)})`) : `${L.pn}: expected lead-time demand ${fmtNum(mean, 1)} units`,
         subtitle: `P(demand = q) over ${L.lead_time_days != null ? `${fmtNum(L.lead_time_days, 0)} days` : 'the lead time'} · ${L.dist_kind || 'champion'} · rate from ${mName(L.rate_source || L.champion)}${sl != null ? ` · ${part?.deadline} service target ${fmtPct(sl, 0)} (${slA?.provenance || 'ASSUMED'})` : ' · service level not exported'}`,
@@ -364,6 +368,7 @@ export async function render(el, ctx) {
         if (near && rel.fill_rate > near.fill_rate) headline = fitN(HALF, `Reliability-exposure adds ${fmtPts(rel.fill_rate - near.fill_rate)} of fill over ${mName(near.method)} for ${fmtPct(rel.capital / near.capital - 1, 0)} more capital`, `Reliability adds ${fmtPts(rel.fill_rate - near.fill_rate)} of fill over ${mName(near.method)} for ${fmtPct(rel.capital / near.capital - 1, 0)} more capital`, `Reliability adds ${fmtPts(rel.fill_rate - near.fill_rate)} of fill over ${mNameS(near.method, true)}`);
       }
       const f = chartFrame(frameHost, {
+      implication: 'Judge forecasts by the fill and capital they produce, not by error scores.',
         headline,
         subtitle: `Fill rate vs mean stock value per method · base stock at the deadline-class service target · single-item stand-in simulator over the selection weeks${spc ? ` · ${PC_NAME[spc]}` : ''}`,
         provenance: fprov, source: 'forecast.json (stock_eval) · unlabelled points: other methods (hover or View data)', story: 'forecast-stock-eval',
@@ -443,6 +448,7 @@ export async function render(el, ctx) {
       const setup = Mo.setup || {};
       monCard.append(chips);
       const f = chartFrame(monCard, {
+      implication: 'On public data the same methods rank similarly, so the simulated ranking is not an artefact of the simulator.',
         headline: fit(`On ${fmtInt(info.n_series)} real car-parts series, ${mName(best.method)} is the best eligible method (MASE ${fmtNum(best.mase)})`, `${mName(best.method)} is the best eligible method on real car-parts data (MASE ${fmtNum(best.mase)})`),
         subtitle: `MASE (m = ${setup.mase_seasonality ?? 1}) · mean and 95% CI over series · ${setup.frequency || 'monthly'}, last ${setup.horizon ?? '—'} ${setup.frequency === 'monthly' ? 'months' : 'periods'} held out · ${fmtInt(info.n_mase_undefined)} series with zero training scale excluded`,
         provenance: 'DERIVED', source: `${Mo.dataset || 'Monash Car Parts'} · Zenodo v${Mo.zenodo_version ?? '—'} · downloaded ${Mo.download_date || '—'}`,
@@ -488,6 +494,7 @@ export async function render(el, ctx) {
     } else {
       const main = TR.find((t) => t.vendor_quoted != null && /mtbur/i.test(t.param)) || TR.find((t) => t.vendor_quoted != null) || TR[0];
       const f = chartFrame(truthCard, {
+      implication: 'History-based reliability beats vendor quotes: update planning parameters from your own removals.',
         headline: main.vendor_quoted != null ? fitN(HALF, `Fitting ${String(main.param).split(' (')[0]} to removals cuts its error from ${fmtE(main, main.vendor_quoted)} to ${fmtE(main, main.estimated)}`, `Estimating ${main.param} from removals cuts the error from ${fmtE(main, main.vendor_quoted)} (vendor-quoted) to ${fmtE(main, main.estimated)}`, `Fitting ${main.param} to removals cuts its error from ${fmtE(main, main.vendor_quoted)} to ${fmtE(main, main.estimated)}`, `Fitting ${String(main.param).split(' (')[0]} to removals cuts its error from ${fmtE(main, main.vendor_quoted)} to ${fmtE(main, main.estimated)}`) : `${main.param}: estimate error ${fmtE(main, main.estimated)}`,
         subtitle: `${main.metric || 'error'} against the simulator's hidden truth, estimated vs vendor-quoted · lower is better · estimates use history weeks only`,
         provenance: 'DERIVED', source: 'forecast.json (truth_recovery)', story: 'forecast-truth',

@@ -1,7 +1,7 @@
 {
  "meta": {
-  "generated_at": "2026-11-26T06:28:10Z",
-  "git_sha": "06a6280",
+  "generated_at": "2026-11-26T09:52:02Z",
+  "git_sha": "d93991b",
   "provenance": "DERIVED",
   "source": [
    "gnm.export.build_site_data"
@@ -23,18 +23,18 @@
   "story"
  ],
  "sizes_bytes": {
-  "kpis": 5632,
-  "parts": 112575,
-  "demand_history": 30693,
-  "forecast": 101596,
-  "rotables": 187178,
-  "network": 24099,
-  "frontier": 276221,
-  "policies": 33722,
-  "aog_lab": 189403,
-  "actions": 57708,
-  "method": 87284,
-  "story": 4709
+  "kpis": 9375,
+  "parts": 125715,
+  "demand_history": 30795,
+  "forecast": 109908,
+  "rotables": 167247,
+  "network": 22357,
+  "frontier": 285347,
+  "policies": 37280,
+  "aog_lab": 198096,
+  "actions": 75278,
+  "method": 127924,
+  "story": 4680
  },
- "total_bytes": 1110820
+ "total_bytes": 1194002
 }

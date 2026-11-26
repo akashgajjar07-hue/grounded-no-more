@@ -250,6 +250,40 @@ def ata_names() -> dict:
     return {str(k): v for k, v in cfg()["parts"]["ata_chapters"].items()}
 
 
+def ps1() -> dict:
+    """The narrated PS1 incident: read from aog_lab incidents.json (ps1_incident_id), never hard-coded."""
+    a = jload("outputs/aog_lab/incidents.json")
+    iid = a.get("ps1_incident_id")
+    inc = next((i for i in a["incidents"] if i["id"] == iid), None) or next((i for i in a["incidents"] if i.get("planted") == "PS1"), a["incidents"][0])
+    return {"incident_id": inc["id"], "pn": inc["pn"], "station": inc["station"], "incident": inc}
+
+
+def planted_meta() -> dict:
+    """Planted situations (truth_recovery.json, evaluation-only metadata): {PS1: {pn, station, weeks, note}, ...}."""
+    return jload("outputs/holdout/truth_recovery.json").get("planted", {})
+
+
+@lru_cache(maxsize=None)
+def applicability() -> pd.DataFrame:
+    """Fleet applicability per PN from config/part_catalogue.csv (NB / WB / BOTH, QPA by type), joined on ATA + description."""
+    cat = pd.read_csv(ROOT / "config" / "part_catalogue.csv")
+    pm = hist("part_master")[["pn", "ata", "description"]].copy()
+    cat["ata"] = cat.ata.astype(str).str.zfill(2)
+    pm["ata"] = pm.ata.astype(str).str.zfill(2)
+    m = pm.merge(cat[["ata", "description", "applic", "qty_nb", "qty_wb"]], on=["ata", "description"], how="left")
+    return m.set_index("pn")
+
+
+def brake_note() -> str:
+    """Parts-screen brake disclosure, from outputs/calibration/v2_p0_gap_diagnosis.md (the short '> Brakes:' draft)."""
+    path = OUT / "calibration" / "v2_p0_gap_diagnosis.md"
+    txt = path.read_text() if path.exists() else ""
+    line = next((l[1:].strip() for l in txt.splitlines() if l.startswith("> Brakes:")), "")
+    if not line:
+        return ""
+    return (line.replace("Any brake AOG shown", "Any brake downtime shown").replace("the WB/NB exchange", "the exchange"))
+
+
 def holdout_central() -> dict:
     return jload("outputs/holdout/policy_summary.json")["variants"]["central"]
 
@@ -394,6 +428,85 @@ def _v(unit, x):
     return aed(x) if unit == "AED" else num(x)
 
 
+def _ci(d: dict) -> dict:
+    return {"mean": d["mean"], "ci": [d["ci_lo"], d["ci_hi"]]}
+
+
+def build_headline() -> dict:
+    """The v2 site headline, computed from the outputs (never typed): P2 vs P0 is the core finding; I125 is a frontier
+    option for additional capital; the honest findings stay next to it."""
+    ps = jload("outputs/holdout/policy_summary.json")
+    rid = recommended_id()
+    hub = cfg()["network"]["hub"]
+    out_rot = {}
+    for pid in ["P0", "P1", "P2"]:
+        t = csv(f"outputs/policies/{pid}_stock_params.csv")
+        out_rot[pid] = int(t[(t.part_class == "R") & (t.station != hub)].target_units.sum())
+    pc = ps["variants"]["central"]["paired"]["P2-P0"]
+    worlds = []
+    for v in ["low_stress", "central", "high_stress"]:
+        pr = ps["variants"][v]["paired"].get("P2-P0")
+        if pr:
+            worlds.append({"variant": v, "aog_hours": _ci(pr["aog_hours"]), "capital_aed": _ci(pr["spare_capital_aed"]),
+                           "significant": bool(pr["aog_hours"]["ci_hi"] < 0)})
+    pen = {k.replace("total_cost_pen_", ""): _ci(pc[k]) for k in ["total_cost_pen_x0.5", "total_cost_pen_x1", "total_cost_pen_x2"] if k in pc}
+    fh = frontier_holdout()
+    r = fh.loc[rid]
+    summ = jload("outputs/frontier/summary.json")
+    tor = csv("outputs/frontier/tornado.csv").set_index(["factor", "setting"])
+    def tor_row(f, st):
+        try:
+            x = tor.loc[(f, st)]
+        except KeyError:
+            return None
+        return {"net_benefit_aed": {"mean": x.net_benefit_mean, "ci": [x.net_benefit_lo, x.net_benefit_hi]},
+                "aog_reduction": {"mean": x.aog_reduction_mean, "ci": [x.aog_reduction_lo, x.aog_reduction_hi]},
+                "net_benefit_significant": bool(x.net_benefit_lo > 0)}
+    pp = jload("outputs/holdout/postplan_i125_stress.json")
+    post = []
+    for w, rows in pp.get("worlds", {}).items():
+        row = next((q for q in rows if q["id"] == rid), None)
+        if row:
+            post.append({"variant": w, "aog_hours": {"mean": row["d_aog_hours_vs_base_mean"], "ci": [row["d_aog_hours_vs_base_lo"], row["d_aog_hours_vs_base_hi"]]},
+                         "total_cost_aed": {"mean": row["d_total_cost_vs_base_mean"], "ci": [row["d_total_cost_vs_base_lo"], row["d_total_cost_vs_base_hi"]]},
+                         "capital_aed": row["d_capital_vs_base_mean"]})
+    chk = csv("outputs/holdout/forecast_champion_check.csv")
+    sba = chk[(chk.demand_class == "intermittent") & (chk.part_class == "R")]
+    tr = jload("outputs/holdout/truth_recovery.json")["reliability"]["all"]
+    p1 = ps["variants"]["central"]["paired"]["P1-P0"]["immediate_fill_rate"]
+    off = tor_row("aog_desk_expedite", "off")
+    offx = tor.loc[("aog_desk_expedite", "off")] if off else None
+    return {
+        "core": {"id": "P2", "vs": "P0", "label": "network positioning",
+                 "baseline_label": f"a legacy OEM-quote policy holding only {out_rot['P0']} outstation rotables",
+                 "outstation_rotables": out_rot,
+                 "aog_reduction": {"mean": -pc["aog_hours"]["mean"], "ci": [-pc["aog_hours"]["ci_hi"], -pc["aog_hours"]["ci_lo"]]},
+                 "capital_aed": _ci(pc["spare_capital_aed"]), "total_cost_aed": _ci(pc["total_annual_cost_aed"]),
+                 "immediate_fill_pts": {"mean": 100 * pc["immediate_fill_rate"]["mean"], "ci": [100 * pc["immediate_fill_rate"]["ci_lo"], 100 * pc["immediate_fill_rate"]["ci_hi"]]},
+                 "worlds": worlds, "holds_all_worlds": all(w["significant"] for w in worlds) and len(worlds) == 3,
+                 "penalty_range": pen, "holds_penalty_range": all(v["ci"][1] < 0 for v in pen.values()),
+                 "split": "holdout", "variant": "central", "paired": True, "seeds": ps["seeds"]},
+        "frontier_option": {"id": rid, "vs": "P2",
+                            "extra_capital_aed": {"mean": r.d_capital_vs_base_mean, "ci": [r.d_capital_vs_base_lo, r.d_capital_vs_base_hi]},
+                            "aog_reduction": {"mean": -r.d_aog_hours_vs_base_mean, "ci": [-r.d_aog_hours_vs_base_hi, -r.d_aog_hours_vs_base_lo]},
+                            "total_cost_aed": {"mean": r.d_total_cost_vs_base_mean, "ci": [r.d_total_cost_vs_base_lo, r.d_total_cost_vs_base_hi]},
+                            "aog_hours": r.aog_hours_mean, "capital_aed": r.capital_mean,
+                            "rule_shifts": [x for x in summ["recommendation_stability"] if x["recommended"] != rid],
+                            "repair_tat_x0_75": tor_row("repair_tat", "x0.75"),
+                            "postplan_stress": post, "postplan_note": pp.get("note", "post-plan check (D015)")},
+        "honest": {"forecast_champions_best": int((chk.champion_rank == 1).sum()), "forecast_cells": int(len(chk)),
+                   "sba_intermittent_rotables_rank": (int(sba.champion_rank.iloc[0]) if len(sba) and sba.champion.iloc[0] == "sba" else None),
+                   "sba_intermittent_rotables_n_methods": (int(sba.n_methods.iloc[0]) if len(sba) else None),
+                   "mtbur_history_error": tr["estimated_mdale"], "mtbur_quote_error": tr["quoted_mdale"],
+                   "fill_pts_P2_vs_P0": 100 * pc["immediate_fill_rate"]["mean"], "fill_pts_P1_vs_P0": 100 * p1["mean"],
+                   "routes_off": ({"p0_aog_hours": offx.p0_base_aog_hours, "p2_aog_hours": offx.base_aog_hours, "rec_aog_hours": offx.rec_aog_hours,
+                                   "central_p0_aog_hours": tor.loc[("base case", "central")].p0_base_aog_hours,
+                                   "central_p2_aog_hours": tor.loc[("base case", "central")].base_aog_hours} if off else None),
+                   "routes_note": summ.get("aog_desk_dependence", "")},
+        "provenance": "SIMULATED",
+    }
+
+
 def build_kpis() -> dict:
     rid = recommended_id()
     fh = frontier_holdout()
@@ -401,18 +514,19 @@ def build_kpis() -> dict:
     acts = jload("outputs/actions/actions.json")
     kpis, consistency = [], []
     for kid, label, unit, better, col, _ in KPI_DEFS:
-        b, r, p2 = fh.loc[BASELINE], fh.loc[rid], fh.loc[BASE_POLICY]
+        # v2 framing (user decision): the KPI value is the CORE finding P2 vs P0; I125 is a frontier option (frontier_option)
+        b, r, p2 = fh.loc[BASELINE], fh.loc[BASE_POLICY], fh.loc[rid]
         bv, rv = _v(unit, b[f"{col}_mean"]), _v(unit, r[f"{col}_mean"])
-        sel_b, sel_r = fs.loc[BASELINE], fs.loc[rid]
+        sel_b, sel_r = fs.loc[BASELINE], fs.loc[BASE_POLICY]
         k = {
             "id": kid, "label": label, "value": rv, "unit": unit, "baseline": bv, "recommended": rv,
             "delta": (aed(r[f"{col}_mean"] - b[f"{col}_mean"]) if unit == "AED" else num(r[f"{col}_mean"] - b[f"{col}_mean"])),
             "better": better, "provenance": "SIMULATED",
             "ci": [_v(unit, r[f"{col}_lo"]), _v(unit, r[f"{col}_hi"])],
             "baseline_ci": [_v(unit, b[f"{col}_lo"]), _v(unit, b[f"{col}_hi"])],
-            "reference": {"id": BASE_POLICY, "value": _v(unit, p2[f"{col}_mean"]),
-                          "ci": [_v(unit, p2[f"{col}_lo"]), _v(unit, p2[f"{col}_hi"])]},
-            "baseline_id": BASELINE, "recommended_id": rid, "split": "holdout", "n_seeds": int(r.n_seeds),
+            "reference": {"id": rid, "value": _v(unit, p2[f"{col}_mean"]),
+                          "ci": [_v(unit, p2[f"{col}_lo"]), _v(unit, p2[f"{col}_hi"])], "role": "frontier option"},
+            "baseline_id": BASELINE, "core_id": BASE_POLICY, "recommended_id": rid, "split": "holdout", "n_seeds": int(r.n_seeds),
             "selection": {"baseline": _v(unit, sel_b[f"{col}_mean"]), "recommended": _v(unit, sel_r[f"{col}_mean"]),
                           "ci": [_v(unit, sel_r[f"{col}_lo"]), _v(unit, sel_r[f"{col}_hi"])]},
         }
@@ -432,13 +546,15 @@ def build_kpis() -> dict:
     return {
         "meta": meta("SIMULATED", ["outputs/holdout/frontier_points.csv", "outputs/frontier/summary.json",
                                    "outputs/frontier/selection_points.csv", "outputs/actions/actions.json"],
-                     f"Mission Control KPIs. value = recommended plan {rid} (flagged in outputs/frontier/summary.json), "
-                     f"baseline = {BASELINE} legacy rules, reference = {BASE_POLICY}; holdout seeds 1000-1019, central variant, "
+                     f"Mission Control KPIs (v2). value = {BASE_POLICY} network positioning, the CORE finding; baseline = {BASELINE} "
+                     f"legacy OEM-quote provisioning; reference = {rid}, the frontier option for additional capital (the rule's pick); "
+                     "headline = the computed site headline (core / frontier_option / honest). Holdout seeds 2000-2019, central variant, "
                      "KPI weeks 104-155 annualised; ci = 95% t-interval over 20 seeds. 'selection' repeats the same numbers on "
                      "selection seeds 100-119. No 'spark' field: there is no genuine time series for these KPIs, so none is "
                      "exported (UI must handle a missing spark). open_exceptions is DERIVED from history week 103.",
                      provenance_by_key={"seeds": "ASSUMED", "kpi_weeks": "ASSUMED"}),
-        "split": "holdout", "recommended_id": rid, "baseline_id": BASELINE, "reference_id": BASE_POLICY,
+        "split": "holdout", "recommended_id": rid, "core_id": BASE_POLICY, "baseline_id": BASELINE, "reference_id": rid,
+        "headline": build_headline(),
         "seeds": jload("outputs/holdout/policy_summary.json")["seeds"], "kpi_weeks": [104, 155],
         "kpis": kpis, "consistency": consistency,
     }
@@ -446,7 +562,7 @@ def build_kpis() -> dict:
 
 POLICY_METRICS = ["immediate_fill_rate", "aog_hours", "aog_events", "backorder_unit_hours", "spare_capital_aed",
                   "total_annual_cost_aed", "holding_cost_aed", "repair_cost_aed", "logistics_cost_aed",
-                  "expedite_cost_aed", "aog_penalty_aed", "purchase_spend_aed",
+                  "expedite_cost_aed", "aog_penalty_aed", "aog_event_cost_aed", "aog_hourly_penalty_aed", "purchase_spend_aed",
                   "total_cost_pen_x0.5", "total_cost_pen_x1", "total_cost_pen_x2"]
 FRONTIER_TO_POLICY = {"fill_rate": "immediate_fill_rate", "aog_hours": "aog_hours", "aog_events": "aog_events",
                       "capital": "spare_capital_aed", "total_cost": "total_annual_cost_aed",
@@ -502,7 +618,7 @@ def build_policies() -> dict:
     return {
         "meta": meta("SIMULATED", ["outputs/holdout/policy_summary.json", "outputs/holdout/frontier_points.csv",
                                    "outputs/policies/selection_summary.json", "outputs/policies/policies.json"],
-                     "Holdout seeds 1000-1019, central variant (headline). Means with 95% paired-t CIs over 20 seeds; "
+                     "Holdout seeds 2000-2019, central variant (headline). Means with 95% paired-t CIs over 20 seeds; "
                      "KPI weeks 104-155 annualised; money in AED; total annual cost = holding + repair + logistics + "
                      "expedite + AOG penalty (capital excluded). The recommended plan I125 is a frontier candidate "
                      "evaluated by the frozen frontier holdout run (frontier_points.csv), so it carries fewer metrics. "
@@ -558,12 +674,17 @@ def build_parts() -> dict:
                                                   "severity": a["severity"], "station": a["station"]})
     piv = {pid: st.pivot(index="pn", columns="station", values=pid).reindex(columns=stations()) for pid in ["P0", "P2", rid]}
     parts = []
+    app = applicability()
     for pn in pm.index:
         p, a, r = pm.loc[pn], attrs.loc[pn], risk.loc[pn]
         sbs = {s: int(piv[rid].at[pn, s]) for s in stations()}
         parts.append({
             "pn": pn, "desc": p.description, "ata": str(p.ata), "ata_name": ata_names().get(str(p.ata), ""),
             "cls": p.part_class, "deadline": p.deadline_class,
+            "removal_mode": (None if pd.isna(p.get("removal_mode")) else str(p.removal_mode)), "family": (None if pd.isna(p.get("family")) else str(p.family)),
+            "applicability": (None if pd.isna(app.at[pn, "applic"]) else str(app.at[pn, "applic"])) if pn in app.index else None,
+            "qpa_nb": (int(app.at[pn, "qty_nb"]) if pn in app.index and not pd.isna(app.at[pn, "qty_nb"]) else None),
+            "qpa_wb": (int(app.at[pn, "qty_wb"]) if pn in app.index and not pd.isna(app.at[pn, "qty_wb"]) else None),
             "demand_class": a.demand_class, "adi": num(a.adi), "cv2": num(a.cv2), "abc": a.abc,
             "annual_usage_qty": num(a.annual_usage_qty), "annual_usage_value_aed": num(a.annual_usage_value_aed),
             "stock_total": int(sum(sbs.values())), "stock_by_station": sbs,
@@ -638,6 +759,7 @@ def build_parts() -> dict:
         "risk_bands_h": {"urgent": RISK_URGENT_H, "review": RISK_REVIEW_H},
         "system_risk_bands_share": {"urgent": SYS_URGENT_SHARE, "review": SYS_REVIEW_SHARE},
         "aog_metric_labels": AOG_METRIC_LABELS, "aog_lookback_weeks": AOG_LOOKBACK_WEEKS,
+        "brake_note": brake_note(), "applicability_source": "config/part_catalogue.csv (applic: NB / WB / BOTH)",
         "parts": parts, "ata_systems": systems,
     }
 
@@ -745,8 +867,9 @@ def build_forecast() -> dict:
                 "basis": ("rotable: pipeline demand over the repair pipeline (reliability-exposure rate x pipeline days)"
                           if r.part_class == "R" else "lead-time demand over the estimated purchase lead time")}
     hubc = ff[(ff.station == "AUH") & (ff.part_class == "C") & (ff.dist_kind == "nbinom")]
-    cons_pn = "GN-21-C010" if "GN-21-C010" in set(hubc.pn) else hubc.sort_values("ltd_mean").pn.iloc[len(hubc) // 2]
-    ex_r, ex_c = ltd("GN-32-R014", "BOM"), ltd(cons_pn, "AUH")
+    cons_pn = hubc.sort_values("ltd_mean").pn.iloc[len(hubc) // 2]   # the median-demand hub consumable (no hard-coded PN)
+    _p1 = ps1()
+    ex_r, ex_c = ltd(_p1["pn"], _p1["station"]), ltd(cons_pn, "AUH")
     rvc = csv("outputs/forecasting/reliability_vs_croston.csv")
     rel_vs = tag([{"part_class": r["part_class"], "reliability_mase": r["reliability_mase"],
                    "reliability_ci": _ci_pair(r["reliability_ci"]), "best_croston_family": r["best_croston_family"],
@@ -794,6 +917,10 @@ def build_forecast() -> dict:
 def build_rotables() -> dict:
     rid = recommended_id()
     sc = hist("serialised_components").sort_values(["serial", "since_h"])
+    n_loan = int((~sc.owned.astype(bool)).groupby(sc.serial).any().sum()) if "owned" in sc else 0
+    # v2: borrowed exchange/loan units (owned = False) are not the airline's float; the lifecycle shows owned serials only
+    if "owned" in sc:
+        sc = sc[sc.owned.astype(bool)]
     nxt = sc.groupby("serial").state.shift(-1)
     flows = (pd.DataFrame({"from": sc.state, "to": nxt}).dropna().value_counts().rename("count").reset_index())
     last = sc.groupby("serial").tail(1)
@@ -806,6 +933,13 @@ def build_rotables() -> dict:
     recent = ro[ro.return_h.notna() & (ro.return_h >= AS_OF_H - 8 * HOURS_PER_WEEK)].copy()
     q = pd.concat([open_, recent])
     q["overdue"] = q.return_h.isna() & (q.quoted_due_h < AS_OF_H)
+    # PS2 = the planted shop-TAT situation: the first RO of the PS2 PN removed inside its planted week window (truth metadata)
+    pm2 = planted_meta().get("PS2", {})
+    ps2_ro = None
+    if pm2.get("pn") and isinstance(pm2.get("weeks"), list):
+        w0, w1 = pm2["weeks"]
+        cand = ro[(ro.pn == pm2["pn"]) & (ro.removed_h >= w0 * HOURS_PER_WEEK) & (ro.removed_h < (w1 + 1) * HOURS_PER_WEEK)].sort_values("removed_h")
+        ps2_ro = int(cand.ro_id.iloc[0]) if len(cand) else None
     queue = []
     for r in q.sort_values(["overdue", "quoted_due_h"], ascending=[False, True]).itertuples():
         is_open = pd.isna(r.return_h)
@@ -816,7 +950,7 @@ def build_rotables() -> dict:
                       "return_h": None if is_open else int(r.return_h),
                       "status": "open" if is_open else ("condemned" if bool(r.condemned) else "returned"),
                       "overdue": bool(r.overdue), "weeks_late": round(max(late_h, 0) / HOURS_PER_WEEK, 1),
-                      "planted": "PS2" if int(r.ro_id) == 1564 else (planted.get(r.pn) if r.pn in planted else None),
+                      "planted": "PS2" if int(r.ro_id) == ps2_ro else (planted.get(r.pn) if r.pn in planted and planted.get(r.pn) != "PS2" else None),
                       "provenance": "SIMULATED"})
     # TAT: completed, non-condemned ROs for real removals (exclude units seeded at t0)
     done = ro[ro.return_h.notna() & ~ro.condemned.astype(bool) & ro.removal_id.notna()].copy()
@@ -849,7 +983,8 @@ def build_rotables() -> dict:
     from gnm.policy.analytic import float_calc
     outs_ff = ff[(ff.station != "AUH") & (ff.part_class == "R")]
     st_idx = st.set_index(["pn", "station"])
-    inc_st = {i["pn"]: i["station"] for i in jload("outputs/aog_lab/incidents.json")["incidents"] if i["id"] == "AOG-0001"}
+    _p1 = ps1()
+    inc_st = {_p1["pn"]: _p1["station"]}
 
     def station_view(pn):
         g = outs_ff[outs_ff.pn == pn]
@@ -891,18 +1026,18 @@ def build_rotables() -> dict:
                      f"History weeks 0-103 under P0 (SIMULATED). lifecycle.flows = consecutive state transitions per serial; "
                      f"counts = each serial's state at the end of history. repair_queue = ROs open at h {AS_OF_H} (end of "
                      "history; condemned ROs close without a return and are excluded) plus ROs returned in the last 8 weeks; overdue = open and past the quoted due date; PS2 = "
-                     "RO 1564. tat = completed, non-condemned ROs of real removals (units seeded at t0 excluded): shop TAT "
+                     "the first RO of the PS2 PN removed in its planted window (truth metadata). tat = completed, non-condemned ROs of real removals (units seeded at t0 excluded): shop TAT "
                      "= return - shop in; cycle = return - removal. float_examples feed the float calculator: rate_per_30d "
                      "= network reliability-exposure removal rate, pipeline_days = hub effective pipeline (T_eff), units = "
                      f"serviceable base stock (P0/P1/P2/{rid}); loop_units = units the engine seeds in the repair loop "
                      "(palm_vs_sim total_spares - base_stock at AUH), so Palm total spares = units + loop_units. station_view = one "
-                     "outstation's own float (the AOG-0001 station for its PN, else the outstation with the highest removal rate): "
+                     "outstation's own float (the PS1 incident's station for its PN, else the outstation with the highest removal rate): "
                      "its removal rate, effective loop days (T_eff_out), the units P0/P2/the recommended plan place there and "
                      "Palm availability for each (no pooling with the hub). "
                      "palm_vs_sim = P1 floats on selection seeds 100-119 (Palm analytic vs simulated fill; inventory-policy note section 7), DERIVED.",
                      provenance_by_key={"as_of_h": "ASSUMED"}),
         "as_of_h": AS_OF_H, "recommended_id": rid,
-        "lifecycle": {"states": states, "counts": {s: int(counts[s]) for s in states},
+        "lifecycle": {"states": states, "counts": {s: int(counts[s]) for s in states}, "n_loan_serials_excluded": n_loan,
                       "flows": records(flows), "n_serials": int(sc.serial.nunique()), "provenance": "SIMULATED"},
         "repair_queue": queue,
         "repair_summary": {"open": int(len(open_)), "overdue": int(q.overdue.sum()),
@@ -976,8 +1111,8 @@ def build_network() -> dict:
                      "qty": int(g.qty.sum()), "provenance": "SIMULATED"})
     other = tr[tr.from_station != net["hub"]]
     lateral = tag(records(other.groupby(["from_station", "to_station", "kind"]).size().rename("count").reset_index()), "SIMULATED")
-    # transfer replay around PS1 (AOG-0001, GN-32-R014 at BOM)
-    inc = next(i for i in jload("outputs/aog_lab/incidents.json")["incidents"] if i["id"] == "AOG-0001")
+    # transfer replay around the PS1 incident (incidents.json ps1_incident_id)
+    inc = ps1()["incident"]
     tid = next(s["evidence"]["transfer_id"] for s in inc["timeline"] if s["step"] == "shipped")
     t0 = int(inc["need_h"])
     w = [t0 - 72, t0 + 96]
@@ -1018,11 +1153,11 @@ def build_network() -> dict:
                      "risk_vs_outstations = the same AOG h divided by the riskiest OUTSTATION's, outstation_rank (1 = riskiest) and "
                      f"outstation_risk_level (urgent >= {OUT_URGENT_REL:g}, review >= {OUT_REVIEW_REL:g}, ASSUMED bands; an outstation "
                      "with open urgent planner actions is at least review); n_actions / n_urgent_actions = actions.json "
-                     "exceptions at the station. Hub: those fields are null. aog_hours_by_policy and policy_compare = holdout seeds 1000-1019, central, means "
+                     "exceptions at the station. Hub: those fields are null. aog_hours_by_policy and policy_compare = holdout seeds 2000-2019, central, means "
                      "over seeds (from policy_station_kpis.parquet) with 95% CIs from policy_summary.json. The recommended "
                      f"{rid} plan has no per-station holdout breakdown (frontier holdout reports network totals only). "
                      "arcs = history transfers AUH->station by kind; transfer_replay = real history transfers around the "
-                     "PS1 incident AOG-0001 (GN-32-R014 at BOM)."),
+                     f"PS1 incident {inc['id']} ({inc['pn']} at {inc['station']})."),
         "hub": net["hub"], "recommended_id": rid,
         "stations": st_rows, "arcs": arcs, "lateral_flows": lateral,
         "transfer_replay": replay, "policy_compare": compare, "paired_by_station": paired,
@@ -1129,7 +1264,7 @@ def build_frontier() -> dict:
     for v in ["low_stress", "central", "high_stress"]:
         sp = selection_points(v)
         row = {"variant": v}
-        for pid in ["P0", "P1", "P2", rid]:
+        for pid in [x for x in ["P0", "P1", "P2", rid] if x in sp.index]:   # v2 stress worlds evaluate P0 / P2 / I125 only
             row[pid] = {"aog_hours": sp.at[pid, "aog_hours_mean"], "capital_aed": sp.at[pid, "capital_mean"]}
         if v == "central":
             rv = summ["recommended_vs_base_policy"]
@@ -1146,10 +1281,10 @@ def build_frontier() -> dict:
         "meta": meta("SIMULATED", ["outputs/holdout/frontier_points.csv", "outputs/frontier/selection_points.csv",
                                    "outputs/frontier/summary.json", "outputs/frontier/allocations.json",
                                    "outputs/frontier/levers.csv", "outputs/frontier/tornado.csv"],
-                     "points = the 23 frozen candidates on holdout seeds 1000-1019 (central): capital = simulated time-average "
+                     "points = the 25 frozen candidates on holdout seeds 2000-2019 (central): capital = simulated time-average "
                      "spare capital, aog_hours = material AOG h/yr, 95% CIs over seeds. kind: policy (P0/P1/P2) / greedy "
                      "(subkind budget = re-optimised allocation, incremental = P2 + greedy additions) / lever / combo. "
-                     "dominated = computed here from the HOLDOUT means over all 23 points (minimise capital and AOG h); "
+                     "dominated = computed here from the HOLDOUT means over all 25 points (minimise capital and AOG h); "
                      "selection_dominated / selection_on_hull = the optimiser's selection-seed flags. recommended = the "
                      "pre-stated rule applied on SELECTION seeds (summary.json), not re-chosen on holdout. B250 has one "
                      "unstable holdout seed (very wide CI); reported, not removed (D011). allocations = rows vs P2, top "
@@ -1250,6 +1385,26 @@ def parse_test_results(path: Path) -> dict:
             "tail": tail}
 
 
+def v1_archive() -> dict:
+    """The archived v1 headline (archive/v1/README.md), shown on Method as superseded, never as a finding."""
+    path = ROOT / "archive" / "v1" / "README.md"
+    if not path.exists():
+        return {"status": "not found"}
+    txt = path.read_text()
+    rows = []
+    for line in txt.splitlines():
+        m = re.match(r"\|\s*(P0|P1|P2|I125)\b([^|]*)\|\s*([\d,]+)\s*\[([\d,]+)[–-]([\d,]+)\]\s*\|\s*AED ([\d.]+)M\s*\|", line)
+        if m:
+            rows.append({"policy": m.group(1), "label": (m.group(1) + m.group(2)).strip(), "aog_hours": int(m.group(3).replace(",", "")),
+                         "aog_ci": [int(m.group(4).replace(",", "")), int(m.group(5).replace(",", ""))], "capital_aed": float(m.group(6)) * 1e6})
+    reasons = [l[2:].strip() for l in txt.split("## Why it was superseded", 1)[-1].splitlines() if l.startswith("- ")]
+    tag_m = re.search(r"Git tag: `([^`]+)` \(commit ([0-9a-f]+)\)", txt)
+    return {"tag": tag_m.group(1) if tag_m else None, "commit": tag_m.group(2) if tag_m else None, "holdout_seeds": "1000–1019",
+            "headline": rows, "superseded_because": reasons,
+            "note": "v1 overstated P0's AOG and the size of the improvement; these numbers are not findings (archive/v1/README.md).",
+            "provenance": "SIMULATED"}
+
+
 def build_method() -> dict:
     sm = pd.read_csv(ROOT / "data" / "source_manifest.csv")
     src = [{"id": r["source_id"], "name": r["name"], "url": r["url"], "licence": r["licence"],
@@ -1267,8 +1422,9 @@ def build_method() -> dict:
     cal = jload("outputs/calibration/p0_history_summary.json")
     checks = []
     hc = cal["variants"]["central"]["history"]
-    tmap = {"immediate_fill_rate": "immediate_fill_rate", "rotable_immediate_fill_rate": "rotable_immediate_fill_rate",
-            "aog_hours_per_year": "aog_hours_per_year", "aog_events_per_year": "aog_events_per_year"}
+    # v2 band (V2-SIM-CAL): rotable immediate fill, material AOG h/yr, AOG events/yr (only the targets that exist)
+    tmap = {k: k for k in ["immediate_fill_rate", "rotable_immediate_fill_rate", "aog_hours_per_year", "aog_events_per_year"]
+            if k in cal["targets"]}
     calib = []
     for k, tk in tmap.items():
         lo, hi = cal["targets"][tk]
@@ -1287,9 +1443,14 @@ def build_method() -> dict:
     hlog = jload("outputs/freeze/holdout_log.json")
     checks.append({"name": f"Frozen artefacts unchanged since {fman['frozen_at'][:19]}Z ({len(fman['artefacts'])} SHA-256 hashes)",
                    "status": "pass" if freeze_ok else "fail", "group": "freeze"})
-    n_forced = sum(bool(h.get("forced")) for h in hlog)
-    checks.append({"name": f"Holdout runs logged after the freeze: {len(hlog)} ({n_forced} forced re-run, disclosed as D010)",
-                   "status": "pass" if all(h["at"] > fman["frozen_at"] for h in hlog) else "fail", "group": "freeze"})
+    # v2 chain: only the v2 blocks count against the v2 freeze; the v1 entries stay in the log (archived world, D014)
+    hlog_v2 = [h for h in hlog if str(h.get("run", "")).startswith("v2_")]
+    hlog_v1 = [h for h in hlog if not str(h.get("run", "")).startswith("v2_")]
+    n_forced = sum(bool(h.get("forced")) for h in hlog_v2)
+    main_v2 = [h for h in hlog_v2 if "postplan" not in h["run"]]
+    post_v2 = [h for h in hlog_v2 if "postplan" in h["run"]]
+    checks.append({"name": f"v2 holdout blocks logged after the v2 freeze: {len(main_v2)} main + {len(post_v2)} post-plan (D015), {n_forced} forced",
+                   "status": "pass" if hlog_v2 and all(h["at"] > fman["frozen_at"] for h in hlog_v2) else "fail", "group": "freeze"})
     aog = jload("outputs/aog_lab/summary.json")
     checks.append({"name": f"AOG incident reconstruction reconciles to aog_events ({fmt_int(aog['aog_hours_reconstructed'])} of {fmt_int(aog['aog_hours_total'])} h)",
                    "status": "pass" if aog["reconciles"] else "fail", "group": "reconciliation"})
@@ -1321,7 +1482,7 @@ def build_method() -> dict:
     dec_path = ROOT / "docs" / "DECISIONS.md"
     if dec_path.exists():
         for line in dec_path.read_text().splitlines():
-            m = re.match(r"\|\s*(D010|D011)\s*\|[^|]*\|\s*(.+?)\s*\|", line)
+            m = re.match(r"\|\s*(D010|D011|D012|D013|D014|D015|V2-SIM-CAL|V2-OPT-4)\s*\|[^|]*\|\s*(.+?)\s*\|", line)
             if m:
                 decisions[m.group(1)] = re.sub(r"\*\*", "", m.group(2))
     return {
@@ -1338,8 +1499,11 @@ def build_method() -> dict:
         "calibration": {"targets_vs_achieved": calib, "policy": cal.get("policy", "P0 only"), "provenance": "SIMULATED"},
         "freeze": {"frozen_at": fman["frozen_at"], "note": fman.get("note", ""),
                    "artefacts": [{"path": k, "sha256": v} for k, v in fman["artefacts"].items()],
-                   "holdout_log": hlog, "forced_rerun_note": decisions.get("D010", ""),
-                   "reporting_note": decisions.get("D011", ""), "verified": freeze_ok, "provenance": "DERIVED"},
+                   "holdout_log": hlog_v2, "holdout_log_v1": hlog_v1, "forced_rerun_note": decisions.get("D010", ""),
+                   "reporting_note": decisions.get("D011", ""), "verified": freeze_ok,
+                   "chain": [{"id": d, "text": decisions[d]} for d in ["V2-SIM-CAL", "D013", "D014", "D015"] if d in decisions],
+                   "provenance": "DERIVED"},
+        "v1_archive": v1_archive(),
         "licences": lic_rows,
         "limitations": lim,
     }
@@ -1350,7 +1514,7 @@ def build_method() -> dict:
 
 
 def build_story(data: dict) -> dict:
-    """Story-mode steps. The narrated part is the planted PS1 part (fallback GN-32-R014) and its station is that
+    """Story-mode steps. The narrated part is the planted PS1 part (incidents.json ps1_incident_id) and its station is that
     part's first replayed AOG incident; every number is read from the exported files or the history.
     Selectors are tight targets (wave-2 design review #10): the KPI row, the whole aircraft drawing, the selected
     PN's demand strip, ... so the step card never covers what the step talks about."""
@@ -1358,12 +1522,13 @@ def build_story(data: dict) -> dict:
     rid = data["kpis"]["recommended_id"]
     n_seeds = len(data["kpis"].get("seeds") or []) or 20
     parts_ = data["parts"]["parts"]
-    part = next((p for p in parts_ if p.get("planted") == "PS1"), None) or next(p for p in parts_ if p["pn"] == "GN-32-R014")
+    _p1 = ps1()
+    part = next((p for p in parts_ if p.get("planted") == "PS1"), None) or next(p for p in parts_ if p["pn"] == _p1["pn"])
     pn, ata = part["pn"], part["ata"]
-    noun = part["desc"].lower()
+    noun = re.sub(r"\((nb|wb)\)", lambda m: f"({m.group(1).upper()})", part["desc"].lower())   # keep NB / WB type tags
     sys_ = next(s for s in data["parts"]["ata_systems"] if s["ata"] == ata)
     incs = data["aog_lab"]["incidents"]
-    inc = next((i for i in incs if i["pn"] == pn), None) or next(i for i in incs if i["id"] == "AOG-0001")
+    inc = next((i for i in incs if i["id"] == _p1["incident_id"]), None) or next(i for i in incs if i["pn"] == pn)
     st = inc["station"]
     mr = hist("material_requests")
     at_st = mr[(mr.pn == pn) & (mr.station == st)]
@@ -1432,10 +1597,12 @@ def build_story(data: dict) -> dict:
              + (f"adds {d_u} unit{'s' if d_u != 1 else ''} here ({u_rec} vs {u_p2})" if d_u > 0 else f"keeps P2's {u_rec} units here")
              + f" and holds network AOG to {fmt_int(pts[rid]['aog_hours'])} h/yr."
              + (f" Each emergency hop from AUH takes {fmt_int(arc['aog_transport_h'])} h." if arc else ""))
-    body6 = (f"The pre-stated rule walks the capital-vs-AOG hull until an extra AED 1M saves fewer than "
-             f"{rec['h_star_per_aed_1m']:.1f} AOG h/yr, and stops at {rid}: {fmt_aed_m(pts[rid]['capital_aed'])} and "
-             f"{fmt_int(pts[rid]['aog_hours'])} AOG h/yr on the holdout, against {fmt_int(pts['P2']['aog_hours'])} h for P2 at "
-             f"{fmt_aed_m(pts['P2']['capital_aed'])}.")
+    fo = data["kpis"]["headline"]["frontier_option"]
+    shifts = "; ".join(f"{x['recommended']} at {x['setting'].replace('x', '×')} the hourly rate" for x in fo["rule_shifts"] if x["factor"] == "aog_penalty")
+    body6 = (f"If you invest an additional {fmt_aed(fo['extra_capital_aed']['mean'])}, the pre-stated rule stops at {rid}: a further "
+             f"{fmt_int(fo['aog_reduction']['mean'])} AOG h/yr [{fmt_int(fo['aog_reduction']['ci'][0])}–{fmt_int(fo['aog_reduction']['ci'][1])}] "
+             f"below P2 (paired holdout). It picks {shifts}." if shifts else
+             f"If you invest an additional {fmt_aed(fo['extra_capital_aed']['mean'])}, the rule stops at {rid}.")
     body7 = (f"{inc['id']}: {inc['tail']} (fictional) grounded at {st} for {fmt_int(inc['aog_hours'])} h waiting for a {noun}. "
              f"Ranked on what the desk knew then, the top option was: {inc['decision']['recommended_label']}.")
     body8 = f"The action centre raises {len(acts)} exceptions for W{data['actions']['as_of_week']}, {nurg} urgent."
@@ -1446,14 +1613,15 @@ def build_story(data: dict) -> dict:
     elif act:
         body8 += f" Including: {act['summary']}."
 
-    aog_sel = ('[data-story="aog-incident-ps1"]' if inc["id"] == "AOG-0001" else f'[data-incident="{inc["id"]}"]') + ' [data-story="aog-timeline"]'
+    aog_sel = ('[data-story="aog-incident-ps1"]' if inc["id"] == _p1["incident_id"] else f'[data-incident="{inc["id"]}"]') + ' [data-story="aog-timeline"]'
     steps = [
         # (route, story_id, selector, title, body)
-        ("#/mission", "mission-kpis", '[data-story="mission-kpis"]', "Fewer groundings, at a stated price",
-         # the result leads, so the phone peek strip (first ~2 lines) always shows it (wave 4)
-         f"{fmt_int(aog['value'])} h of material AOG a year, down from {fmt_int(aog['baseline'])} under P0: the recommended "
-         f"plan ({rid}) across {n_seeds} holdout seeds. Immediate fill rises from {fmt_pct(fill['baseline'])} to "
-         f"{fmt_pct(fill['value'])}, for {fmt_aed_m(cap['value'] - cap['baseline'])} more spare capital than P0."),
+        ("#/mission", "mission-kpis", '[data-story="mission-kpis"]', "Position the network, cut the groundings",
+         # v2 framing: the core finding is P2 vs a legacy OEM-quote P0; the result leads so the phone peek shows it
+         (lambda c: f"Network positioning ({c['outstation_rotables']['P2']} outstation rotables, not {c['outstation_rotables']['P0']}) cuts "
+                    f"material AOG by {fmt_int(c['aog_reduction']['mean'])} h a year [{fmt_int(c['aog_reduction']['ci'][0])}–{fmt_int(c['aog_reduction']['ci'][1])}] "
+                    f"versus legacy OEM-quote provisioning, for {fmt_aed(c['capital_aed']['mean'])} more capital (paired, {n_seeds} holdout seeds). "
+                    f"Immediate fill is {abs(c['immediate_fill_pts']['mean']):.1f} pts lower.")(data["kpis"]["headline"]["core"])),
         (f"#/parts?ata={ata}&pn={pn}", "aircraft", '[data-story="aircraft"]', t2, body2),
         (f"#/forecast?pn={pn}", "forecast-demand-strip", '[data-story="forecast-demand-strip"] .fl-strip-sel',
          f"Why its demand is {part['demand_class']}", body3),

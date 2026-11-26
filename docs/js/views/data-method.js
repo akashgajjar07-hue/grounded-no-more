@@ -72,6 +72,7 @@ export async function render(el, ctx) {
   ];
   const asm = { id: 'asm', tag: 'ASSUMED', title: 'Assumptions', text: `${fmtInt(asmN.ASSUMED)} tagged ASSUMED in the register (config/*.yaml)` };
   const ff = chartFrame(flowCard, {
+      implication: 'Every number traces to a source, a model or a stated assumption; none is measured airline data.',
     headline: `${fmtInt(srcN.REAL)} of ${fmtInt(sources.length)} sources are real public data; every result is derived from simulation`,
     subtitle: 'Sources → generator → engine → models → exports · the fleet, demand and repairs are SIMULATED · holdout seeds run only after the freeze',
     provenance: 'DERIVED', source: 'method.json (source_manifest, assumptions)',
@@ -103,7 +104,7 @@ export async function render(el, ctx) {
     caption: 'Assumption register', bare: true, maxHeight: 520, rows: assumptions, mobileColumns: ['key', 'value', 'provenance', 'rationale'],
     columns: [
       { key: 'key', label: 'Key', mono: true },
-      { key: 'value', label: 'Value', mono: true, format: (v, r) => `${v == null ? '—' : String(v).replace(/^"(.*)"$/, '$1')}${r.unit ? ` ${r.unit}` : ''}` },
+      { key: 'value', label: 'Value', mono: true, format: (v, r) => `${v == null || ['null', 'None', ''].includes(String(v)) ? '—' : String(v).replace(/^"(.*)"$/, '$1')}${r.unit ? ` ${r.unit}` : ''}` },
       { key: 'provenance', label: 'Tag', render: (r) => provChip(r.provenance, { force: true }) },
       { key: 'rationale', label: 'Rationale', render: (r) => (r._same ? h('span', { class: 'dm-same', title: r.rationale }, '↑ same rationale as above') : (r.rationale ?? (String(r.key).startsWith('meta.') ? h('span', { class: 'faint' }, 'Site metadata (labels, not a modelling choice)') : '—'))) },
     ],
@@ -157,7 +158,22 @@ export async function render(el, ctx) {
       log.length ? h('div', { class: 'dm-log' }, log.map((r) => h('div', { class: `dm-log-item ${r.forced ? 'is-forced' : ''}` }, h('span', { class: 'dm-log-dot', 'aria-hidden': 'true' }), h('div', { style: { minWidth: 0 } }, h('div', { class: 'dm-log-run' }, r.run), h('div', { class: 'dm-log-at' }, fmtTime(r.at)), r.note ? h('div', { class: 'dm-log-note' }, humanISO(r.note)) : null), pill(r.forced ? 'review' : 'ok', r.forced ? 'Forced rerun' : 'Single run')))) : h('p', { class: 'faint t-14' }, 'Holdout log not exported.'),
     ],
   });
-  el.append(h('div', { class: 'dm-stack', dataset: { story: 'method-validation' } }, testsCard, calCard, conCard, logCard));
+  // v2: the calibration → freeze → holdout chain (DECISIONS rows) and the archived v1 headline (superseded, not findings)
+  const chain = freeze.chain || [];
+  const chainCard = chain.length ? card({
+    prov: 'DERIVED', kicker: 'v2 evaluation chain', title: 'Calibrate P0, lock, freeze, then one holdout (plus one disclosed post-plan check)',
+    body: h('ol', { class: 'dm-chain' }, chain.map((c) => h('li', {}, h('b', { class: 'mono' }, c.id), h('span', {}, ` ${humanISO(stripMd(c.text)).slice(0, 360)}${String(c.text).length > 360 ? '…' : ''}`)))),
+  }) : null;
+  const V1 = M.v1_archive;
+  const v1Card = V1?.headline?.length ? card({
+    prov: 'SIMULATED', kicker: `Archived v1 world${V1.tag ? ` · git tag ${V1.tag}` : ''}`, title: 'v1 results are superseded and are not findings',
+    body: h('div', { class: 'stack' },
+      h('p', { class: 't-14 muted' }, V1.note || ''),
+      dataTable({ caption: 'Archived v1 headline (holdout seeds 1000–1019)', bare: true, dense: true, rows: V1.headline, mobileColumns: ['label', 'aog_hours', 'capital_aed'],
+        columns: [{ key: 'label', label: 'v1 policy' }, { key: 'aog_hours', label: 'AOG h/yr', num: true, format: (v, r) => `${fmtInt(v)} [${fmtInt(r.aog_ci[0])}–${fmtInt(r.aog_ci[1])}]` }, { key: 'capital_aed', label: 'Capital', num: true, format: (v) => `AED ${(v / 1e6).toFixed(1)}M` }] }),
+      V1.superseded_because?.length ? h('details', { class: 'dm-v1-why' }, h('summary', {}, `Why v1 was superseded (${fmtInt(V1.superseded_because.length)} domain findings)`), h('ul', {}, V1.superseded_because.map((r) => h('li', {}, r)))) : null),
+  }) : null;
+  el.append(h('div', { class: 'dm-stack', dataset: { story: 'method-validation' } }, testsCard, calCard, conCard, logCard, chainCard, v1Card));
 
   // ---------------------------------------------------------------- limitations
   el.append(sectionTitle('Limitations'));
@@ -245,6 +261,7 @@ function calibration(host, cal) {
   const rows = list.filter((r) => num(r.achieved) && num(r.target_lo) && num(r.target_hi)).map((r) => ({ ...r, pass: r.pass ?? r.in_band, label: r.label || String(r.metric || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()).replace(/\baog\b/gi, 'AOG') }));
   const nPass = rows.filter((r) => (r.pass ?? (r.achieved >= r.target_lo && r.achieved <= r.target_hi))).length;
   const f = chartFrame(host, {
+      implication: 'The legacy baseline matches its stated band, so improvements are measured against a realistic starting point.',
     headline: rows.length ? `${fmtInt(nPass)} of ${fmtInt(rows.length)} calibration targets met by the P0 history` : 'Calibration results not exported',
     subtitle: `Hatched band = target range (ASSUMED) · dot = achieved · ${cal?.policy || 'P0'} on the public history · each row on its own scale`,
     provenance: cal?.provenance || 'SIMULATED', source: 'method.json (calibration)',
@@ -295,6 +312,7 @@ function consistency(host, kpis) {
   const worst = rows.filter((r) => !r.ok).sort((a, b) => Math.abs(b.dSel) - Math.abs(a.dSel))[0];
   const rec = kpis?.recommended_id || 'the recommended plan';
   const f = chartFrame(host, {
+      implication: 'Selection-to-holdout gaps show how much the plan was fitted to the seeds it was chosen on.',
     headline: rows.length ? `${fmtInt(inside.length)} of ${fmtInt(rows.length)} selection-seed results fall inside the holdout 95% CI` : 'Selection vs holdout comparison not exported',
     subtitle: `${rec} · % difference from the holdout mean · teal = holdout 95% CI · ◇ = selection-seed mean${worst ? ` · largest gap: ${label(worst.id)}, ${fmtU(worst.selection_recommended, worst)} on selection vs ${fmtU(worst.holdout_recommended, worst)} on holdout` : ''}`,
     provenance: 'SIMULATED', source: 'kpis.json (consistency)',

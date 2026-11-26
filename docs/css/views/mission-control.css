@@ -215,3 +215,9 @@ a.mc-pr:hover { background: var(--c-teal-a08); }
   .mc-fault-d, .mc-fault-sys { display: none; }
   .mc-fault { max-width: 180px; }
 }
+/* v2 findings list: what holds (P2), the frontier option (I125), honest caveats */
+.mc-findings { display: flex; flex-direction: column; gap: 10px; font-size: var(--fs-14); line-height: 1.55; color: var(--text-muted); }
+.mc-findings li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; }
+.mc-findings .icon { width: 16px; height: 16px; margin-top: 3px; color: var(--text-faint); }
+.mc-findings li.is-holds .icon { color: var(--primary); }
+.mc-findings li.is-holds span { color: var(--text); }

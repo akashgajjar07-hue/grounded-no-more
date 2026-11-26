@@ -158,9 +158,10 @@ export async function render(el, ctx) {
 
     // timeline
     const tlCard = h('section', { class: 'card span-12', dataset: { story: 'aog-timeline' } });
-    const incWrap = h('div', { class: 'span-12 aog-incident', dataset: { story: inc.id === 'AOG-0001' ? 'aog-incident-ps1' : 'aog-incident', incident: inc.id } });
+    const incWrap = h('div', { class: 'span-12 aog-incident', dataset: { story: inc.id === A.ps1_incident_id ? 'aog-incident-ps1' : 'aog-incident', incident: inc.id } });
     const fitted = (inc.timeline || []).find((s) => s.step === 'fitted');
     const tf = chartFrame(tlCard, {
+      implication: 'The wait sits in sourcing, not transport: where the stock already is decides how long the aircraft stays down.',
       headline: fitted
         ? fitHeadline(`Released ${fmtHours(fitted.t_h)} after the request: ${cf.actual_route_label || 'route not recorded'}`, `Released ${fmtHours(fitted.t_h)} after the request`)
         : fitHeadline(`Not released within the history window: ${cf.actual_route_label || 'route not recorded'}`, 'Not released within the history window'),
@@ -192,6 +193,7 @@ export async function render(el, ctx) {
     const exCard = h('section', { class: 'card span-12' });
     const allMeet = rec && runner && rec.deadline_met && feas.filter((o) => o !== rec).every((o) => o.deadline_met) && slack > 0;
     const ef = chartFrame(exCard, {
+      implication: 'Rank sourcing routes by total shortage exposure, not by freight cost alone.',
       headline: allMeet
         // every feasible option lands inside the slack, so none is AOG: exposure (= direct cost) is the tie-breaker
         ? fitHeadline(`${feas.length === 2 ? 'Both' : `All ${fmtInt(feas.length)}`} feasible options land inside the ${fmtHours(slack)} ${inc.deadline} slack; ${optLabel(rec).toLowerCase()} costs ${fmtMoneyFine(runner.exposure_aed - rec.exposure_aed)} less`,
@@ -265,6 +267,7 @@ export async function render(el, ctx) {
     ].filter((r) => r.value != null);
     const saved = C.actual_request_aog_h - C.best_option_request_aog_h;
     const fr = chartFrame(sc, {
+      implication: 'Per-incident response is already close to the best route; the remaining lever is positioning stock before the need.',
       headline: saved > 0
         ? fitHeadline(`Taking the best feasible option at request time would have cut request-level AOG from ${fmtHours(C.actual_request_aog_h)} to ${fmtHours(C.best_option_request_aog_h)}${C.net_exposure_saving_aed != null ? `, ${fmtAED(C.net_exposure_saving_aed)} less exposure` : ''}`,
           `The best feasible option would have cut request-level AOG from ${fmtHours(C.actual_request_aog_h)} to ${fmtHours(C.best_option_request_aog_h)}`,
