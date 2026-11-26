@@ -1651,7 +1651,8 @@ def build_deck(N, A, CH, bg, total=10):
     s.card(48, 150, 760, 520, line=blend(C["amber"], C["card"], 0.4))
     s.text(70, 166, 600, 16, P(R("LIMITATIONS THAT MATTER MOST", "label", c=C["amber"])))
     lim = [
-        ("Synthetic data.", "Every airline number is simulated, and the models are tested on a world the author designed."),
+        ("Synthetic data, not a dispatch tool.", "Every airline number is simulated on a world the author designed; "
+                                                "not an approved maintenance, airworthiness or dispatch tool."),
         ("AOG-route dependence.", f"With the recovery routes off, AOG rises to {fmt_int(ro['p0_aog_hours'])} h/yr for P0, "
                                   f"{fmt_int(ro['p2_aog_hours'])} for P2 and {fmt_int(ro['rec_aog_hours'])} for {fid} "
                                   f"(selection seeds; {fmt_int(ro['central_p0_aog_hours'])} / "
@@ -1663,9 +1664,11 @@ def build_deck(N, A, CH, bg, total=10):
                                        "recommended frontier point moves with them."),
         ("Brakes.", "Cost-per-landing contracts are not modelled. Brake changes are planned at notice; residual brake "
                     "downtime only occurs when AUH is short and the exchange fails."),
-        ("Robbery.", "Needs engineering/quality approval; the simulation assumes a donor does not fly until reinstated."),
+        ("Robbed-donor hours.", "Robbery needs engineering/quality approval. A robbed donor is assumed grounded until "
+                                "reinstated, but those hours are not counted, so absolute downtime is understated."),
         ("Optimiser.", "Greedy additions on an analytic proxy with guardrails, then re-simulated; not a proven optimum."),
-        ("Scope.", "A learning project on simulated data, not an approved maintenance, airworthiness or dispatch tool."),
+        ("Legacy baseline.", "Most of P0's few outstation rotables are brakes changed only at AUH, so the P2 gap largely "
+                             "measures stocking no-go items at line stations (LIMITATIONS 29–39)."),
     ]
     half = (len(lim) + 1) // 2
     for col_i, chunk in enumerate((lim[:half], lim[half:])):
