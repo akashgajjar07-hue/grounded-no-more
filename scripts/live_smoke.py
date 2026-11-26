@@ -4,7 +4,7 @@ import sys
 from playwright.sync_api import sync_playwright
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "https://akashgajjar07-hue.github.io/grounded-no-more/"
-ROUTES = ["mission", "parts", "parts?ata=32&pn=GN-32-R014", "forecast", "rotables?pn=GN-32-R014", "network?station=BOM",
+ROUTES = ["mission", "parts", "parts?ata=32&pn=GN-32-R014", "forecast", "rotables?pn=GN-32-R014", "network?station=BOM", "about",
           "capital", "aog?incident=AOG-0001", "actions", "method"]
 bad = []
 with sync_playwright() as p:
