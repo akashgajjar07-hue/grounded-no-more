@@ -27,6 +27,6 @@ The current stress worlds change one thing at a time, over a narrow range (relia
 
 ## 4. An MRO-side model
 
-Model the same ideas from the repair shop's side: work orders held for parts, kit readiness, repair induction and shop queues, and customer-owned versus company-owned stock. See [How this transfers to an MRO](mro.md).
+Model the same ideas from the repair shop's side. That means work orders held for parts, kit readiness, repair induction and shop queues. It also means customer-owned versus company-owned stock. See [How this transfers to an MRO](mro.md).
 
 Back: [What real data would make this useful](real_data.md)

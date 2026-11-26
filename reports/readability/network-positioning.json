@@ -1,0 +1,11 @@
+{
+  "view": "network-positioning",
+  "route": "#/network?station=BOM",
+  "mode": "simple",
+  "viewport": 1440,
+  "grade": 4.1,
+  "maxSentenceWords": 23,
+  "words": 844,
+  "sentences": 115,
+  "longSentences": []
+}

@@ -1,0 +1,10 @@
+{
+ "grade": 5.1,
+ "maxSentenceWords": 22,
+ "longSentences": [],
+ "mode": "simple",
+ "expert": {
+  "grade": 7.2,
+  "maxSentenceWords": 26
+ }
+}

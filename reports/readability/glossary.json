@@ -1,0 +1,11 @@
+{
+  "view": "glossary",
+  "route": "#/glossary",
+  "mode": "simple",
+  "viewport": 1440,
+  "grade": 4.7,
+  "maxSentenceWords": 21,
+  "words": 2908,
+  "sentences": 309,
+  "longSentences": []
+}

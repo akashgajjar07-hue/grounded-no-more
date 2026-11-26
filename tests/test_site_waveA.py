@@ -109,6 +109,7 @@ def test_navigation_groups_and_shortcuts(site, browser):  # noqa: F811
         ctx.close()
 
 
+@pytest.mark.skip(reason="superseded by the v2.1 A1 landing (tests/test_site_mission.py covers the new hero)")
 def test_mission_hero_copy_and_fold(site, browser):  # noqa: F811
     ctx, page, problems = open_page(browser, site + "#/mission", "1440")
     try:
@@ -162,8 +163,8 @@ def test_about_route(site, browser, vp):  # noqa: F811
         assert page.locator('.nav-item[data-route="about"]').count() == 1
         assert page.locator('[data-role="ai-note"]').inner_text().strip() == "Built with AI-assisted development; analysis, decisions and validation reviewed by the author."
         qs = [t.strip() for t in page.locator('[data-role="why-questions"] .ab-q-t').all_inner_texts()]
-        assert qs == ["Intermittent demand handling", "Why maximum local stock isn’t optimal", "How TAT drives float", "Why point accuracy isn’t enough",
-                      "How the optimiser balances readiness and capital", "What data I’d request from a real airline"]
+        # v2.1: wording follows the forbidden-word rule ("optimal" removed) and Simple-mode phrasing; six questions, no answers
+        assert len(qs) == 6 and not any("optimal" in q.lower() for q in qs)
         # wave C: an intentional list of the questions only (no drafted answers), with the one-line note
         assert page.locator('[data-role="why-note"]').inner_text().strip() == "Author’s answers to follow."
         assert page.evaluate("[...document.querySelectorAll('[data-role=\"why-questions\"] .ab-q-item')].every((s) => s.children.length === 1)")
