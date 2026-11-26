@@ -1,0 +1,96 @@
+{
+  "provenance": "DERIVED",
+  "source": "data/processed/history (weeks 0-103, history_seed, P0); selection origins 78-98",
+  "n_parts": 120,
+  "origins": [
+    78,
+    82,
+    86,
+    90,
+    94,
+    98
+  ],
+  "methods": [
+    "adida",
+    "bootstrap",
+    "croston",
+    "imapa",
+    "ma",
+    "naive",
+    "reliability",
+    "sba",
+    "tsb",
+    "zero"
+  ],
+  "champions_sha256": "3399c6aec948ea418999cefe9c576926e32a62d2d0830821137301a90c2ba3dc",
+  "champion_counts_parts": {
+    "sba": 40,
+    "tsb": 38,
+    "naive": 38,
+    "imapa": 4
+  },
+  "reliability_vs_croston": [
+    {
+      "part_class": "C",
+      "reliability_mase": 0.7934518791,
+      "reliability_ci": [
+        0.7284117734,
+        0.8781772947
+      ],
+      "best_croston_family": "sba",
+      "croston_family_mase": 0.7752774515,
+      "croston_family_ci": [
+        0.7278608927,
+        0.8298223664
+      ],
+      "reliability_better": false,
+      "cis_overlap": true,
+      "reliability_pinball_q90": 1.7192592593,
+      "croston_family_pinball_q90": 1.8644444444
+    },
+    {
+      "part_class": "E",
+      "reliability_mase": 0.9662907864,
+      "reliability_ci": [
+        0.8586026897,
+        1.0954535237
+      ],
+      "best_croston_family": "tsb",
+      "croston_family_mase": 0.9426016637,
+      "croston_family_ci": [
+        0.8370720773,
+        1.0787041218
+      ],
+      "reliability_better": false,
+      "cis_overlap": true,
+      "reliability_pinball_q90": 0.3,
+      "croston_family_pinball_q90": 0.3823809524
+    },
+    {
+      "part_class": "R",
+      "reliability_mase": 0.9022583619,
+      "reliability_ci": [
+        0.8242581256,
+        0.98312067
+      ],
+      "best_croston_family": "tsb",
+      "croston_family_mase": 0.8845534779,
+      "croston_family_ci": [
+        0.7942248875,
+        0.9827034114
+      ],
+      "reliability_better": false,
+      "cis_overlap": true,
+      "reliability_pinball_q90": 0.245,
+      "croston_family_pinball_q90": 0.2691666667
+    }
+  ],
+  "lead_time_regime_shifts": [
+    "GN-30-E025"
+  ],
+  "timings_s": {
+    "evaluation": 4.0,
+    "stock_eval": 1.4,
+    "final": 0.7
+  }
+}

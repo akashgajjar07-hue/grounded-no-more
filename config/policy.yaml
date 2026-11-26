@@ -1,0 +1,57 @@
+# GROUNDED NO MORE — policy parameters for P1 / P2 (inventory-policy agent).
+# Kept separate from config/assumptions.yaml, which is part of the LOCKED simulator calibration
+# (outputs/freeze/calibration_lock.json). Service targets and economics are NOT duplicated here:
+# they are read from config/assumptions.yaml (service_targets, economics).
+# Every entry carries provenance + rationale. "Falcon Hub Airways (fictional)" does not exist.
+
+forecast:
+  final_origin_week: 104             # final forecasts are fitted on weeks 0..103 (history only)
+  dispersion_window_weeks: 52        # weekly variance-to-mean ratio (VMR) is estimated on the last 52 history weeks
+  nb_min_vmr: 1.05                   # below this VMR the lead-time demand is treated as Poisson
+  planned_exposure_window_weeks: 52  # planned future exposure = mean weekly exposure of the last 52 history weeks
+  reliability_prior_strength: 2.0    # gamma prior on the removal rate = 2 pseudo-removals at the vendor-quoted MTBUR (FC-5)
+  station_share_prior_strength: 4.0  # Dirichlet pseudo-requests for the station share of demand (empirical-Bayes prior)
+  provenance: ASSUMED
+  rationale: "Two years of history leave ~1 year as the most relevant window for dispersion and exposure (flying programme roughly stable, seasonality averaged over a year). The station share of each PN's demand is shrunk towards a prior built from planned arrivals at the station times the pooled ratio of observed to exposure-expected demand for parts of the same class and deadline class, so the hub-deferral pattern of D3/D10 removals is learnt from data rather than assumed."
+
+lead_time:
+  half_life_weeks: 13                # recency weighting of history PO receipts (weight = 0.5 ** (age_weeks / half_life))
+  prior_weight_orders: 1.0           # the quoted lead time counts as this many (full-weight) observations
+  use_open_po_censoring: true        # an open PO older than the estimate contributes its elapsed age (lower bound)
+  reasons: [reorder, condemn_replacement]   # expedite POs are excluded (distributor / AOG-desk buys)
+  shift_last_n: 2                    # supplier-change check: the last 2 observations (receipts or overdue open POs) ...
+  shift_factor: 1.5                  # ... all above 1.5 x the estimate from older data -> re-baseline on the recent ones
+  provenance: ASSUMED
+  rationale: "A planner estimates the purchase lead time from recent receipts rather than trusting the master quote. A 13-week half-life lets three recent slow receipts outweigh eight older ones (this is how a supplier change such as PS4 is caught) while one quote-weight keeps sparse PNs near the master value. Open POs already older than the estimate are evidence that the lead time is longer (right-censoring). Exponential weighting alone reacts slowly to a step change with sparse receipts, so an exception rule re-baselines when the two most recent observations are both 50% above the older estimate (a supplier-change signal a planner would act on); the number of PNs it fires on is reported."
+
+ordering:
+  ordering_cost_aed_per_po: 350      # hub purchase-order line: buyer time, receiving inspection, certificate checks
+  ordering_cost_aed_per_sto: null    # outstation stock-transfer line: uses economics.routine_shipment_aed_per_line (150) from assumptions.yaml
+  max_cover_weeks: 52                # EOQ capped at one year of demand
+  shelf_life_cover_share: 0.5        # shelf-life items: order quantity capped at demand over 50% of the shelf life
+  provenance: ASSUMED
+  rationale: "EOQ (Harris-Wilson) Q* = sqrt(2 D K / (h c)) with h = economics.carrying_cost_pct_per_year. The PO ordering cost is an assumed order of magnitude for an aviation stores PO line (admin, receiving, certificate of conformity / EASA Form 1 check); it is a tuning knob and is sensitivity-relevant only for cheap consumables. Caps prevent multi-year buys and expiry write-offs."
+
+rotable:
+  condemn_prior_weight: 2.0          # quoted condemnation rate counts as 2 pseudo shop visits
+  palm_max_units: 60                 # search limit for the base-stock search
+  subtract_initial_pipeline: true    # engine base_stock = serviceable units ON TOP of the seeded repair loop -> hand the engine S_palm - pipeline units (POL-6)
+  provenance: ASSUMED
+  rationale: "Pipeline time for Palm's theorem = observed transport to the shop + quoted shop TAT + vendor return transit + observed lateness against the quoted due date (history repair orders, open overdue ROs censored at the origin). Condemned units are replaced by a PO, so the effective pipeline is (1-p) x repair pipeline + p x (transport + purchase lead time), with p shrunk towards the quoted condemnation rate."
+
+p2_network:
+  positioning_threshold_aed_per_aed_year: 0.20   # add an outstation unit while annual expected cost avoided / unit capital >= this
+  include_auh_wait_in_outstation_lead_time: true # outstation resupply lead time = routine transit + expected hub backorder delay (EBO/lambda, METRIC-style)
+  provenance: ASSUMED
+  rationale: "Network rule: the hub holds the pooled stock sized on network demand at the deadline-class target; an outstation gets a unit only while the annual expected AOG penalty plus emergency-logistics cost it avoids, per AED of capital, beats the threshold. The default 0.20 equals the carrying cost rate (the unit at least pays its own carrying cost); it is the main P2 tuning knob."
+
+evaluation:
+  week_from: 78
+  week_to: 155
+  kpi_from_week: 104
+  kpi_to_week: 155
+  variants: [central, low_stress, high_stress]
+  n_boot: 2000
+  seeds_per_batch: 5
+  provenance: ASSUMED
+  rationale: "Data contract §2: selection scenarios cover weeks 78-155 with a 26-week warm-up; KPIs from week 104. Only selection seeds 100-119 are used; holdout seeds are never generated here."

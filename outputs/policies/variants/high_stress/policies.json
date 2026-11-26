@@ -1,0 +1,261 @@
+{
+  "provenance": "DERIVED",
+  "source": "history weeks 0-103 (public tables) + config/policy.yaml",
+  "policies": [
+    {
+      "policy_id": "P0",
+      "label": "Legacy static min/max + rule-of-thumb float",
+      "notes": "C/E: min = ceil(6 weeks of quoted demand), max = 2 x min (AUH sized on network demand); R: float = ceil(quoted annual removals x quoted TAT / 365), at AUH except 1 unit at an outstation for D0 PNs with >= 4 quoted removals/yr there",
+      "lateral_transfers": false,
+      "rebalance": false,
+      "capital_at_target_aed": 18164357.990000002,
+      "capital_avg_est_aed": 17493622.775,
+      "capital_at_target_by_class": {
+        "C": 762250.3,
+        "E": 1920690.56,
+        "R": 15481417.13
+      },
+      "capital_at_target_by_deadline": {
+        "D0": 1288468.7,
+        "D10": 10838266.7,
+        "D3": 6037622.59
+      },
+      "units_by_station": {
+        "AUH": 5043,
+        "BOM": 635,
+        "CAI": 479,
+        "FRA": 200,
+        "JED": 541,
+        "LHR": 225,
+        "SIN": 225
+      },
+      "rotable_units_by_station": {
+        "AUH": 129,
+        "BOM": 1,
+        "CAI": 1,
+        "FRA": 0,
+        "JED": 1,
+        "LHR": 1,
+        "SIN": 1
+      },
+      "capital_by_station": {
+        "AUH": 16486689.86,
+        "BOM": 380699.35,
+        "CAI": 296601.75,
+        "FRA": 193401.16,
+        "JED": 303944.41,
+        "LHR": 251510.73,
+        "SIN": 251510.73
+      },
+      "stocked_pn_station_pairs": 501,
+      "outstation_rotable_units": 5,
+      "rotable_serviceable_target_units": 134,
+      "rotable_pipeline_units_at_start": 123,
+      "provenance": "DERIVED"
+    },
+    {
+      "policy_id": "P1",
+      "label": "Local optimised",
+      "notes": "C/E (s,S): s = LTD quantile at the deadline-class target (hub on network demand over the estimated PO lead time, outstations on local demand over routine transit), S = s + EOQ. R: Palm base stock per station on local rate x pipeline days. Emergency source AUH only.",
+      "lateral_transfers": false,
+      "rebalance": false,
+      "capital_at_target_aed": 53346147.58,
+      "capital_avg_est_aed": 52356299.615,
+      "capital_at_target_by_class": {
+        "C": 1085830.76,
+        "E": 2148274.91,
+        "R": 50112041.91
+      },
+      "capital_at_target_by_deadline": {
+        "D0": 5085406.06,
+        "D10": 25880696.13,
+        "D3": 22380045.39
+      },
+      "units_by_station": {
+        "AUH": 8857,
+        "BOM": 1170,
+        "CAI": 904,
+        "FRA": 402,
+        "JED": 1015,
+        "LHR": 462,
+        "SIN": 496
+      },
+      "rotable_units_by_station": {
+        "AUH": 152,
+        "BOM": 58,
+        "CAI": 45,
+        "FRA": 37,
+        "JED": 44,
+        "LHR": 37,
+        "SIN": 38
+      },
+      "capital_by_station": {
+        "AUH": 22574963.89,
+        "BOM": 6864091.93,
+        "CAI": 5622294.4,
+        "FRA": 4226903.69,
+        "JED": 5689349.84,
+        "LHR": 4167017.21,
+        "SIN": 4201526.62
+      },
+      "stocked_pn_station_pairs": 689,
+      "outstation_rotable_units": 259,
+      "rotable_serviceable_target_units": 411,
+      "rotable_pipeline_units_at_start": 123,
+      "provenance": "DERIVED"
+    },
+    {
+      "policy_id": "P2",
+      "label": "Network",
+      "notes": "Hub: rotable float on network pipeline demand at the target (Palm), C/E (s,S) on network LTD over the estimated PO lead time. Outstations: units added while annual expected AOG penalty + logistics avoided per AED of capital >= 0.20. Lateral transfers and weekly rebalancing on.",
+      "lateral_transfers": true,
+      "rebalance": true,
+      "capital_at_target_aed": 28224115.11,
+      "capital_avg_est_aed": 27458414.005000003,
+      "capital_at_target_by_class": {
+        "C": 1135281.81,
+        "E": 1712468.37,
+        "R": 25376364.93
+      },
+      "capital_at_target_by_deadline": {
+        "D0": 4209176.96,
+        "D10": 12769327.15,
+        "D3": 11245611.0
+      },
+      "units_by_station": {
+        "AUH": 8890,
+        "BOM": 1216,
+        "CAI": 938,
+        "FRA": 400,
+        "JED": 1066,
+        "LHR": 474,
+        "SIN": 503
+      },
+      "rotable_units_by_station": {
+        "AUH": 185,
+        "BOM": 9,
+        "CAI": 8,
+        "FRA": 6,
+        "JED": 8,
+        "LHR": 7,
+        "SIN": 6
+      },
+      "capital_by_station": {
+        "AUH": 25435758.77,
+        "BOM": 577429.03,
+        "CAI": 537600.86,
+        "FRA": 374675.64,
+        "JED": 521668.66,
+        "LHR": 439059.98,
+        "SIN": 337922.17
+      },
+      "stocked_pn_station_pairs": 413,
+      "outstation_rotable_units": 44,
+      "rotable_serviceable_target_units": 229,
+      "rotable_pipeline_units_at_start": 123,
+      "provenance": "DERIVED"
+    },
+    {
+      "policy_id": "P1@central",
+      "label": "Local optimised (central history)",
+      "notes": "C/E (s,S): s = LTD quantile at the deadline-class target (hub on network demand over the estimated PO lead time, outstations on local demand over routine transit), S = s + EOQ. R: Palm base stock per station on local rate x pipeline days. Emergency source AUH only.",
+      "lateral_transfers": false,
+      "rebalance": false,
+      "capital_at_target_aed": 49206053.34,
+      "capital_avg_est_aed": 48234018.260000005,
+      "capital_at_target_by_class": {
+        "C": 1086139.46,
+        "E": 1991322.5,
+        "R": 46128591.38
+      },
+      "capital_at_target_by_deadline": {
+        "D0": 4431780.36,
+        "D10": 22853987.91,
+        "D3": 21920285.07
+      },
+      "units_by_station": {
+        "AUH": 8704,
+        "BOM": 1192,
+        "CAI": 917,
+        "FRA": 423,
+        "JED": 1007,
+        "LHR": 483,
+        "SIN": 454
+      },
+      "rotable_units_by_station": {
+        "AUH": 120,
+        "BOM": 55,
+        "CAI": 46,
+        "FRA": 38,
+        "JED": 46,
+        "LHR": 39,
+        "SIN": 35
+      },
+      "capital_by_station": {
+        "AUH": 17982954.12,
+        "BOM": 6942020.25,
+        "CAI": 5702428.27,
+        "FRA": 4492617.53,
+        "JED": 5744299.57,
+        "LHR": 4278093.63,
+        "SIN": 4063639.97
+      },
+      "stocked_pn_station_pairs": 687,
+      "outstation_rotable_units": 259,
+      "rotable_serviceable_target_units": 379,
+      "rotable_pipeline_units_at_start": 123,
+      "provenance": "DERIVED"
+    },
+    {
+      "policy_id": "P2@central",
+      "label": "Network (central history)",
+      "notes": "Hub: rotable float on network pipeline demand at the target (Palm), C/E (s,S) on network LTD over the estimated PO lead time. Outstations: units added while annual expected AOG penalty + logistics avoided per AED of capital >= 0.20. Lateral transfers and weekly rebalancing on.",
+      "lateral_transfers": true,
+      "rebalance": true,
+      "capital_at_target_aed": 22844980.92,
+      "capital_avg_est_aed": 22095988.174999997,
+      "capital_at_target_by_class": {
+        "C": 1134610.79,
+        "E": 1556038.99,
+        "R": 20154331.14
+      },
+      "capital_at_target_by_deadline": {
+        "D0": 3432758.75,
+        "D10": 9666953.04,
+        "D3": 9745269.13
+      },
+      "units_by_station": {
+        "AUH": 8731,
+        "BOM": 1232,
+        "CAI": 960,
+        "FRA": 421,
+        "JED": 1044,
+        "LHR": 492,
+        "SIN": 463
+      },
+      "rotable_units_by_station": {
+        "AUH": 147,
+        "BOM": 6,
+        "CAI": 8,
+        "FRA": 6,
+        "JED": 8,
+        "LHR": 8,
+        "SIN": 6
+      },
+      "capital_by_station": {
+        "AUH": 20084861.89,
+        "BOM": 496684.28,
+        "CAI": 564795.9,
+        "FRA": 280257.02,
+        "JED": 660456.18,
+        "LHR": 452739.11,
+        "SIN": 305186.54
+      },
+      "stocked_pn_station_pairs": 407,
+      "outstation_rotable_units": 42,
+      "rotable_serviceable_target_units": 189,
+      "rotable_pipeline_units_at_start": 123,
+      "provenance": "DERIVED"
+    }
+  ]
+}

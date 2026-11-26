@@ -1,0 +1,9 @@
+demand_class,part_class,champion,mean_mase,mean_bias,n_parts_basis,n_parts_cell,n_parts_cell_defined,basis,runner_up,selection_weeks,n_origins
+erratic,C,tsb,0.685718,-0.049246,6,6,6,cell,sba,78-103,6
+insufficient_data,E,tsb,0.866155,-0.013711,120,2,2,global,imapa,78-103,6
+intermittent,C,imapa,0.912018,0.009916,72,4,4,pooled_demand_class,tsb,78-103,6
+intermittent,E,tsb,0.901611,-0.019244,30,30,30,cell,imapa,78-103,6
+intermittent,R,naive,0.847616,-0.016447,38,38,38,cell,tsb,78-103,6
+smooth,C,sba,0.756015,-0.372603,35,35,35,cell,tsb,78-103,6
+smooth,E,sba,0.753695,-0.347587,40,3,3,pooled_demand_class,tsb,78-103,6
+smooth,R,sba,0.753695,-0.347587,40,2,2,pooled_demand_class,tsb,78-103,6
