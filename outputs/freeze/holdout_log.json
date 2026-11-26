@@ -1,0 +1,26 @@
+[
+  {
+    "run": "policy_holdout",
+    "at": "2026-11-26T02:25:31.134835+00:00",
+    "manifest_frozen_at": "2026-11-26T02:25:21.525168+00:00",
+    "forced": false
+  },
+  {
+    "run": "policy_holdout",
+    "at": "2026-11-26T02:26:19.212102+00:00",
+    "manifest_frozen_at": "2026-11-26T02:25:21.525168+00:00",
+    "forced": true
+  },
+  {
+    "run": "frontier_holdout",
+    "at": "2026-11-26T02:26:53.185024+00:00",
+    "manifest_frozen_at": "2026-11-26T02:25:21.525168+00:00",
+    "forced": false
+  },
+  {
+    "run": "forecast_holdout",
+    "at": "2026-11-26T02:27:04.925039+00:00",
+    "manifest_frozen_at": "2026-11-26T02:25:21.525168+00:00",
+    "forced": false
+  }
+]

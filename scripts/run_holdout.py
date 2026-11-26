@@ -18,9 +18,21 @@ OUT = OUTPUTS / "holdout"
 DRY = False   # --dry: exercise every path on 2 selection seeds + history only, no freeze needed
 
 
+FORCE = set()   # --force=<block>: logged re-run of a block that crashed before producing results
+
+
 def _gate(name):
     if not DRY:
-        require_frozen(name)
+        require_frozen(name, force=name in FORCE)
+
+
+def warm_cache(seeds, variants, wf, wt):
+    """Generate scenarios sequentially before multiprocessing: parallel workers generating the same
+    uncached scenario raced on the pickle cache (truncated read) in the first holdout attempt."""
+    from gnm.sim.api import load_or_generate_scenario
+    for v in variants:
+        for s in seeds:
+            load_or_generate_scenario(int(s), wf, wt, variant=v)
 
 
 def _jd(o):
@@ -40,6 +52,7 @@ def policy_holdout(hold):
     from gnm.sim.api import load_world
     _gate("policy_holdout")
     pcfg = fp.load_policy_config()["evaluation"]
+    warm_cache(hold, pcfg["variants"], pcfg["week_from"], pcfg["week_to"])
     champs = pd.read_csv(fp.FC_OUT / "champions.csv")
     kp, st, cl, central = [], [], [], None
     for v in pcfg["variants"]:
@@ -157,6 +170,7 @@ def truth_recovery():
 if __name__ == "__main__":
     import sys
     DRY = "--dry" in sys.argv
+    FORCE = {a.split("=", 1)[1] for a in sys.argv if a.startswith("--force=")}
     if DRY:
         OUT = OUTPUTS / "holdout_dryrun"
         hold = cfg_seeds()["selection"][:2]

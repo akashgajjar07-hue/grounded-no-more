@@ -1,0 +1,68 @@
+{
+  "provenance": "DERIVED",
+  "note": "Estimates use history weeks 0-103 only; truth read here for evaluation only.",
+  "metric": "median absolute log error |ln(est/true)|; 0.10 ~ 10% off",
+  "reliability": {
+    "all": {
+      "n_parts": 75,
+      "quoted_mdale": 0.3688289920198366,
+      "estimated_mdale": 0.1091814151473494,
+      "share_estimate_closer": 0.7866666666666666
+    },
+    "E": {
+      "n_parts": 35,
+      "quoted_mdale": 0.28192931749674455,
+      "estimated_mdale": 0.09622742601308307,
+      "share_estimate_closer": 0.7714285714285715
+    },
+    "R": {
+      "n_parts": 40,
+      "quoted_mdale": 0.4162251365812333,
+      "estimated_mdale": 0.1260463013782135,
+      "share_estimate_closer": 0.8
+    }
+  },
+  "lead_time": {
+    "n_parts": 120,
+    "quoted_mdale": 0.0660464617158806,
+    "estimated_mdale": 0.06436585592765809,
+    "changed_parts": [
+      {
+        "pn": "GN-30-E025",
+        "true": 165.1609577171511,
+        "est": 156.4792,
+        "quoted": 65.2,
+        "changed": true
+      }
+    ]
+  },
+  "planted": {
+    "PS1": {
+      "pn": "GN-32-R014",
+      "station": "BOM",
+      "weeks": "all history",
+      "note": "D0 rotable on both fleets; true MTBUR 4200 FC vs quoted 10500, so P0 sees < 4 removals/yr at BOM and holds no unit there while the true BOM rate is well above that"
+    },
+    "PS2": {
+      "pn": "GN-28-R031",
+      "station": "EU_VENDOR",
+      "weeks": [
+        84,
+        92
+      ],
+      "note": "true shop TAT 88 d vs quoted 60 d; on the history seed the first removal in weeks [84, 92] gets 200 shop work days -> that RO is still open and far past its quoted due date at week 103"
+    },
+    "PS3": {
+      "pn": "GN-21-C010",
+      "station": "network (AUH largest)",
+      "weeks": "0-103 (declining)",
+      "note": "true usage multiplies by 0.45 per year; quoted usage reflects the week-0 rate, so static min/max over-stocks"
+    },
+    "PS4": {
+      "pn": "GN-30-E025",
+      "station": "AUH",
+      "weeks": 70,
+      "note": "supplier change: true PO lead time 64 d -> 165 d for orders placed from week 70; part master still quotes 65 d"
+    }
+  }
+}

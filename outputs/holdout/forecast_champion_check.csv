@@ -1,0 +1,9 @@
+demand_class,part_class,n_parts,champion,champion_mase,best_in_hindsight,best_mase,champion_rank,n_methods
+erratic,C,6,tsb,0.7236624874101492,reliability,0.7109503424819842,6,9
+insufficient_data,E,2,tsb,1.0310202728943305,naive,0.5755208333333334,2,9
+intermittent,C,4,imapa,1.0535404176773764,reliability,1.0082848381534857,6,9
+intermittent,E,30,tsb,0.8791662432124373,tsb,0.8791662432124373,1,9
+intermittent,R,38,naive,1.07180549989166,tsb,0.9324016481050607,9,9
+smooth,C,35,sba,0.7229581654152316,sba,0.7229581654152316,1,9
+smooth,E,3,sba,0.6744054529681119,reliability,0.6502611358457501,2,9
+smooth,R,2,sba,0.8139015724456996,reliability,0.8068589760227615,2,9
