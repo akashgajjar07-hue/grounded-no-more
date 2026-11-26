@@ -7,6 +7,7 @@
 /* ---------- aircraft explorer ---------- */
 .pi-explorer .card-title { font-size: var(--fs-20); }
 .pi-aircraft { max-width: 760px; margin: 0 auto; }
+.pi-aircraft:empty { aspect-ratio: 815 / 895; width: 100%; } /* v2.1 CLS: hold the drawing's space until the SVG arrives (narrowbody default) */
 .pi-aircraft svg { display: block; }
 .pi-aircraft .ata-hotspot { --risk: var(--c-aero-teal); }
 .pi-aircraft .ata-hotspot.risk-review { --risk: var(--c-amber); }
