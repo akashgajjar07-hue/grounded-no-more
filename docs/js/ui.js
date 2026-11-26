@@ -712,13 +712,18 @@ export function storyMode({ steps, navigate, onExit }) {
     if (playing) schedule();
   }
   function schedule() { clearTimeout(timer); if (playing && i < steps.length - 1) timer = setTimeout(() => { if (playing) go(i + 1); }, AUTO_MS); else if (playing) setPlaying(false); }
-  const cardEl = h('div', { class: 'story-card' }, grab, stepEl, titleEl, bodyEl, prog, h('div', { class: 'story-actions' }, h('div', { class: 'row' }, h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => exit() }, 'Skip tour'), playBtn), h('div', { class: 'row' }, back, next)));
+  const cardEl = h('div', { class: 'story-card' }, grab, stepEl, titleEl, bodyEl, prog, h('div', { class: 'story-actions' }, h('div', { class: 'row' }, h('button', { class: 'btn btn--ghost btn--sm story-skip', type: 'button', onclick: () => exit() }, 'Skip tour'), playBtn), h('div', { class: 'row' }, back, next)));
   root.append(spot, cardEl);
   let opener = null;
+  let spaceEat = false;
+  // a button activates on Space keyup: swallow that keyup when the keydown already toggled Play
+  const onKeyUp = (e) => { if (e.key === ' ' && spaceEat) { e.preventDefault(); e.stopPropagation(); spaceEat = false; } };
   const onKey = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); exit(); return; }
     if (e.target.closest?.('input, textarea, select')) return;
-    if (e.key === ' ' && !e.target.closest?.('button')) { e.preventDefault(); setPlaying(!playing); return; }
+    // wave C (F3): Space is Play/Pause anywhere in the tour, including when Next/Back has focus; only the Play button
+    // itself and Skip keep their native Space activation (so Play is not toggled twice)
+    if (e.key === ' ' && (!e.target.closest?.('button') || (e.target.closest('.story-card') && e.target !== playBtn && e.target !== grab && !e.target.classList.contains('story-skip')))) { e.preventDefault(); spaceEat = true; setPlaying(!playing); return; }
     if (e.key === 'ArrowRight') { e.preventDefault(); next.click(); }
     if (e.key === 'ArrowLeft' && i > 0) { e.preventDefault(); back.click(); }
     trapFocus(cardEl, e);
@@ -847,7 +852,7 @@ export function storyMode({ steps, navigate, onExit }) {
   function exit() {
     seq++;
     playing = false; clearTimeout(timer);
-    document.removeEventListener('keydown', onKey, true);
+    document.removeEventListener('keydown', onKey, true); document.removeEventListener('keyup', onKeyUp, true);
     removeEventListener('resize', onViewport);
     removeEventListener('scroll', onViewport, true);
     root.remove();
@@ -862,7 +867,7 @@ export function storyMode({ steps, navigate, onExit }) {
       activeStory = api;
       opener = document.activeElement;
       document.body.append(root);
-      document.addEventListener('keydown', onKey, true);
+      document.addEventListener('keydown', onKey, true); document.addEventListener('keyup', onKeyUp, true);
       addEventListener('resize', onViewport);
       addEventListener('scroll', onViewport, true);
       go(0);

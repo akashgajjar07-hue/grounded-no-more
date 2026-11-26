@@ -621,6 +621,12 @@ def compute() -> dict[str, str]:  # noqa: C901, PLR0915 - one flat list of keys 
     for pid in ("P0", "P1", "P2", "I125"):
         V[f"policy.{pid}.rotable_total_spares"] = fmt_int(rt.loc[pid, "total_spares"])
     V["policy.loop_units"] = fmt_int(rt.loc["P2", "loop_units"])
+    rmx = json.loads((ROOT / "docs/data/kpis.json").read_text())["headline"]["core"]["remix"]
+    V["policy.remix.buy_units"] = fmt_int(rmx["buy_units"])
+    V["policy.remix.buy_aed"] = fmt_aed(rmx["buy_aed"])
+    V["policy.remix.shed_units"] = fmt_int(rmx["shed_units"])
+    V["policy.remix.shed_aed"] = fmt_aed(rmx["shed_aed"])
+    V["scope.pn_count"] = fmt_int(len(pd.read_parquet(ROOT / "data/processed/history/part_master.parquet")))
     passed = junit_case_passed("test_optim_greedy", "test_greedy_equals_brute_force_at_breakpoints")
     V["optim.greedy_gap_small_case_pct"] = (
         "on a small separable, convex toy case the greedy allocation equals the brute-force optimum at every greedy "

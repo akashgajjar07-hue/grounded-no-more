@@ -13,7 +13,7 @@ import { chartFrame, responsive, svgIn, theme, fmtAED, fmtHours, fmtInt, fmtPct,
 
 export const data = ['aog_lab'];
 
-const STEP_LABEL = { removal: 'Removal', request: 'Request', local_check: 'Local stock check', network_check: 'Network stock check', aog_start: 'AOG starts', sourcing: 'Sourcing decided', ordered: 'Ordered', shipped: 'Shipped', arrived: 'Arrived', received: 'Received', fitted: 'Fitted · released', unfilled: 'Unfilled', context: 'Context' };
+const STEP_LABEL = { removal: 'Removal', request: 'Request', local_check: 'Local stock check', network_check: 'Network stock check', aog_start: 'AOG starts', sourcing: 'Sourcing decided', ordered: 'Ordered', shipped: 'Shipped', arrived: 'Arrived', received: 'Received', fitted: 'Part at the aircraft', released: 'Fitted and released to service', unfilled: 'Unfilled', context: 'Context' };
 const BASIS = {
   transport_matrix: 'Transfers keep their estimate: transport times in this world are fixed.',
   actual_order_arrival: 'Scored on the order’s actual arrival.',
@@ -24,10 +24,12 @@ const BASIS = {
 const BASIS_SHORT = { transport_matrix: 'scored on fixed transport times', actual_order_arrival: 'scored on the order’s actual arrival', replan_expedite_at_quoted_due: 're-planned to an expedite at the quoted date', estimate_not_realisable: 'kept the estimate (not taken in history)' };
 const stepLabel = (s) => STEP_LABEL[s] || String(s || 'step').replace(/_/g, ' ');
 /** Short step names for the swimlane (the full sentence lives in the event log). */
-const STEP_SHORT = { removal: 'Removal', requirement: 'Requirement', request: 'Request', local_check: 'Local check', network_check: 'Network check', aog_start: 'AOG starts', sourcing: 'Sourcing', ordered: 'Ordered', shipped: 'Shipped', arrived: 'Arrived', received: 'Received', fitted: 'Fitted', unfilled: 'Unfilled', context: 'Context' };
+const STEP_SHORT = { removal: 'Removal', requirement: 'Requirement', request: 'Request', local_check: 'Local check', network_check: 'Network check', aog_start: 'AOG starts', sourcing: 'Sourcing', ordered: 'Ordered', shipped: 'Shipped', arrived: 'Arrived', received: 'Received', fitted: 'Part at aircraft', released: 'Released', unfilled: 'Unfilled', context: 'Context' };
 const stepShort = (s) => STEP_SHORT[s] || stepLabel(s);
 /** Swimlanes: desk decisions vs physical movement of the part. Unknown steps go to the desk lane. */
-const MOVE_STEPS = new Set(['shipped', 'arrived', 'received', 'fitted', 'unfilled', 'issued']);
+const MOVE_STEPS = new Set(['shipped', 'arrived', 'received', 'fitted', 'released', 'unfilled', 'issued']);
+/** The step that ends material downtime: release to service when exported (v2: fit/RTS counted), else the fitted step. */
+const endStepOf = (tl) => (tl || []).find((s) => s.step === 'released') || (tl || []).find((s) => s.step === 'fitted');
 const laneOf = (s) => (MOVE_STEPS.has(s.step) ? 1 : 0);
 /** Plain-language reason labels; the raw code stays in a title attribute. Unknown codes are sentence-cased. */
 const REASON = {
@@ -99,7 +101,7 @@ export async function render(el, ctx) {
   el.append(pageHead({
     num: '07', eyebrow: 'AOG Response Lab',
     title: 'An aircraft is on the ground. What are the options?',
-    lede: `${fmtInt(incidents.length)} showcase groundings from the simulated history of Falcon Hub Airways (fictional). Each is replayed at the moment of the request, using only what the AOG desk knew then: stock before the request, open orders at their quoted dates. Deadline classes D0/D3/D10 are hypothetical simulation classes, not MEL categories.`,
+    lede: `${fmtInt(incidents.length)} showcase groundings from the simulated history of Falcon Hub Airways (fictional). Each is replayed at the moment of the request, using only what the AOG desk knew then: stock before the request, open orders at their quoted dates. D0/D3/D10 are hypothetical rectification windows; D3 and D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions.`,
     meta: [provChip(prov), h('span', { class: 'chip chip-mono' }, 'History W0–W103 · policy P0')],
   }));
 
@@ -121,6 +123,11 @@ export async function render(el, ctx) {
     select(incidents[(k + incidents.length) % incidents.length], true);
   });
   el.append(card({ kicker: 'Showcase incidents', title: 'Pick a grounding to replay', prov, story: 'aog-picker', body: picker }));
+  const badId = ctx.params.incident && !incidents.some((i) => i.id === ctx.params.incident) ? ctx.params.incident : null;
+  if (badId && inc) {
+    el.append(h('p', { class: 'aog-badid t-12 muted mt-2', role: 'status', dataset: { role: 'bad-incident' } }, icon('info'), ` ${badId} is not one of the showcase incidents; showing ${inc.id}.`));
+    ctx.setParams({ incident: inc.id });
+  }
 
   const host = h('div', { class: 'mt-3' });
   el.append(host);
@@ -159,19 +166,23 @@ export async function render(el, ctx) {
     // timeline
     const tlCard = h('section', { class: 'card span-12', dataset: { story: 'aog-timeline' } });
     const incWrap = h('div', { class: 'span-12 aog-incident', dataset: { story: inc.id === A.ps1_incident_id ? 'aog-incident-ps1' : 'aog-incident', incident: inc.id } });
-    const fitted = (inc.timeline || []).find((s) => s.step === 'fitted');
+    const atAc = (inc.timeline || []).find((s) => s.step === 'fitted');
+    const fitted = endStepOf(inc.timeline);
+    const twoStage = atAc && fitted && fitted !== atAc;
     const tf = chartFrame(tlCard, {
       implication: 'The wait sits in sourcing, not transport: where the stock already is decides how long the aircraft stays down.',
       headline: fitted
-        ? fitHeadline(`Released ${fmtHours(fitted.t_h)} after the request: ${cf.actual_route_label || 'route not recorded'}`, `Released ${fmtHours(fitted.t_h)} after the request`)
+        ? (twoStage
+          ? fitHeadline(`Part at the aircraft ${fmtHours(atAc.t_h)} after the request; released to service at ${fmtHours(fitted.t_h)}`, `Part at aircraft at ${fmtHours(atAc.t_h)}; released at ${fmtHours(fitted.t_h)}`)
+          : fitHeadline(`Released ${fmtHours(fitted.t_h)} after the request: ${cf.actual_route_label || 'route not recorded'}`, `Released ${fmtHours(fitted.t_h)} after the request`))
         : fitHeadline(`Not released within the history window: ${cf.actual_route_label || 'route not recorded'}`, 'Not released within the history window'),
-      subtitle: 'Each step in order, split into desk decisions and physical movement · same-hour steps share a bracket · gaps show elapsed hours (not to scale)',
+      subtitle: `${twoStage ? `Realised: ${fmtHours(atAc.t_h)} sourcing + ${fmtHours(fitted.t_h - atAc.t_h)} fitting = ${fmtHours(fitted.t_h)} material AOG · ` : ''}Each step in order, split into desk decisions and physical movement · same-hour steps share a bracket · gaps show elapsed hours (not to scale)`,
       provenance: prov, source: 'aog_lab.json',
       table: { columns: [{ key: 'wk', label: 'Sim week', mono: true }, { key: 't_h', label: 'T+ h', num: true }, { key: 'station', label: 'Station', mono: true }, { key: 'step', label: 'Step', format: stepLabel }, { key: 'event', label: 'Event' }], rows: (inc.timeline || []).map((s) => ({ ...s, wk: simWeek(s.abs_h) ?? '—' })) },
     });
     stops.push(responsive(tf.body, (w) => drawTimeline(tf.body, w, inc, slack)));
     // The full event sentences: collapsed by default so the chart, not a repeat of it, carries the story.
-    const tlList = h('ol', { class: 'aog-tl list-reset' }, (inc.timeline || []).map((s, i) => h('li', { class: `aog-tl-row ${s.evidence?.context ? 'is-context' : ''} ${s.step === 'fitted' ? 'is-fitted' : ''}` },
+    const tlList = h('ol', { class: 'aog-tl list-reset' }, (inc.timeline || []).map((s, i) => h('li', { class: `aog-tl-row ${s.evidence?.context ? 'is-context' : ''} ${s === fitted ? 'is-fitted' : ''}` },
       h('span', { class: 'aog-tl-n mono' }, String(i + 1).padStart(2, '0')),
       h('span', { class: 'aog-tl-time mono' }, h('span', {}, tLabel(s.t_h)), s.abs_h != null ? h('span', { class: 'faint' }, simWeek(s.abs_h)) : null),
       h('span', { class: 'aog-tl-stn mono' }, s.station || ''),
@@ -206,7 +217,7 @@ export async function render(el, ctx) {
         : 'No feasible option at the time of the request',
       subtitle: `${allMeet ? 'No feasible option is AOG, so exposure is the direct cost alone · ' : ''}Exposure = hours beyond the ${slack != null ? `${fmtHours(slack)} ` : ''}deadline slack × AOG penalty + direct cost (AED) · ex-ante estimate at request time · dashed = not available`,
       provenance: prov, source: 'aog_lab.json',
-      table: { columns: [{ key: 'key', label: 'Key', mono: true }, { key: 'option', label: 'Option' }, { key: 'feasible', label: 'Feasible', format: (v) => (v ? 'yes' : 'no') }, { key: 'wait_h', label: 'Wait', num: true, format: fmtHours }, { key: 'direct_cost', label: 'Direct cost', num: true, format: (v) => fmtAEDfull(v) }, { key: 'exposure_aed', label: 'Exposure', num: true, format: (v) => fmtAEDfull(v) }, { key: 'rank', label: 'Rank', num: true, format: (v) => (v == null ? '—' : v) }], rows: opts },
+      table: { columns: [{ key: 'option', label: 'Option' }, { key: 'feasible', label: 'Feasible', format: (v) => (v ? 'yes' : 'no') }, { key: 'wait_h', label: 'Wait', num: true, format: fmtHours }, { key: 'direct_cost', label: 'Direct cost', num: true, format: (v) => fmtAEDfull(v) }, { key: 'exposure_aed', label: 'Exposure', num: true, format: (v) => fmtAEDfull(v) }, { key: 'rank', label: 'Rank', num: true, format: (v) => (v == null ? '—' : v) }], rows: opts },
     });
     stops.push(responsive(ef.body, (w) => drawExposure(ef.body, w, opts, rec, optLabel)));
 
@@ -216,18 +227,13 @@ export async function render(el, ctx) {
     const human = card({
       cls: 'span-7 aog-human', bp: true, kicker: 'Human decision required', title: rec ? `Recommend: ${recTitle(d.recommended_label || optLabel(rec), d.source || rec.source)}` : 'No feasible option to recommend', prov, story: 'aog-decision',
       body: h('div', { class: 'stack-3' },
-        h('p', { class: 'aog-why m-0' }, d.why ? tidyProse(d.why) : 'No reasoning exported.'),
+        h('p', { class: 'aog-why m-0' }, d.why ? tidyProse(d.why).replace(/expected material-related downtime ([\d.,]+ h)/, 'expected $1 of material AOG (ex-ante estimate)').replace(/exposure (AED [\d.,]+k?M?)/, 'ex-ante exposure $1') : 'No reasoning exported.'),
         h('div', {}, h('div', { class: 'card-kicker mb-1' }, 'What a human must check before acting'),
           h('ul', { class: 'aog-checks list-reset' }, (d.checks || []).map((c) => h('li', {}, icon('check'), h('span', {}, c))))),
-        h('div', { class: 'aog-robbery' }, h('div', { class: 'row' }, icon('alert'), h('b', {}, 'Robbery / cannibalisation')),
-          h('p', { class: 'm-0' }, 'Requires engineering/quality approval — human decision. Never ranked or recommended by the lab.'),
-          d.robbery_note ? h('p', { class: 'm-0 faint' }, d.robbery_note) : null,
-          robbery?.evidence?.donors?.length ? h('p', { class: 'm-0 mono t-12' }, `Donor aircraft: ${robbery.evidence.donors.map((x) => (typeof x === 'string' ? x : `${x.tail || x.aircraft || ''} ${x.status || ''}`.trim())).join(', ')}`) : null,
-          h('ul', { class: 'aog-checks list-reset' }, (d.robbery_checks || []).map((c) => h('li', {}, icon('shield'), h('span', {}, c))))),
-        h('p', { class: 't-12 faint m-0' }, 'The lab supports the AOG desk. It is not an approved maintenance, airworthiness or dispatch tool.')),
+h('p', { class: 't-12 faint m-0' }, 'The lab supports the AOG desk. It is not an approved maintenance, airworthiness or dispatch tool.')),
     });
     const optsWrap = card({
-      cls: 'span-12', kicker: `Options a–h · ${fmtInt(okCards.length)} feasible`, title: 'Every sourcing route the desk could have taken', prov, story: 'aog-options',
+      cls: 'span-12', kicker: `${fmtInt(opts.length)} sourcing routes · ${fmtInt(okCards.length)} feasible`, title: 'Every sourcing route the desk could have taken', prov, story: 'aog-options',
       body: h('div', { class: 'stack-3' },
         noneMeets ? h('div', { class: 'aog-nomeet', role: 'note', dataset: { role: 'none-meets' } }, icon('alert'), h('span', {}, h('b', {}, `No option can meet ${inc.deadline || 'the deadline'}. `), !slack ? 'The aircraft is AOG from removal (0 h slack), so every route misses; the options are ranked by exposure.' : `No route arrives within the ${fmtHours(slack)} slack, so some AOG is unavoidable; the options are ranked by exposure.`)) : null,
         h('div', { class: 'aog-optgroup', dataset: { group: 'feasible' } },
@@ -241,13 +247,19 @@ export async function render(el, ctx) {
 
     // counterfactual for this incident
     const cfCard = counterfactualCard(inc, cf, prov, optLabel);
+    // wave C: the robbery note sits under the counterfactual, so the two columns end together (no half-card void)
+    const robCard = card({ cls: 'mt-3', kicker: 'Robbery / cannibalisation', title: 'Shown, never ranked', prov, body:         h('div', { class: 'aog-robbery stack-2' },
+          h('p', { class: 'm-0' }, 'The simulation engine uses robbery automatically as the first AUH route after local stock, with engineering/quality approval flagged on every case. The AOG Lab never ranks or recommends it: here it is a human decision.'),
+          d.robbery_note ? h('p', { class: 'm-0 faint' }, d.robbery_note) : null,
+          robbery?.evidence?.donors?.length ? h('p', { class: 'm-0 mono t-12' }, `Donor aircraft: ${robbery.evidence.donors.map((x) => (typeof x === 'string' ? x : `${x.tail || x.aircraft || ''} ${x.status || ''}`.trim())).join(', ')}`) : null,
+          h('ul', { class: 'aog-checks list-reset' }, (d.robbery_checks || []).map((c) => h('li', {}, icon('shield'), h('span', {}, c))))) });
 
     head.classList.add('mb-3');
     incWrap.append(head, tlCard);
     host.replaceChildren(
       h('div', { class: 'grid-12' }, incWrap, exCard),
       h('div', { class: 'grid-12 mt-3' }, optsWrap),
-      h('div', { class: 'grid-12 mt-3' }, human, h('div', { class: 'span-5 aog-side' }, cfCard)),
+      h('div', { class: 'grid-12 mt-3' }, human, h('div', { class: 'span-5 aog-side' }, cfCard, robCard)),
     );
   }
 
@@ -303,7 +315,7 @@ export async function render(el, ctx) {
           h('li', {}, 'Options are ex-ante estimates built on quoted figures. Quoted repair and purchase dates are unreliable in this world, and expedite lead times are a cap, not a supplier quote.'),
           h('li', {}, 'Accelerated repair, expedite and pool were not taken in history, so they keep their estimate; they cannot be realised from the record.'),
           h('li', {}, '“Await inbound” queues behind earlier unfilled requests network-wide; the engine may have allocated units differently.'),
-          h('li', {}, 'Fitting time is zero, as in the engine: issue = fitted = released. Pool exchange is shown for reference only: no contract existed under P0.'))),
+          h('li', {}, 'Material AOG runs from the need to release to service, so it includes the fitting / release-to-service hours after the part reaches the aircraft (V2-SIM-7). Route waits in the options are sourcing and transport only. Pool exchange is shown for reference only: no contract existed under P0.'))),
     });
     summaryHost.replaceChildren(h('div', { class: 'grid-12' }, sc, cav));
   }
@@ -321,9 +333,9 @@ function optionCard(o, rec, inc, codes, optLabel, slack, note, noneMeets = false
   const met = o.human_decision ? h('span', { class: 'faint' }, 'n/a') : o.wait_h == null ? h('span', { class: 'faint' }, '—') : o.deadline_met ? pill('ok', 'Met')
     : noneMeets ? h('span', { class: 'aog-late mono', title: 'Every option misses this deadline (see the note above)' }, `+${fmtHours(Math.max(0, late))} late`) : pill('urgent', 'Missed');
   // wave 5: when every option misses, "wait exceeds the deadline slack" is said once (banner + the top card), not per card
-  const rc = (o.reason_codes || []).filter((c) => !(noneMeets && c === 'EXCEEDS_DEADLINE' && o !== rec && o.feasible)).map((c) => h('li', { title: c, dataset: { code: c } }, h('span', { class: 'aog-code' }, reasonLabel(c)), codes[c] ? h('span', { class: 'aog-code-txt' }, tidyProse(codes[c])) : null));
-  return h('article', { class: `aog-opt aog-opt--${st.cls}`, dataset: { key: o.key, state: st.cls }, 'aria-label': `Option ${o.key}: ${optLabel(o)}` },
-    h('div', { class: 'aog-opt-head' }, h('span', { class: 'aog-key mono' }, o.key), h('h4', { class: 'aog-opt-title' }, optLabel(o)), st.pill),
+  const rc = (o.reason_codes || []).filter((c) => !(noneMeets && c === 'EXCEEDS_DEADLINE' && o !== rec && o.feasible)).map((c) => h('li', { title: c, dataset: { code: c } }, h('span', { class: 'aog-code' }, reasonLabel(c)), codes[c] ? h('span', { class: 'aog-code-txt' }, tidyProse(codes[c]).replace(/never auto-recommended/g, 'never ranked by the lab')) : null));
+  return h('article', { class: `aog-opt aog-opt--${st.cls}`, dataset: { key: o.key, state: st.cls }, 'aria-label': `Option: ${optLabel(o)}` },
+    h('div', { class: 'aog-opt-head' }, h('h4', { class: 'aog-opt-title' }, optLabel(o)), st.pill),
     o.human_decision ? h('p', { class: 'aog-human-note m-0' }, icon('alert'), 'Requires engineering/quality approval — human decision') : null,
     st.cls === 'greyed' ? h('p', { class: 'aog-human-note aog-human-note--grey m-0' }, icon('info'), 'Not contracted: indicative P3 terms shown for reference') : null,
     h('dl', { class: 'aog-metrics' },
@@ -342,10 +354,10 @@ function counterfactualCard(inc, cf, prov, optLabel) {
   const worse = (cf.aog_h_saving ?? 0) < 0;
   // wave 5: the route is prose, so it gets a full-width left-aligned line above the numeric rows
   const histRoute = cf.actual_route_label || cf.actual_route || '—';
-  const bestRoute = `${cf.best_option ? `${cf.best_option} · ` : ''}${cf.best_option_label || '—'}`;
+  const bestRoute = cf.best_option_label || '—';
   const sameRoute = String(cf.best_option_label || '').toLowerCase() && String(histRoute).toLowerCase().includes(String(cf.best_option_label || '').toLowerCase().replace(/ stock$/, ''));
   const rows = [
-    ['', 'History', 'Best option'],
+    ['', 'History', 'Best (ex post)'],
     ['AOG hours', fmtHours(cf.actual_aog_h), fmtHours(cf.best_realised_aog_h ?? cf.best_aog_h)],
     ['Direct cost', fmtMoneyFine(cf.actual_direct_cost_aed), fmtMoneyFine(cf.best_realised_direct_cost_aed ?? cf.best_direct_cost_aed)],
     ['Exposure', fmtMoneyFine(cf.actual_exposure_aed), fmtMoneyFine(cf.best_realised_exposure_aed ?? cf.best_exposure_aed)],
@@ -360,6 +372,7 @@ function counterfactualCard(inc, cf, prov, optLabel) {
       h('table', { class: 'data-table data-table--dense aog-cf' }, h('caption', { class: 'sr-only' }, 'History versus best option'),
         h('thead', {}, h('tr', {}, rows[0].map((c, i) => h('th', { scope: 'col', class: i ? 'is-num' : '' }, c)))),
         h('tbody', {}, rows.slice(1).map((r) => h('tr', {}, h('th', { scope: 'row' }, r[0]), h('td', { class: 'is-num' }, r[1]), h('td', { class: 'is-num' }, r[2]))))),
+      cf.best_exposure_aed != null ? h('p', { class: 't-12 faint m-0', dataset: { role: 'cf-exante' } }, `Ex-ante estimate at the request: ${fmtHours(cf.best_aog_h)} expected, exposure ${fmtMoneyFine(cf.best_exposure_aed)}. Scored ex post on the record: ${fmtHours(cf.best_realised_aog_h ?? cf.best_aog_h)}, ${fmtMoneyFine(cf.best_realised_exposure_aed ?? cf.best_exposure_aed)}.`) : null,
       h('p', { class: 'm-0' }, verdict),
       h('p', { class: 't-12 faint m-0' }, `Scoring basis: ${BASIS[cf.realised_basis] || (cf.realised_basis ? fmtEnum(cf.realised_basis) : 'not recorded')}`)),
   });
@@ -383,13 +396,14 @@ function drawTimeline(body, w, inc, slack) {
   groups.forEach((g, gi) => { if (gi) { g.gapFrom = pos; pos += GAP; g.gapTo = pos; } g.from = pos; g.steps.forEach((s) => { s.p = pos + 0.5; pos += 1; }); g.to = pos; });
   const total = pos;
   const aog = steps.find((s) => s.step === 'aog_start');
-  const fit = steps.find((s) => s.step === 'fitted');
+  const endRaw = endStepOf(inc.timeline);
+  const fit = steps.find((s) => endRaw && s.step === endRaw.step);
   const aogH = aog && fit ? fit.t_h - aog.t_h : null;
   const deadlineGroup = slack != null && slack > 0 ? groups.find((g) => g.t >= slack) : null;
   const LANES = ['Desk decisions', 'Physical movement'];
   const urgent = theme.series.urgent;
   const stepNode = (gg, s, cx, cy) => {
-    const isFit = s.step === 'fitted';
+    const isFit = s === fit;
     const c = gg.append('g').attr('transform', `translate(${cx},${cy})`).attr('class', 'aog-sl-step').attr('tabindex', 0).attr('role', 'img')
       .attr('aria-label', `${String(s.n).padStart(2, '0')} ${stepLabel(s.step)} at ${tLabel(s.t_h)}${s.station ? `, ${s.station}` : ''}`);
     c.append('circle').attr('r', 10).attr('fill', isFit ? theme.color.accent : theme.color.panel)
@@ -446,7 +460,7 @@ function drawTimeline(body, w, inc, slack) {
       stepNode(g, s, cx, cy);
       const below = slotW >= 84 || i % 2 === 0;
       g.append('text').attr('class', 'gnm-label').attr('x', cx).attr('y', below ? cy + 24 : cy - 16).attr('text-anchor', 'middle').attr('font-size', 11)
-        .style('fill', s.step === 'fitted' ? theme.color.accent : theme.color.muted).text(truncate(stepShort(s.step), Math.max(48, slotW * (slotW < 84 ? 1.9 : 0.98))));
+        .style('fill', s === fit ? theme.color.accent : theme.color.muted).text(truncate(stepShort(s.step), Math.max(48, slotW * (slotW < 84 ? 1.9 : 0.98))));
     });
     return;
   }
@@ -475,7 +489,7 @@ function drawTimeline(body, w, inc, slack) {
   steps.forEach((s) => {
     const cx = laneX(s.lane) + 18, cy = ys.get(s);
     stepNode(g, s, cx, cy);
-    g.append('text').attr('class', 'gnm-label').attr('x', cx + 16).attr('y', cy).attr('dy', '0.32em').attr('font-size', 11).style('fill', s.step === 'fitted' ? theme.color.accent : theme.color.muted).text(truncate(stepShort(s.step), colWs[s.lane] - 40));
+    g.append('text').attr('class', 'gnm-label').attr('x', cx + 16).attr('y', cy).attr('dy', '0.32em').attr('font-size', 11).style('fill', s === fit ? theme.color.accent : theme.color.muted).text(truncate(stepShort(s.step), colWs[s.lane] - 40));
   });
   if (aog && fit && ys.get(fit) >= ys.get(aog)) {
     const xb = w - 6;
@@ -495,7 +509,7 @@ function drawExposure(body, w, opts, rec, optLabel) {
   const narrow = w < 560;
   // label column sized to the longest label (cap 360 px at >= 900 px); labels longer than the cap wrap to two lines
   const CW = 6.9;
-  const labOf = (o) => `${o.key} · ${optLabel(o)}`;
+  const labOf = (o) => optLabel(o);
   const longest = d3.max(rows, (o) => labOf(o).length) * CW + 16;
   const cap = w >= 900 ? 360 : Math.min(300, w * 0.4);
   const lw = narrow ? 0 : Math.min(cap, longest);

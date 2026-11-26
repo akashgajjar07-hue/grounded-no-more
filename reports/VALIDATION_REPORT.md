@@ -6,7 +6,7 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 
 ## 1. Tests
 
-556 tests, 0 failures, 0 errors, 0 skipped, 344 s, run at 2026-11-26T16:08:22.410899+05:30 (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast, slow and browser suites in one serial run).
+556 tests, 1 failures, 0 errors, 0 skipped, 378 s, run at 2026-11-26T17:29:28.559334+05:30 (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast, slow and browser suites in one serial run).
 
 | Area | Test modules | Tests | Failed | Skipped |
 |---|---|---|---|---|
@@ -18,10 +18,10 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 | Freeze and holdout discipline | `test_freeze` | 3 | 0 | 0 |
 | Site data export, reconciliation, rendered docs | `test_reconciliation`, `test_site_data`, `test_docs_rendered` | 48 | 0 | 0 |
 | SQL, workbook, notebooks | `test_sql`, `test_workbook`, `test_notebooks` | 63 | 0 | 0 |
-| Web app screens (browser) | `test_site_actions`, `test_site_aog`, `test_site_forecast`, `test_site_method`, `test_site_mission`, `test_site_network`, `test_site_optimiser`, `test_site_overlays`, `test_site_parts`, `test_site_rotables`, `test_site_shared_apis`, `test_site_wave3_shared`, `test_site_waveA`, `test_site_waveB` | 190 | 0 | 0 |
-| **Total** | 45 modules | **556** | **0** | **0** |
+| Web app screens (browser) | `test_site_actions`, `test_site_aog`, `test_site_forecast`, `test_site_method`, `test_site_mission`, `test_site_network`, `test_site_optimiser`, `test_site_overlays`, `test_site_parts`, `test_site_rotables`, `test_site_shared_apis`, `test_site_wave3_shared`, `test_site_waveA`, `test_site_waveB` | 190 | 1 | 0 |
+| **Total** | 45 modules | **556** | **1** | **0** |
 
-No test failed.
+Failing in this run: `test_site_waveA::test_navigation_groups_and_shortcuts`.
 
 Doc rendering is checked by `tests/test_docs_rendered.py`: no result placeholder survives, the README results table and headline match `docs/data/kpis.json`, the P2 headline and the baseline sentence (8 vs 44 outstation rotables) are present, and the README never claims a result "at every tested setting".
 
@@ -129,7 +129,7 @@ Most of them overstated P0's downtime and the size of the improvement. For trans
 | P0 legacy (stock to pipeline mean) | 2,871 [2,459–3,282] | AED 36.8M |
 | P1 local optimised | 1,626 [1,243–2,008] | AED 64.6M |
 | P2 network | 533 [419–646] | AED 37.0M |
-| I125 recommended | 223 [174–272] | AED 41.9M |
+| I125 v1 frontier pick | 223 [174–272] | AED 41.9M |
 
 v1 commit chain:
 
@@ -233,11 +233,13 @@ AOG reconstruction: 2,564 of 2,564 history material AOG hours reconstructed requ
 These reviews were run on the v1 world before it was archived. The aviation review is the reason v1 was archived; the correctness and design findings were fixed in v1 and the fixes carried into v2 where the code survived.
 
 - [`reports/review_aviation.md`](review_aviation.md): Aviation domain review: GROUNDED NO MORE; 4 critical, 11 major, 13 minor.
+- [`reports/review_aviation_v2.md`](review_aviation_v2.md): Aviation domain review: v2 world; see file.
 - [`reports/review_correctness.md`](review_correctness.md): Correctness review — GROUNDED NO MORE; 0 critical, 5 major, 16 minor.
 - [`reports/review_design.md`](review_design.md): GROUNDED NO MORE: independent design critique; overall 3.61 / 5.
 - [`reports/review_design_2.md`](review_design_2.md): GROUNDED NO MORE: second independent design critique; overall 4.23 / 5.
 - [`reports/review_design_3.md`](review_design_3.md): GROUNDED NO MORE: third independent design critique; overall 4.22 / 5.
 - [`reports/review_design_4.md`](review_design_4.md): GROUNDED NO MORE: fourth independent design critique; overall 4.33 / 5.
+- [`reports/review_design_5.md`](review_design_5.md): GROUNDED NO MORE: fifth independent design critique; overall 4.20 / 5.
 
 ### v2 reviews
 

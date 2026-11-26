@@ -89,7 +89,7 @@
   .pac-filters > :first-child { grid-column: 1 / -1; }
   .pac-ghead { padding-left: 10px; }
 }
-.pac-more { width: 100%; justify-content: center; }
+.pac-more { width: 100%; justify-content: center; margin-bottom: var(--s-2); }
 
 /* wave 3: the action column shows the whole first sentence (3-line safety clamp); the rest is in the drawer */
 .pac-c-action { -webkit-line-clamp: 2; line-clamp: 2; }
@@ -97,7 +97,7 @@
 .pac-nw { white-space: nowrap; }
 @media (max-width: 767px) { .pac-c-action { -webkit-line-clamp: 2; line-clamp: 2; } }
 @media (max-width: 767px) { .pac-filters > :last-child { grid-column: 1 / -1; } }
-@media (max-width: 480px) { .pac-shown { white-space: nowrap; } .pac-shownrow { flex-wrap: wrap; gap: 4px var(--s-1); } }
+@media (max-width: 480px) { .pac-shown { white-space: normal; } .pac-shownrow { flex-wrap: wrap; gap: 4px var(--s-1); } }
 .pac-list-inline { margin: 0; padding-left: 16px; } .pac-list-inline li + li { margin-top: 2px; }
 /* wave B: Monday-morning walkthrough */
 .pac-walk-step { font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary); }
@@ -110,3 +110,4 @@
 .pac-walk-dots { display: flex; gap: 6px; }
 .pac-walk-dots span { width: 24px; height: 3px; border-radius: 2px; background: var(--line-strong); }
 .pac-walk-dots span.is-on { background: var(--primary); }
+@media (max-width: 480px) { .pac-shown { display: flex; flex-wrap: wrap; column-gap: 4px; min-width: 0; max-width: 100%; } }

@@ -18,9 +18,11 @@ An aviation spare-parts intelligence project for a fictional airline, **Falcon H
 
 ## Headline
 
-Holdout results: 20 paired seeds (2000–2019), 52 weeks (weeks 104–155), central world, run once after the freeze. "Material AOG" means expected material-related downtime hours: the hours an aircraft waits for a part that was not available in time, including fitting and release-to-service time.
+Holdout results: 20 paired seeds (2000–2019), 52 weeks (weeks 104–155), central world, run once after the freeze. "Material AOG" means expected material-related downtime hours: the hours an aircraft waits for a part that was not available in time, including fitting and release-to-service time. The scope is the modelled catalogue of 120 AOG-critical part numbers, not every part on the fleet.
 
 **Network positioning (P2) cuts material AOG by 1,480 h a year [1,332–1,629] vs a legacy OEM-quote policy holding only 8 outstation rotables, for about +AED 0.6M of spares capital.** P2 holds 44 rotables at the six outstations instead of 8 and pools the rest at the hub. Material AOG falls from 1,690 h to 210 h a year (88% lower) on the holdout (seeds 2000–2019, paired 95% CI). It holds in all three calibrated worlds and across the ×0.5–×2 range of the hourly AOG penalty.
+
+P2 is not a free repositioning of P0's float. Going from P0 to P2 buys 68 rotables (about AED 8.4M) for no-go (D0) items and sheds 20 high-value deferrable ones (about AED 3.1M), so procurement would see a purchase request plus disposals, at roughly flat net capital (target units × unit cost from the policy tables).
 
 **Frontier option: if you invest an additional AED 7.6M**, the frontier point I125 (P2 plus greedy rotable additions) cuts a further 134 h a year [87–181] vs P2 (76 h vs 210 h) and lowers total annual cost by AED 3.3M [1.8–4.8] (holdout, paired). Sensitivity, on the selection seeds and one factor at a time: its cost lead over P2 is not significant if repair is 25% faster (+AED 0.36M [−0.75 to 1.46] a year), and the pre-stated rule moves to I110 at ×0.5 and B150 at ×2 the hourly rate. Post-plan check (D015, added after the main holdout, no re-selection): low stress −85 h [−125 to −45] a year and total annual cost −AED 1.7M [−2.9 to −0.4] for +AED 7.7M capital (I125 62 h vs central-built P2 147 h); high stress −184 h [−239 to −128] a year and total annual cost −AED 5.0M [−6.8 to −3.1] for +AED 7.5M capital (I125 76 h vs central-built P2 260 h).
 
@@ -29,7 +31,7 @@ Holdout results: 20 paired seeds (2000–2019), 52 weeks (weeks 104–155), cent
 - **Forecasting champions rarely won on the holdout.** The frozen champion was best in only 3 of 9 demand-class × part-class cells. For intermittent rotables the frozen SBA champion ranked 6th of 9 (TSB was best in hindsight). The policies size rotables on the reliability-exposure rate instead, so they do not depend on that cell's champion.
 - **History beats the vendor quote on reliability.** The history-based MTBUR estimate is about 7% off the hidden truth against about 14% for vendor quotes (median absolute log error, 75 removal-driven parts).
 - **Immediate fill is slightly lower under the network plans.** Against P0, P2 changes the share of requests filled from the shelf by −1.25 pts [−1.42 to −1.09] and P1 by −1.26 pts [−1.43 to −1.10]. The cause is lean consumable and expendable reorder points, not rotables (consumables P0 1.000 vs P2 0.983; expendables P0 0.949 vs P2 0.918; rotables P0 0.803 vs P2 0.898).
-- **Everything depends on the AOG recovery routes.** Every policy, P0 included, leans on robbery at the hub (an engineering/quality approval decision), local borrow at outstations, exchange/loan and local buy: with the routes switched off (selection seeds, a structural stress) material AOG rises from 1,727 h to 42,070 h a year under P0, from 235 h to 18,320 h under P2 and from 92 h to 11,080 h under I125. See [LIMITATIONS](LIMITATIONS.md#economics-and-decisions).
+- **Everything depends on the AOG recovery routes.** Every policy, P0 included, leans on robbery at the hub (used automatically as the first AUH route after local stock, with engineering/quality approval flagged), local borrow at outstations, exchange/loan and local buy: with the routes switched off (selection seeds, a structural stress) material AOG rises from 1,727 h to 42,070 h a year under P0, from 235 h to 18,320 h under P2 and from 92 h to 11,080 h under I125. See [LIMITATIONS](LIMITATIONS.md#economics-and-decisions).
 - **Selection carried over to the holdout:** for P2 the selection-seed value of 6 of 6 headline KPIs lies inside the holdout 95% CI (material AOG 235 h on selection, 210 h [146–274] on holdout); I125 scored 92 h on selection and 76 h [50–102] on holdout (inside the CI).
 - **The stress worlds sit at different ends of the calibration band:** the low-stress world reaches the AOG end of the band (pooled history and selection 1,174 h/yr; band end 1,200) at 0.841 rotable fill, and the high-stress world reaches the fill end (0.781; band end 0.78) at about 1,595 h/yr, well short of the 2,700 h end, because fill binds first.
 
@@ -109,7 +111,7 @@ These are results on simulated data from assumed parameters. They show that the 
 | Feature | What it does |
 |---|---|
 | **Readiness Frontier** | Capital vs expected material-related downtime for every budget, within stated stocking guardrails. Each point is an allocation you can open line by line, with paired-seed confidence intervals. |
-| **AOG Response Lab** | Replays the simulated history's groundings. For each one it compares AUH transfer, lateral, local borrow, robbery (shown, flagged for engineering/quality approval, never ranked), exchange/loan, local buy and awaiting inbound supply on wait, cost and material shortage exposure. |
+| **AOG Response Lab** | Replays the simulated history's groundings. For each one it compares AUH transfer, lateral, local borrow, robbery (shown and flagged for engineering/quality approval; the engine uses it automatically as the first AUH route after local stock, but the lab never ranks it), exchange/loan, local buy and awaiting inbound supply on wait, cost and material shortage exposure. |
 | **Planner Action Centre** | A weekly inbox of exceptions (outstation depletion, overdue repair, robbed donor not reinstated, lead-time drift, excess stock) with evidence, owner and a recommended action. |
 | **Forecast Lab** | Demand classification (ADI, CV²), method leaderboard by class, and how well each method recovers the hidden true rates. |
 | **Rotable & Repair** | Serial lifecycle flows, the simulated repair pipeline (including no-fault-found), TAT and float sizing from Palm's theorem. |
@@ -123,7 +125,7 @@ These are results on simulated data from assumed parameters. They show that the 
 
 1. **Simulate a world.** A seeded generator builds a fictional 40-aircraft fleet (A320-family and 787-family archetypes, type-exclusive parts), its flights, and the removals, kit demands and line usage those flights cause. True failure rates stay hidden in `data/ground_truth/`.
 2. **Record a history.** One event engine runs the airline for 104 weeks under the legacy OEM-quote policy (P0). Its output looks like what a materials planner would pull from an MRO system: requests, repair orders, POs, transfers, loans, robberies and AOG events.
-3. **Calibrate P0 only, then lock.** The world was calibrated against a user-approved band using P0 alone, and locked before any P1, P2 or optimiser run.
+3. **Calibrate P0 only, then lock.** The world was calibrated against an ASSUMED plausibility band chosen before any policy comparison, using P0 alone, and locked before any P1, P2 or optimiser run.
 4. **Plan from the history only.** Forecasting, float sizing, positioning and the frontier optimiser see only the history and the part master, never the truth. A static scan of the source and a runtime audit test check this.
 5. **Evaluate fairly.** Every policy runs through the same engine on the same paired seeds. Parameters are frozen and hashed before the 52-week holdout runs once.
 6. **Ship.** Results export to JSON and a static app on GitHub Pages. Every number on screen is read from the exported JSON, and `tests/test_reconciliation.py` recomputes the headline from `outputs/`.
@@ -132,7 +134,7 @@ Method details: [METHODOLOGY.md](METHODOLOGY.md). Model scope: [MODEL_CARD.md](M
 
 **Checked against real data too.** The forecasting code was also run on a REAL public benchmark. Dataset: Monash Car Parts (without missing values), 2,674 monthly series, licence CC BY 4.0, data provenance REAL (metrics DERIVED). Best eligible method IMAPA with mean MASE 1.056 [1.011–1.109]; the all-zero forecast scores 0.777, which is why zero is never allowed to be a champion. Attribution: Car Parts dataset, Monash Time Series Forecasting Archive (Godahewa, Bergmeir, Webb, Hyndman & Montero-Manso, 2021), Zenodo record 4656021, licensed CC BY 4.0; original data from Hyndman (2015), R package expsmooth.
 
-**Tests:** 556/556 passing, 0 failing, 0 skipped (fast, slow and browser suites, `GNM_RELEASE=1`; `reports/junit.xml`, run at 2026-11-26 16:08).
+**Tests:** 555/556 passing, 1 failing, 0 skipped (fast, slow and browser suites, `GNM_RELEASE=1`; `reports/junit.xml`, run at 2026-11-26 17:29).
 
 ---
 

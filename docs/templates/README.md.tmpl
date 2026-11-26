@@ -18,9 +18,11 @@ An aviation spare-parts intelligence project for a fictional airline, **Falcon H
 
 ## Headline
 
-Holdout results: {{RESULT:seeds.n}} paired seeds ({{RESULT:seeds.holdout}}), 52 weeks (weeks {{RESULT:seeds.kpi_weeks}}), central world, run once after the freeze. "Material AOG" means expected material-related downtime hours: the hours an aircraft waits for a part that was not available in time, including fitting and release-to-service time.
+Holdout results: {{RESULT:seeds.n}} paired seeds ({{RESULT:seeds.holdout}}), 52 weeks (weeks {{RESULT:seeds.kpi_weeks}}), central world, run once after the freeze. "Material AOG" means expected material-related downtime hours: the hours an aircraft waits for a part that was not available in time, including fitting and release-to-service time. The scope is the modelled catalogue of {{RESULT:scope.pn_count}} AOG-critical part numbers, not every part on the fleet.
 
 {{RESULT:core.headline}}
+
+P2 is not a free repositioning of P0's float. Going from P0 to P2 buys {{RESULT:policy.remix.buy_units}} rotables (about {{RESULT:policy.remix.buy_aed}}) for no-go (D0) items and sheds {{RESULT:policy.remix.shed_units}} high-value deferrable ones (about {{RESULT:policy.remix.shed_aed}}), so procurement would see a purchase request plus disposals, at roughly flat net capital (target units × unit cost from the policy tables).
 
 {{RESULT:fo.headline}}
 
@@ -29,7 +31,7 @@ Holdout results: {{RESULT:seeds.n}} paired seeds ({{RESULT:seeds.holdout}}), 52 
 - **Forecasting champions rarely won on the holdout.** The frozen champion was best in only {{RESULT:honest.champions_best}} demand-class × part-class cells. For intermittent rotables the frozen {{RESULT:honest.ir_champion}} champion ranked {{RESULT:honest.ir_rank}} ({{RESULT:honest.ir_best}} was best in hindsight). The policies size rotables on the reliability-exposure rate instead, so they do not depend on that cell's champion.
 - **History beats the vendor quote on reliability.** The history-based MTBUR estimate is about {{RESULT:honest.mtbur_hist}} off the hidden truth against about {{RESULT:honest.mtbur_quote}} for vendor quotes (median absolute log error, {{RESULT:honest.mtbur_n}} removal-driven parts).
 - **Immediate fill is slightly lower under the network plans.** Against P0, P2 changes the share of requests filled from the shelf by {{RESULT:policies.P2_vs_P0.delta_fill_pts}} {{RESULT:policies.P2_vs_P0.delta_fill_pts_ci}} and P1 by {{RESULT:policies.P1_vs_P0.delta_fill_pts}} {{RESULT:policies.P1_vs_P0.delta_fill_pts_ci}}. The cause is lean consumable and expendable reorder points, not rotables ({{RESULT:policies.fill_by_class}}).
-- **Everything depends on the AOG recovery routes.** Every policy, P0 included, leans on robbery at the hub (an engineering/quality approval decision), local borrow at outstations, exchange/loan and local buy: {{RESULT:honest.routes_off}}. See [LIMITATIONS](LIMITATIONS.md#economics-and-decisions).
+- **Everything depends on the AOG recovery routes.** Every policy, P0 included, leans on robbery at the hub (used automatically as the first AUH route after local stock, with engineering/quality approval flagged), local borrow at outstations, exchange/loan and local buy: {{RESULT:honest.routes_off}}. See [LIMITATIONS](LIMITATIONS.md#economics-and-decisions).
 - **Selection carried over to the holdout:** {{RESULT:honest.consistency}}.
 - **The stress worlds sit at different ends of the calibration band:** {{RESULT:honest.band_ends}}.
 
@@ -105,7 +107,7 @@ These are results on simulated data from assumed parameters. They show that the 
 | Feature | What it does |
 |---|---|
 | **Readiness Frontier** | Capital vs expected material-related downtime for every budget, within stated stocking guardrails. Each point is an allocation you can open line by line, with paired-seed confidence intervals. |
-| **AOG Response Lab** | Replays the simulated history's groundings. For each one it compares AUH transfer, lateral, local borrow, robbery (shown, flagged for engineering/quality approval, never ranked), exchange/loan, local buy and awaiting inbound supply on wait, cost and material shortage exposure. |
+| **AOG Response Lab** | Replays the simulated history's groundings. For each one it compares AUH transfer, lateral, local borrow, robbery (shown and flagged for engineering/quality approval; the engine uses it automatically as the first AUH route after local stock, but the lab never ranks it), exchange/loan, local buy and awaiting inbound supply on wait, cost and material shortage exposure. |
 | **Planner Action Centre** | A weekly inbox of exceptions (outstation depletion, overdue repair, robbed donor not reinstated, lead-time drift, excess stock) with evidence, owner and a recommended action. |
 | **Forecast Lab** | Demand classification (ADI, CV²), method leaderboard by class, and how well each method recovers the hidden true rates. |
 | **Rotable & Repair** | Serial lifecycle flows, the simulated repair pipeline (including no-fault-found), TAT and float sizing from Palm's theorem. |
@@ -119,7 +121,7 @@ These are results on simulated data from assumed parameters. They show that the 
 
 1. **Simulate a world.** A seeded generator builds a fictional 40-aircraft fleet (A320-family and 787-family archetypes, type-exclusive parts), its flights, and the removals, kit demands and line usage those flights cause. True failure rates stay hidden in `data/ground_truth/`.
 2. **Record a history.** One event engine runs the airline for 104 weeks under the legacy OEM-quote policy (P0). Its output looks like what a materials planner would pull from an MRO system: requests, repair orders, POs, transfers, loans, robberies and AOG events.
-3. **Calibrate P0 only, then lock.** The world was calibrated against a user-approved band using P0 alone, and locked before any P1, P2 or optimiser run.
+3. **Calibrate P0 only, then lock.** The world was calibrated against an ASSUMED plausibility band chosen before any policy comparison, using P0 alone, and locked before any P1, P2 or optimiser run.
 4. **Plan from the history only.** Forecasting, float sizing, positioning and the frontier optimiser see only the history and the part master, never the truth. A static scan of the source and a runtime audit test check this.
 5. **Evaluate fairly.** Every policy runs through the same engine on the same paired seeds. Parameters are frozen and hashed before the 52-week holdout runs once.
 6. **Ship.** Results export to JSON and a static app on GitHub Pages. Every number on screen is read from the exported JSON, and `tests/test_reconciliation.py` recomputes the headline from `outputs/`.

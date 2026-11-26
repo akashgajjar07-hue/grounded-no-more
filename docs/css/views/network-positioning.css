@@ -86,3 +86,4 @@
 .np-pol tr.is-rec td:first-child { color: var(--c-teal-hi); font-weight: 600; box-shadow: inset 2px 0 0 var(--primary); }
 .np-pol .np-rec-note { text-align: left !important; font-family: var(--font-ui); font-size: 11px; line-height: 1.45; color: var(--text-muted); white-space: normal; }
 .np-legend .np-line--dash { background: none; border-top: 2px dashed currentColor; height: 0; }
+.np-pol tr.is-opt td:first-child { color: var(--text-muted); box-shadow: inset 2px 0 0 var(--line-strong); }

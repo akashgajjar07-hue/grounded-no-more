@@ -485,7 +485,7 @@ export async function render(el, ctx) {
         h('div', {}, h('div', { class: 'card-kicker mb-1' }, 'Evidence · the numbers behind it'),
           h('table', { class: 'data-table data-table--dense pac-evtable' }, h('caption', { class: 'sr-only' }, 'Evidence'), h('tbody', {}, evRows.map(([k, v]) => h('tr', {}, h('th', { scope: 'row' }, evLabel(k)), h('td', { class: 'is-num mono' }, fmtEv(k, v))))))),
         prov === 'SIMULATED' ? h('p', { class: 't-12 faint m-0' }, 'This exception comes from a seeded random flag, not from document data. It illustrates the quarantine workflow only.') : null,
-        h('p', { class: 't-12 faint m-0' }, 'Deadline classes D0/D3/D10 are hypothetical simulation classes, not MEL categories. A planner confirms before acting.')),
+        h('p', { class: 't-12 faint m-0' }, 'D0/D3/D10 are hypothetical rectification windows; D3 and D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions. A planner confirms before acting.')),
       foot: [
         a.pn ? h('a', { class: 'btn btn--sm', href: ctx.buildHash('parts', { ata: a.pn.split('-')[1], pn: a.pn }) }, icon('layers'), 'Open part') : null,
         a.station && a.station !== NETWORK ? h('a', { class: 'btn btn--sm', href: ctx.buildHash('network', { station: a.station }) }, icon('map-pin'), 'Open station') : null,
@@ -506,7 +506,6 @@ export async function render(el, ctx) {
     ownerSel.querySelector('select').value = f.owner;
     ownerList.querySelectorAll('.pac-own').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.owner === f.owner)));
     const nU = rows.filter((a) => a.severity === 'urgent').length;
-    shown.replaceChildren(h('span', { class: 'pac-nw' }, `Showing ${fmtInt(rows.length)} of ${fmtInt(all.length)}`), ' · ', h('span', { class: 'pac-nw' }, `${fmtInt(nU)} urgent`));
     resetBtn.disabled = f.severity === 'all' && !f.type && !f.station && !f.owner;
     // Page by whole groups: show groups until about PAGE visible rows, then "Show all".
     const gs = groupsOf(rows);
@@ -516,6 +515,11 @@ export async function render(el, ctx) {
     const hiddenRows = gs.slice(collapsedN).reduce((n, g) => n + g.rows.length, 0);
     list.replaceChildren(...(rows.length ? gs.slice(0, shownN).map(groupBlock) : [h('li', { class: 'state' }, icon('info'), h('p', {}, 'No exceptions match these filters.'))]));
     gridHead.hidden = !rows.length;
+    // wave C (F7): the counter reports the rows actually on screen, and says when the list is truncated
+    const visN = [...list.querySelectorAll('.pac-row')].filter((r) => !r.closest('[hidden]') && r.offsetParent !== null).length || list.querySelectorAll('.pac-row').length;
+    shown.replaceChildren(...[h('span', { class: 'pac-nw', dataset: { role: 'shown-count' } }, `Showing ${fmtInt(Math.min(visN, rows.length))} of ${fmtInt(rows.length)}`),
+      rows.length < all.length ? h('span', { class: 'pac-nw' }, ` matching (${fmtInt(all.length)} in all)`) : null,
+      visN < rows.length ? h('span', { class: 'pac-nw' }, ' (expand for all)') : null, ' · ', h('span', { class: 'pac-nw' }, `${fmtInt(nU)} urgent`)].filter((x) => x != null));
     moreBtn.hidden = hiddenRows === 0;
     moreBtn.replaceChildren(icon(expanded ? 'arrow-up' : 'arrow-down'), expanded ? 'Show the top of the list only' : `Show all ${fmtInt(rows.length)} exceptions (${fmtInt(hiddenRows)} more across ${fmtInt(gs.length - collapsedN)} parts)`);
     ctx.setParams({ severity: f.severity === 'all' ? '' : f.severity, type: f.type, station: f.station, owner: f.owner });

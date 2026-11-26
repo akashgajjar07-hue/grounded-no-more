@@ -104,7 +104,7 @@ export async function render(el, ctx) {
     DC_ORDER.filter((c) => all.some((x) => x.p.demand_class === c)).forEach((c) => {
       const inC = all.filter((x) => x.p.demand_class === c).sort((a, b) => a.s.nz - b.s.nz || a.p.pn.localeCompare(b.p.pn));
       const picks = [...new Set([0.2, 0.5, 0.8].map((q) => Math.min(inC.length - 1, Math.floor(q * inC.length))))].map((i) => inC[i]);
-      const col = h('div', { class: 'fl-strip-col' }, h('div', { class: 'fl-strip-head' }, h('span', { class: 'fl-dc' }, dcLabel(c)), h('span', { class: 'faint mono' }, `${fmtInt(inC.length)} PNs`)));
+      const col = h('div', { class: 'fl-strip-col' }, h('div', { class: 'fl-strip-head' }, h('span', { class: 'fl-dc' }, dcLabel(c).replace(/^./, (x) => x.toUpperCase())), h('span', { class: 'faint mono' }, `${fmtInt(inC.length)} PN${inC.length === 1 ? "" : "s"}`)));
       picks.forEach(({ p, s }) => {
         const sh = h('div', { class: 'fl-strip-plot' });
         col.append(h('div', { class: 'fl-strip' }, h('div', { class: 'fl-strip-meta' }, h('a', { class: 'mono', href: `#/parts?pn=${p.pn}` }, p.pn), h('span', { class: 'faint mono' }, `${fmtInt(s.nz)}/${fmtInt(s.weeks)} wk · max ${fmtInt(Math.max(...(DH.series[p.pn] || [0])))}`)), sh));
@@ -298,7 +298,7 @@ export async function render(el, ctx) {
       // C8 (wave 4): reconcile the quantile with what the plans actually position at this station
       const placed = L.station ? num(part?.stock_by_station?.[L.station]) : null;
       if (rop != null && placed != null && placed !== rop) {
-        f.body.after(h('p', { class: 'fl-reconcile t-12 muted' }, icon('info'), h('span', {}, `Service-level quantile ${fmtInt(rop)} vs positioned ${fmtInt(placed)}: the recommended plan places ${fmtInt(placed)} at ${L.station}. Its cost-based allocation ${placed < rop ? `stops short of the quantile because the next unit's modelled AOG saving is worth less than its holding cost` : `goes past the quantile because the D0 penalty pays for the extra unit`} (see Capital Optimiser).`)));
+        f.body.after(h('p', { class: 'fl-reconcile t-12 muted' }, icon('info'), h('span', {}, `Service-level quantile ${fmtInt(rop)} vs positioned ${fmtInt(placed)}: P2, the core plan, places ${fmtInt(placed)} at ${L.station}. Its cost-based allocation ${placed < rop ? `stops short of the quantile because the next unit's modelled AOG saving is worth less than its holding cost` : `goes past the quantile because the D0 penalty pays for the extra unit`} (see Capital Optimiser).`)));
       }
       stop = responsive(f.body, (w) => {
         const hgt = 260, m = { top: 30, right: 16, bottom: 34, left: 44 };
@@ -394,7 +394,10 @@ export async function render(el, ctx) {
         const y = d3().scaleLinear().domain([Math.max(0, ye[0] - yp), Math.min(1, ye[1] + yp)]).nice().range([ih, 0]);
         gridY(g.append('g'), y, iw, 4);
         axisLeft(g.append('g'), y, { ticks: 4, format: (v) => fmtPct(v, 0) });
-        axisBottom(g.append('g'), x0, { height: ih, ticks: small ? 3 : 5, format: (v) => fmtAED(v) });
+        const axB = g.append('g');
+        axisBottom(axB, x0, { height: ih, ticks: small ? 3 : 5, format: (v) => fmtAED(v) });
+        // wave C (F6): drop a tick label that would sit under the "off-scale" note
+        if (cut !== Infinity) axB.selectAll('.tick').filter((t) => x0(t) > iw - 80).remove();
         if (cut !== Infinity) g.append('text').attr('class', 'pi-axis-t').attr('x', iw).attr('y', ih + 18).attr('text-anchor', 'end').text('⋯ off-scale');
         g.append('text').attr('class', 'pi-axis-t').attr('x', iw).attr('y', ih + 32).attr('text-anchor', 'end').text('capital (mean stock value) →');
         g.append('text').attr('class', 'pi-axis-t').attr('x', 0).attr('y', -4).text('fill rate ↑');
@@ -509,7 +512,7 @@ export async function render(el, ctx) {
         const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
         const max = d3().max(TR, (t) => Math.max(t.estimated, t.vendor_quoted ?? 0)) * 1.15;
         const x = d3().scaleLinear().domain([0, max]).nice().range([0, iw]);
-        axisBottom(g.append('g'), x, { height: ih, ticks: 4, format: (v) => (isLog(main) ? fmtNum(v, 1) : fmtPct(v, 0)) });
+        axisBottom(g.append('g'), x, { height: ih, ticks: 4, format: (v) => (isLog(main) ? fmtNum(v, x.domain()[1] < 0.5 ? 2 : 1) : fmtPct(v, 0)) }); // wave C (F5): no duplicate ticks on a narrow domain
         const rg = g.selectAll('g.fl-tr').data(TR).join('g').attr('class', 'fl-tr').attr('transform', (t, i) => `translate(0,${i * rowH + rowH / 2})`);
         rg.append('text').attr('class', 'fl-mlabel').attr('x', -10).attr('dy', '0.32em').attr('text-anchor', 'end').each(function (t) {
           const words = String(t.param).split(' ');

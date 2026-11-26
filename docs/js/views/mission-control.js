@@ -64,7 +64,7 @@ export async function render(el, ctx) {
   if (ao && num(ao.value) && num(ao.baseline)) clauses.push([`${ao.value <= ao.baseline ? 'cuts' : 'raises'} modelled material AOG from `, h('b', {}, fmtHours(ao.baseline)), ' to ', h('b', {}, fmtHours(ao.value)), ' a year']);
   const story = h('p', { class: 'mc-story' });
   if (clauses.length) {
-    const parts2 = [`Across ${seedText}, the recommended stocking plan${recId ? ` (${recId})` : ''} `];
+    const parts2 = [`Across ${seedText}, the core plan (P2) `];
     clauses.forEach((c, i) => { if (i) parts2.push(i === clauses.length - 1 ? ' and ' : ', '); parts2.push(...c); });
     if (sc && num(sc.value) && num(sc.baseline)) {
       const d = sc.value - sc.baseline;
@@ -99,7 +99,7 @@ export async function render(el, ctx) {
         h('div', { class: 'mc-fault-k' }, `${cap(hot.severity)} part`),
         h('div', { class: 'mc-fault-sys', title: `System level = the chapter's share of fleet material shortage exposure${num(sysOf[hotAta]?.risk_share) ? ` (${fmtPct(sysOf[hotAta].risk_share, 0)})` : ''}, as on Parts Intelligence` }, `ATA ${hotAta}${hotSys ? ` · system ${hotSysWord}` : ''}`),
         h('div', { class: 'mc-fault-pn' }, hot.pn),
-        h('div', { class: 'mc-fault-at' }, h('span', {}, hot.station), num(hotPart?.risk_score) ? h('span', { class: 'mc-fault-risk', title: 'Part-level material shortage exposure, 0–100 (log-scaled AOG hours)' }, `risk ${Math.round(hotPart.risk_score * 100)}`) : null),
+        h('div', { class: 'mc-fault-at' }, h('span', { title: hot.summary }, hot.type === 'DONOR_NOT_REINSTATED' && hot.destination ? `${hot.station} · donor ${hot.destination}` : hot.station), num(hotPart?.risk_score) ? h('span', { class: 'mc-fault-risk', title: 'Part-level material shortage exposure, 0–100 (log-scaled AOG hours)' }, `risk ${Math.round(hotPart.risk_score * 100)}`) : null),
         h('div', { class: 'mc-fault-d' }, [hotPart?.desc, hot.evidence?.deadline ? `deadline class ${hot.evidence.deadline} (hypothetical)` : null].filter(Boolean).join(' · ') || hot.summary)))
     : null;
   // accessible list alternative for the drawing's hotspots
@@ -114,7 +114,7 @@ export async function render(el, ctx) {
         h('h1', { class: 'mc-title' }, 'GROUNDED NO MORE'),
         h('p', { class: 'mc-tagline' }, 'The right spare. The right station. Before the aircraft needs it.'),
         h('p', { class: 'mc-oneline' }, 'An aviation materials-planning simulation connecting intermittent-demand forecasting, rotable repair planning and inventory optimisation to aircraft readiness.'),
-        h('p', { class: 'mc-scope' }, '40 aircraft · 2 fleet families · 7 stations · Independent simulation'),
+        h('p', { class: 'mc-scope' }, `40 aircraft · 2 fleet families · 7 stations · ${fmtInt((parts.parts || []).length)} AOG-critical part numbers · Independent simulation`),
         h('div', { class: 'mc-cta' },
           h('button', { class: 'btn btn--primary', type: 'button', onclick: startTour, dataset: { story: 'mission-start' } }, icon('play'), '60-second tour'),
           h('a', { class: 'btn btn--ghost', href: '#/method' }, 'Methodology', icon('chevron-right'))),
@@ -166,6 +166,12 @@ export async function render(el, ctx) {
     sc,
     openK,
   ].filter(Boolean).map((k) => kpiInstrument(k, baseLabel, ranked, k.core_id || kpis.core_id || 'P2', actions));   // v2: tiles read P0 → P2
+  // AV2-03: the capital tile says what the +capital is: a re-mix of the rotable float (bought and shed units)
+  const RM = kpis.headline?.core?.remix;
+  const capTile = sc ? tiles[[fr, ao, sc].filter(Boolean).indexOf(sc)] : null;
+  if (RM && capTile) capTile.querySelector('.kpi-delta')?.after(h('div', { class: 'mc-remix t-12 muted', dataset: { role: 'remix' } },
+    `Buys ${fmtInt(RM.buy_units)} rotables (≈${fmtAED(RM.buy_aed)}), sheds ${fmtInt(RM.shed_units)} (≈${fmtAED(RM.shed_aed)})`));
+  REMIX = RM || null;
   el.append(h('div', { class: 'mc-kpis', dataset: { story: 'mission-kpis' }, role: 'group', 'aria-label': 'Headline indicators' }, tiles));
 
   // ================================================================ comparison + actions | map
@@ -227,14 +233,18 @@ export async function render(el, ctx) {
   const hub = stations.find((s) => s.role === 'hub');
   const nOut = stations.filter((s) => s.role !== 'hub').length;
   const topOut = byRisk.find((s) => s.role !== 'hub');
+  // wave C: one denominator site-wide: each station's share of the network's total material shortage exposure
+  const riskSum = byRisk.reduce((a, s) => a + s.risk, 0) || 1;
+  const shareOf = (s) => s.risk / riskSum;
+  const outShare = byRisk.filter((s) => s.role !== 'hub').reduce((a, s) => a + shareOf(s), 0);
   const mf = chartFrame(mapCard, {
-      implication: 'Shortage exposure concentrates at the hub and a few outstations: position stock there first.',
-    headline: topOut && topOut !== topS
-      ? `${topOut.station} has the most outstation shortage exposure (${fmtPct(topOut.risk, 0)} of ${topS.role === 'hub' ? 'hub ' : ''}${topS.station})`
+      implication: `Outstations carry ${fmtPct(outShare, 0)} of the exposure between them: position no-go stock there, fed from the hub.`,
+    headline: topOut
+      ? `${topOut.station} has the most outstation shortage exposure: ${fmtPct(shareOf(topOut), 0)} of the network total`
       : topS ? `${topS.station} carries the most grounding exposure` : 'Station risk not run',
-    subtitle: `Material shortage exposure = ${network.risk_definition || 'P0 holdout material AOG h vs the worst station'} · ${hub ? `${hub.station} hub + ${nOut} outstations · ` : ''}line width = history transfers`,
+    subtitle: `Material shortage exposure = P0 holdout material AOG h · bars = each station's share of the network total · ${hub ? `${hub.station} hub + ${nOut} outstations · ` : ''}line width = history transfers`,
     provenance: network.meta?.provenance || 'SIMULATED', source: 'network.json',
-    table: { columns: [{ key: 'station', label: 'Station', mono: true }, { key: 'role', label: 'Role' }, { key: 'risk', label: 'Risk', num: true, format: (v) => fmtPct(v, 0) }, { key: 'serviceable_units', label: 'Serviceable units', num: true, format: fmtInt }, { key: 'stock_value', label: 'Stock value', num: true, format: fmtAED }], rows: byRisk },
+    table: { columns: [{ key: 'station', label: 'Station', mono: true }, { key: 'role', label: 'Role' }, { key: 'risk', label: 'Share of network exposure', num: true, format: (v) => fmtPct(v / riskSum, 0) }, { key: 'serviceable_units', label: 'Serviceable units', num: true, format: fmtInt }, { key: 'stock_value', label: 'Stock value', num: true, format: fmtAED }], rows: byRisk },
   });
   const mapHost = h('div', { class: 'mc-map' });
   const listHost = h('div', { class: 'mc-stations' });
@@ -244,20 +254,20 @@ export async function render(el, ctx) {
     stations, arcs: network.arcs || [], selected: topS?.station, inset: false, aspect: 0.62, label: 'Network map: hub and outstations',
     onSelect: (id) => ctx.navigate(ctx.buildHash('network', { station: id })),
   }).then((m) => { map = m; }).catch((e) => { console.warn('map unavailable', e); mapHost.replaceChildren(h('p', { class: 'faint t-12' }, 'Map unavailable.')); });
-  listHost.append(h('ul', { class: 'mc-st list-reset', 'aria-label': 'Station risk, share of the worst station' }, byRisk.map((s) => h('li', { class: `mc-st-row${s === topOut ? ' is-focus' : ''}${s.role === 'hub' ? ' is-hub' : ''}` },
+  listHost.append(h('ul', { class: 'mc-st list-reset', 'aria-label': 'Station material shortage exposure, share of the network total' }, byRisk.map((s) => h('li', { class: `mc-st-row${s === topOut ? ' is-focus' : ''}${s.role === 'hub' ? ' is-hub' : ''}` },
     h('a', { href: ctx.buildHash('network', { station: s.station }), class: 'mc-st-l' }, h('span', { class: 'mono' }, s.station), h('span', { class: 'faint' }, s.role === 'hub' ? ' · hub' : ' · outstation')),
-    h('span', { class: 'mc-st-bar', 'aria-hidden': 'true' }, h('span', { style: { width: `${Math.max(1, s.risk * 100)}%` } })),
-    h('span', { class: 'mc-st-v mono' }, fmtPct(s.risk, 0))))));
+    h('span', { class: 'mc-st-bar', 'aria-hidden': 'true' }, h('span', { style: { width: `${Math.max(1, (s.risk / byRisk[0].risk) * 100)}%` } })),
+    h('span', { class: 'mc-st-v mono' }, fmtPct(shareOf(s), 0))))));
 
   const sysRows = (parts.ata_systems || []).filter((a) => num(a.risk_share)).sort((a, b) => b.risk_share - a.risk_share);
   if (sysRows.length) {
-    const nShow = Math.min(4, sysRows.length);
+    const nShow = Math.min(innerWidth >= 1100 ? 9 : 4, sysRows.length); // wave C: desktop fills the column (no half-card void)
     const lvWord = (l) => (l === 'ok' ? 'OK' : cap(l));
     const nUrgSys = sysRows.filter((a) => (a.system_level || a.risk_level) === 'urgent').length;
     const nWatch = sysRows.filter((a) => (a.system_level || a.risk_level) !== 'urgent' && (a.has_urgent_part ?? a.n_urgent > 0)).length;
     right.append(card({
       story: 'mission-systems', kicker: 'Aircraft systems', prov: 'DERIVED',
-      title: (() => { const shownWatch = sysRows.slice(0, nShow).filter((a) => (a.system_level || a.risk_level) !== 'urgent' && (a.has_urgent_part ?? a.n_urgent > 0)).length; return `${fmtInt(nUrgSys)} system${nUrgSys === 1 ? '' : 's'} rate urgent; ${fmtInt(nWatch)} more hold an urgent part${nWatch ? ` (${fmtInt(shownWatch)} shown)` : ''}`; })(),
+      title: (() => { const shownWatch = sysRows.slice(0, nShow).filter((a) => (a.system_level || a.risk_level) !== 'urgent' && (a.has_urgent_part ?? a.n_urgent > 0)).length; return `${fmtInt(nUrgSys)} system${nUrgSys === 1 ? '' : 's'} rate urgent; ${fmtInt(nWatch)} more ${nWatch === 1 ? 'holds' : 'hold'} an urgent part${nWatch ? ` (${fmtInt(shownWatch)} shown)` : ''}`; })(),
       body: h('ul', { class: 'mc-sys list-reset' }, sysRows.slice(0, nShow).map((a) => {
         const lv = a.system_level || a.risk_level || 'unknown';
         const nU = a.n_urgent ?? 0;
@@ -361,7 +371,8 @@ function kpiInstrument(k, baseLabel, ranked, recLabel, actions) {
   const fmt = !k.unit ? fmtInt : fmtByUnit(k.unit);
   const dfmt = k.unit === '%' ? fmtPts : fmt;
   const hasDelta = num(k.delta);
-  const tile = kpiTile({ ...k, delta: hasDelta ? k.delta : 0, ci: Array.isArray(k.ci) ? k.ci : null }, { format: fmt, deltaFormat: dfmt, sparkline });
+  // wave C: the fill change is a trade-off (lean C/E stock), told in the neutral tone like capital, not red
+  const tile = kpiTile({ ...k, delta: hasDelta ? k.delta : 0, ci: Array.isArray(k.ci) ? k.ci : null }, { format: fmt, deltaFormat: dfmt, sparkline, deltaTone: /fill/.test(k.id || '') ? 'neutral' : 'auto' });
   const ref = tile.querySelector('.kpi-delta-ref');
   if (ref) ref.textContent = ` vs ${baseLabel}`;
   const footSpans = tile.querySelectorAll('.kpi-foot > span');
@@ -427,6 +438,7 @@ function dumbbell(k, fmt, baseLabel, recLabel) {
 // ------------------------------------------------------------------ P0 / P1 / P2 / recommended strip
 /** 'Legacy rules (baseline)' → 'Legacy', 'Network (multi-echelon)' → 'Network' (phones: no truncated policy names). */
 const shortPol = (l) => String(l || '').split(/[\s(]/)[0] || String(l || '');
+let REMIX = null;
 function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
   const P = policies.policies || [];
   const get = (id) => P.find((p) => p.policy_id === id);
@@ -471,9 +483,9 @@ function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
   // Wave A: simple horizontal bars of expected material AOG hours per policy, spare capital as a label. The detailed
   // mean-and-CI chart lives in Capital Optimiser only.
   const f = chartFrame(host, {
-      implication: 'Positioning the existing float beats buying more of it; extra capital is a secondary option.',
+      implication: REMIX ? `P2 re-mixes the rotable float (buys ${fmtInt(REMIX.buy_units)} units, sheds ${fmtInt(REMIX.shed_units)}) at roughly flat capital; capital beyond P2 is a secondary option.` : 'P2 re-mixes the rotable float at roughly flat capital; capital beyond P2 is a secondary option.',
     headline: headline.replace(/; the intervals overlap$/, ''),
-    subtitle: `Expected material-related downtime: material AOG h/yr, mean · ${seedText}${fSplit && !seedText.includes(fSplit) ? ` (recommended point: ${fSplit} seeds)` : ''} · label: spare capital · intervals in Capital Optimiser`,
+    subtitle: `Expected material-related downtime: material AOG h/yr, mean · ${seedText}${fSplit && !seedText.includes(fSplit) ? ` (frontier option: ${fSplit} seeds)` : ''} · label: spare capital · intervals in Capital Optimiser`,
     provenance: policies.meta?.provenance || 'SIMULATED', source: 'policies.json + frontier.json',
     table: { columns: [{ key: 'name', label: 'Policy' }, { key: 'label', label: 'Description' }, { key: 'value', label: 'AOG h/yr', num: true, format: fmtHours }, { key: 'lo', label: 'CI low', num: true, format: fmtHours }, { key: 'hi', label: 'CI high', num: true, format: fmtHours }, { key: 'capital', label: 'Spare capital', num: true, format: fmtAED }], rows },
   });

@@ -49,8 +49,9 @@ export function demandStrip(host, values, { height = 160, compact = false, split
     withTooltip(lp, (d) => ({ title: fmtWeek(d.x), rows: [['Units demanded', fmtInt(d.y)], ['Window', splitAt != null && d.x >= splitAt ? 'Selection' : 'Training']] }));
     if (!compact && annot && nz.length) {
       const peak = nz.reduce((a, b) => (b.y > a.y ? b : a));
+      const ties = nz.filter((d) => d.y === peak.y);
       const px = x(peak.x), py = y(peak.y);
-      annotate(g, { x: px, y: py, dx: px > iw * 0.6 ? -26 : 26, dy: py < 20 ? 18 : -10, title: `Peak ${fmtWeek(peak.x)}`, sub: `${fmtInt(peak.y)} unit${peak.y === 1 ? '' : 's'}` });
+      annotate(g, { x: px, y: py, dx: px > iw * 0.6 ? -26 : 26, dy: py < 20 ? 18 : -10, title: ties.length === 1 ? `Peak ${fmtWeek(peak.x)}` : ties.length === 2 ? `Peaks ${fmtWeek(ties[0].x)} and ${fmtWeek(ties[1].x)}` : `Peak, ${ties.length} weeks (first ${fmtWeek(ties[0].x)})`, sub: `${fmtInt(peak.y)} unit${peak.y === 1 ? '' : 's'}` });
     }
   });
 }

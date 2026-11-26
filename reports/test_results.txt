@@ -1,2 +1,2 @@
-# Full suite (fast + slow + browser), GNM_RELEASE=1, 2026-11-26T10:44Z, commit b01ce5d
-==== 556 passed in 344.44s ====
+# Full suite (fast + slow + browser), GNM_RELEASE=1, 2026-11-26T12:06Z, base commit 26d4960
+==== 556 run: 555 passed, 1 failed (tests/test_site_waveA.py::test_navigation_groups_and_shortcuts: help modal timed out under full-suite load; passed on immediate rerun, and the whole test_site_waveA.py file passes) ====

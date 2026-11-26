@@ -103,7 +103,8 @@ export async function render(el, ctx) {
   const table = dataTable({
     caption: 'Assumption register', bare: true, maxHeight: 520, rows: assumptions, mobileColumns: ['key', 'value', 'provenance', 'rationale'],
     columns: [
-      { key: 'key', label: 'Key', mono: true },
+      // wave C: keys break only after '.' and '_' (a <wbr> after each), never mid-word
+      { key: 'key', label: 'Key', mono: true, render: (r) => h('span', { class: 'dm-key' }, ...String(r.key).split(/(?<=[._])/).flatMap((t, i) => (i ? [h('wbr'), t] : [t]))) },
       { key: 'value', label: 'Value', mono: true, format: (v, r) => `${v == null || ['null', 'None', ''].includes(String(v)) ? '—' : String(v).replace(/^"(.*)"$/, '$1')}${r.unit ? ` ${r.unit}` : ''}` },
       { key: 'provenance', label: 'Tag', render: (r) => provChip(r.provenance, { force: true }) },
       { key: 'rationale', label: 'Rationale', render: (r) => (r._same ? h('span', { class: 'dm-same', title: r.rationale }, '↑ same rationale as above') : (r.rationale ?? (String(r.key).startsWith('meta.') ? h('span', { class: 'faint' }, 'Site metadata (labels, not a modelling choice)') : '—'))) },
@@ -162,7 +163,8 @@ export async function render(el, ctx) {
   const chain = freeze.chain || [];
   const chainCard = chain.length ? card({
     prov: 'DERIVED', kicker: 'v2 evaluation chain', title: 'Calibrate P0, lock, freeze, then one holdout (plus one disclosed post-plan check)',
-    body: h('ol', { class: 'dm-chain' }, chain.map((c) => h('li', {}, h('b', { class: 'mono' }, c.id), h('span', {}, ` ${humanISO(stripMd(c.text)).slice(0, 360)}${String(c.text).length > 360 ? '…' : ''}`)))),
+    // wave C: each entry shows its first sentence; the full DECISIONS.md entry opens in place (no hard truncation)
+    body: h('ol', { class: 'dm-chain' }, chain.map((c) => { const t = humanISO(stripMd(c.text)); const first = (t.match(/^.+?[.;](\s|$)/) || [t])[0].trim(); return h('li', {}, h('b', { class: 'mono' }, c.id), h('span', {}, ` ${first}`), first.length < t.length ? h('details', { class: 'dm-chain-more' }, h('summary', {}, 'Full entry'), h('p', { class: 'm-0' }, t)) : null); })),
   }) : null;
   const V1 = M.v1_archive;
   const v1Card = V1?.headline?.length ? card({
@@ -191,7 +193,7 @@ export async function render(el, ctx) {
     A.linkedin ? h('a', { class: 'btn btn--sm', href: A.linkedin, target: '_blank', rel: 'noopener noreferrer' }, 'LinkedIn', icon('chevron-right')) : null))) });
   const licCard = card({ cls: 'dm-span-12', kicker: 'Third-party licences', title: `${fmtInt((M.licences || []).length)} vendored packages and fonts`, prov: 'REAL',
     body: h('div', { class: 'dm-wrap' }, dataTable({ caption: 'Licences', bare: true, dense: true, rows: (M.licences || []).map((r) => ({ ...r, name: stripMd(r.name) })), mobileColumns: ['name', 'licence', 'version'], columns: [{ key: 'name', label: 'Package' }, { key: 'version', label: 'Version', mono: true }, { key: 'licence', label: 'Licence' }] })) });
-  const discCard = card({ cls: 'dm-span-7', bp: true, kicker: 'Disclaimer', body: [h('p', { class: 'dm-disclaimer' }, M.disclaimer || DISCLAIMER), h('p', {}, 'Falcon Hub Airways, its tails and its part numbers are fictional; no real airline names, logos or liveries are used. Simulated rates are not measured reliability. Deadline classes D0/D3/D10 are hypothetical and are not MEL categories.')] });
+  const discCard = card({ cls: 'dm-span-7', bp: true, kicker: 'Disclaimer', body: [h('p', { class: 'dm-disclaimer' }, M.disclaimer || DISCLAIMER), h('p', {}, 'Falcon Hub Airways, its tails and its part numbers are fictional; no real airline names, logos or liveries are used. Simulated rates are not measured reliability. D0/D3/D10 are hypothetical rectification windows; D3 and D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions.')] });
   el.append(h('div', { class: 'dm-grid' }, authorCard, discCard, licCard));
 
   return () => cleanups.forEach((f) => { try { f?.(); } catch { /* ignore */ } });
@@ -261,7 +263,7 @@ function calibration(host, cal) {
   const rows = list.filter((r) => num(r.achieved) && num(r.target_lo) && num(r.target_hi)).map((r) => ({ ...r, pass: r.pass ?? r.in_band, label: r.label || String(r.metric || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()).replace(/\baog\b/gi, 'AOG') }));
   const nPass = rows.filter((r) => (r.pass ?? (r.achieved >= r.target_lo && r.achieved <= r.target_hi))).length;
   const f = chartFrame(host, {
-      implication: 'The legacy baseline matches its stated band, so improvements are measured against a realistic starting point.',
+      implication: 'P0 lands inside an ASSUMED plausibility band chosen before any policy comparison; the band is author judgement, not an external benchmark, so improvements are measured against that assumption.',
     headline: rows.length ? `${fmtInt(nPass)} of ${fmtInt(rows.length)} calibration targets met by the P0 history` : 'Calibration results not exported',
     subtitle: `Hatched band = target range (ASSUMED) · dot = achieved · ${cal?.policy || 'P0'} on the public history · each row on its own scale`,
     provenance: cal?.provenance || 'SIMULATED', source: 'method.json (calibration)',
@@ -310,7 +312,7 @@ function consistency(host, kpis) {
   const rows = rows0.map((r) => ({ ...r, ok: r.selection_inside_holdout_ci ?? (r.selection_recommended >= r.holdout_ci[0] && r.selection_recommended <= r.holdout_ci[1]), dSel: rel(r.selection_recommended, r), dLo: rel(r.holdout_ci[0], r), dHi: rel(r.holdout_ci[1], r) }));
   const inside = rows.filter((r) => r.ok);
   const worst = rows.filter((r) => !r.ok).sort((a, b) => Math.abs(b.dSel) - Math.abs(a.dSel))[0];
-  const rec = kpis?.recommended_id || 'the recommended plan';
+  const rec = kpis?.core_id || 'P2'; // wave C: the consistency rows are the core plan P2 (exporter sel_r = P2)
   const f = chartFrame(host, {
       implication: 'Selection-to-holdout gaps show how much the plan was fitted to the seeds it was chosen on.',
     headline: rows.length ? `${fmtInt(inside.length)} of ${fmtInt(rows.length)} selection-seed results fall inside the holdout 95% CI` : 'Selection vs holdout comparison not exported',
@@ -327,7 +329,7 @@ function consistency(host, kpis) {
     const rowH = narrow ? 76 : 40, labelW = narrow ? 0 : Math.min(190, w * 0.28), valW = narrow ? 0 : 168;
     const iw = Math.max(80, w - labelW - valW - 24);
     const H = headH + rows.length * rowH + axisH;
-    const svg = svgIn(f.body, w, H, 'Selection versus holdout results for the recommended plan, as % difference from the holdout mean');
+    const svg = svgIn(f.body, w, H, 'Selection versus holdout results for the core plan P2, as % difference from the holdout mean');
     const ext = d3().max(rows, (r) => Math.max(Math.abs(r.dSel), Math.abs(r.dLo), Math.abs(r.dHi))) || 0.1;
     const x = d3().scaleLinear().domain([-ext * 1.12, ext * 1.12]).nice(4).range([labelW + 8, labelW + 8 + iw]);
     const top = headH, bottom = headH + rows.length * rowH;

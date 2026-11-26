@@ -30,7 +30,7 @@ Parameter values quoted below come from the config and are **ASSUMED** unless ma
 | Planning models never see the truth | True rates live in `data/ground_truth/`. `tests/test_leakage.py` statically scans `gnm.forecasting`, `gnm.policy`, `gnm.optim`, `gnm.aog` and `gnm.export` for imports of the truth or the generator internals, and a runtime test makes reads of the hidden-truth folder raise while the planning pipeline runs. These are checks, not a proof. |
 | One set of mechanics for every policy | A policy is a parameter table (`PolicySpec`). One event engine runs them all ([D002](docs/DECISIONS.md)). |
 | Same world for every policy | Exogenous demand and the random draws for repair time, condemnation, no-fault-found, lead time and AOG route availability are pre-sampled or counter-based (common random numbers, [D003](docs/DECISIONS.md), V2-SIM-5). |
-| Calibrate the baseline only, then lock | P0 alone was calibrated against a user-approved band and locked before any P1, P2 or optimiser run ([section 6](#6-calibration-p0-only-and-the-lock)). |
+| Calibrate the baseline only, then lock | P0 alone was calibrated against an ASSUMED plausibility band chosen before any policy comparison and locked before any P1, P2 or optimiser run ([section 6](#6-calibration-p0-only-and-the-lock)). |
 | Test once, on data nobody tuned against | Parameters are hashed before the holdout runs ([section 12](#12-holdout-freeze-discipline)). |
 | Every number traceable | Each table and JSON object carries a provenance tag. `tests/test_reconciliation.py` recomputes the headline shown in the app from `outputs/`. |
 
@@ -132,7 +132,7 @@ A removed core travels to AUH, then to its shop (the AUH in-house shop, the whee
 
 ## 6. Calibration (P0 only) and the lock
 
-**Band (user-approved before any policy result, V2-SIM-16):** {{RESULT:cal.band}}. It describes a legacy OEM-quote operation with no line-station units for low-volume D0 parts; the v1 band ({{RESULT:cal.v1_band}}) is kept in the config for reference only.
+**Band (V2-SIM-16): An ASSUMED plausibility band chosen before any policy comparison, set by the author after the P0 gap diagnosis; author judgement, not an external benchmark:** {{RESULT:cal.band}}. It describes a legacy OEM-quote operation with no line-station units for low-volume D0 parts; the v1 band ({{RESULT:cal.v1_band}}) is kept in the config for reference only.
 
 **History of the P0 numbers.** Each step below is a domain or engine correction made before calibration, then the calibration itself. None was chosen by looking at P1, P2 or the optimiser, which did not exist yet:
 
@@ -144,7 +144,7 @@ A removed core travels to AUH, then to its shop (the AUH in-house shop, the whee
 
 {{RESULT:cal.variants_table}}
 
-Only {{RESULT:cal.variants_in_band}} lands inside the band, and it is also the fewest-changes option, so the user approved it: {{RESULT:cal.settings}}. The {{RESULT:cal.not_applied}} were not applied, and the P0 rule is unchanged.
+Only {{RESULT:cal.variants_in_band}} lands inside the band, and it is also the fewest-changes option (the rule chosen before calibration), so it was applied: {{RESULT:cal.settings}}. The {{RESULT:cal.not_applied}} were not applied, and the P0 rule is unchanged.
 
 **Stress worlds.** Only the true MTBUR is scaled: ×{{RESULT:cal.low_scale}} (low stress) and ×{{RESULT:cal.high_scale}} (high stress), aiming each at one end of the band:
 
@@ -242,7 +242,7 @@ Route usage per year by policy (holdout, central):
 
 {{RESULT:policies.routes_table}}
 
-Robbery stays a reported outcome: it needs engineering/quality approval, so its frequency is shown, never optimised.
+Robbery stays a reported outcome: the simulation engine uses robbery automatically as the first AUH route (after local stock), with engineering/quality approval flagged on every case; the AOG Lab never ranks it, and the optimiser never optimises its frequency.
 
 ---
 
@@ -343,6 +343,6 @@ Each item is a documented non-calibration correction, decided before any result 
 | V2-SIM-13 | Engine | A wear-planned brake change triggers supply at notice when the hub will be short: a transfer, else a pre-arranged exchange/loan. |
 | V2-SIM-14 | Engine | A failed AOG route is retried with fresh paired draws while the need is open, instead of waiting weeks for a PO. |
 | V2-SIM-15 | Data | Wheel-and-tyre assemblies are rebuilt in a hub shop in days, not at the EU vendor in months. |
-| V2-SIM-16 | Decision | Calibration band recorded (user decision); the legacy line-station rule kept. |
+| V2-SIM-16 | Decision | Calibration band recorded (ASSUMED plausibility band, author decision); the legacy line-station rule kept. |
 | V2-SIM-17 | Bug | A need whose earmarked shelf-life units expire on arrival is re-opened and re-routed. |
 | V2-SIM-18 | Bug | Atomic scenario-cache writes, so parallel workers cannot read a truncated file (the D010 root cause). |

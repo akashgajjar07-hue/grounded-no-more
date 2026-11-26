@@ -212,7 +212,7 @@ def compute_numbers():
     N["palm_vs_sim_policy"] = rot.get("palm_vs_sim_policy", "P1")
     lam = N["ltd"]["mean"]
     N["s_bom"] = sv["units"]["P2"]
-    # Palm immediate fill at BOM: P(X <= S-1), X ~ Poisson(lambda*T) over the BOM loop (V2-SIM-10 semantics)
+    # Palm immediate fill at BOM: P(X <= S-1), X ~ Poisson(lambda*T) over the AUH resupply time (V2-SIM-10 semantics)
     N["palm_bom"] = sum(math.exp(-lam) * lam ** j / math.factorial(j) for j in range(N["s_bom"]))
 
     # Frontier
@@ -817,7 +817,7 @@ class Charts:
         ax.set_ylim(0, top * 1.18)
         ax.set_yticks([])
         ax.spines["left"].set_visible(False)
-        ax.set_xlabel("Units of this PN in BOM's repair loop at a random moment", fontsize=fs + 0.5)
+        ax.set_xlabel("Units of this PN on the way back to BOM (AUH resupply) at a random moment", fontsize=fs + 0.5)
         self.mono_ticks(ax, fs + 0.5)
         return self._save(fig, "pmf" + ("-b" if big else ""))
 
@@ -1061,6 +1061,10 @@ def common(N):
         fill=f"{abs(core['immediate_fill_pts']['mean']):.2f}",
         fill_ci=f"[{core['immediate_fill_pts']['ci'][0]:.2f}, {core['immediate_fill_pts']['ci'][1]:.2f}]".replace("-", "−"),
     )
+    # AV2-03: P2 re-mixes the float (computed by the exporter from the P0/P2 stock tables)
+    rm = core.get("remix")
+    d["remix"] = (f"It buys {rm['buy_units']} rotables (≈{fmt_mm(rm['buy_aed'])}) and sheds {rm['shed_units']} high-value ones "
+                  f"(≈{fmt_mm(rm['shed_aed'])}), net about +{d['cap']}.") if rm else ""
     return d
 
 
@@ -1091,7 +1095,7 @@ def build_deck(N, A, CH, bg, total=10):
     s.text(56, 64, 640, 16, P(R("AVIATION SPARE-PARTS PLANNING · A SIMULATION CASE STUDY", "eyebrow")))
     s.text(56, 86, 640, 180, [P(R("GROUNDED", "title", s=58, sp=-1), ls=0.9),
                               P(R("NO MORE", "title", s=58, sp=-1, c=C["aero_teal"]), ls=0.9)])
-    s.text(56, 250, 620, 30, P(R("Where you hold rotables matters as much as how many.", "lede", s=15, c=C["ice"])))
+    s.text(56, 250, 620, 30, P(R("Which rotables you hold, and where, matters.", "lede", s=15, c=C["ice"])))
     s.text(56, 288, 610, 66, P(R(f"Network positioning ({cid}) cuts material AOG by {cm['red']} h/yr {cm['red_ci']} vs "
                                  f"{N['base_label']}, for +{cm['cap']} of capital.", "body", s=12), ls=1.12))
     y0 = 376
@@ -1231,8 +1235,9 @@ def build_deck(N, A, CH, bg, total=10):
     s = Slide(bg=bg)
     s.header(4, "Why positioning works", f"Palm's theorem: {N['s_bom']} units at BOM turn 0% into "
              f"{round(N['palm_bom'] * 100)}% immediate fill",
-             "A rotable is repaired, not consumed: the spares you need are the units tied up in the repair loop. With "
-             "Poisson removals, loop occupancy is Poisson with mean λ·T (Palm), whatever the shape of the repair time.")
+             "An outstation's shelf is refilled from AUH, so its own stock is sized on the resupply time T (transit + "
+             "expected hub wait), as P2 does; the network float is sized on the repair loop. With Poisson removals, units "
+             "on the way back are Poisson with mean λ·T (Palm), whatever the shape of the delay.")
     s.card(48, 150, 560, 520)
     s.text(70, 166, 420, 16, P(R(f"THE CALCULATION · {fl['desc'].upper()}", "label", c=C["faint"])))
     s.chip_r(590, 164, "DERIVED")
@@ -1244,7 +1249,7 @@ def build_deck(N, A, CH, bg, total=10):
     rows = [
         ("Network removal rate", f"{fl['rate_per_30d']:.2f} per 30 days"),
         (f"BOM removal rate", f"{sv['rate_per_30d']:.2f} per 30 days"),
-        ("BOM repair loop T", f"{sv['loop_days']:.1f} days → λT = {ltd['mean']:.3f}"),
+        ("BOM resupply from AUH T", f"{(sv.get('resupply_days') or sv['loop_days']):.1f} days → λT = {ltd['mean']:.3f}"),
         ("Unit cost · class", f"AED {fl['unit_cost_aed']:,} · {fl['deadline']}"),
         (f"Emergency hop {N['hub']} → BOM", f"{hop_h:g} h" if hop_h is not None else "—"),
     ]
@@ -1593,8 +1598,8 @@ def build_deck(N, A, CH, bg, total=10):
                                    c=C["aero_teal"] if st_["role"] == "hub" else C["ice"])))
         s.text(cx + 40, cy + 1, 130, 18, P(R(st_["name"].split(", ")[-1].replace(" International", ""),
                                              "small", s=8)))
-    s.text(70, 610, 340, 50, P(R(f"{AIRLINE} does not exist. Labels like D0/D3/D10 are simplified analogues of MEL "
-                                 "repair-interval categories, not operator MEL decisions.", "small", s=8.2), ls=1.08))
+    s.text(70, 610, 340, 50, P(R(f"{AIRLINE} does not exist. D0/D3/D10 are hypothetical rectification windows; D3/D10 are "
+                                 "simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions.", "small", s=8.2), ls=1.08))
     s.card(446, 150, 400, 520)
     s.text(468, 166, 360, 16, P(R("CALIBRATE → FREEZE → ONE HOLDOUT", "label", c=C["aero_teal"])))
     steps = [
@@ -1702,7 +1707,7 @@ def build_deck(N, A, CH, bg, total=10):
         "option for additional capital. Everything is simulated for a fictional airline.",
         "The problem: one incident (AOG-0001), then the pattern behind it.",
         "The core finding: P2 network positioning vs the legacy OEM-quote policy, with worlds, penalty range and the fill price.",
-        "Palm: spares = loop occupancy. The BOM figure is computed here from the exported Poisson distribution and checked "
+        "Palm: station stock covers removals over the AUH resupply time. The BOM figure is computed here from the exported Poisson distribution and checked "
         "against the exporter.",
         "Forecasting honesty: champions best in few cells; MTBUR from history beats vendor quotes.",
         "Frontier option I125: additional capital, its paired gain, its sensitivity, and the post-plan stress check (D015).",
@@ -1751,10 +1756,10 @@ def build_carousel(N, A, CH, bg):
     # 2 — the core finding
     s = Slide(1080, 1080, bg)
     frame(s, 2, "the core finding")
-    s.text(72, 120, 936, 70, P(R("Same money, placed differently.", "title", s=40, sp=-0.5)))
+    s.text(72, 120, 936, 70, P(R("A re-mixed float, not a bigger one.", "title", s=40, sp=-0.5)))
     s.text(72, 200, 936, 150, P(R(f"Against {N['base_label']}, positioning the network ({cm['out2']} outstation units) "
-                                  f"cuts material AOG by {cm['red']} hours a year {cm['red_ci']}, for +{cm['cap']} of "
-                                  "capital.", "lede", s=21, c=C["ice"]), ls=1.15))
+                                  f"cuts material AOG by {cm['red']} hours a year {cm['red_ci']}. {cm['remix']}",
+                                  "lede", s=21, c=C["ice"]), ls=1.15))
     s.text(72, 356, 936, 24, P(R("MATERIAL AOG H / YEAR · SPARE CAPITAL · HOLDOUT, 20 PAIRED SEEDS", "label", s=11,
                                  c=C["faint"])))
     s.image(72, 388, 936, 470, CH.kpi_bars(600, 300))
@@ -1771,8 +1776,8 @@ def build_carousel(N, A, CH, bg):
     frame(s, 3, "why it works")
     s.text(72, 120, 936, 150, P(R(f"At {inc['station']}, the legacy rule held {sv['units']['P0']} of the part that "
                                   f"grounded the aircraft.", "title", s=40, sp=-0.5), ls=1.1))
-    s.text(72, 290, 936, 110, P(R(f"A rotable is repaired, not consumed. Palm's theorem says how many sit in the repair "
-                                  f"loop. With {N['s_bom']} units at {inc['station']}, {fmt_pct(N['palm_bom'], 0)} of "
+    s.text(72, 290, 936, 110, P(R(f"The shelf at {inc['station']} is refilled from AUH in a few days. Palm's theorem says how "
+                                  f"many removals that resupply time has to cover. With {N['s_bom']} units at {inc['station']}, {fmt_pct(N['palm_bom'], 0)} of "
                                   f"no-go removals find one on the shelf instead of waiting for the next flight in.",
                                   "lede", s=19), ls=1.15))
     s.image(72, 420, 936, 380, CH.palm_pmf(620, 252, big=True))
@@ -1864,7 +1869,7 @@ def build_carousel(N, A, CH, bg):
     lim = [
         f"{AIRLINE} does not exist; every airline number is simulated.",
         "Results lean on AOG recovery routes (borrow, exchange/loan, robbery with engineering approval) existing.",
-        "D0/D3/D10 are simplified analogues of MEL categories, not operator MEL decisions.",
+        "D0/D3/D10 are hypothetical rectification windows; D3/D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions.",
         f"{N['validation']['tests_passed']} tests, frozen artefacts and a disclosed holdout log keep it honest inside "
         "that world.",
     ]
@@ -1907,7 +1912,7 @@ GROUNDED NO MORE is a simulation of a fictional airline, {AIRLINE}, with a Gulf 
 
 What I found, on simulated futures the model had never seen:
 
-1. Where you hold stock matters as much as how much. Against {N['base_label']}, positioning the network ({cm['out2']} outstation units) cut material AOG by {cm['red']} hours a year {cm['red_ci']} for about +{cm['cap']} of capital. It held in all {len(core['worlds'])} simulated worlds and across half to double the assumed downtime cost.
+1. Which rotables you hold, and where, matters. Against {N['base_label']}, positioning the network ({cm['out2']} outstation units) cut material AOG by {cm['red']} hours a year {cm['red_ci']}. It is not a free repositioning: {cm['remix'][0].lower() + cm['remix'][1:] if cm['remix'] else ''} It held in all {len(core['worlds'])} simulated worlds and across half to double the assumed downtime cost.
 
 2. One missing part is enough. In the simulated history, a nose wheel steering actuator is removed at {inc['station']}, the legacy rule holds {sv['units']['P0']} there, and the aircraft is on the ground for {inc['aog_hours']} hours. With {N['s_bom']} units at {inc['station']}, Palm's theorem says {fmt_pct(N['palm_bom'], 0)} of those removals find one on the shelf.
 

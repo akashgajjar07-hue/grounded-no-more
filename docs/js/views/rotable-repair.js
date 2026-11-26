@@ -88,7 +88,7 @@ export async function render(el, ctx) {
   const fixture = !!r.meta?.fixture;
 
   el.append(pageHead({
-    num: '04', eyebrow: 'Rotable & Repair Control',
+    num: '04', eyebrow: 'Rotable & Repair',
     title: 'Every serial, every repair order, every day of float',
     lede: 'Serialised rotables of Falcon Hub Airways (fictional) cycle through fit, removal, shop and return. This workspace tracks the loop, flags overdue repair orders and sizes the float with a METRIC-inspired (Palm’s theorem) calculator.',
     meta: [provChip(prov(r.meta)), provChip('DERIVED'), now != null ? h('span', { class: 'chip chip-mono' }, `As of ${fmtWeek(Math.floor(now / HPW))}`) : null].filter(Boolean),
@@ -548,7 +548,7 @@ function exampleInputs(ex, r) {
     spares: num(pick(ex, 'spares', 'total_spares')) ?? (num(ex.current) != null ? num(ex.current) + (num(ex.loop_units) ?? 0) : null),
     loop: num(ex.loop_units) ?? 0,
     // S = shelf + units already in the repair loop (exporter spares_total when present, else derived)
-    presets: [['P0', ex.p0_units, 'P0'], ['P1', ex.p1_units, 'P1'], ['P2', ex.p2_units, 'P2'], ['Recommended', ex.rec_units ?? ex.recommended, 'recommended']].filter(([, v]) => num(v) != null)
+    presets: [['P0', ex.p0_units, 'P0'], ['P1', ex.p1_units, 'P1'], ['P2', ex.p2_units, 'P2'], [`${r.recommended_id || 'I125'} option`, ex.rec_units ?? ex.recommended, 'recommended']].filter(([, v]) => num(v) != null)
       .map(([k, v, sk]) => [k, num(ex.spares_total?.[sk]) ?? num(v) + (num(ex.loop_units) ?? 0)]),
     desc: ex.desc || '', deadline: ex.deadline || '', planted: ex.planted || null,
     cost: num(pick(ex, 'unit_cost_aed', 'unit_cost')),
@@ -627,7 +627,7 @@ function renderFloatCalc(host, r, method, ctx) {
   host.append(h('div', { class: 'section-title mt-3' }, h('h2', { class: 't-16' }, 'Lever comparison: buy spares vs cut TAT'), h('span', { class: 'rule' })));
   // wave 5: the lever tool compares at a stocking point where the levers bite. Default: the station view (e.g. BOM, 2 units);
   // the reader can switch to the calculator inputs above.
-  let leverBasis = 'station';
+  let leverBasis = 'inputs'; // wave C (AV2-14): the levers act on the repair pipeline, i.e. the pooled network view
   const basisSeg = h('div', { class: 'seg fc-basis', role: 'radiogroup', 'aria-label': 'Compare the levers at' });
   host.append(h('div', { class: 'fc-basis-row' }, h('span', { class: 'fc-label' }, 'Compare at'), basisSeg), h('div', { class: 'fc-lever-controls' }, lN.el, lD.el), leverBox, verdict, assume);
   host.append(h('p', { class: 'rr-method-note mt-2' }, 'Palm’s theorem: with Poisson removals at rate λ and any repair-time distribution of mean T, the number of units in the pipeline is Poisson(λT). Availability = P(X < S); EBO = E[max(X − S, 0)]; expected wait = EBO / λ. Single site, infinite repair capacity, no condemnation — hence “METRIC-inspired”, not a full multi-echelon METRIC.'));
@@ -650,12 +650,12 @@ function renderFloatCalc(host, r, method, ctx) {
   const round = (v, d) => (v == null ? null : Math.round(v * 10 ** d) / 10 ** d);
   const load = (ex) => {
     cur = ex;
-    // C9 (wave 4): open on the Recommended preset (not P0's S); removals to 1 decimal, TAT to whole days
-    const recS = (ex.presets || []).find(([k]) => k === 'Recommended')?.[1];
+    // wave C: open on P2's S (the core plan); removals to 1 decimal, TAT to whole days
+    const recS = (ex.presets || []).find(([k]) => k === 'P2')?.[1];
     Object.assign(state, { rate: round(ex.rate, 1), tat: round(ex.tat, 0), spares: recS ?? ex.spares, cost: ex.cost });
     lD.range.max = Math.max(10, Math.floor(ex.tat ?? 10));
     if (state.tat != null && state.cut > state.tat) state.cut = Math.floor(state.tat / 2);
-    reason.replaceChildren(`${ex.deadline ? `${ex.deadline} (hypothetical deadline class) · ` : ''}${ex.station && ex.station !== 'network' ? `${ex.station} · ` : 'network float · '}spares include ${fmtInt(ex.loop ?? 0)} units already in the repair loop. `, ex.reason ? h('details', { class: 'fc-why' }, h('summary', {}, `Why the model recommends ${ex.recommended != null ? fmtInt(ex.recommended) : 'this'} base-stock units`), h('p', {}, ex.reason)) : '');
+    reason.replaceChildren(`${ex.deadline ? `${ex.deadline} (hypothetical deadline class) · ` : ''}${ex.station && ex.station !== 'network' ? `${ex.station} · ` : 'network float · '}spares include ${fmtInt(ex.loop ?? 0)} units already in the repair loop. `, ex.reason ? h('details', { class: 'fc-why' }, h('summary', {}, `Why the frontier option ${ctxRec || 'I125'} holds ${ex.recommended != null ? fmtInt(ex.recommended) : 'these'} base-stock units`), h('p', {}, ex.reason)) : '');
     presetBox.replaceChildren(...(ex.presets || []).map(([k, v]) => h('button', { type: 'button', class: 'btn btn--sm', 'aria-pressed': 'false', dataset: { preset: k, value: v }, onclick: () => { state.spares = v; sync(null); compute(); } }, (ex.loop ? `${k} · ${fmtInt(v - ex.loop)} + ${fmtInt(ex.loop)} = ${fmtInt(v)}` : `${k} · S = ${fmtInt(v)}`))));
     setRanges(); sync(null); compute();
   };
@@ -677,14 +677,19 @@ function renderFloatCalc(host, r, method, ctx) {
     const sv = cur.stationView;
     if (!sv || !sv.units) { stationBox.replaceChildren(); stationBox.hidden = true; return; }
     stationBox.hidden = false;
-    const rec = ctxRec || 'Recommended';
-    const rows = [['P0', 'P0'], ['P2', 'P2'], ['recommended', rec]].filter(([k]) => sv.units[k] != null);
-    const recU = sv.units.recommended, recA = sv.availability?.recommended;
+    const opt = ctxRec || 'I125';
+    // wave C: P2 is the core plan (teal); the frontier option is a neutral secondary row
+    const rows = [['P0', 'P0', ''], ['P2', 'P2 · core', 'is-rec'], ['recommended', `${opt} · option`, 'is-opt']].filter(([k]) => sv.units[k] != null);
+    const p2U = sv.units.P2, p2A = sv.availability?.P2, p0U = sv.units.P0, p0A = sv.availability?.P0;
+    const rs = sv.basis === 'resupply' && sv.resupply_days != null;
+    const fmtA = (v) => (v == null ? '—' : v > 0.9995 ? '> 99.9%' : v > 0.99 ? fmtPct(v, 1) : fmtPct(v, 0));
     stationBox.replaceChildren(
-      h('div', { class: 'fc-station-head' }, h('span', { class: 'fc-out-label' }, `Station view · ${sv.station}`), h('span', { class: 'fc-hint' }, `${fmtNum(sv.rate_per_30d, 1)} removals / 30 d · ${fmtInt(sv.loop_days)}-day loop · own units only`)),
-      h('div', { class: 'fc-station-rows' }, rows.map(([k, label]) => h('div', { class: `fc-station-row ${k === 'recommended' ? 'is-rec' : ''}`, dataset: { station: k } },
-        h('span', { class: 'fc-station-k' }, label), h('span', { class: 'fc-station-u' }, `${fmtInt(sv.units[k])} unit${sv.units[k] === 1 ? '' : 's'}`), h('span', { class: 'fc-station-a' }, fmtPct(sv.availability?.[k], 0))))),
-      h('p', { class: 'fc-station-note' }, icon('info'), h('span', {}, `Pooled vs station: the ${fmtAvail(res.availability)} above pools every spare as if any unit reached any station at once. An aircraft at ${sv.station} waits for one of the ${fmtInt(recU)} unit${recU === 1 ? '' : 's'} there: ${fmtPct(recA, 0)} available, which is where the AOG hours come from.`)));
+      h('div', { class: 'fc-station-head' }, h('span', { class: 'fc-out-label' }, `Station view · ${sv.station}`), h('span', { class: 'fc-hint' }, `${fmtNum(sv.rate_per_30d, 1)} removals / 30 d · ${rs ? `${fmtNum(sv.resupply_days, 1)}-day resupply from AUH (transit + expected hub wait), as P2 sizes it` : `${fmtInt(sv.loop_days)}-day loop`} · own units only`)),
+      h('div', { class: 'fc-station-rows' }, rows.map(([k, label, cls]) => h('div', { class: `fc-station-row ${cls}`, dataset: { station: k } },
+        h('span', { class: 'fc-station-k' }, label), h('span', { class: 'fc-station-u' }, `${fmtInt(sv.units[k])} unit${sv.units[k] === 1 ? '' : 's'}`), h('span', { class: 'fc-station-a' }, fmtA(sv.availability?.[k]))))),
+      h('p', { class: 'fc-station-note' }, icon('info'), h('span', {}, rs
+        ? `Two views. Network (pooled) view, above: the ${fmtAvail(res.availability)} sizes the whole float on the repair pipeline. Station view: an aircraft at ${sv.station} needs a unit on the shelf there, and the shelf is refilled from AUH in about ${fmtNum(sv.resupply_days, 1)} days. P2's ${fmtInt(p2U)} unit${p2U === 1 ? '' : 's'} give ${fmtA(p2A)}; P0's ${fmtInt(p0U)} give ${fmtA(p0A)}, which is where P0's AOG hours come from.`
+        : `Pooled vs station: the ${fmtAvail(res.availability)} above pools every spare. An aircraft at ${sv.station} waits for one of the ${fmtInt(p2U)} unit${p2U === 1 ? '' : 's'} there: ${fmtA(p2A)} available.`)));
   }
   let stopChart = null;
   function compute() {
@@ -717,8 +722,8 @@ function renderFloatCalc(host, r, method, ctx) {
     stopChart = drawPmf(frame, res.pipeline_mean, S, res);
     // levers: at the station view (own units, own loop) or at the calculator inputs
     const sv = cur.stationView;
-    const useSt = leverBasis === 'station' && sv && sv.units?.recommended != null;
-    basisSeg.replaceChildren(...[sv ? ['station', `${sv.station} · ${fmtInt(sv.units.recommended)} unit${sv.units.recommended === 1 ? '' : 's'}, own loop`] : null, ['inputs', `Calculator inputs · S = ${fmtInt(S)}`]].filter(Boolean)
+    const useSt = false;
+    basisSeg.replaceChildren(...[['inputs', `Network (pooled) view · S = ${fmtInt(S)}`]]
       .map(([k, label]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String((useSt ? 'station' : 'inputs') === k), dataset: { basis: k }, onclick: () => { leverBasis = k; compute(); } }, label)));
     const L = useSt ? { rate: sv.rate_per_30d, tat: sv.loop_days, S: sv.units.recommended } : { rate, tat, S };
     const N = Math.max(0, Math.round(extra ?? 0)), D = Math.min(Math.max(0, cut ?? 0), L.tat);
@@ -760,7 +765,7 @@ function renderFloatCalc(host, r, method, ctx) {
     if (saturated) {
       // the pooled float is already saturated (e.g. the Recommended S): say so, and offer the level where the levers bite
       verdict.replaceChildren(h('strong', {}, `At S = ${fmtInt(L.S)} the float is saturated: neither lever moves availability. `),
-        !useSt && sv ? h('button', { type: 'button', class: 'btn btn--sm btn--ghost fc-try-p0', onclick: () => { leverBasis = 'station'; compute(); } }, `Compare at ${sv.station} instead`) : !useSt && p0S != null && p0S !== S ? h('button', { type: 'button', class: 'btn btn--sm btn--ghost fc-try-p0', onclick: () => { state.spares = p0S; sync(null); compute(); } }, `Compare the levers at P0 (S = ${fmtInt(p0S)})`) : null, ' ', annualTxt);
+        p0S != null && p0S !== S ? h('button', { type: 'button', class: 'btn btn--sm btn--ghost fc-try-p0', onclick: () => { state.spares = p0S; sync(null); compute(); } }, `Compare the levers at P0 (S = ${fmtInt(p0S)})`) : null, ' ', annualTxt);
       return;
     }
     verdict.replaceChildren(

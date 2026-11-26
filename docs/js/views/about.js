@@ -34,7 +34,7 @@ export async function render(el) {
     document.head.append(h('link', { rel: 'stylesheet', href: new URL('../../css/views/about.css', import.meta.url).href, dataset: { viewCss: 'about' } }));
   }
   el.append(pageHead({
-    num: '—', eyebrow: 'About',
+    num: null, eyebrow: 'About',
     title: 'About this project',
     lede: 'GROUNDED NO MORE is an independent aviation materials-planning simulation built as a portfolio project. Falcon Hub Airways and every part number in it are fictional.',
   }));
@@ -72,7 +72,10 @@ export async function render(el) {
   el.append(h('div', { class: 'grid-12 mt-3' },
     card({
       cls: 'span-12 ab-why', kicker: 'Planning decisions', title: 'Why I made these planning decisions',
-      body: h('div', { class: 'ab-q', dataset: { role: 'why-questions' } }, QUESTIONS.map((q) => h('section', { class: 'ab-q-item' }, h('h4', { class: 'ab-h' }, q)))),
+      // wave C: an intentional list of the six questions, with a one-line note; the answers are the author's to write
+      body: h('div', { class: 'stack-2' },
+        h('ol', { class: 'ab-q', dataset: { role: 'why-questions' } }, QUESTIONS.map((q) => h('li', { class: 'ab-q-item' }, h('span', { class: 'ab-q-t' }, q)))),
+        h('p', { class: 'ab-q-note t-12 faint m-0', dataset: { role: 'why-note' } }, 'Author’s answers to follow.')),
     })));
   return null;
 }

@@ -5,6 +5,8 @@ import csv
 import io
 import json
 
+import re
+
 import pytest
 
 from _sitefx import DOCS, VIEWPORTS, audit, browser, open_page, site  # noqa: F401
@@ -48,7 +50,7 @@ def test_filters_and_counts(site, browser):  # noqa: F811
     ctx, page, problems = open_page(browser, site + "#/actions?severity=urgent", "1440")
     try:
         n_urg = sum(a["severity"] == "urgent" for a in A)
-        assert f"Showing {n_urg} of {len(A)}" in page.locator(".pac-shown").inner_text()
+        assert re.search(rf"Showing \d+ of {n_urg} matching \({len(A)} in all\)", page.locator(".pac-shown").inner_text())
         page.locator('[data-action="show-all"]').click()
         assert page.locator(".pac-row").count() == n_urg
         page.select_option("#pac-owner", A[0]["owner"])

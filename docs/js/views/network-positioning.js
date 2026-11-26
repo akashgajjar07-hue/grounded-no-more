@@ -25,7 +25,7 @@ const HPW = 168;
 const POLS = ['P0', 'P1', 'P2'];
 const SR = theme.series;
 // P0 = baseline (copper), P1 = other comparison (slate), P2 = the network policy (bright titanium, filled).
-// Not teal: teal is the recommended I125 plan site-wide, and I125 has no per-station holdout breakdown (wave 4, C5).
+// Not teal: teal is the P2 core plan site-wide, and I125 has no per-station holdout breakdown (wave 4, C5).
 const POL_COLOR = { P0: SR.baseline, P1: SR.context, P2: SR.neutral };
 
 let cssLoaded = false;
@@ -60,23 +60,25 @@ function riskVsOut(s) {
 function riskBand(s) {
   if (s.role !== 'hub') {
     const lv = String(s.outstation_risk_level || '').toLowerCase();
-    if (['urgent', 'high'].includes(lv)) return 'urgent';
+    if (['urgent', 'high'].includes(lv)) return 'high';
     // below the top band, outstations are compared in neutral (no amber/teal status: the map already carries teal + red)
     if (['review', 'medium', 'elevated', 'watch'].includes(lv)) return 'watch';
     if (['ok', 'low'].includes(lv)) return 'low';
     const rv = riskVsOut(s);
-    if (rv != null) return rv >= 0.8 ? 'urgent' : rv >= 0.5 ? 'watch' : 'low';
+    if (rv != null) return rv >= 0.8 ? 'high' : rv >= 0.5 ? 'watch' : 'low';
   }
   const lvl = String(s.risk_level || '').toLowerCase();
-  if (['urgent', 'high'].includes(lvl)) return 'urgent';
+  if (['urgent', 'high'].includes(lvl)) return 'high';
   if (['review', 'medium', 'elevated'].includes(lvl)) return 'review';
   if (['ok', 'low'].includes(lvl)) return 'ok';
   const r = num(s.risk);
   if (r == null) return 'unknown';
-  return r > 0.66 ? 'urgent' : r > 0.33 ? 'review' : 'ok';
+  return r > 0.66 ? 'high' : r > 0.33 ? 'review' : 'ok';
 }
 const RISK = {
-  urgent: { word: 'HIGH', glyph: '▲', color: C.urgent, pill: 'urgent' },
+  urgent: { word: 'HIGH', glyph: '▲', color: C.urgent, pill: 'urgent' }, // legacy key; stations use 'high' (wave C)
+  // wave C: station exposure is a scale, not an exception: amber ring + ▲; red stays for urgent exceptions (pills, actions)
+  high: { word: 'HIGH', glyph: '▲', color: C.review, pill: 'review' },
   review: { word: 'WATCH', glyph: '◆', color: C.review, pill: 'review' },
   ok: { word: 'LOW', glyph: '●', color: C.ok, pill: 'ok' },
   watch: { word: 'ELEVATED', glyph: '◆', color: SR.neutral, pill: 'unknown' }, // not WATCH: WATCH is amber review site-wide (wave 4, C4)
@@ -87,11 +89,11 @@ const RISK = {
 /** Risk pill text: outstations relative to the riskiest outstation, the hub on its own scale. */
 function riskText(s, stations) {
   const b = RISK[riskBand(s)];
-  if (s.role === 'hub') return `${b.word} · hub`;
-  const rv = riskVsOut(s);
-  if (rv != null && rv >= 0.999) return `${b.word} · top outstation`;
-  const top = stations.filter((x) => x.role !== 'hub').sort((a, c) => (c.risk ?? 0) - (a.risk ?? 0))[0];
-  return rv != null ? `${b.word} · ${fmtPct(rv, 0)} of ${top?.station || 'top'}` : b.word;
+  // wave C: one denominator site-wide (as on Mission Control): share of the network's total exposure
+  const tot = stations.reduce((a, x) => a + (num(x.risk) ?? 0), 0);
+  const sh = tot && num(s.risk) != null ? ` · ${fmtPct(s.risk / tot, 0)} of network` : '';
+  const word = b.word.charAt(0) + b.word.slice(1).toLowerCase();
+  return `${word}${s.role === 'hub' ? ' · hub' : ''}${sh}`;
 }
 
 /** {mean, lo, hi} for a metric on a policy_compare row, tolerant of several export shapes. */
@@ -132,7 +134,7 @@ export async function render(el, ctx) {
   const recId = n.recommended_id || F?.recommended || 'I125';
   const fpt = (id) => { const q = (F?.points || []).find((x) => x.id === id); return q ? { aog: num(q.aog_hours ?? q.aog_hours_mean), cap: num(q.capital_aed) } : null; };
   const recPt = fpt(recId), p2Pt = fpt('P2');
-  REC = { id: recId, pt: recPt };
+  REC = { id: recId, pt: recPt, extra: recPt && p2Pt ? fmtAED(recPt.cap - p2Pt.cap) : null };
   setOutstationScale(stations);
   const hub = stations.find((s) => s.role === 'hub') || stations[0];
   const byId = Object.fromEntries(stations.map((s) => [s.station, s]));
@@ -164,39 +166,40 @@ export async function render(el, ctx) {
   const totalTransfers = arcs.reduce((a, b) => a + (num(b.transfers) ?? 0), 0);
   const totalEmerg = arcs.reduce((a, b) => a + (num(b.emergency) ?? 0), 0);
   // wave A: proposed movements = where the recommended plan positions more rotables than P2 (its base), from AUH
-  const proposed = hub ? stations.filter((x) => x.role !== 'hub' && x.by_policy?.[recId] && x.by_policy?.P2 && x.by_policy[recId].rotable_units > x.by_policy.P2.rotable_units)
-    .map((x) => ({ from: hub.station, to: x.station, label: `+${fmtInt(x.by_policy[recId].rotable_units - x.by_policy.P2.rotable_units)} rotable${x.by_policy[recId].rotable_units - x.by_policy.P2.rotable_units === 1 ? '' : 's'} positioned (${recId} vs P2)`, basis: `${recId} allocation (proposed, not a history transfer)` })) : [];
+  // wave C: proposed movements = where P2 (the core recommendation) holds more rotables than the P0 legacy policy
+  const proposed = hub ? stations.filter((x) => x.role !== 'hub' && x.by_policy?.P2 && x.by_policy?.P0 && x.by_policy.P2.rotable_units > x.by_policy.P0.rotable_units)
+    .map((x) => { const d = x.by_policy.P2.rotable_units - x.by_policy.P0.rotable_units; return { from: hub.station, to: x.station, label: `+${fmtInt(d)} rotable${d === 1 ? '' : 's'} held here (P2 vs P0)`, basis: 'P2 allocation (proposed, not a history transfer)' }; }) : [];
   const busiest = arcs.slice().sort((a, b) => (b.transfers ?? 0) - (a.transfers ?? 0))[0];
   const topRisk = stations.filter((s) => s.role !== 'hub').sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0))[0];
   const topAll = stations.slice().sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0))[0];
   const mapF = chartFrame(mapCard, {
       implication: 'Stock belongs where an aircraft would wait longest for it, not evenly across stations.',
     // wave 5: the headline speaks the recommended plan (node size is its units); risk stays the P0-holdout exposure
-    headline: topAll && topRisk && hub?.by_policy?.[recId] && stations.every((x) => x.by_policy?.[recId])
+    headline: topAll && topRisk && hub?.by_policy?.P2 && stations.every((x) => x.by_policy?.P2 && x.by_policy?.P0)
       ? (() => {
-        const ou = stations.filter((x) => x.role !== 'hub').map((x) => x.by_policy[recId].rotable_units);
-        const rng = Math.min(...ou) === Math.max(...ou) ? fmtInt(ou[0]) : `${fmtInt(Math.min(...ou))}–${fmtInt(Math.max(...ou))}`;
-        const a1 = `${recId} pools ${fmtInt(hub.by_policy[recId].rotable_units)} rotables at ${hub.station} and ${rng} per outstation; ${topRisk.station} is the riskiest outstation`;
-        return a1.length <= 90 ? a1 : `${recId} pools ${fmtInt(hub.by_policy[recId].rotable_units)} rotables at ${hub.station}, ${rng} per outstation`;
+        const outs = stations.filter((x) => x.role !== 'hub');
+        const o2 = outs.reduce((a, x) => a + x.by_policy.P2.rotable_units, 0), o0 = outs.reduce((a, x) => a + x.by_policy.P0.rotable_units, 0);
+        const a1 = `P2 holds ${fmtInt(o2)} rotables at the outstations, not P0's ${fmtInt(o0)}; ${topRisk.station} is the riskiest outstation`;
+        return a1.length <= 90 ? a1 : `P2 holds ${fmtInt(o2)} outstation rotables, not P0's ${fmtInt(o0)}`;
       })()
       : topAll && topRisk
       ? (topAll.role === 'hub'
         ? `The ${topAll.station} hub carries the most projected AOG risk; ${topRisk.station} leads outstations at ${fmtPct(topRisk.risk, 0)} of it`
         : `${topAll.station} carries the highest material shortage exposure (${fmtPct(topAll.risk, 0)}); ${fmtInt(totalEmerg)} of ${fmtInt(totalTransfers)} transfers were emergencies`)
       : 'Hub-and-spoke network',
-    subtitle: `Node size = material shortage exposure (P0 holdout AOG h, vs the worst station) · ring = exposure band · solid lines = ${fmtInt(totalTransfers)} history transfers (width = volume) · dashed teal = proposed ${recId} positioning · labels: ${recId} rotable units`,
+    subtitle: `Node size = material shortage exposure (P0 holdout AOG h, vs the worst station) · ring = exposure band · solid lines = ${fmtInt(totalTransfers)} history transfers (width = volume) · dashed teal = outstation rotables P2 adds over P0 · labels: P2 rotable units`,
     provenance: prov(n.meta), source: 'network.json → stations, arcs',
     table: { columns: [{ key: 'from', label: 'From' }, { key: 'to', label: 'To' }, { key: 'transfers', label: 'Transfers', num: true, format: fmtInt }, { key: 'emergency', label: 'Emergency', num: true, format: fmtInt }, { key: 'aog_transport_h', label: 'AOG transport', num: true, format: fmtHours }], rows: arcs },
   });
   // one legend row, two groups: ring = risk (only the bands present), line = transfer kind
-  const bandsPresent = ['low', 'watch', 'ok', 'review', 'urgent'].filter((b) => stations.some((s) => riskBand(s) === b));
+  const bandsPresent = ['low', 'watch', 'ok', 'review', 'high', 'urgent'].filter((b) => stations.some((s) => riskBand(s) === b));
   mapF.body.append(mapHost, h('div', { class: 'np-map-foot' }, picker,
     h('div', { class: 'np-legend', 'aria-hidden': 'true' },
       h('span', { class: 'np-legend-k' }, 'Exposure ring'),
       ...bandsPresent.map((b) => h('span', { style: { color: RISK[b].color } }, h('i', { class: 'np-ring' }), RISK[b].word.toLowerCase())),
       h('span', { class: 'np-legend-k' }, 'Movements'),
       h('span', { style: { color: SR.neutral } }, h('i', { class: 'np-line' }), 'history transfers'),
-      proposed.length ? h('span', { style: { color: theme.series.recommended } }, h('i', { class: 'np-line np-line--dash' }), `proposed (${recId})`) : null,
+      proposed.length ? h('span', { style: { color: theme.series.recommended } }, h('i', { class: 'np-line np-line--dash' }), 'P2 adds over P0') : null,
       totalEmerg ? h('span', { style: { color: SR.urgent } }, h('i', { class: 'np-line' }), 'emergency (replay)') : null)));
   const drill = h('section', { class: 'card', dataset: { story: 'station-drill' }, 'aria-live': 'polite' });
   // wave 4: the hub-vs-outstation finding sits under the map, so the left column matches the tall station panel (no dead space)
@@ -207,7 +210,7 @@ export async function render(el, ctx) {
     stations, arcs, selected, proposed,
     onSelect: (id) => { choose(id, false); openStation(id); },
     // sub-label sits directly under the IATA code: units, plus the risk word only when it is not low (no glyph, so it never reads as another airport)
-    labelSub: (s) => { const b = riskBand(s); const risk = b === 'ok' || b === 'low' ? '' : ` · ${RISK[b].word}`; return `${fmtInt(s.serviceable_units)} u${risk}`; },
+    labelSub: (s) => { const b = riskBand(s); const risk = b === 'ok' || b === 'low' ? '' : ` · ${RISK[b].word}`; return `${fmtInt(s.by_policy?.P2?.rotable_units ?? s.serviceable_units)} u${risk}`; },
     // wave A: node size = material shortage exposure (P0 holdout AOG h vs the worst station); units are in the label
     nodeRadius: (s) => 4.5 + 11 * Math.sqrt(Math.max(0, num(s.risk) ?? 0)),
     nodeColor: (s) => RISK[riskBand(s)].color,
@@ -234,7 +237,7 @@ export async function render(el, ctx) {
       body: h('div', { class: 'stack-3' },
         h('div', { class: 'row-wrap' }, pill(rb.pill, riskText(s, stations)), provChip(prov(n.meta))),
         h('dl', { class: 'meta-list' },
-          ...row(`${recId} rotable units`, fmtInt(u[recId]?.rotable_units ?? s.serviceable_units)),
+          ...row('P2 rotable units (core plan)', fmtInt(u.P2?.rotable_units ?? s.serviceable_units)),
           ...row('Stock value', fmtAED(s.stock_value)),
           ...row('Material shortage exposure', s.role === 'hub' ? `${fmtPct(s.risk, 0)} (worst station)` : `${fmtPct(s.risk, 0)} of the worst station`),
           ...row('Requests (2-yr history)', fmtInt(s.requests)),
@@ -284,8 +287,8 @@ export async function render(el, ctx) {
       const u = st.by_policy?.[recId]?.rotable_units, u2 = st.by_policy?.P2?.rotable_units;
       if (u == null) return null;
       const d = u2 != null ? u - u2 : null;
-      return h('tr', { class: 'is-rec', dataset: { pol: recId } },
-        h('td', {}, recId, h('span', { class: 'np-best' }, ' recommended')),
+      return h('tr', { class: 'is-opt', dataset: { pol: recId } },
+        h('td', {}, recId, h('span', { class: 'np-best' }, ' frontier option')),
         h('td', { colspan: hasR ? 3 : 2, class: 'np-rec-note' },
           `${fmtInt(u)} rotables here${d != null ? ` (${d === 0 ? 'same as P2' : `${d > 0 ? '+' : '−'}${fmtInt(Math.abs(d))} vs P2`})` : ''}. Per-station holdout not run${recPt ? `; network ${fmtHours(recPt.aog)}/yr vs P2 ${fmtHours(p2Pt?.aog)}` : ''}.`));
     }
@@ -303,14 +306,14 @@ export async function render(el, ctx) {
         ...(s.aog_hours_hist != null ? [fact('AOG h · W0–W103 history (2 yr, P0)', `${fmtHours(s.aog_hours_hist)}${s.aog_events_hist != null ? ` · ${fmtInt(s.aog_events_hist)} ev` : ''}`)] : []),
         ...(s.role === 'hub' ? [fact('Outstations served', fmtInt(outbound.length))] : [])),
       s.by_policy ? h('div', { class: 'np-sub' }, 'Rotable units positioned here, by plan') : null,
-      s.by_policy ? h('div', { class: 'np-units' }, Object.entries(s.by_policy).map(([k, v]) => h('div', { class: `np-unit ${k === n.recommended_id ? 'is-rec' : ''}` }, h('span', { class: 'np-unit-k' }, k === n.recommended_id ? `${k} · rec.` : k), h('span', { class: 'np-unit-v' }, fmtInt(v.rotable_units)), h('span', { class: 'np-unit-s' }, fmtAED(v.stock_value_aed))))) : null,
+      s.by_policy ? h('div', { class: 'np-units' }, Object.entries(s.by_policy).map(([k, v]) => h('div', { class: `np-unit ${k === 'P2' ? 'is-rec' : ''}` }, h('span', { class: 'np-unit-k' }, k === 'P2' ? `${k} · core` : k === n.recommended_id ? `${k} · option` : k), h('span', { class: 'np-unit-v' }, fmtInt(v.rotable_units)), h('span', { class: 'np-unit-s' }, fmtAED(v.stock_value_aed))))) : null,
       h('div', { class: 'np-sub' }, `P0 / P1 / P2 / ${recId} at ${s.station} · ${splitLabel(n, p)} · mean, 95% CI`),
       polRows.some((r) => r.aog || r.fill)
         ? h('table', { class: 'np-pol' },
           h('caption', { class: 'sr-only' }, `Policy comparison at ${s.station}`),
           h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Policy'), h('th', { scope: 'col' }, 'AOG h/yr'), h('th', { scope: 'col' }, 'Fill'), hasR ? h('th', { scope: 'col' }, 'Rot. fill') : null)),
-          h('tbody', {}, polRows.map((r) => h('tr', { class: bestAog && r.pol === bestAog.pol ? 'is-best' : '' },
-            h('td', {}, r.pol, bestAog && r.pol === bestAog.pol ? h('span', { class: 'np-best' }, ' lowest AOG') : null),
+          h('tbody', {}, polRows.map((r) => h('tr', { class: [bestAog && r.pol === bestAog.pol ? 'is-best' : '', r.pol === 'P2' ? 'is-rec' : ''].filter(Boolean).join(' ') },
+            h('td', {}, r.pol, r.pol === 'P2' ? h('span', { class: 'np-best' }, ' recommended (core)') : bestAog && r.pol === bestAog.pol ? h('span', { class: 'np-best' }, ' lowest AOG') : null),
             h('td', {}, r.aog ? fmtHours(r.aog.mean) : 'not run', ci(r.aog, fmtHours)),
             h('td', {}, r.fill ? fmtPct(r.fill.mean) : 'not run', ci(r.fill, (v) => fmtPct(v))),
             hasR ? h('td', {}, r.rfill ? fmtPct(r.rfill.mean) : '—', ci(r.rfill, (v) => fmtPct(v))) : null)),
@@ -487,7 +490,7 @@ function renderCompare(host, n, p, stations, pcBy, ctx) {
     f.root.querySelector('.chart-headline').textContent = head;
     const sub = f.root.querySelector('.chart-subtitle') || (() => { const d = h('div', { class: 'chart-subtitle' }); f.root.querySelector('.chart-headline').after(d); return d; })();
     const clamped = rows.some((r) => r.m.clamped);
-    sub.textContent = [subExtra, `${splitLabel(n, p)} · mean and 95% CI${mk.key === 'aog_hours' ? ' · square-root scale' : ''}`, 'P0 legacy, P1 local, P2 network', REC.pt ? `${REC.id} (recommended, P2 + targeted units) was simulated for network totals only: ${fmtHours(REC.pt.aog)}/yr` : '', clamped ? 'CI ends below 0 drawn at 0' : ''].filter(Boolean).join(' · ');
+    sub.textContent = [subExtra, `${splitLabel(n, p)} · mean and 95% CI${mk.key === 'aog_hours' ? ' · square-root scale' : ''}`, 'P0 legacy, P1 local, P2 network', REC.pt ? `${REC.id} (frontier option: P2 + targeted units${REC.extra ? `, if you invest an additional ${REC.extra}` : ''}) was simulated for network totals only: ${fmtHours(REC.pt.aog)}/yr` : '', clamped ? 'CI ends below 0 drawn at 0' : ''].filter(Boolean).join(' · ');
     sub.title = sub.textContent;
     f.setTable([{ key: 'station', label: 'Station' }, { key: 'pol', label: 'Policy' }, { key: 'mean', label: 'Mean', num: true, format: mk.fmt }, { key: 'lo', label: 'CI lo', num: true, format: mk.fmt }, { key: 'hi', label: 'CI hi', num: true, format: mk.fmt }], rows.map((r) => ({ station: r.station, pol: r.pol, mean: r.m.mean, lo: r.m.lo, hi: r.m.hi })));
     stop?.();
@@ -535,8 +538,9 @@ function drawCompare(el, rows, order, mk, w) {
     if (!r) return;
     if (!narrow) dl(g, { x: iw + 10, y: y(first) + y.bandwidth() / 2 + off[pol], text: `${pol} ${mk.fmt(r.m.mean)}`, color: pol === 'P1' ? C.muted : POL_COLOR[pol], strong: pol === 'P2' });
   });
-  if (narrow) POLS.forEach((pol, i) => dl(g, { x: i * 52 - m.left + 8, y: -14, text: `● ${pol}`, color: pol === 'P1' ? C.muted : POL_COLOR[pol], strong: pol === 'P2' }));
-  else dl(g, { x: iw + 10, y: -12, text: first, color: C.faint });
+  // key at every width: P2 = solid titanium dot, P0 / P1 = hollow rings (copper / slate)
+  POLS.forEach((pol, i) => dl(g, { x: i * 52 - m.left + 8, y: -14, text: `${pol === 'P2' ? '●' : '○'} ${pol}`, color: pol === 'P1' ? C.muted : POL_COLOR[pol], strong: pol === 'P2' }));
+  if (!narrow) dl(g, { x: iw + 10, y: -12, text: first, color: C.faint });
   if (mk.key === 'aog_hours') {
     const r0 = rows.find((d) => d.station === first && d.pol === 'P0');
     const r2 = rows.find((d) => d.station === first && d.pol === 'P2');
@@ -546,7 +550,8 @@ function drawCompare(el, rows, order, mk, w) {
         dl(g, { x: iw, y: -14, text: `${first} P2 −${fmtHours(r0.m.mean - r2.m.mean)} vs P0`, anchor: 'end', color: C.text, strong: true });
       } else {
         const xa = x(r2.m.mean), ya = y(first) + y.bandwidth() / 2 + off.P2;
-        annotate(g, { x: xa, y: ya, dx: -48, dy: -6, title: `${first} −${fmtHours(r0.m.mean - r2.m.mean)}`, sub: 'P2 vs P0' });
+        // above the row (wave C): the leader no longer crosses the P0/P1 labels
+        annotate(g, { x: xa, y: ya, dx: 36, dy: -(off.P2 + y.bandwidth() / 2) + 4, title: `${first} −${fmtHours(r0.m.mean - r2.m.mean)}`, sub: 'P2 vs P0' });
       }
     }
   }
@@ -563,8 +568,12 @@ function renderShare(host, n, p, stations, pcBy, hub) {
   const r0 = rows.find((r) => r.pol === 'P0'), r1 = rows.find((r) => r.pol === 'P1'), r2 = rows.find((r) => r.pol === 'P2');
   const share0 = r0 ? r0.hub / (r0.hub + r0.out) : null;
   const f = chartFrame(host, {
-      implication: 'Hub shortages drive most downtime, so hub pooling and replenishment matter as much as outstation stock.',
-    headline: share0 != null ? `${fmtPct(share0, 0)} of P0’s AOG hours are at the ${hub.station} hub, not the outstations` : 'Hub vs outstation AOG: not run',
+      implication: share0 != null && share0 < 0.5
+        ? 'Most legacy downtime is at outstations holding no no-go stock: position units there, fed from the hub.'
+        : 'Hub shortages drive most legacy downtime, so hub pooling and replenishment come first.',
+    headline: share0 != null
+      ? (share0 < 0.5 ? `${fmtPct(1 - share0, 0)} of P0’s AOG hours are at the outstations; ${fmtPct(share0, 0)} at the ${hub.station} hub` : `${fmtPct(share0, 0)} of P0’s AOG hours are at the ${hub.station} hub, not the outstations`)
+      : 'Hub vs outstation AOG: not run',
     subtitle: `AOG h / yr · hub vs sum of outstations · ${splitLabel(n, p)} · means`,
     provenance: prov(n.meta), source: 'network.json → policy_compare',
     table: { columns: [{ key: 'pol', label: 'Policy' }, { key: 'hub', label: 'Hub AOG h', num: true, format: fmtHours }, { key: 'out', label: 'Outstations AOG h', num: true, format: fmtHours }], rows },
@@ -580,8 +589,8 @@ function renderShare(host, n, p, stations, pcBy, hub) {
     rows.forEach((r, i) => {
       const yy = i * rowH;
       dl(g, { x: -8, y: yy + 22, text: r.pol, anchor: 'end', color: r.pol === 'P2' ? C.text : C.muted, strong: r.pol === 'P2' });
-      g.append('rect').attr('x', 0).attr('y', yy + 14).attr('width', Math.max(1, x(r.hub))).attr('height', 16).attr('rx', 2).attr('fill', SR.neutral).attr('fill-opacity', r.pol === 'P2' ? 0.85 : 0.6);
-      g.append('rect').attr('x', x(r.hub) + 1).attr('y', yy + 14).attr('width', Math.max(1, x(r.out))).attr('height', 16).attr('rx', 2).attr('fill', SR.context).attr('fill-opacity', 0.55);
+      g.append('rect').attr('x', 0).attr('y', yy + 14).attr('width', Math.max(1, x(r.hub))).attr('height', 16).attr('rx', 2).attr('fill', r.pol === 'P0' ? SR.baseline : SR.neutral).attr('fill-opacity', r.pol === 'P2' ? 0.85 : 0.6);
+      g.append('rect').attr('x', x(r.hub) + 1).attr('y', yy + 14).attr('width', Math.max(1, x(r.out))).attr('height', 16).attr('rx', 2).attr('fill', r.pol === 'P0' ? SR.baseline : SR.context).attr('fill-opacity', r.pol === 'P0' ? 0.35 : 0.55);
       const txt = `hub ${fmtHours(r.hub)} · out ${fmtHours(r.out)}`;
       const tx = x(r.hub + r.out) + 6;
       if (tx + txt.length * 6.4 < iw) dl(g, { x: tx, y: yy + 22, text: txt, color: C.muted });
@@ -589,7 +598,12 @@ function renderShare(host, n, p, stations, pcBy, hub) {
     });
   });
   const items = [];
-  if (r0 && r2) items.push([`Pooling at the hub pays most.`, ` P2 cuts hub AOG by ${fmtHours(r0.hub - r2.hub)} a year versus P0, with ${fmtHours(r2.out)} left across all outstations.`]);
+  if (r0 && r2) {
+    const dHub = r0.hub - r2.hub, dOut = r0.out - r2.out;
+    items.push(dOut >= dHub
+      ? ['Outstation stock pays most.', ` P2 cuts outstation AOG by ${fmtHours(dOut)} a year versus P0 and hub AOG by ${fmtHours(dHub)}.`]
+      : ['Pooling at the hub pays most.', ` P2 cuts hub AOG by ${fmtHours(dHub)} a year versus P0, with ${fmtHours(r2.out)} left across all outstations.`]);
+  }
   if (r1 && r2) items.push([`Local floats miss the hub.`, ` P1 stocks every outstation, yet leaves ${fmtHours(r1.hub)} of AOG at ${hub.station}${r0 ? ` (P0: ${fmtHours(r0.hub)})` : ''}.`]);
   items.push(['Selective positioning.', ' Outstation units go where D0 exposure and transport time justify them; D3/D10 demand is covered from the hub within the deadline.']);
   f.body.after(h('ul', { class: 'np-findings' }, items.map(([a, b]) => h('li', {}, icon('target'), h('div', {}, h('strong', {}, a), b)))));

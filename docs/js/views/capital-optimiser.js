@@ -14,6 +14,9 @@ import { chartFrame, responsive, svgIn, axisBottom, withTooltip, theme, fmtAED, 
 export const data = ['frontier', 'policies'];
 
 const CAPITAL_KINDS = new Set(['policy', 'baseline', 'budget', 'incremental', 'reposition', 'frontier', 'recommended', 'candidate']);
+/** Human names for raw plan codes (wave C). */
+const PLAN_NAME = { P2_GUARD: 'P2 held to guardrails' };
+const planName = (id) => PLAN_NAME[id] || id;
 const KIND_LABEL = { policy: 'Reference policy', baseline: 'Reference policy', budget: 'Re-optimised budget point', incremental: 'Base + greedy additions', lever: 'Lever (annual spend, not capital)', combo: 'Budget point + lever', reposition: 'Reposition only', frontier: 'Frontier point', recommended: 'Recommended', candidate: 'Candidate' };
 const LEVER_LABEL = { buy_1: 'Buy 1 spare', buy_2: 'Buy 2 spares', tat_cut_10d: 'Cut repair TAT 10 d', reposition_1: 'Reposition 1 unit' };
 const COMP = [
@@ -23,7 +26,7 @@ const COMP = [
   { key: 'expedite_cost', label: 'Expedite' },
   { key: 'logistics_cost', label: 'Logistics' },
 ];
-const FACTOR_LABEL = { aog_penalty: 'AOG penalty', carrying_cost: 'Carrying cost', repair_tat: 'Repair TAT', lead_time: 'Lead time', aog_desk_expedite: 'AOG-desk expedite' };
+const FACTOR_LABEL = { aog_penalty: 'AOG penalty', carrying_cost: 'Carrying cost', repair_tat: 'Repair TAT', lead_time: 'Lead time', aog_desk_expedite: 'AOG-desk routes' };
 const num = (v) => (v === null || v === undefined || v === '' || Number.isNaN(+v) ? null : +v);
 const ciTxt = (lo, hi, f) => (lo == null || hi == null ? '' : ` [${f(lo)}, ${f(hi)}]`);
 const signH = (v) => (v == null ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmtHours(Math.abs(v))}`);
@@ -96,7 +99,8 @@ export async function render(el, ctx) {
   const P1 = byId.get('P1');
   const rec = byId.get(F.recommended) || pts.find((p) => p.kind === 'recommended') || pts[0];
   const split = F.split || F.meta?.split || 'holdout';
-  const seedsTxt = F.seeds_label || (split === 'holdout' ? 'holdout seeds 1000–1019' : 'selection seeds 100–119');
+  const seedsTxt = F.seeds_label || (split === 'holdout' ? 'holdout seeds' : 'selection seeds 100–119');
+  const holdRange = (F.seeds_label || '').replace(/^holdout seeds\s*/, '');
   const hasSel = pts.some((p) => p.sel && p.sel.aog != null);
   const H = (p) => ({ cap: p.cap, aog: p.aog, ci: p.ci });
   const S = (p) => (p.sel && p.sel.aog != null ? { cap: p.sel.cap ?? p.cap, aog: p.sel.aog, ci: p.sel.ci } : null);
@@ -220,9 +224,10 @@ export async function render(el, ctx) {
       const size = (p) => (p === rec ? 150 : isPolicy(p) ? 90 : fr.includes(p) ? 52 : 30);
       const pp = gPts.selectAll('path.co-pt').data(pts, (p) => p.id).join((en) => en.append('path').attr('class', 'co-pt').attr('transform', (p) => `translate(${x(posOf(p, md).cap)},${y(posOf(p, md).aog)})`));
       pp.attr('d', (p) => d3.symbol(shape(p), size(p))())
-        .attr('fill', (p) => (p === rec ? theme.color.accent : isPolicy(p) ? theme.color.bg : fr.includes(p) ? theme.color.bg : theme.color.neutral))
+        // wave C: teal marks P2 (the core plan); the frontier option I125 is a neutral, secondary marker
+        .attr('fill', (p) => (p === P2 ? theme.color.accent : p === rec ? SER.neutral : isPolicy(p) ? theme.color.bg : fr.includes(p) ? theme.color.bg : theme.color.neutral))
         .attr('fill-opacity', (p) => (fr.includes(p) || isPolicy(p) || p === rec ? 1 : 0.55))
-        .attr('stroke', (p) => (p === P0 ? SER.baseline : isPolicy(p) ? SER.neutral : fr.includes(p) || p === rec ? theme.color.accent : p.kind === 'lever' || p.kind === 'combo' ? theme.color.muted : 'none'))
+        .attr('stroke', (p) => (p === P0 ? SER.baseline : p === P2 ? theme.color.accent : p === rec ? SER.neutral : isPolicy(p) ? SER.neutral : fr.includes(p) ? theme.color.accent : p.kind === 'lever' || p.kind === 'combo' ? theme.color.muted : 'none'))
         .attr('stroke-width', (p) => (isPolicy(p) ? 2 : 1.5)).style('cursor', 'pointer')
         .attr('tabindex', (p) => (front.includes(p) ? 0 : null)).attr('role', (p) => (front.includes(p) ? 'button' : null))
         .attr('aria-label', (p) => `${p.id}: ${fmtAED(p.cap)}, ${fmtHours(p.aog)} per year`);
@@ -245,7 +250,7 @@ export async function render(el, ctx) {
       const pols = [P0, P1, P2].filter(Boolean);
       const labs = gLab.selectAll('text').data(pols, (p) => p.id).join('text').attr('class', 'gnm-label gnm-label--strong').style('fill', (p) => (p === P0 ? SER.baseline : SER.neutral)).attr('font-family', theme.font.mono);
       T(labs).attr('x', (p) => x(posOf(p, md).cap) + (p === P2 ? -10 : 10)).attr('y', (p) => y(posOf(p, md).aog) + (p === P2 ? 20 : 0)).attr('dy', '0.32em').attr('text-anchor', (p) => (p === P2 ? 'end' : 'start'))
-        .text((p) => (p.id === baseId && !narrow ? `${p.id} · base policy` : p.id));
+        .text((p) => (p.id === baseId && !narrow ? `${p.id} · core plan` : p.id));
       // annotation on recommended
       gAnn.selectAll('*').remove();
       if (rec) {
@@ -260,6 +265,8 @@ export async function render(el, ctx) {
         if (narrow) {
           const txt = `${rec.id} · frontier option`;
           const obstacles = pts.map((p) => markerRect(x(posOf(p, md).cap), y(posOf(p, md).aog), p === rec ? 8 : 4));
+          // wave C: the policy labels (P0 / P1 / P2) are obstacles too, so the option label never covers "P2" at 390
+          pols.forEach((p) => { const t = p.id, w = t.length * 7 + 4, lx = x(posOf(p, md).cap) + (p === P2 ? -10 - w : 10), ly = y(posOf(p, md).aog) + (p === P2 ? 20 : 0); obstacles.push({ x: lx - 2, y: ly - 9, width: w + 4, height: 18 }); });
           const centroid = { x: d3.mean(fr, (p) => x(posOf(p, md).cap)), y: d3.mean(fr, (p) => y(posOf(p, md).aog)) };
           const lp = labelAround({ x: ax, y: ayy }, { r: 12, text: txt, centroid, obstacles, bounds: { x: 0, y: 0, width: iw, height: ih } });
           gAnn.append('text').attr('class', 'gnm-annot-text').attr('x', lp.x).attr('y', lp.y).attr('dy', '0.32em').attr('text-anchor', lp.anchor).text(txt);
@@ -301,9 +308,9 @@ export async function render(el, ctx) {
   const readout = h('dl', { class: 'meta-list co-readout' });
   const minB = front[0]?.cap ?? 0, maxB = front.at(-1)?.cap ?? 1;
   const step = Math.max(50000, Math.round((maxB - minB) / 200 / 50000) * 50000);
-  const planFor = (v) => front.filter((q) => q.cap <= v + step / 2).at(-1) || front[0];
+  const planFor = (v) => front.filter((q) => q.cap <= v + 1).at(-1) || front[0]; // never a plan above the budget
   const sl = slider({
-    label: 'Capital budget', min: Math.floor(minB / step) * step, max: Math.ceil(maxB / step) * step, step, value: Math.round(sel.cap / step) * step, format: (v) => fmtAED(v),
+    label: 'Capital budget', min: Math.ceil(minB / step) * step, /* wave C (F4): the minimum always maps to a plan that fits */ max: Math.ceil(maxB / step) * step, step, value: Math.ceil(sel.cap / step) * step, format: (v) => fmtAED(v),
     // screen readers hear the budget and the plan it selects, not "41850000" (F5)
     valueText: (v) => { const p = planFor(v); return `Budget ${fmtAED(v)}: plan ${p.id}, ${fmtAED(p.cap)} capital, ${fmtHours(p.aog)} AOG a year`; },
     onInput: (v) => { const p = planFor(v); if (p !== sel) choose(p, false); },
@@ -317,8 +324,8 @@ export async function render(el, ctx) {
     const p = sel;
     const selMode = mode === 'selection' && p.sel?.aog != null;
     const rows = [
-      ['Plan', h('span', {}, h('b', { class: 'mono' }, p.id), ' ', h('span', { class: 'faint' }, KIND_LABEL[p.kind] || p.kind))],
-      ['Seeds', selMode ? 'selection 100–119' : 'holdout 1000–1019'],
+      ['Plan', h('span', {}, h('b', { class: 'mono' }, planName(p.id)), ' ', h('span', { class: 'faint' }, KIND_LABEL[p.kind] || p.kind))],
+      ['Seeds', selMode ? 'selection 100–119' : `holdout ${holdRange}`.trim()],
       ['Capital', `${fmtAED(p.cap)}${p.capCI[0] != null ? ciTxt(p.capCI[0], p.capCI[1], (v) => fmtAED(v).replace('AED ', '')) : ''}`],
       selMode ? ['AOG / yr', `${fmtHours(p.sel.aog)}${ciTxt(p.sel.ci?.[0], p.sel.ci?.[1], fmtInt)}`] : ['AOG / yr', `${fmtHours(p.aog)}${ciTxt(p.ci[0], p.ci[1], fmtInt)}`],
       selMode && P2?.sel?.aog != null && p !== P2 ? [`vs ${baseId}`, `${signH(p.sel.aog - P2.sel.aog)} · ${signAED(p.cap - P2.cap)}`] : null,
@@ -333,14 +340,14 @@ export async function render(el, ctx) {
   const rule = card({
     kicker: 'Recommendation rule · pre-stated', title: R.h_star_per_aed_1m != null ? `Stop when an extra AED 1M buys fewer than ${fmtNum(R.h_star_per_aed_1m, 1)} AOG h` : 'Balanced point rule', prov: 'ASSUMED',
     body: h('div', { class: 't-14 muted co-rule-body' },
-      h('p', { class: 'm-0' }, R.aed_per_aog_hour != null ? `Walk the lower hull of the capital-only plans. Each segment buys AOG hours per extra AED 1M. Break-even h* = carrying ${fmtNum((R.carrying_pct ?? 0) * 100, 0)}% × AED 1M ÷ ${fmtAED(R.aed_per_aog_hour)} per AOG hour. The recommendation is the last vertex before the first segment below h*.` : 'Walk the lower hull of the capital-only plans and stop at the first segment worth less than its holding cost.'),
+      h('p', { class: 'm-0' }, R.aed_per_aog_hour != null ? `Walk the lower hull of the capital-only plans. Each segment buys AOG hours per extra AED 1M. Break-even h* = carrying ${fmtNum((R.carrying_pct ?? 0) * 100, 0)}% × AED 1M ÷ ${fmtAED(R.aed_per_aog_hour)} per AOG hour. The frontier option is the last vertex before the first segment below h*.` : 'Walk the lower hull of the capital-only plans and stop at the first segment worth less than its holding cost.'),
       R.segments ? h('p', { class: 'm-0 t-12 faint' }, `Selection-seed hull. Segment into ${R.recommended || rec.id}: ${fmtNum(R.segments.find((s) => s.to === (R.recommended || rec.id))?.h_per_aed_1m, 1)} h per AED 1M; next segment: ${fmtNum(R.segments.find((s) => s.from === (R.recommended || rec.id))?.h_per_aed_1m, 1)} h.`) : null),
   });
   side.append(
     card({
       cls: 'co-controls', kicker: 'Explore the frontier', title: 'Budget and seed set', prov,
       body: h('div', { class: 'stack-3' },
-        h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Seed set'), modeSeg, h('span', { class: 't-12 faint' }, hasSel ? 'Selection seeds 100–119 chose the plan; holdout seeds 1000–1019 judge it.' : 'Selection-seed values are not in this export.')),
+        h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Seed set'), modeSeg, h('span', { class: 't-12 faint' }, hasSel ? `Selection seeds 100–119 chose the plan; ${seedsTxt} judge it.` : 'Selection-seed values are not in this export.')),
         sl,
         h('p', { class: 't-12 faint m-0' }, 'The slider walks the non-dominated plans: it picks the lowest-AOG plan whose capital fits the budget (holdout means).'),
         readout),
@@ -369,7 +376,7 @@ export async function render(el, ctx) {
       body: h('div', { class: 'stack' },
         h('p', { class: 'chart-implication' }, h('span', { class: 'chart-implication-k' }, 'So what'), h('span', { class: 'chart-implication-t' }, `Each extra AED 1M buys less downtime; stop where the next step is worth less than its holding cost. Differences vs ${baseId} below are paired (same seeds); a CI crossing 0 is not significant.`)),
         dataTable({ caption: `Paired differences vs ${baseId}, holdout`, bare: true, dense: true, rows: pairRows, rowKey: 'id', mobileColumns: ['id', 'daog', 'dcap'],
-          columns: [{ key: 'id', label: 'Plan', mono: true, render: (r) => h('span', { class: r.rec ? 'co-rec-id' : '' }, r.id, r.rec ? h('span', { class: 'faint t-12' }, ' rule pick') : null) },
+          columns: [{ key: 'id', label: 'Plan', mono: true, render: (r) => h('span', { class: r.rec ? 'co-rec-id' : '' }, planName(r.id), r.rec ? h('span', { class: 'faint t-12' }, ' frontier option') : null) },
             { key: 'kind', label: 'Kind' },
             { key: 'dcap', label: `Δ capital vs ${baseId}`, num: true, format: (v) => signAED(v) },
             { key: 'daog', label: 'Δ AOG h/yr [95% CI]', num: true, render: (r) => pr(r.daog, r.ci, (x) => fmtInt(x)) },
@@ -423,9 +430,9 @@ export async function render(el, ctx) {
     allocMore.textContent = allocCard.classList.contains('is-expanded') ? 'Show fewer rows' : allocMore.dataset.label;
     allocCard.classList.toggle('has-more', rows.length > 8);
     // C3 (wave 4): two capital bases on one page, each named. Allocation capital = target units × unit cost (this table);
-    // simulated capital = the time-average stock value over the run, net of AOG-desk buys (the KPI and the frontier).
+    // simulated capital = the time-average stock value over the run (the KPI and the frontier).
     const simD = sel !== P2 && num(sel.cap) != null && num(P2?.cap) != null ? sel.cap - P2.cap : null;
-    const basis = rows.length && simD != null ? `Allocation capital is target units × unit cost. The KPI and frontier show simulated capital (the time-average stock value, which nets out units in repair and AOG-desk buys): ${fmtAED(Math.abs(simD))} ${simD >= 0 ? 'more' : 'less'} than ${baseId}.` : '';
+    const basis = rows.length && simD != null ? `Allocation capital is target units × unit cost. The KPI and frontier show simulated capital (the time-average stock value over the run, which nets out units away in repair): ${fmtAED(Math.abs(simD))} ${simD >= 0 ? 'more' : 'less'} than ${baseId}.` : '';
     const shown = tot && num(tot.n_rows_shown) < num(tot.n_rows) ? `Showing the ${fmtInt(tot.n_rows_shown)} changes with the largest modelled effect of ${fmtInt(tot.n_rows)}; totals cover all rows. ` : '';
     allocNote.textContent = `${shown}${basis}`;
     allocCard.dataset.point = sel.id;
@@ -435,14 +442,16 @@ export async function render(el, ctx) {
   function choose(p, fromChart) {
     sel = p;
     showSel(); showAlloc(); chart?.update(true);
-    if (fromChart) { slInput.value = String(Math.round(p.cap / step) * step); slInput.dispatchEvent(new Event('input')); }
+    if (fromChart) { slInput.value = String(Math.ceil(p.cap / step) * step); slInput.dispatchEvent(new Event('input')); }
     ctx.setParams({ point: p.id });
   }
 
   // ---- cost breakdown + tornado
-  const costCard = h('section', { class: 'card span-6' });
-  const torCard = h('section', { class: 'card span-6', dataset: { story: 'tornado' } });
-  el.append(h('div', { class: 'grid-12 mt-3' }, costCard, torCard));
+  const costCard = h('section', { class: 'card' });
+  const torCard = h('section', { class: 'card', dataset: { story: 'tornado' } });
+  // wave C: two stacked columns (cost + levers | tornado + robustness), so no card is stretched beside a taller one
+  const colL = h('div', { class: 'span-6 md-span-12 co-col' }, costCard), colR = h('div', { class: 'span-6 md-span-12 co-col' }, torCard);
+  el.append(h('div', { class: 'grid-12 mt-3 co-cols' }, colL, colR));
   drawCost(costCard);
   drawTornado(torCard);
 
@@ -565,13 +574,13 @@ export async function render(el, ctx) {
       });
     }));
     const desk = F.aog_desk_dependence;
-    if (desk && typeof desk === 'object' && desk.base_aog_hours != null) fr.body.after(h('p', { class: 't-12 faint m-0' }, `Not drawn (off-scale): with the AOG-desk expedite switched off, ${baseId} rises from ${fmtHours(num(desk.central_base_aog_hours))} to ${fmtHours(num(desk.base_aog_hours))} a year and ${rec.id} from ${fmtHours(num(desk.central_rec_aog_hours))} to ${fmtHours(num(desk.rec_aog_hours))} (selection seeds). See the limitations below.`));
+    if (desk && typeof desk === 'object' && desk.base_aog_hours != null) fr.body.after(h('p', { class: 't-12 faint m-0' }, `Not drawn (off-scale): with the AOG-desk routes switched off, ${baseId} rises from ${fmtHours(num(desk.central_base_aog_hours))} to ${fmtHours(num(desk.base_aog_hours))} a year and ${rec.id} from ${fmtHours(num(desk.central_rec_aog_hours))} to ${fmtHours(num(desk.rec_aog_hours))} (selection seeds). See the limitations below.`));
   }
 
   // ---- levers + variants
-  const levCard = h('section', { class: 'card span-6', dataset: { story: 'levers' } });
-  const varCard = h('div', { class: 'span-6' });
-  el.append(h('div', { class: 'grid-12 mt-3' }, levCard, varCard));
+  const levCard = h('section', { class: 'card', dataset: { story: 'levers' } });
+  const varCard = h('div', { class: 'co-var' });
+  colL.append(levCard); colR.append(varCard);
   drawLevers(levCard);
   drawVariants(varCard);
 
@@ -663,10 +672,10 @@ export async function render(el, ctx) {
   el.append(card({
     cls: 'mt-3', kicker: 'Method and limitations', title: 'What this frontier can and cannot tell you', prov: 'ASSUMED',
     body: h('div', { class: 'co-limits' },
-      h('div', {}, h('h4', {}, icon('chart'), 'Greedy marginal allocation is a heuristic'), h('p', {}, 'Budget points come from a greedy walk that adds the unit with the largest modelled delay-cost reduction per AED. Greedy is optimal only for separable convex problems; with hub/outstation coupling, the expedite drift and the wait cap it is a heuristic. The analytic model only ranks candidates; the simulator judges every plan.')),
-      h('div', {}, h('h4', {}, icon('alert'), 'Conditional on an AOG-desk market'), h('p', {}, (typeof F.aog_desk_dependence === 'object' ? F.aog_desk_dependence?.text : F.aog_desk_dependence) || 'Every policy leans on the simulated AOG-desk emergency purchase.'),
-        desk ? h('p', { class: 'mono t-12' }, `Expedite off (selection seeds): P0 ${fmtHours(num(desk.p0_base_aog_hours))} · ${baseId} ${fmtHours(num(desk.base_aog_hours))} · ${rec.id} ${fmtHours(num(desk.rec_aog_hours))} a year`) : null),
-      h('div', {}, h('h4', {}, icon('capital'), 'Capital is partly endogenous'), h('p', {}, 'Simulated capital includes units the AOG desk buys during the run, so a plan’s capital is its starting allocation plus what the run had to buy. CIs are over 20 seeds of one world; the stress variants show the knee moves with true reliability.'))),
+      h('div', {}, h('h4', {}, icon('chart'), 'Greedy marginal allocation is a heuristic'), h('p', {}, 'Budget points come from a greedy walk that adds the unit with the largest modelled delay-cost reduction per AED. Greedy is optimal only for separable convex problems; with hub/outstation coupling and the wait cap it is a heuristic. The analytic model only ranks candidates; the simulator judges every plan.')),
+      h('div', {}, h('h4', {}, icon('alert'), 'Conditional on the AOG-desk routes'), h('p', {}, (typeof F.aog_desk_dependence === 'object' ? F.aog_desk_dependence?.text : F.aog_desk_dependence) || 'Every policy leans on the simulated AOG-desk routes.'),
+        desk ? h('p', { class: 'mono t-12' }, `AOG-desk routes off (selection seeds): P0 ${fmtHours(num(desk.p0_base_aog_hours))} · ${baseId} ${fmtHours(num(desk.base_aog_hours))} · ${rec.id} ${fmtHours(num(desk.rec_aog_hours))} a year`) : null),
+      h('div', {}, h('h4', {}, icon('capital'), 'Capital is partly endogenous'), h('p', {}, 'Simulated capital is the time-average value of owned stock over the run. Borrowed or exchanged units are never owned, so they never add capital. CIs are over 20 seeds of one world; the stress variants show the knee moves with true reliability.'))),
   }));
 
   return () => { stopChart(); stops.forEach((s) => s()); };

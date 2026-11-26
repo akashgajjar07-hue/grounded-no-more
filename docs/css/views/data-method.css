@@ -20,14 +20,15 @@
 .dm-grid > * { min-width: 0; }
 .dm-stack { display: flex; flex-direction: column; gap: var(--gutter); }
 .dm-wrap td.mono { min-width: 200px; }
-.dm-wrap td:first-child.mono { overflow-wrap: anywhere; word-break: normal; }
+.dm-wrap td:first-child.mono { overflow-wrap: normal; word-break: normal; }
+.dm-key { overflow-wrap: normal; word-break: normal; }
 
 .dm-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); margin-bottom: var(--s-2); }
 .dm-search { flex: 1 1 240px; min-width: 0; height: 36px; padding: 0 12px; border-radius: var(--r-control); border: 1px solid var(--line-strong); background: var(--bg); color: var(--text); font: inherit; font-size: var(--fs-14); }
 .dm-search:focus-visible { outline: none; box-shadow: var(--focus-ring); border-color: var(--primary); }
 .dm-search::placeholder { color: var(--text-faint); }
 .dm-showing { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); }
-.dm-wrap td { white-space: normal; overflow-wrap: anywhere; }
+.dm-wrap td { white-space: normal; overflow-wrap: break-word; word-break: normal; }
 
 .dm-big { font-family: var(--font-display); font-size: var(--fs-40); font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
 .dm-big small { font-size: var(--fs-20); color: var(--text-muted); }
@@ -89,3 +90,8 @@
 .dm-chain b { color: var(--text); }
 .dm-v1-why summary { cursor: pointer; font-size: var(--fs-14); color: var(--text-muted); }
 .dm-v1-why ul { margin: 8px 0 0; padding-left: 18px; font-size: var(--fs-14); color: var(--text-muted); }
+
+.dm-chain-more summary { cursor: pointer; color: var(--text-faint); font-size: var(--fs-12); margin-top: 2px; }
+.dm-chain-more p { margin-top: 6px; }
+/* wave C: the register fades at its bottom edge so a row is never read as cut mid-cell */
+.dm-wrap .table-wrap[style*="max-height"] { mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent); }

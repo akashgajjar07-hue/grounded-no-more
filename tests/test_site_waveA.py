@@ -1,6 +1,7 @@
 """Design wave A (external design review): shell, hero copy, typography, colour, aircraft archetypes, About route."""
 from __future__ import annotations
 
+import json
 import re
 import urllib.request
 
@@ -115,11 +116,13 @@ def test_mission_hero_copy_and_fold(site, browser):  # noqa: F811
         assert page.locator(".mc-title").inner_text().strip() == "GROUNDED NO MORE"
         assert page.locator(".mc-tagline").inner_text().strip() == "The right spare. The right station. Before the aircraft needs it."
         assert page.locator(".mc-oneline").inner_text().strip() == "An aviation materials-planning simulation connecting intermittent-demand forecasting, rotable repair planning and inventory optimisation to aircraft readiness."
-        assert page.locator(".mc-scope").inner_text().strip() == "40 aircraft · 2 fleet families · 7 stations · Independent simulation"
+        # wave C: the scope names the modelled part-number universe (count read from parts.json)
+        n_pn = len(json.load(open(DOCS / "data" / "parts.json"))["parts"])
+        assert page.locator(".mc-scope").inner_text().strip() == f"40 aircraft · 2 fleet families · 7 stations · {n_pn} AOG-critical part numbers · Independent simulation"
         assert page.locator(".mc-byline").inner_text().strip() == "Portfolio project by Akash Gajjar, MSc Supply Chain Management, University of Liverpool"
         assert hero.locator("a", has_text="Methodology").get_attribute("href") == "#/method"
         hh = hero.bounding_box()["height"]
-        assert 240 <= hh <= 280, hh
+        assert 240 <= hh <= 305, hh  # wave C: the scope line now names the part-number universe
         tops = page.evaluate("[...document.querySelectorAll('[data-story=\"mission-kpis\"] .kpi')].map((k) => Math.round(k.getBoundingClientRect().top))")
         assert len(tops) == 4 and len(set(tops)) == 1, tops
         prio_top = page.locator('[data-story="mission-actions"]').bounding_box()["y"]
@@ -158,10 +161,11 @@ def test_about_route(site, browser, vp):  # noqa: F811
     try:
         assert page.locator('.nav-item[data-route="about"]').count() == 1
         assert page.locator('[data-role="ai-note"]').inner_text().strip() == "Built with AI-assisted development; analysis, decisions and validation reviewed by the author."
-        qs = page.locator('[data-role="why-questions"] h4').all_inner_texts()
+        qs = [t.strip() for t in page.locator('[data-role="why-questions"] .ab-q-t').all_inner_texts()]
         assert qs == ["Intermittent demand handling", "Why maximum local stock isn’t optimal", "How TAT drives float", "Why point accuracy isn’t enough",
                       "How the optimiser balances readiness and capital", "What data I’d request from a real airline"]
-        # headings only: no drafted answers
+        # wave C: an intentional list of the questions only (no drafted answers), with the one-line note
+        assert page.locator('[data-role="why-note"]').inner_text().strip() == "Author’s answers to follow."
         assert page.evaluate("[...document.querySelectorAll('[data-role=\"why-questions\"] .ab-q-item')].every((s) => s.children.length === 1)")
         body = page.locator("#view").inner_text()
         for t in ["Akash Gajjar", "University of Liverpool (2025)", "Primark", "Uniqlo"]:

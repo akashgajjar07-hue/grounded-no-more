@@ -93,3 +93,11 @@
 .co-hero svg .co-unstable { fill: var(--text-faint); font-family: var(--font-mono); font-size: 11px; }
 .co-rule-body { display: flex; flex-direction: column; gap: var(--s-1); } /* wave 4: 8 px between the rule and its footnote */
 @media (min-width: 768px) and (max-width: 1199px) { .co-kpis--3 > .kpi { grid-column: span 4; } } /* wave A: tablets keep the three KPIs in one row */
+/* wave C: stacked columns below the frontier (cost + levers | tornado + robustness) */
+.co-cols { align-items: start; }
+.co-col { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
+.co-col > .co-var > .card { margin: 0; }
+/* wave C (F8): the stacked paired-difference rows wrap the CI below the value instead of clipping it */
+.co-marginal .dts-row { grid-template-columns: minmax(0, 1fr); }
+.co-marginal .dts-metric { justify-self: start; flex-wrap: wrap; white-space: normal; height: auto; max-width: 100%; overflow: visible; }
+.co-marginal .dts-metric > :not(.dts-metric-label) { overflow: visible; white-space: normal; text-overflow: clip; }

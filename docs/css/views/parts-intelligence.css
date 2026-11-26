@@ -25,7 +25,8 @@
   font-family: var(--font-mono); font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-anchor: middle; dominant-baseline: central;
   fill: var(--risk); paint-order: stroke; stroke: var(--bg); stroke-width: 5px; stroke-linejoin: round;
 }
-.pi-aircraft svg .ata-hotspot.is-active .hs-risk { fill: var(--c-ice); }
+.pi-aircraft svg .ata-hotspot.is-active .hs-risk { fill: var(--risk); } /* wave C: the status word keeps its token when selected */
+.pi-aircraft svg .hs-zone-t { paint-order: stroke; stroke: var(--surface, var(--bg)); stroke-linejoin: round; } /* 3 px halo, sized in layoutAircraft */
 .pi-aircraft .hs-pulse { fill: none; stroke: var(--risk); stroke-width: 1.5; opacity: 0; transform-box: fill-box; transform-origin: center; pointer-events: none; }
 .pi-aircraft .risk-urgent .hs-pulse { animation: pi-pulse 2.4s var(--ease) infinite; }
 @keyframes pi-pulse { 0% { opacity: 0.7; transform: scale(1); } 80%, 100% { opacity: 0; transform: scale(2.1); } }
@@ -237,3 +238,6 @@
 .pi-panel-foot { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: var(--s-2); }
 .pi-sys[disabled] { opacity: 1; color: var(--text-faint); border-style: dashed; cursor: not-allowed; }
 .pi-panel .pi-desc { max-width: 170px; }
+/* wave C: explorer + planted situations share the left column (no half-card void beside the system list) */
+.pi-main { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
+.pi-main > .pi-planted-card { flex: 1 1 auto; }
