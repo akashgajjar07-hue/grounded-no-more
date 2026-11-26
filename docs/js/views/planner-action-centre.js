@@ -77,6 +77,31 @@ export function shortTitle(a) {
   return a.pn ? `${a.pn} · ${issueText(a)}` : a.summary;
 }
 
+/** The v2 action fields that exist on this exception, in planner order: [label, value, mono]. */
+export function actionFields(a) {
+  const out = [];
+  const ea = a.expected_availability, eb = a.expected_benefit;
+  if (a.trigger) out.push(['Exception trigger', tidyEnums(a.trigger)]);
+  if (a.quantity != null) out.push(['Quantity', fmtInt(a.quantity)]);
+  if (a.source || a.destination) out.push(['Source → destination', `${a.source ? tidyEnums(a.source) : '—'} → ${a.destination ? tidyEnums(a.destination) : '—'}`, true]);
+  if (a.required_by_week != null) out.push(['Required by', fmtWeek(a.required_by_week), true]);
+  if (ea && (ea.week != null || ea.basis)) out.push(['Expected availability', `${ea.week != null ? fmtWeek(ea.week) : 'not known'}${ea.basis ? ` · ${ea.basis}` : ''}${ea.past_quote ? ' · already past quote' : ''}`]);
+  if (Array.isArray(a.constraints) && a.constraints.length) out.push(['Constraints', h('ul', { class: 'pac-list-inline' }, a.constraints.map((c) => h('li', {}, tidyEnums(c))))]);
+  if (eb && typeof eb === 'object') {
+    const bits = [];
+    if (eb.observed_downtime_h_lookback != null) bits.push(`${fmtInt(eb.observed_downtime_h_lookback)} h downtime observed here in the lookback`);
+    if (eb.observed_exposure_rate_aed_per_h != null) bits.push(`at ${fmtAED(eb.observed_exposure_rate_aed_per_h)}/h`);
+    if (eb.capital_above_26w_cover_aed != null) bits.push(`${fmtAED(eb.capital_above_26w_cover_aed)} capital above 26 weeks of cover`);
+    if (eb.annual_carrying_cost_aed != null) bits.push(`${fmtAED(eb.annual_carrying_cost_aed)}/yr carrying cost`);
+    if (eb.units_expired_in_history != null) bits.push(`${fmtInt(eb.units_expired_in_history)} units expired in history (${fmtAED(eb.value_expired_in_history_aed)})`);
+    if (bits.length) out.push(['Expected benefit', `${bits.join(', ')}${eb.note ? ` (${eb.note})` : ''}`]);
+  }
+  if (a.owner) out.push(['Owner', a.owner]);
+  if (a.due_week != null) out.push(['Due', fmtWeek(a.due_week), true]);
+  if (a.pn) out.push(['Part', a.pn, true]);
+  return out;
+}
+
 function ensureCSS() {
   if (document.querySelector('link[data-view-css="planner-action-centre"]')) return;
   document.head.append(h('link', { rel: 'stylesheet', href: new URL('../../css/views/planner-action-centre.css', import.meta.url).href, dataset: { viewCss: 'planner-action-centre' } }));
@@ -280,7 +305,7 @@ export async function render(el, ctx) {
   const summaryCard = card({
     cls: 'span-4', kicker: 'This week', title: 'Who owns the work', prov: metaProv,
     body: h('div', { class: 'stack-3' }, ownerList,
-      h('p', { class: 't-12 faint m-0' }, 'Click an owner to filter the inbox. Rules live in config/aog_lab.yaml; quarantine (documents) rows are a simulated workflow illustration, not document data.')),
+      h('p', { class: 't-12 faint m-0' }, 'Click an owner to filter the inbox. Rules live in config/aog_lab.yaml; only exception types the v2 simulation produces are raised (no document data exists).')),
   });
   const chartCard = h('section', { class: 'card span-8', dataset: { story: 'action-types' } });
   const byType = types.map((t) => ({ t, label: typeLabel(t), ...Object.fromEntries(SEV.map((s) => [s, count((a) => a.type === t && a.severity === s)])), n: count((a) => a.type === t) }));
@@ -321,6 +346,38 @@ export async function render(el, ctx) {
     });
   }
   el.append(h('div', { class: 'grid-12' }, chartCard, summaryCard));
+
+  // ---- wave B: a guided "Monday morning" walkthrough of five typical exceptions from the v2 queue (one per owner/type)
+  const TYPE_ORDER = ['OUTSTATION_DEPLETION', 'DONOR_NOT_REINSTATED', 'OPEN_REQUIREMENT', 'OVERDUE_REPAIR', 'CONDEMNED_AWAITING_REPLACEMENT', 'LEAD_TIME_DRIFT', 'EXCESS_DECLINING_DEMAND', 'EXPIRY_RISK'];
+  const walk = [];
+  TYPE_ORDER.forEach((t) => { if (walk.length < 5) { const a = all.find((x) => x.type === t); if (a) walk.push(a); } });
+  if (walk.length) {
+    let wi = 0;
+    const wBody = h('div', { class: 'pac-walk-body', 'aria-live': 'polite' });
+    const wBack = h('button', { type: 'button', class: 'btn btn--ghost btn--sm', onclick: () => showWalk(wi - 1) }, 'Back');
+    const wNext = h('button', { type: 'button', class: 'btn btn--primary btn--sm', onclick: () => showWalk(wi + 1) }, 'Next');
+    const dots = h('div', { class: 'pac-walk-dots', 'aria-hidden': 'true' }, walk.map(() => h('span')));
+    function showWalk(n) {
+      wi = Math.max(0, Math.min(walk.length - 1, n));
+      const a = walk[wi];
+      wBody.replaceChildren(
+        h('div', { class: 'pac-walk-step' }, `${String(wi + 1).padStart(2, '0')} / ${String(walk.length).padStart(2, '0')} · ${a.owner || 'Owner not set'}`),
+        h('h4', { class: 'pac-walk-title' }, sevPill(a.severity), h('span', {}, `${a.type_label || typeLabel(a.type)} · `), h('span', { class: 'mono' }, a.pn || ''), a.station ? h('span', { class: 'mono faint' }, ` · ${a.station}`) : null),
+        h('dl', { class: 'pac-walk-dl' },
+          h('dt', {}, 'What triggered it'), h('dd', {}, tidyEnums(a.trigger || a.summary || '')),
+          h('dt', {}, 'The evidence'), h('dd', {}, tidyEnums(a.summary || '')),
+          h('dt', {}, 'What to do'), h('dd', {}, tidyEnums(a.recommended_action || 'No action recorded'))),
+        h('button', { type: 'button', class: 'btn btn--sm', onclick: () => open(a) }, icon('chevron-right'), 'Open the full exception'));
+      [...dots.children].forEach((d, j) => d.classList.toggle('is-on', j <= wi));
+      wBack.disabled = wi === 0; wNext.disabled = wi === walk.length - 1;
+    }
+    el.append(h('div', { class: 'grid-12 mt-3' }, card({
+      cls: 'span-12 pac-walk', kicker: 'Guided walkthrough', story: 'action-walkthrough', prov: metaProv,
+      title: `Monday morning: ${fmtInt(walk.length)} typical exceptions from the ${asOf != null ? fmtWeek(asOf) : ''} queue, in the order a planner works them`,
+      body: h('div', {}, wBody, h('div', { class: 'pac-walk-nav' }, dots, h('div', { class: 'row' }, wBack, wNext))),
+    })));
+    showWalk(0);
+  }
 
   // ---- filters
   const sel = (label, key, options, fmt = (v) => v) => {
@@ -422,7 +479,8 @@ export async function render(el, ctx) {
         h('div', { class: 'row-wrap' }, sevPill(a.severity), h('span', { class: 'chip chip-mono' }, typeLabel(a.type)), provChip(prov)),
         h('div', { class: 'pac-why' }, h('div', { class: 'card-kicker mb-1' }, 'Why it was raised'), h('p', { class: 'm-0' }, tidyEnums(a.summary))),
         h('div', { class: 'pac-action' }, h('div', { class: 'card-kicker' }, 'Recommended action'), h('p', { class: 'm-0' }, a.recommended_action ? tidyEnums(a.recommended_action) : 'No action recorded'),
-          h('dl', { class: 'meta-list mt-2' }, ...[['Owner', a.owner || 'not set'], ['Due', a.due_week != null ? fmtWeek(a.due_week) : 'not set'], ['Raised', a.week != null ? fmtWeek(a.week) : 'not recorded'], ['Part', a.pn || '—'], ['Station', stationOf(a)]].flatMap(([k, v]) => [h('dt', {}, k), h('dd', { class: k === 'Part' || k === 'Station' ? 'mono' : '' }, v)]))),
+          // wave B: only the fields the v2 actions.json produces; a field the rule does not fill is left out
+          h('dl', { class: 'meta-list mt-2', dataset: { role: 'action-fields' } }, ...actionFields(a).flatMap(([k, v, mono]) => [h('dt', {}, k), h('dd', { class: mono ? 'mono' : '' }, v)]))),
         chart,
         h('div', {}, h('div', { class: 'card-kicker mb-1' }, 'Evidence · the numbers behind it'),
           h('table', { class: 'data-table data-table--dense pac-evtable' }, h('caption', { class: 'sr-only' }, 'Evidence'), h('tbody', {}, evRows.map(([k, v]) => h('tr', {}, h('th', { scope: 'row' }, evLabel(k)), h('td', { class: 'is-num mono' }, fmtEv(k, v))))))),

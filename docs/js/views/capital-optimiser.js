@@ -252,13 +252,13 @@ export async function render(el, ctx) {
         const rp = posOf(rec, md);
         const ax = x(rp.cap), ayy = y(rp.aog);
         const lines = [
-          [`Recommended · ${rec.id}${md === 'selection' ? ' (selection seeds)' : ''}`, 'gnm-annot-text'],
+          [`Frontier option · ${rec.id}${md === 'selection' ? ' (selection seeds)' : ''}`, 'gnm-annot-text'],
           [`${fmtAED(rp.cap)} · ${fmtHours(rp.aog)}/yr${ciTxt(rp.ci?.[0], rp.ci?.[1], fmtInt)}`, 'gnm-annot-sub'],
         ];
         if (md !== 'selection' && P2 && rec.dBaseAog) lines.push([`vs ${baseId}: ${signH(rec.dBaseAog[0])}${ciTxt(rec.dBaseAog[1], rec.dBaseAog[2], (v) => fmtInt(v))} h · ${signAED(rec.cap - P2.cap)}`, 'gnm-annot-sub']);
         if (md !== 'selection' && P0) lines.push([`vs P0: ${signH(rec.aog - P0.aog)}${rec.dP0Aog ? ciTxt(rec.dP0Aog[1], rec.dP0Aog[2], (v) => fmtInt(v)) : ''} · ${signAED(rec.cap - P0.cap)}`, 'gnm-annot-sub']);
         if (narrow) {
-          const txt = `${rec.id} · recommended`;
+          const txt = `${rec.id} · frontier option`;
           const obstacles = pts.map((p) => markerRect(x(posOf(p, md).cap), y(posOf(p, md).aog), p === rec ? 8 : 4));
           const centroid = { x: d3.mean(fr, (p) => x(posOf(p, md).cap)), y: d3.mean(fr, (p) => y(posOf(p, md).aog)) };
           const lp = labelAround({ x: ax, y: ayy }, { r: 12, text: txt, centroid, obstacles, bounds: { x: 0, y: 0, width: iw, height: ih } });
@@ -267,7 +267,7 @@ export async function render(el, ctx) {
           annoteHTML.hidden = false;
         } else {
           annoteHTML.hidden = true;
-          const dx = ax > iw * 0.55 ? -40 : 40, dy = -Math.min(150, ayy - lines.length * 15 - 4);
+          const dx = ax > iw * 0.55 ? -40 : 40, dy = -Math.min(105, ayy - lines.length * 15 - 4);
           const tx = ax + dx, anchor = dx < 0 ? 'end' : 'start';
           gAnn.append('path').attr('class', 'gnm-annot-line').attr('d', `M${ax},${ayy - 10}L${ax},${ayy + dy + 6}L${tx},${ayy + dy + 6}`);
           lines.forEach(([t, c], i) => gAnn.append('text').attr('class', c).attr('x', tx + (dx < 0 ? -6 : 6)).attr('y', ayy + dy - 4 - (lines.length - 1 - i) * 15).attr('text-anchor', anchor).text(t));
@@ -349,6 +349,36 @@ export async function render(el, ctx) {
   // wave 4: the rule card lives under the controls (right column), so neither column leaves ~300 px of dead space
   side.append(rule);
   showSel();
+
+  // ---- wave B: marginal value of the last investment increment + paired differences vs P2 (holdout)
+  {
+    const R2 = F.recommendation || {};
+    const segs = R2.segments || [];
+    const into = segs.find((x) => x.to === rec?.id), after = segs.find((x) => x.from === rec?.id);
+    const hstar = R2.h_star_per_aed_1m;
+    // the hull points from P2's capital upward (where extra capital is spent), plus P2 within guardrails
+    const hull = new Set(R2.hull || []);
+    const pairRows = (F.points || []).filter((q) => q.id !== baseId && Array.isArray(q.d_aog_vs_P2_ci) && (q.d_capital_vs_P2_aed ?? -1) >= -1e6 && (hull.has(q.id) || q.id === 'P2_GUARD' || q.id === rec?.id))
+      .map((q) => ({ id: q.id, kind: KIND_LABEL[q.kind] || q.kind, dcap: q.d_capital_vs_P2_aed, daog: q.d_aog_vs_P2, ci: q.d_aog_vs_P2_ci, dcost: q.d_total_cost_vs_P2_aed, cci: q.d_total_cost_vs_P2_ci || [null, null], rec: q.id === rec?.id }))
+      .sort((x, y) => x.dcap - y.dcap);
+    const sigTxt = (ci) => (ci[0] != null && ci[1] != null ? (ci[1] < 0 ? 'lower' : ci[0] > 0 ? 'higher' : 'not significant') : '—');
+    const pr = (v, ci, f) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${f(Math.abs(v))} [${f(ci[0])} to ${f(ci[1])}]`;
+    const mvCard = card({
+      cls: 'mt-3 co-marginal', kicker: 'Marginal value and paired differences', prov, story: 'capital-paired',
+      title: into && hstar != null ? `The last increment into ${rec.id} buys ${fmtNum(into.h_per_aed_1m, 1)} h per AED 1M; the next one only ${after ? fmtNum(after.h_per_aed_1m, 1) : '—'}, under the ${fmtNum(hstar, 1)} h break-even` : 'Marginal value of extra capital',
+      body: h('div', { class: 'stack' },
+        h('p', { class: 'chart-implication' }, h('span', { class: 'chart-implication-k' }, 'So what'), h('span', { class: 'chart-implication-t' }, `Each extra AED 1M buys less downtime; stop where the next step is worth less than its holding cost. Differences vs ${baseId} below are paired (same seeds); a CI crossing 0 is not significant.`)),
+        dataTable({ caption: `Paired differences vs ${baseId}, holdout`, bare: true, dense: true, rows: pairRows, rowKey: 'id', mobileColumns: ['id', 'daog', 'dcap'],
+          columns: [{ key: 'id', label: 'Plan', mono: true, render: (r) => h('span', { class: r.rec ? 'co-rec-id' : '' }, r.id, r.rec ? h('span', { class: 'faint t-12' }, ' rule pick') : null) },
+            { key: 'kind', label: 'Kind' },
+            { key: 'dcap', label: `Δ capital vs ${baseId}`, num: true, format: (v) => signAED(v) },
+            { key: 'daog', label: 'Δ AOG h/yr [95% CI]', num: true, render: (r) => pr(r.daog, r.ci, (x) => fmtInt(x)) },
+            { key: 'sig', label: 'AOG vs P2', render: (r) => sigTxt(r.ci) },
+            { key: 'dcost', label: 'Δ total cost/yr [95% CI]', num: true, render: (r) => (r.dcost == null ? '—' : `${signAED(r.dcost)} [${fmtAED(r.cci[0])} to ${fmtAED(r.cci[1])}]`) }] }),
+        h('p', { class: 't-12 faint m-0' }, `CIs are 95% paired-t over the ${seedsTxt} and are conditional on the simulation assumptions (one world per variant, the assumed AOG routes and penalty rates); they are not uncertainty about the real airline. Marginal values come from the pre-stated rule's hull on the selection seeds.`)),
+    });
+    el.append(mvCard);
+  }
 
   // ---- allocation table
   const allocCard = h('section', { class: 'card mt-3 co-alloc', dataset: { story: 'allocation-table' } });

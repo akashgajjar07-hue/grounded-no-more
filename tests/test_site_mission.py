@@ -97,7 +97,8 @@ def test_story_overlay_keyboard(site, browser, vp):  # noqa: F811
         page.wait_for_function("!document.querySelector('.story').hasAttribute('aria-busy')", timeout=8000)
         page.keyboard.press("ArrowLeft")
         page.wait_for_function("document.querySelector('.story-step')?.textContent.includes('STEP 01')")
-        page.wait_for_function("location.hash.startsWith('#/mission')", timeout=8000)
+        first = json.loads((DOCS / "data/story.json").read_text())["steps"][0]["route"].split("?")[0]
+        page.wait_for_function(f"location.hash.startsWith({json.dumps(first)})", timeout=8000)   # wave B: step 1 = the PS1 incident
         page.keyboard.press("Escape")
         page.wait_for_function("!document.querySelector('.story')")
         assert not [p for p in problems if "pageerror" in p], problems

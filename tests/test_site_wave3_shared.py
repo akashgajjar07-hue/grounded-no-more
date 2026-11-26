@@ -193,14 +193,15 @@ def _story_steps(page, n):
 
 
 def test_story_framing_desktop(site, browser):  # noqa: F811
+    n = len(json.load(open(DOCS / "data" / "story.json"))["steps"])   # wave B: six steps
     ctx, page, problems = open_page(browser, site + "#/mission", "1440")
     try:
-        frames = _story_steps(page, 8)
+        frames = _story_steps(page, n)
         for f in frames:
             assert f["spotTop"] >= f["bar"] + 1, f            # the spotlight never sits under the sticky bar
             assert f["cardTop"] >= f["bar"] + 15, f           # nor does the card
             assert f["cardBottom"] <= f["vh"], f
-        for f in frames[3:7]:                                  # steps 4-7: headline sits >= 8 px below the bar
+        for f in frames[1:-1]:                                 # inner steps: headline sits >= 8 px below the bar
             assert f["spotTop"] >= f["bar"] + 4, f
         assert not problems, problems
     finally:
@@ -212,7 +213,7 @@ def test_story_mobile_selector_and_peek(site, browser):  # noqa: F811
     assert any(s.get("mobile_selector") for s in story["steps"])
     ctx, page, problems = open_page(browser, site + "#/mission", "390")
     try:
-        frames = _story_steps(page, 8)
+        frames = _story_steps(page, len(story["steps"]))
         for i, (f, s) in enumerate(zip(frames, story["steps"])):
             assert f["sheet"] and f["grab"], f
             assert f["spotTop"] >= f["bar"] + 1, f
@@ -223,7 +224,7 @@ def test_story_mobile_selector_and_peek(site, browser):  # noqa: F811
                 assert f["spotBottom"] - f["cardTop"] <= 32, (i + 1, f)
             if s.get("mobile_selector"):
                 h = page.evaluate("(s) => { const e = document.querySelector(s); return e ? e.getBoundingClientRect().height : null; }", s["mobile_selector"])
-                if i == 7 and h is not None:
+                if s["story_id"] == "action-inbox" and h is not None:
                     # the row is the spotlight (+8 px pad each side); its 2-line clamp can settle a few px after placement
                     assert abs(f["spotH"] - (h + 16)) < 8, (s["mobile_selector"], f, h)
         # the grab handle toggles the sheet

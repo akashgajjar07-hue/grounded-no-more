@@ -72,8 +72,7 @@ POLICY_LABELS = {
     "I125": "Recommended: P2 + greedy additions (I125)",
 }
 # data-story ids the story steps target for the current world (network-<station> follows the narrated incident)
-STORY_IDS = ["mission-kpis", "aircraft", "forecast-demand-strip", "rotable-float-calc",
-             "network-bom", "frontier-chart", "aog-incident-ps1", "action-inbox"]
+STORY_IDS = ["aog-incident-ps1", "aircraft", "rotable-float-calc", "network-bom", "action-inbox", "frontier-chart"]
 
 # ----------------------------------------------------------------------------------------------
 # helpers
@@ -1179,6 +1178,8 @@ def _point(pid: str, r: pd.Series, sel: pd.Series, split: str) -> dict:
          "fill_rate": r.fill_rate_mean, "fill_ci": [r.fill_rate_lo, r.fill_rate_hi],
          "aog_events": r.aog_events_mean, "expedite_cost_aed": r.expedite_cost_mean,
          "d_aog_vs_P2": r.d_aog_hours_vs_base_mean, "d_aog_vs_P2_ci": [r.d_aog_hours_vs_base_lo, r.d_aog_hours_vs_base_hi],
+         "d_total_cost_vs_P2_aed": r.d_total_cost_vs_base_mean, "d_total_cost_vs_P2_ci": [r.d_total_cost_vs_base_lo, r.d_total_cost_vs_base_hi],
+         "d_capital_vs_P2_ci": [r.d_capital_vs_base_lo, r.d_capital_vs_base_hi],
          "d_capital_vs_P2_aed": r.d_capital_vs_base_mean, "split": split, "n_seeds": int(r.n_seeds),
          "allocation_capital_aed": num(sel.allocation_capital_aed), "model_aog_hours": num(sel.model_aog_hours),
          "provenance": "SIMULATED"}
@@ -1612,26 +1613,30 @@ def build_story(data: dict) -> dict:
                   f"and {fmt_int(e['aog_hours_lookback'])} AOG h there in the last {e['lookback_weeks']} weeks (W{data['actions']['as_of_week'] + 1 - e['lookback_weeks']}–W{data['actions']['as_of_week']}).")
     elif act:
         body8 += f" Including: {act['summary']}."
+    if act and act.get("recommended_action") and len(body8) + len(act["recommended_action"]) + 10 <= 300:
+        body8 += f" Action: {act['recommended_action']}."
 
     aog_sel = ('[data-story="aog-incident-ps1"]' if inc["id"] == _p1["incident_id"] else f'[data-incident="{inc["id"]}"]') + ' [data-story="aog-timeline"]'
+    # wave B: six steps following the v2 hero part (PS1): problem -> diagnose -> pipeline -> trade-offs -> action -> value
+    core = data["kpis"]["headline"]["core"]
+    body_problem = (f"{inc['tail']} (fictional) is on the ground at {st}: a {part['deadline']} {noun} failed and none was held there. "
+                    f"It waited {fmt_int(inc['aog_hours'])} h. Ranked on what the desk knew then, the best route was: "
+                    f"{inc['decision']['recommended_label']}.")
+    body_value = (f"Positioning ({core['outstation_rotables']['P2']} outstation rotables, not {core['outstation_rotables']['P0']}) cuts material AOG by "
+                  f"{fmt_int(core['aog_reduction']['mean'])} h a year [{fmt_int(core['aog_reduction']['ci'][0])}–{fmt_int(core['aog_reduction']['ci'][1])}] "
+                  f"for {fmt_aed(core['capital_aed']['mean'])} more capital. " + body6)
+    if len(body_value) > 300:
+        body_value = (f"Positioning cuts material AOG by {fmt_int(core['aog_reduction']['mean'])} h a year for "
+                      f"{fmt_aed(core['capital_aed']['mean'])} more capital. " + body6)
     steps = [
         # (route, story_id, selector, title, body)
-        ("#/mission", "mission-kpis", '[data-story="mission-kpis"]', "Position the network, cut the groundings",
-         # v2 framing: the core finding is P2 vs a legacy OEM-quote P0; the result leads so the phone peek shows it
-         (lambda c: f"Network positioning ({c['outstation_rotables']['P2']} outstation rotables, not {c['outstation_rotables']['P0']}) cuts "
-                    f"material AOG by {fmt_int(c['aog_reduction']['mean'])} h a year [{fmt_int(c['aog_reduction']['ci'][0])}–{fmt_int(c['aog_reduction']['ci'][1])}] "
-                    f"versus legacy OEM-quote provisioning, for {fmt_aed(c['capital_aed']['mean'])} more capital (paired, {n_seeds} holdout seeds). "
-                    f"Immediate fill is {abs(c['immediate_fill_pts']['mean']):.1f} pts lower.")(data["kpis"]["headline"]["core"])),
-        (f"#/parts?ata={ata}&pn={pn}", "aircraft", '[data-story="aircraft"]', t2, body2),
-        (f"#/forecast?pn={pn}", "forecast-demand-strip", '[data-story="forecast-demand-strip"] .fl-strip-sel',
-         f"Why its demand is {part['demand_class']}", body3),
-        (f"#/rotables?pn={pn}", "rotable-float-calc", '[data-story="rotable-float-calc"] .fc-results', "Pooled float vs the station", body4),
-        (f"#/network?station={st}", f"network-{st.lower()}", f'[data-story="network-{st.lower()}"]', "Positioning beats reacting", body5),
-        ("#/capital", "frontier-chart", '[data-story="frontier-chart"]', "Where to stop buying", body6),
-        (f"#/aog?incident={inc['id']}", "aog-incident-ps1", aog_sel, "One incident, replayed", body7),
-        # F2 (wave 4): spotlight the BOM row the copy talks about, on desktop too, so the card sits clear of the inbox head
+        (f"#/aog?incident={inc['id']}", "aog-incident-ps1", aog_sel, "1 · The operational problem", body_problem),
+        (f"#/parts?ata={ata}&pn={pn}", "aircraft", '[data-story="aircraft"]', "2 · Diagnose the shortage", body2),
+        (f"#/rotables?pn={pn}", "rotable-float-calc", '[data-story="rotable-float-calc"] .fc-results', "3 · The repair pipeline", body4),
+        (f"#/network?station={st}", f"network-{st.lower()}", f'[data-story="network-{st.lower()}"]', "4 · Compare the trade-offs", body5),
         ("#/actions", "action-inbox", (f'[data-story="action-inbox"] [data-id="{act["exception_id"]}"]' if act else '[data-story="action-inbox"]'),
-         "What the planner does on Monday", body8),
+         "5 · Recommend the action", body8),
+        ("#/capital", "frontier-chart", '[data-story="frontier-chart"]', "6 · Business value on the Readiness Frontier", body_value),
     ]
     # phones (<= 480 px): a narrower child to spotlight so the bottom sheet does not cover the subject (wave-3 #4).
     # Hooks are stable view markup (see docs/agent_notes/wave3-S.md); the UI falls back to `selector` if absent.

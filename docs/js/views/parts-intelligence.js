@@ -72,6 +72,10 @@ export async function render(el, ctx) {
   const pnParam = byPn.get(ctx.params.pn);
   if (!ata) ata = pnParam && ATAS.includes(pnParam.ata) ? pnParam.ata : ATAS.slice().sort((a, b) => (sysStat[b].max || 0) - (sysStat[a].max || 0))[0];
   let cls = ['C', 'E', 'R'].includes(ctx.params.cls) ? ctx.params.cls : 'all';
+  // wave B: fleet filter from the v2 applicability table (parts.json applicability: NB / WB / both)
+  let fleet = ['NB', 'WB', 'all'].includes(ctx.params.fleet) ? ctx.params.fleet : 'all';
+  const inFleet = (p) => fleet === 'all' || !p.applicability || p.applicability === 'both' || p.applicability === fleet;
+  const FLEET_LABEL = { NB: 'Narrowbody', WB: 'Widebody', all: 'All fleet' };
   let query = '';
 
   // ------------------------------------------------------------------ header
@@ -91,13 +95,23 @@ export async function render(el, ctx) {
   const legend = h('div', { class: 'pi-legend', 'aria-hidden': 'true' }, ...['urgent', 'review', 'ok'].map((l) => h('span', { class: `pi-legend-item is-${l}` }, h('b', {}, LEVEL[l].glyph), l === 'review' ? 'Review / watch' : LEVEL[l].text)), h('span', { class: 'pi-legend-item is-pip' }, h('b', { class: 'pi-legend-pip' }, 'n'), 'urgent PNs in system'), h('span', { class: 'faint' }, 'Shaded areas are indicative zones, not component locations · badge = system share of material shortage exposure · WATCH = OK system holding an urgent part'));
   const explorerCard = card({
     cls: 'span-7 md-span-12 pi-explorer', bp: true, prov,
-    kicker: 'Aircraft system explorer · narrowbody archetype · indicative zones',
+    kicker: `Aircraft system explorer · ${fleet === 'WB' ? 'widebody' : 'narrowbody'} archetype · indicative zones`,
     title: explorerTitle(),
     // the story hook wraps the drawing AND the phone's top-part line, so story step 2 frames the part on phones too (wave 5)
     body: [h('div', { class: 'pi-air-wrap', 'data-story': 'aircraft' }, airHost, airNote), legend],
   });
   /** F8 (wave 4): the headline follows the selected ATA; with "All" (or nothing selected) it names the riskiest system. */
+  /** Fleet-filtered system stats (share of the fleet's material shortage exposure, PN count, urgent PNs, top PN). */
+  function fleetStat(a) {
+    const fp = parts.filter(inFleet), sp = fp.filter((p) => p.ata === a);
+    const tot = fp.reduce((x, p) => x + (+p.risk_hours || 0), 0);
+    return { ata: a, name: sysName(a), n: sp.length, urgent: sp.filter((p) => p.risk_level === 'urgent').length, share: tot ? sp.reduce((x, p) => x + (+p.risk_hours || 0), 0) / tot : null, top: sp.slice().sort((x, y) => (y.risk_score || 0) - (x.risk_score || 0))[0] };
+  }
   function explorerTitle() {
+    if (fleet !== 'all' && ata && ata !== 'all') {
+      const f = fleetStat(ata);
+      return `ATA ${f.ata} ${f.name.toLowerCase()}: ${f.share != null ? `${fmtPct(f.share, 0)} of ${FLEET_LABEL[fleet].toLowerCase()} shortage exposure, ` : ''}${fmtInt(f.urgent)} urgent of ${fmtInt(f.n)} PNs`;
+    }
     const s = ata && ata !== 'all' ? sysStat[ata] : null;
     if (s) return `ATA ${s.ata} ${s.name.toLowerCase()}: ${s.share != null ? `${fmtPct(s.share, 0)} of fleet shortage exposure, ` : ''}${fmtInt(s.urgent)} urgent of ${fmtInt(s.n)} PNs${worst && worst.ata === s.ata ? ', the most of any system' : ''}`;
     return worst ? `ATA ${worst.ata} ${worst.name.toLowerCase()} carries the most exposure: ${worst.share != null ? fmtPct(worst.share, 0) + ' of fleet shortage exposure, ' : ''}${worst.urgent} urgent of ${worst.n} PNs` : 'No risk scores exported';
@@ -119,7 +133,12 @@ export async function render(el, ctx) {
   const allBtn = h('button', { type: 'button', class: 'btn btn--sm', 'aria-pressed': String(ata === 'all'), onclick: () => setAta('all') }, icon('layers'), `All ${fmtInt(parts.length)} PNs`);
   const listCard = card({ cls: 'span-5 md-span-12', kicker: 'Systems · list view', title: 'Select an ATA chapter', prov: 'DERIVED', actions: allBtn, body: sysList, foot: h('span', {}, `${P.system_risk_bands_share ? `System level: urgent if the chapter holds ≥ ${fmtPct(P.system_risk_bands_share.urgent, 0)} of fleet material shortage exposure, review ≥ ${fmtPct(P.system_risk_bands_share.review, 0)}. ` : ''}${P.risk_bands_h ? `Part level: urgent ≥ ${fmtInt(P.risk_bands_h.urgent)} AOG h/yr, review ≥ ${fmtInt(P.risk_bands_h.review)} (assumed bands). ` : ''}Risk score 0–100 is log-scaled AOG hours. ${parts.filter((p) => !ATAS.includes(p.ata)).length} PNs sit in other chapters (see “All”).`) });
 
-  el.append(h('div', { class: 'grid-12' }, explorerCard, listCard));
+  const fleetSeg = segmented({ label: 'Fleet', value: fleet, options: [{ value: 'NB', label: 'Narrowbody' }, { value: 'WB', label: 'Widebody' }, { value: 'all', label: 'All fleet' }], onChange: (v) => setFleet(v) });
+  fleetSeg.dataset.role = 'fleet-filter';
+  explorerCard.querySelector('.card-head')?.after(h('div', { class: 'pi-fleet-row' }, fleetSeg, h('span', { class: 'pi-fleet-note faint' })));
+  const panelCard = h('section', { class: 'card pi-panel', dataset: { story: 'parts-system-panel' }, 'aria-live': 'polite' });
+  listCard.classList.remove('span-5', 'md-span-12');
+  el.append(h('div', { class: 'grid-12' }, explorerCard, h('div', { class: 'span-5 md-span-12 pi-side' }, panelCard, listCard)));
 
   // ------------------------------------------------------------------ exploded view + demand matrix
   const figHost = h('div', { class: 'bp-figure pi-exploded' });
@@ -163,7 +182,7 @@ export async function render(el, ctx) {
   function riskTitle(r) {
     return `${r.risk_hours != null ? `${fmtHours(r.risk_hours)}/yr of AOG = ${fmtHours(r.aog_hours_hist_per_yr)} history + ${fmtNum(r.residual_aog_h_per_yr, 1)} h modelled residual. ` : ''}Score = ln(1 + AOG h) / ln(1 + fleet max), × 100.`;
   }
-  const rowsFor = () => parts.filter((p) => (ata === 'all' || p.ata === ata) && (cls === 'all' || p.cls === cls) && (!query || p.pn.toLowerCase().includes(query) || String(p.desc).toLowerCase().includes(query)));
+  const rowsFor = () => parts.filter((p) => inFleet(p) && (ata === 'all' || p.ata === ata) && (cls === 'all' || p.cls === cls) && (!query || p.pn.toLowerCase().includes(query) || String(p.desc).toLowerCase().includes(query)));
   const table = dataTable({ columns, rows: rowsFor(), sort: { key: 'risk_score', dir: 'desc' }, onRowClick: (r) => openPart(r.pn), rowKey: 'pn', caption: 'Parts for the selected ATA system', maxHeight: 520, mobileColumns: ['pn', 'risk_score', 'stock_total', 'desc'], stickyFirst: true });
   const tableCount = h('span', { class: 'chip' });
   const tableTitle = h('h3', { class: 'card-title' });
@@ -194,11 +213,18 @@ export async function render(el, ctx) {
   drawPlanted();
 
   // ------------------------------------------------------------------ aircraft
-  const air = await blueprintAircraft(airHost, { active: ata === 'all' ? null : ata, onSelect: (a) => setAta(a), compactBelow: 1e6, label: 'Plan view of a single-aisle twin-engine airliner archetype (original schematic) with indicative ATA system zones' });
-  decorateAircraft(air.svg);
+  let air = null;
+  async function buildAircraft() {
+    air?.destroy?.();
+    const wb = fleet === 'WB';
+    air = await blueprintAircraft(airHost, { fleet: wb ? 'widebody' : 'narrowbody', active: ata === 'all' ? null : ata, onSelect: (a) => setAta(a), compactBelow: 1e6,
+      label: wb ? 'Plan view of a twin-aisle twin-engine airliner archetype (original schematic) with indicative ATA system zones' : 'Plan view of a single-aisle twin-engine airliner archetype (original schematic) with indicative ATA system zones' });
+    decorateAircraft(air.svg);
+  }
+  await buildAircraft();
   const airRO = new ResizeObserver(() => requestAnimationFrame(layoutAircraft));
   airRO.observe(airHost);
-  cleanups.push(air.destroy, () => airRO.disconnect());
+  cleanups.push(() => air?.destroy?.(), () => airRO.disconnect());
 
   /**
    * Hotspot decoration. Badge colour + word = SYSTEM level (chapter share of fleet risk-hours). A red pip with a
@@ -209,6 +235,9 @@ export async function render(el, ctx) {
   function decorateAircraft(svg) {
     svg.querySelectorAll('.ata-hotspot').forEach((g) => {
       const s = sysStat[g.dataset.ata];
+      // a system with no part number on the selected fleet is not drawn (e.g. no ATA 36 pneumatic parts on the widebody)
+      const nFleet = parts.filter((p) => p.ata === g.dataset.ata && inFleet(p)).length;
+      if (!nFleet) { g.style.display = 'none'; g.setAttribute('aria-hidden', 'true'); g.setAttribute('tabindex', '-1'); return; }
       if (!s) return;
       g.classList.add(`risk-${LEVEL[s.tone] ? s.tone : s.level}`);
       g.dataset.story = `parts-hotspot-${s.ata}`;
@@ -281,7 +310,7 @@ export async function render(el, ctx) {
     airNote.hidden = true;
     if (ata === 'all') return;
     const g = svg.querySelector(`.ata-hotspot[data-ata="${ata}"]`);
-    const top = sysStat[ata]?.top;
+    const top = fleet === 'all' ? sysStat[ata]?.top : fleetStat(ata).top;   // the fleet's own top part
     if (!g?._hs || !top) return;
     const lv = LEVEL[top.risk_level] ? top.risk_level : 'unknown';
     const small = wpx < 480;
@@ -600,9 +629,53 @@ export async function render(el, ctx) {
     air.setActive(a === 'all' ? null : a);
     layoutAircraft();
     refreshTable();
+    showPanel();
     cleanups[0]?.(); cleanups[0] = drawMatrix();
     ctx.setParams({ ata: a, pn: '' });
     await drawExploded();
+  }
+  async function setFleet(f) {
+    fleet = f;
+    const kk = explorerCard.querySelector('.card-kicker'); if (kk) kk.textContent = `Aircraft system explorer · ${f === 'WB' ? 'widebody' : 'narrowbody'} archetype · indicative zones`;
+    const tt = explorerCard.querySelector('.card-title'); if (tt) tt.textContent = explorerTitle();
+    ctx.setParams({ fleet: f === 'all' ? '' : f });
+    sysButtons.forEach((b) => { const n = parts.filter((p) => p.ata === b.dataset.ata && inFleet(p)).length; b.disabled = !n; b.title = n ? '' : `No part numbers on the ${FLEET_LABEL[f].toLowerCase()} fleet`; });
+    if (ata !== 'all' && !parts.some((p) => p.ata === ata && inFleet(p))) ata = 'all';
+    await buildAircraft();
+    layoutAircraft();
+    refreshTable();
+    showPanel();
+  }
+  /** Side panel for the selected system: fleet-filtered exposure share, PN count, urgent exceptions, affected PNs. */
+  function showPanel() {
+    const fp = parts.filter(inFleet);
+    explorerCard.querySelector('.pi-fleet-note').textContent = `${fmtInt(fp.length)} of ${fmtInt(parts.length)} part numbers apply to ${FLEET_LABEL[fleet].toLowerCase()}${fleet === 'WB' ? ' · widebody drawing' : ' · narrowbody drawing'}`;
+    if (ata === 'all') {
+      panelCard.replaceChildren(h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, 'Selected system'), h('h3', { class: 'card-title' }, 'Select a system on the aircraft or in the list'))),
+        h('p', { class: 'muted t-14 m-0' }, 'The panel shows the system\'s share of material shortage exposure, its part numbers, urgent exceptions and the parts that drive them, for the selected fleet.'));
+      return;
+    }
+    const sp = fp.filter((p) => p.ata === ata);
+    const tot = fp.reduce((a, p) => a + (+p.risk_hours || 0), 0);
+    const share = tot ? sp.reduce((a, p) => a + (+p.risk_hours || 0), 0) / tot : null;
+    const exc = sp.flatMap((p) => (p.exceptions || []).map((e) => ({ ...e, pn: p.pn })));
+    const urgentExc = exc.filter((e) => e.severity === 'urgent');
+    const urgentPn = sp.filter((p) => p.risk_level === 'urgent');
+    const top = sp.slice().sort((a, b) => (b.risk_hours || 0) - (a.risk_hours || 0)).slice(0, 6);
+    const stat = (k, v, sub) => h('div', { class: 'pi-pstat' }, h('div', { class: 'pi-pstat-k' }, k), h('div', { class: 'pi-pstat-v' }, v), sub ? h('div', { class: 'pi-pstat-s' }, sub) : null);
+    const firstUrgent = urgentExc[0] || exc[0];
+    panelCard.replaceChildren(
+      h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, `Selected system · ${FLEET_LABEL[fleet]}`), h('h3', { class: 'card-title' }, `ATA ${ata} ${sysName(ata).toLowerCase()}`)), provChip(prov)),
+      h('div', { class: 'pi-pstats' },
+        stat('Shortage exposure share', share == null ? '—' : fmtPct(share, 0), `of the ${FLEET_LABEL[fleet].toLowerCase()} total`),
+        stat('Part numbers', fmtInt(sp.length), `${fmtInt(urgentPn.length)} urgent`),
+        stat('Urgent exceptions', fmtInt(urgentExc.length), `${fmtInt(exc.length)} open in all`)),
+      dataTable({ caption: `Part numbers driving ATA ${ata}`, bare: true, dense: true, rowKey: 'pn', onRowClick: (r) => openPart(r.pn), rows: top, mobileColumns: ['pn', 'risk_score', 'desc'],
+        columns: [{ key: 'pn', label: 'PN', mono: true }, { key: 'desc', label: 'Description', render: (r) => h('span', { class: 'pi-desc', title: r.desc }, r.desc) },
+          { key: 'risk_score', label: 'Risk', num: true, render: (r) => h('span', { class: 'pi-risk-cell' }, riskPill(r), excChip(r)) }] }),
+      h('div', { class: 'pi-panel-foot' },
+        h('a', { class: 'btn btn--sm', href: firstUrgent ? ctx.buildHash('actions', { id: firstUrgent.exception_id }) : '#/actions' }, icon('inbox'), firstUrgent ? `Open ${firstUrgent.exception_id} in the Planner Action Centre` : 'Open the Planner Action Centre'),
+        h('span', { class: 't-12 faint' }, 'Share = this system\'s material shortage exposure (AOG h/yr: history + modelled residual) over the fleet total.')));
   }
 
   // ------------------------------------------------------------------ drill-down drawer
@@ -666,6 +739,8 @@ export async function render(el, ctx) {
     return d;
   }
 
+  showPanel();
+  if (fleet !== 'all') sysButtons.forEach((b) => { const n = parts.filter((p) => p.ata === b.dataset.ata && inFleet(p)).length; b.disabled = !n; });
   await drawExploded();
   // during the guided tour keep the aircraft visible (the tour spotlights the ATA hotspot)
   if (pnParam && !document.querySelector('.story')) openPart(pnParam.pn);

@@ -698,12 +698,27 @@ export function storyMode({ steps, navigate, onExit }) {
   const next = h('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => (i < steps.length - 1 ? go(i + 1) : exit()) }, 'Next');
   let peekUser = null; // null = automatic, true/false = the reader toggled the sheet on this step
   const grab = h('button', { class: 'story-grab', type: 'button', 'aria-expanded': 'true', 'aria-label': 'Collapse the tour card', onclick: () => { setPeek(!cardEl.classList.contains('is-peek')); peekUser = cardEl.classList.contains('is-peek'); } }, h('span', { 'aria-hidden': 'true' }));
-  const cardEl = h('div', { class: 'story-card' }, grab, stepEl, titleEl, bodyEl, prog, h('div', { class: 'story-actions' }, h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => exit() }, 'Exit tour'), h('div', { class: 'row' }, back, next)));
+  // wave B: manual next/back, play/pause (auto-advance), skip, and keyboard control (← → Space Esc)
+  const AUTO_MS = 9000;
+  let playing = false, timer = 0;
+  const playBtn = h('button', { class: 'btn btn--ghost btn--sm story-play', type: 'button', 'aria-pressed': 'false', 'aria-label': 'Play the tour automatically', onclick: () => setPlaying(!playing) }, icon('play'), h('span', {}, 'Play'));
+  function setPlaying(on) {
+    playing = !!on;
+    clearTimeout(timer);
+    playBtn.setAttribute('aria-pressed', String(playing));
+    playBtn.setAttribute('aria-label', playing ? 'Pause the tour' : 'Play the tour automatically');
+    playBtn.querySelector('span').textContent = playing ? 'Pause' : 'Play';
+    playBtn.querySelector('use')?.setAttribute('href', playing ? '#i-minus' : '#i-play');
+    if (playing) schedule();
+  }
+  function schedule() { clearTimeout(timer); if (playing && i < steps.length - 1) timer = setTimeout(() => { if (playing) go(i + 1); }, AUTO_MS); else if (playing) setPlaying(false); }
+  const cardEl = h('div', { class: 'story-card' }, grab, stepEl, titleEl, bodyEl, prog, h('div', { class: 'story-actions' }, h('div', { class: 'row' }, h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => exit() }, 'Skip tour'), playBtn), h('div', { class: 'row' }, back, next)));
   root.append(spot, cardEl);
   let opener = null;
   const onKey = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); exit(); return; }
     if (e.target.closest?.('input, textarea, select')) return;
+    if (e.key === ' ' && !e.target.closest?.('button')) { e.preventDefault(); setPlaying(!playing); return; }
     if (e.key === 'ArrowRight') { e.preventDefault(); next.click(); }
     if (e.key === 'ArrowLeft' && i > 0) { e.preventDefault(); back.click(); }
     trapFocus(cardEl, e);
@@ -761,7 +776,13 @@ export function storyMode({ steps, navigate, onExit }) {
     // clip the target rect to the visible area below the bar, so a tall target leaves room for the card
     const vis = { left: r.left, right: r.right, top: Math.max(r.top, bar), bottom: Math.min(r.bottom, innerHeight), width: r.width };
     vis.height = Math.max(0, vis.bottom - vis.top);
-    const pos = storyCardPosition(vis, { cw: Math.min(380, innerWidth - 32), ch: cardEl.offsetHeight || 240, vw: innerWidth, vh: innerHeight, top: bar + BAR_GAP });
+    const ch = cardEl.offsetHeight || 240, cw = Math.min(380, innerWidth - 32);
+    const pos = storyCardPosition(vis, { cw, ch, vw: innerWidth, vh: innerHeight, top: bar + BAR_GAP });
+    // sub-pixel / few-px contact with the spotlight's bottom edge: nudge the card down into the bottom margin
+    const spotBot = top0 + Math.max(0, bot0 - top0), spotL = r.left - pad, spotR = r.right + pad;
+    const xHit = Math.min(pos.left + cw, spotR) > Math.max(pos.left, spotL);
+    const yOver = spotBot - pos.top;
+    if (xHit && yOver > 0 && yOver <= 12 && pos.top + yOver + ch <= innerHeight - 2) pos.top = Math.ceil(spotBot) + 1;
     Object.assign(cardEl.style, { left: `${pos.left}px`, top: `${pos.top}px` });
   }
   let raf = 0;
@@ -821,9 +842,11 @@ export function storyMode({ steps, navigate, onExit }) {
     place();
     root.removeAttribute('aria-busy');
     next.focus({ preventScroll: true });
+    if (playing) schedule();
   }
   function exit() {
     seq++;
+    playing = false; clearTimeout(timer);
     document.removeEventListener('keydown', onKey, true);
     removeEventListener('resize', onViewport);
     removeEventListener('scroll', onViewport, true);

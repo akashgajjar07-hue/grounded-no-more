@@ -225,3 +225,15 @@
 .pi-foot { flex-direction: column; align-items: flex-start; }
 .pi-brake-note { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: var(--fs-13); line-height: 1.5; color: var(--text-muted); }
 .pi-brake-note .icon { flex: none; width: 14px; height: 14px; margin-top: 3px; color: var(--text-faint); }
+/* wave B: fleet filter + selected-system side panel */
+.pi-fleet-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px var(--s-2); margin: calc(-1 * var(--s-1)) 0 var(--s-2); }
+.pi-fleet-note { font-size: var(--fs-13); }
+.pi-side { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
+.pi-pstats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-control); overflow: hidden; margin-bottom: var(--s-2); }
+.pi-pstat { background: var(--surface); padding: 10px 12px; min-width: 0; }
+.pi-pstat-k { font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
+.pi-pstat-v { font-family: var(--font-display); font-size: var(--fs-20); font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.pi-pstat-s { font-size: var(--fs-12); color: var(--text-faint); }
+.pi-panel-foot { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: var(--s-2); }
+.pi-sys[disabled] { opacity: 1; color: var(--text-faint); border-style: dashed; cursor: not-allowed; }
+.pi-panel .pi-desc { max-width: 170px; }
