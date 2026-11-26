@@ -57,8 +57,11 @@ def load_or_generate_scenario(seed: int, week_from: int, week_to: int, use_cache
     sc = generator.generate_scenario(world, truth, seed, week_from, week_to)
     if use_cache:
         CACHE.mkdir(parents=True, exist_ok=True)
-        with open(path, "wb") as f:
+        import os, tempfile   # atomic write: parallel workers must never read a half-written pickle (D010, V2-SIM-18)
+        fd, tmp = tempfile.mkstemp(dir=CACHE, suffix=".tmp")
+        with os.fdopen(fd, "wb") as f:
             pickle.dump(sc, f, protocol=pickle.HIGHEST_PROTOCOL)
+        os.replace(tmp, path)
     return sc
 
 

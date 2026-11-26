@@ -1,6 +1,6 @@
 {
   "version": "v2",
-  "locked_at": "2026-11-26T07:55:06.960260+00:00",
+  "locked_at": "2026-11-26T08:23:55.974535+00:00",
   "note": "V2-SIM-CAL: v2 P0-only calibration locked before any v2 P1/P2/optimiser run",
   "policy_used": "P0 only",
   "targets": {
@@ -198,11 +198,11 @@
     "config/assumptions.yaml": "85615c217bc473f08d27618ec5fd26e9c0d4cef51ef7643c6e710693c5a9e60c",
     "config/part_catalogue.csv": "89871fbc3dce032d7d0b42101e2894f7709ee18e94901ba5e9249b3ff0eb36f9",
     "src/gnm/sim/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "src/gnm/sim/api.py": "df33a6957f1165fd57d300da4f32a1b7575837ff0b1c40de874806a7106f9546",
+    "src/gnm/sim/api.py": "96d6735e55ccb935aca058c0a0833bae4252604b81cae1d40f2a252f01823eb5",
     "src/gnm/sim/baseline.py": "b6b76776ce1df8cc49eba89a8ca00365f8e1286ece15c18e668e77c168cefe66",
     "src/gnm/sim/calibration.py": "0542c20abfd6ca3f2d5e526093c8a80750f7383b7061f56011e7b7884ab7909f",
     "src/gnm/sim/crn.py": "f73e335c065f29bab8b7ba910a401011623812c848672ae527f50b3aae56978f",
-    "src/gnm/sim/engine.py": "5203908610fe3d5821332c11756643b395e8a97924dd3970d9141d7188ee9999",
+    "src/gnm/sim/engine.py": "cfb2690b1a56a1c3f0973c497c021656e664f70cf8f59f625621544d42c8f613",
     "src/gnm/sim/generator.py": "2b371088c3aa5f34bfe7429cb58177b723a22535e831c153c51569d21339be22",
     "src/gnm/sim/quoted.py": "1462a22f5236a41022c1212c41feafa2edb98858eb2dea1c64b2d4129f96fc5c",
     "src/gnm/sim/truth.py": "120f1a5b6c20fdaa94c3f7a1b0ecc3854b3e9f7c91b4e22dd3968e8136070333",

@@ -1030,9 +1030,17 @@ class _Engine:
             self._purge(p, j, t)
         if r is not None:
             self.earmark_in[p][j] -= q
-            x = min(q, self.r_unf[r], self.on_hand[p][j])
+            need = min(q, self.r_unf[r])
+            x = min(need, self.on_hand[p][j])
             if x > 0:
                 self._issue(p, j, x, r, t, "lateral" if kind == "lateral" else src)
+            short = need - x
+            if short > 0:   # V2-SIM-17: earmarked shelf-life units expired on arrival -> re-open the need
+                self.r_unc[r] += short
+                self.bo_unc[p][j] += short
+                heapq.heappush(self.bo_q[p][j], (self.r_need[r] + self.r_dlh[r], r))
+                if self.routes_on and self.r_dlh[r] < BIG_H:
+                    self._aog_route(r, t)
         elif loan is not None:
             self.earmark_in[p][j] -= q
             self._swap_in_own(p, j, loan, t, f"LOAN{loan}")
