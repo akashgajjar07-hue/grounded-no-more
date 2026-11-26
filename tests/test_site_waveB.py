@@ -98,6 +98,10 @@ def test_six_step_story_play_pause_skip(site, browser):  # noqa: F811
 def test_capital_paired_differences(site, browser):  # noqa: F811
     ctx, page, problems = open_page(browser, site + "#/capital", "1440")
     try:
+        # v2.1: the paired-differences card is Expert-only (Simple mode hides it by design)
+        page.evaluate("localStorage.setItem('gnm-mode','expert')")
+        page.reload()
+        page.wait_for_selector('[data-story="capital-paired"]', timeout=20000)
         card = page.locator('[data-story="capital-paired"]')
         txt = card.inner_text()
         rec = json.loads((DOCS / "data/frontier.json").read_text())["recommended"]

@@ -115,3 +115,15 @@
 .aog-cf-route { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px var(--s-2); margin: 0; font-size: var(--fs-14); }
 .aog-cf-route dt { font-family: var(--font-ui); font-size: var(--fs-12); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); padding-top: 2px; }
 .aog-cf-route dd { margin: 0; color: var(--text); line-height: 1.5; }
+
+/* v2.1: AOG clock note; option metrics in a 2 × 2 grid so long values ("+954 h late") never overprint the card edge */
+.aog-clock { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: var(--s-1); padding: 12px var(--s-2); border: 1px solid var(--line); border-left: 2px solid var(--primary); border-radius: var(--r-control); background: var(--panel); font-size: var(--fs-14); line-height: 1.5; color: var(--text-muted); }
+.aog-clock > .icon { width: 16px; height: 16px; margin-top: 3px; color: var(--primary); }
+.aog-clock b { color: var(--text); font-weight: 600; }
+.aog-clock > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.aog-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px var(--s-2); }
+.aog-m { min-width: 0; }
+.aog-m dd { white-space: normal; overflow-wrap: anywhere; }
+.aog-m dd .aog-late { white-space: normal; }
+.aog-human-note > span { min-width: 0; }
+.aog-human { align-self: start; }

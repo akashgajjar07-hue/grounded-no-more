@@ -241,3 +241,33 @@
 /* wave C: explorer + planted situations share the left column (no half-card void beside the system list) */
 .pi-main { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
 .pi-main > .pi-planted-card { flex: 1 1 auto; }
+
+/* v2.1 · A7 escalation (hero part) and A9 invalid outstation brake allocations */
+.pi-escalation { display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--r-control); border: 1px solid var(--status-urgent); border-left-width: 4px; background: color-mix(in srgb, var(--status-urgent) 9%, var(--surface)); color: var(--text); }
+.pi-escalation > .icon { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--status-urgent); }
+.pi-escalation-main { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.pi-escalation-k { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: var(--fs-12); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--status-urgent); }
+.pi-escalation-k .mono { text-transform: none; letter-spacing: 0; color: var(--text); }
+.pi-escalation-desc { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text-muted); }
+.pi-escalation-text { margin: 0; font-size: var(--fs-16); line-height: 1.45; font-weight: 600; color: var(--text); }
+.pi-escalation-basis { margin: 0; font-size: var(--fs-12); color: var(--text-faint); }
+.pi-escalation-open { align-self: flex-start; }
+.pi-escalation.is-compact { padding: 12px 14px; margin-bottom: var(--s-2); }
+.pi-escalation.is-compact .pi-escalation-text { font-size: var(--fs-14); }
+.pi-alloc-flags { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-control); border: 1px dashed var(--status-review); background: color-mix(in srgb, var(--status-review) 7%, var(--surface)); font-size: var(--fs-13); line-height: 1.5; color: var(--text); }
+.pi-alloc-flags > .icon { flex: none; width: 15px; height: 15px; margin-top: 3px; color: var(--status-review); }
+.pi-alloc-flags p { margin: 0; }
+.pi-alloc-flags-list { margin: 4px 0; display: flex; flex-direction: column; gap: 2px; }
+.pi-alloc-flags-list .mono { font-size: var(--fs-12); }
+.pi-alloc-flags-s { color: var(--text-muted); font-size: var(--fs-12); }
+.pi-alloc-flags.is-compact { margin-top: var(--s-2); }
+.pi-foot .pi-alloc-flags { margin-top: 8px; }
+.pi-flag-chip, .pi-esc-chip { gap: 4px; font-size: 11px; padding: 1px 7px; white-space: nowrap; }
+.pi-flag-chip { border-color: var(--status-review); color: var(--status-review); }
+.pi-esc-chip { border-color: var(--status-urgent); color: var(--status-urgent); }
+.pi-flag-chip .icon, .pi-esc-chip .icon { width: 11px; height: 11px; }
+.pi-stock li { grid-template-columns: 44px 1fr 40px 74px; }
+.pi-stock li.is-flagged > .mono:first-child { color: var(--status-review); }
+.pi-stock-flag { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--status-review); white-space: nowrap; }
+.pi-stock-flag .icon { width: 11px; height: 11px; }
+.pi-panel-scope { margin: 0 0 var(--s-2); }

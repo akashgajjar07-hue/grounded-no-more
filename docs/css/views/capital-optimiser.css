@@ -101,3 +101,26 @@
 .co-marginal .dts-row { grid-template-columns: minmax(0, 1fr); }
 .co-marginal .dts-metric { justify-self: start; flex-wrap: wrap; white-space: normal; height: auto; max-width: 100%; overflow: visible; }
 .co-marginal .dts-metric > :not(.dts-metric-label) { overflow: visible; white-space: normal; text-overflow: clip; }
+
+/* v2.1: frontier subtitle, A4 capital table + A8 insight row, A9 flags, A6 note, scope note */
+.co-subtitle { margin: 4px 0 0; font-family: var(--font-display); font-size: var(--fs-18, 18px); font-style: italic; color: var(--primary); }
+.co-a4a8 { align-items: stretch; }
+.co-a4a8 > .card { display: flex; flex-direction: column; }
+.co-insight-text { font-family: var(--font-display); font-size: var(--fs-18, 18px); line-height: 1.45; color: var(--text); }
+.co-levers-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.co-lever-chip { display: inline-flex; align-items: center; min-height: 28px; padding: 2px 12px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 13px; color: var(--text); background: var(--panel); }
+.co-lever-chip:first-child { border-color: var(--primary); color: var(--primary); }
+.co-lever-chip + .co-lever-chip::before { content: none; }
+.co-pn { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.co-flag { display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; border-radius: 4px; border: 1px solid color-mix(in srgb, var(--status-review) 55%, transparent); color: var(--status-review); font-size: 11px; line-height: 18px; white-space: nowrap; }
+.co-flag .icon { width: 12px; height: 12px; }
+.co-flags:empty { display: none; }
+.co-flag-note { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: var(--s-1); margin-bottom: var(--s-2); padding: 12px var(--s-2); border: 1px solid color-mix(in srgb, var(--status-review) 45%, transparent); border-radius: var(--r-control); background: var(--c-amber-a12); font-size: 13px; color: var(--text); }
+.co-flag-note > .icon { width: 16px; height: 16px; color: var(--status-review); margin-top: 2px; }
+.co-flag-note > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.co-flag-note .mono { overflow-wrap: anywhere; color: var(--text-muted); }
+.co-a6 { color: var(--text-muted); margin-top: var(--s-1); }
+.co-scope { max-width: 72ch; }
+.co-annote-head { font-family: var(--font-display); font-size: var(--fs-14); color: var(--text); font-weight: 500; }
+.co-flag-list { display: flex; flex-wrap: wrap; gap: 2px 16px; color: var(--text-muted); }
+.co-kpis .kpi-foot span { white-space: normal; overflow: visible; text-overflow: clip; min-width: 0; overflow-wrap: anywhere; }

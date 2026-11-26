@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 
@@ -43,15 +44,15 @@ def test_recommended_is_rank1_not_double_counted(site, browser, inc_id):  # noqa
         if expected:
             assert rec.count() == 1 and rec.get_attribute("data-key") == expected
         # robbery is always a human decision, never "No"/recommended
-        rob = page.locator('.aog-opt[data-key="g"]')
+        rob = page.locator('.aog-opt[data-key="robbery"]')
         if rob.count():
             assert rob.get_attribute("data-state") == "human"
             assert "engineering/quality approval" in rob.inner_text()
         # pool shown as not contracted
-        pool = page.locator('.aog-opt[data-key="d"]')
-        if pool.count() and any(o["key"] == "d" and "NOT_CONTRACTED" in o["reason_codes"] for o in inc["options"]):
+        pool = page.locator('.aog-opt[data-key="pool"]')
+        if pool.count() and any(o["key"] == "pool" and "NOT_CONTRACTED" in o["reason_codes"] for o in inc["options"]):
             assert "Not contracted" in pool.inner_text()
-        assert "Human decision required" in page.locator(".aog-human").inner_text() or "HUMAN DECISION REQUIRED" in page.locator(".aog-human").inner_text().upper()
+        assert re.search(r"HUMAN DECISION REQUIRED|A PERSON DECIDES", page.locator(".aog-human").inner_text().upper())
         assert not problems, problems
     finally:
         ctx.close()
@@ -100,12 +101,12 @@ def test_aog_wave2_design(site, browser, vp, inc_id):  # noqa: F811
         feas = page.locator('.aog-optgroup[data-group="feasible"] .aog-opt').evaluate_all("(els) => els.map((e) => e.dataset.key)")
         exp = [o["key"] for o in sorted((o for o in inc["options"] if o.get("feasible") and not o.get("human_decision") and not o.get("indicative") and "NOT_CONTRACTED" not in (o.get("reason_codes") or [])), key=lambda o: o.get("rank") or 99)]
         assert feas == exp
-        assert "FEASIBLE (" in page.locator('.aog-optgroup[data-group="feasible"] .aog-optgroup-head h4').inner_text()
+        assert re.search(r"FEASIBLE \(|COULD WORK \(", page.locator('.aog-optgroup[data-group="feasible"] .aog-optgroup-head h4').inner_text().upper())
         # MISSED on the recommended card is explained
         rec = page.locator('.aog-opt[data-state="rec"]')
         if rec.count() and "Missed" in rec.inner_text():
             note = rec.locator('[data-role="missed-note"]').inner_text()
-            assert "ranked by exposure" in note.lower() or "lowest exposure" in note.lower()
+            assert re.search(r"ranked by (exposure|total cost)|lowest (exposure|total cost)", note.lower())
         # wave 4: when every feasible option misses, one banner replaces the per-card red MISSED pills
         feas_opts = [o for o in inc["options"] if o.get("feasible") and not o.get("human_decision") and o.get("wait_h") is not None]
         if feas_opts and all(not o.get("deadline_met") for o in feas_opts):
@@ -152,3 +153,58 @@ def test_wave3_aog_copy(site, browser, vp):  # noqa: F811
                 assert any("slack" in hd for hd in heads), heads
             finally:
                 ctx.close()
+
+
+# ---- v2.1 final release (PAGE-4): plain English, the AOG clock, clean option cards, both modes and viewports
+def _open_mode(browser, url, vp, mode):
+    w, h = VIEWPORTS[vp]
+    ctx = browser.new_context(viewport={"width": w, "height": h}, reduced_motion="reduce")
+    ctx.add_init_script(f"try{{localStorage.setItem('gnm-mode','{mode}')}}catch(e){{}}")
+    page = ctx.new_page()
+    problems: list[str] = []
+    page.on("console", lambda m: problems.append(f"console.{m.type}: {m.text}") if m.type == "error" else None)
+    page.on("pageerror", lambda e: problems.append(f"pageerror: {e}"))
+    page.goto(url)
+    page.wait_for_function("document.documentElement.dataset.ready === 'true'", timeout=15000)
+    page.wait_for_timeout(1000)
+    return ctx, page, problems
+
+
+FORBIDDEN = re.compile(r"\b(validated|optimal)\b|Etihad|A320|Airbus|Boeing|787", re.I)
+# robbery incidents first: they exercise the borrowing wording
+ROB_IDS = [i["id"] for i in LAB["incidents"] if i["id"] in IDS and (i["decision"].get("robbery_note") or i["counterfactual"].get("actual_route") == "robbery")]
+V21_IDS = list(dict.fromkeys([IDS[0]] + ROB_IDS[:2]))
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+@pytest.mark.parametrize("mode", ["simple", "expert"])
+@pytest.mark.parametrize("inc_id", V21_IDS)
+def test_v21_aog(site, browser, vp, mode, inc_id):  # noqa: F811
+    ctx, page, problems = _open_mode(browser, site + f"#/aog?incident={inc_id}", vp, mode)
+    try:
+        audit(page, problems, min_frames=2)
+        txt = page.locator("#view").inner_text()
+        assert not FORBIDDEN.search(txt), FORBIDDEN.findall(txt)
+        assert page.locator('[data-role="intro3"]').count() == 1
+        # the AOG clock: starts at removal, overnight hours count, fitting included
+        clock = page.locator('[data-role="aog-clock"]').inner_text().lower()
+        assert "removed" in clock and "overnight" in clock and "fitting" in clock
+        assert page.locator('#view [data-role="scope"]').count() >= 1
+        # option cards: no metric value overprints its card edge
+        bad = page.evaluate("""() => [...document.querySelectorAll('.aog-opt')].flatMap((c) => {
+            const cr = c.getBoundingClientRect(); if (!cr.width) return [];
+            return [...c.querySelectorAll('.aog-m dd, .aog-m dt, .aog-opt-title, .aog-src')].filter((e) => { const r = e.getBoundingClientRect(); return r.width && (r.right > cr.right - 1 || e.scrollWidth > e.clientWidth + 1); }).map((e) => e.textContent); })""")
+        assert not bad, bad
+        if mode == "simple":
+            vis = page.evaluate("""() => { const c = document.querySelector('#view').cloneNode(true);
+              c.querySelectorAll('.term-expert, table, svg, .sr-only, [hidden], details:not([open])').forEach((e) => e.remove()); return c.textContent; }""")
+            assert not re.search(r"robbery|cannibal", vis, re.I), re.findall(r".{30}robbery.{30}", vis, re.I)
+            assert "another of our aircraft" in vis
+            assert not re.search(r"\bP0\b|ex-ante|ex post|V2-SIM", vis)
+            r = page.evaluate("import('./js/lib/readability.js').then(R => R.readability(document.querySelector('#view')))")
+            assert r["grade"] <= 9 and r["maxSentenceWords"] <= 25, r["longSentences"]
+        else:
+            assert "Human decision required" in page.locator(".aog-human").inner_text() or "HUMAN DECISION REQUIRED" in page.locator(".aog-human").inner_text().upper()
+        assert not problems, problems
+    finally:
+        ctx.close()

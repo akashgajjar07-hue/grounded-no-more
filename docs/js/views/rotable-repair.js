@@ -12,11 +12,15 @@
  *  6. Palm vs simulation
  * Every number comes from the JSON or from floatcalc.js applied to user inputs.
  */
-import { h, icon, pageHead, card, provChip, pill, dataTable, bindValueText, fillPct } from '../ui.js';
+import { h, icon, pageHead, card, provChip, pill, dataTable, bindValueText, fillPct, intro3 } from '../ui.js';
 import { chartFrame, responsive, svgIn, axisBottom, axisLeft, gridY, directLabel, annotate, withTooltip, truncate, theme, chipLabel, refLine, fmtAED, fmtPct, fmtDays, fmtInt, fmtNum, fmtWeek, fmtEnum, fmtCount, plural } from '../charts/theme.js';
 import { floatCalc, compareLevers, pmfSeries } from '../lib/floatcalc.js';
+import { isSimple, byMode } from '../lib/mode.js';
+import { term, termText } from '../lib/glossary.js';
+import { displayName } from '../lib/names.js';
+import { escalationBlock, allocationFlagNote } from './parts-intelligence/flags.js';
 
-export const data = ['rotables', 'method', 'network'];
+export const data = ['rotables', 'method', 'network', 'parts'];
 
 const d3 = () => window.d3;
 /** directLabel whose colour wins over the .gnm-label CSS fill. */
@@ -87,11 +91,20 @@ export async function render(el, ctx) {
   const flows = r.lifecycle?.flows || [];
   const fixture = !!r.meta?.fixture;
 
+  const S = isSimple();
   el.append(pageHead({
     num: '04', eyebrow: 'Rotable & Repair',
-    title: 'Every serial, every repair order, every day of float',
-    lede: 'Serialised rotables of Falcon Hub Airways (fictional) cycle through fit, removal, shop and return. This workspace tracks the loop, flags overdue repair orders and sizes the float with a METRIC-inspired (Palm’s theorem) calculator.',
+    title: byMode('Repairable parts: the repair loop and the spares that cover it', 'Every serial, every repair order, every day of float'),
+    lede: S
+      ? h('span', {}, 'Each ', term('rotable'), ' of a fictional airline goes round a loop: fitted, removed, repaired and returned. This page tracks the loop, flags late repairs and sizes the ', term('float'), '.')
+      : 'Serialised rotables of Falcon Hub Airways (fictional) cycle through fit, removal, shop and return. This workspace tracks the loop, flags overdue repair orders and sizes the float with a METRIC-inspired (Palm’s theorem) calculator.',
     meta: [provChip(prov(r.meta)), provChip('DERIVED'), now != null ? h('span', { class: 'chip chip-mono' }, `As of ${fmtWeek(Math.floor(now / HPW))}`) : null].filter(Boolean),
+  }));
+
+  el.append(intro3({
+    what: 'How repairable parts move through repair, which repairs are late, and how many spares cover the gap.',
+    why: ['When ', term('tat'), ' runs long and the spares pool is small, planes wait on the ground for a part.'],
+    action: 'Chase the latest repairs first. Then use the calculator to compare buying spares with faster repair.',
   }));
 
   // ---------------------------------------------------------------- 1. status strip
@@ -105,10 +118,10 @@ export async function render(el, ctx) {
     h('div', { class: 'rr-stat-value' }, value, unit ? h('small', {}, unit) : null),
     h('div', { class: 'rr-stat-sub' }, sub));
   el.append(h('div', { class: 'rr-stats mt-3', dataset: { story: 'rotable-stats' } },
-    stat({ label: 'Units in repair loop', value: fmtInt(loop), unit: 'serials', sub: fleet ? `${fmtPct(loop / fleet)} of ${fmtInt(fleet)} active serials are removed (U/S) or in a shop` : 'Lifecycle counts not exported', chip: prov(r.lifecycle, prov(r.meta)) }),
-    stat({ label: 'Open repair orders', value: fmtInt(r.repair_summary?.open ?? openROs.length), unit: 'ROs', sub: `${fmtInt(new Set(openROs.map((o) => o.shop)).size)} shops · ${fmtInt(r.repair_summary?.returned_last_8w ?? ros.length - openROs.length)} returned in the last 8 weeks`, chip: prov(r.meta) }),
-    stat({ label: 'Overdue vs quoted due', value: fmtInt(r.repair_summary?.overdue ?? overdueROs.length), unit: 'ROs', sub: overdueROs.length ? h('span', { class: 'rr-stat-crit' }, overdueROs.some(isCritical) ? icon('alert') : null, `${plural(overdueROs.filter(isCritical).length, 'RO')} more than ${Math.round(CRITICAL_LATE_D / 7)} weeks late`) : 'None overdue', chip: prov(r.meta) }),
-    stat({ label: 'Actual / quoted TAT', value: tatRatio != null ? `${fmtNum(tatRatio, 2)}×` : 'not run', sub: lateShare != null ? `Median over ${fmtInt(tatRows.length)} PN–shop pairs · ${fmtPct(lateShare, 0)} run late` : 'TAT table not exported', chip: prov(r.tat?.[0], prov(r.meta)) }),
+    stat({ label: byMode('Parts away for repair', 'Units in repair loop'), value: fmtInt(loop), unit: byMode('parts', 'serials'), sub: fleet ? (S ? `${fmtPct(loop / fleet)} of ${fmtInt(fleet)} parts are broken or in a shop` : `${fmtPct(loop / fleet)} of ${fmtInt(fleet)} active serials are removed (U/S) or in a shop`) : 'Lifecycle counts not exported', chip: prov(r.lifecycle, prov(r.meta)) }),
+    stat({ label: byMode('Open repair jobs', 'Open repair orders'), value: fmtInt(r.repair_summary?.open ?? openROs.length), unit: byMode('jobs', 'ROs'), sub: `${fmtInt(new Set(openROs.map((o) => o.shop)).size)} shops · ${fmtInt(r.repair_summary?.returned_last_8w ?? ros.length - openROs.length)} returned in the last 8 weeks`, chip: prov(r.meta) }),
+    stat({ label: byMode('Repair jobs past due', 'Overdue vs quoted due'), value: fmtInt(r.repair_summary?.overdue ?? overdueROs.length), unit: byMode('jobs', 'ROs'), sub: overdueROs.length ? h('span', { class: 'rr-stat-crit' }, overdueROs.some(isCritical) ? icon('alert') : null, `${plural(overdueROs.filter(isCritical).length, byMode('job', 'RO'))} more than ${Math.round(CRITICAL_LATE_D / 7)} weeks late`) : 'None overdue', chip: prov(r.meta) }),
+    stat({ label: byMode('Actual vs promised repair time', 'Actual / quoted TAT'), value: tatRatio != null ? `${fmtNum(tatRatio, 2)}×` : 'not run', sub: lateShare != null ? (S ? `Middle value over ${fmtInt(tatRows.length)} part and shop pairs · ${fmtPct(lateShare, 0)} run late` : `Median over ${fmtInt(tatRows.length)} PN–shop pairs · ${fmtPct(lateShare, 0)} run late`) : 'TAT table not exported', chip: prov(r.tat?.[0], prov(r.meta)) }),
   ));
 
   // ---------------------------------------------------------------- 2. lifecycle
@@ -119,18 +132,20 @@ export async function render(el, ctx) {
   const shopOut = sumF((f) => f.from === 'IN_REPAIR' && f.to !== 'IN_REPAIR');
   const condemned = sumF((f) => f.from === 'IN_REPAIR' && f.to === 'CONDEMNED');
   const flowWindow = r.lifecycle?.window_label || (r.lifecycle?.window_weeks ? `weeks ${r.lifecycle.window_weeks.join('–')}` : now != null ? `weeks 0–${Math.floor(now / HPW) - 1}` : null);
-  const lcHead = flows.length && shopOut
-    ? `${fmtInt(removals)} removals fed the repair loop; ${fmtPct(condemned / shopOut)} of shop exits were condemned (BER)`
-    : `${fmtInt(loop)} serials are removed (U/S) or in repair right now`;
+  const lcHead = S
+    ? (flows.length && shopOut ? `${fmtInt(removals)} removals fed the repair loop; ${fmtPct(condemned / shopOut)} of parts leaving the shop were scrapped` : `${fmtInt(loop)} parts are broken or in repair right now`)
+    : flows.length && shopOut
+      ? `${fmtInt(removals)} removals fed the repair loop; ${fmtPct(condemned / shopOut)} of shop exits were condemned (BER)`
+      : `${fmtInt(loop)} serials are removed (U/S) or in repair right now`;
   const lcF = chartFrame(lcCard, {
-      implication: 'Most rotables sit on aircraft; the repair loop is where float is gained or lost.',
+    implication: byMode('Most repairable parts sit on aircraft. The repair loop is where the spares pool is won or lost.', 'Most rotables sit on aircraft; the repair loop is where float is gained or lost.'),
     headline: lcHead,
-    subtitle: `Box = serials in each state at ${now != null ? fmtWeek(Math.floor(now / HPW)) : 'end of window'} (${fmtInt(r.lifecycle?.n_serials ?? fleet)} serials) · one row per transition, dot = from, arrow = to, width = count${flowWindow ? ` over ${flowWindow}` : ''}`,
+    subtitle: S ? `Boxes show how many parts are in each state${now != null ? ` at ${fmtWeek(Math.floor(now / HPW))}` : ''}. Each row below is one kind of move. Thicker lines mean more moves${flowWindow ? ` over ${flowWindow}` : ''}.` : `Box = serials in each state at ${now != null ? fmtWeek(Math.floor(now / HPW)) : 'end of window'} (${fmtInt(r.lifecycle?.n_serials ?? fleet)} serials) · one row per transition, dot = from, arrow = to, width = count${flowWindow ? ` over ${flowWindow}` : ''}`,
     provenance: prov(r.lifecycle, prov(r.meta)), source: 'rotables.json → lifecycle',
     table: { columns: [{ key: 'item', label: 'State / transition' }, { key: 'count', label: 'Serials', num: true, format: fmtInt }], rows: [...Object.entries(counts).map(([k, v]) => ({ item: stateName(k), count: v })), ...flows.map((f) => ({ item: `${stateName(f.from)} → ${stateName(f.to)}`, count: f.count }))] },
   });
   const lcHost = h('div', { class: 'rr-flow' });
-  lcF.body.append(lcHost, h('p', { class: 'rr-lc-note' }, 'Each serial is in exactly one state. Outstation removals travel to AUH as unserviceable cores before induction; hub removals go straight to the shop. BER units are condemned and replaced by purchase order.'));
+  lcF.body.append(lcHost, h('p', { class: 'rr-lc-note' }, byMode('Each part is in one state at a time. Broken parts at other airports fly to AUH before repair. Hub removals go straight to the shop. Parts not worth fixing are scrapped and bought new.', 'Each serial is in exactly one state. Outstation removals travel to AUH as unserviceable cores before induction; hub removals go straight to the shop. BER units are condemned and replaced by purchase order.')));
   cleanups.push(responsive(lcHost, (w) => drawFlow(lcHost, r.lifecycle?.states || Object.keys(counts), counts, flows, w)));
   // ---------------------------------------------------------------- 3. repair queue gantt + 4. TAT
   const grid = h('div', { class: 'grid-12 mt-3' });
@@ -151,25 +166,25 @@ export async function render(el, ctx) {
   const pvGrid = h('div', { class: 'grid-12 mt-3' });
   el.append(pvGrid);
   const pvCard = h('section', { class: 'card span-7', dataset: { story: 'palm-vs-sim' } });
-  const whyCard = card({ cls: 'span-5', kicker: 'Why analytic and simulated differ', title: 'Palm assumes an infinite, stationary repair loop. The simulated network does not.', prov: 'DERIVED', body: whyList(r) });
+  const whyCard = card({ cls: 'span-5', kicker: byMode('Why the formula and the simulation differ', 'Why analytic and simulated differ'), title: byMode('The simple formula assumes an endless, steady repair loop. The simulated network does not.', 'Palm assumes an infinite, stationary repair loop. The simulated network does not.'), prov: 'DERIVED', body: whyList(r) });
   pvGrid.append(pvCard, whyCard);
   cleanups.push(renderPalmVsSim(pvCard, r, ctx.data.network?.hub || ctx.data.network?.stations?.find((s) => s.role === 'hub')?.station));
 
   // ---------------------------------------------------------------- open ROs table
   const tableRows = ros.filter((o) => o.open).sort((a, b) => (b.overdue - a.overdue) || ((b.late_d ?? -1e9) - (a.late_d ?? -1e9)));
   el.append(h('div', { class: 'mt-3' }, card({
-    kicker: 'Repair orders', title: `${fmtInt(tableRows.length)} open repair orders, most days past due first`, prov: prov(r.meta),
+    kicker: byMode('Repair jobs', 'Repair orders'), title: S ? `${fmtInt(tableRows.length)} open repair jobs, latest first` : `${fmtInt(tableRows.length)} open repair orders, most days past due first`, prov: prov(r.meta),
     body: dataTable({
       caption: 'Open repair orders', maxHeight: 360, dense: true,
       mobileColumns: ['serial', 'late_d', 'shop', 'ro_id', 'overdue'], stickyFirst: true,
       columns: [
-        { key: 'ro_id', label: 'RO', mono: true },
-        { key: 'serial', label: 'Serial', mono: true },
+        { key: 'ro_id', label: byMode('Job', 'RO'), mono: true },
+        { key: 'serial', label: byMode('Part serial', 'Serial'), mono: true },
         { key: 'shop', label: 'Shop', format: shopLabel },
-        { key: 'inH', label: 'Inducted', num: true, format: (v) => (v == null ? '—' : fmtWeek(Math.floor(v / HPW))) },
-        { key: 'due', label: 'Quoted due', num: true, format: (v) => (v == null ? '—' : fmtWeek(Math.floor(v / HPW))) },
+        { key: 'inH', label: byMode('Went in', 'Inducted'), num: true, format: (v) => (v == null ? '—' : fmtWeek(Math.floor(v / HPW))) },
+        { key: 'due', label: byMode('Promised', 'Quoted due'), num: true, format: (v) => (v == null ? '—' : fmtWeek(Math.floor(v / HPW))) },
         { key: 'late_d', label: 'vs due', short: 'vs due', num: true, format: (v) => (v == null ? '—' : v > 0 ? `+${fmtDays(v)}` : `−${fmtDays(-v)}`) },
-        { key: 'overdue', label: 'Status', render: (o) => (isCritical(o) ? pill('urgent', o.planted ? `Critical · ${o.planted}` : 'Critical') : o.overdue ? h('span', { class: 'pill pill--unknown rr-pill-late' }, o.planted ? `Overdue · ${o.planted}` : 'Overdue') : h('span', { class: 'pill pill--unknown rr-pill-quote' }, 'In quote')) },
+        { key: 'overdue', label: 'Status', render: (o) => (isCritical(o) ? pill('urgent', o.planted ? `Critical · ${o.planted}` : 'Critical') : o.overdue ? h('span', { class: 'pill pill--unknown rr-pill-late' }, o.planted ? `Overdue · ${o.planted}` : 'Overdue') : h('span', { class: 'pill pill--unknown rr-pill-quote' }, byMode('On time', 'In quote'))) },
       ],
       rows: tableRows, sort: { key: 'late_d', dir: 'desc' }, // F7 (wave 4): the mobile Sort control names the real order
     }),
@@ -180,7 +195,17 @@ export async function render(el, ctx) {
 }
 
 // ============================================================================= lifecycle state ladder
-const STATE_META = {
+const STATE_SIMPLE = {
+  SERVICEABLE: { label: 'READY TO FIT', short: 'Ready to fit', sub: 'In stores' },
+  INSTALLED: { label: 'ON AIRCRAFT', short: 'On aircraft', sub: 'Fitted' },
+  REMOVED: { label: 'BROKEN', short: 'Broken', sub: 'Sent to AUH' },
+  IN_REPAIR: { label: 'IN REPAIR', short: 'In repair', sub: 'Queue + shop' },
+  IN_TRANSIT: { label: 'IN TRANSIT', short: 'In transit', sub: 'On the way back' },
+  CONDEMNED: { label: 'SCRAPPED', short: 'Scrapped', sub: 'Not worth fixing' },
+};
+/** v2.1: state names follow the reading mode (Simple: plain words). */
+const STATE_META = new Proxy({}, { get: (_, k) => (isSimple() ? STATE_SIMPLE : STATE_EXPERT)[k] });
+const STATE_EXPERT = {
   SERVICEABLE: { label: 'SERVICEABLE', short: 'Serviceable', sub: 'In stores' },
   INSTALLED: { label: 'INSTALLED', short: 'Installed', sub: 'On aircraft' },
   REMOVED: { label: 'REMOVED (U/S)', short: 'Removed', sub: 'Core to AUH' },
@@ -210,7 +235,7 @@ function drawFlow(el, states, counts, flows, w) {
     // wave 5: no teal category here (teal = the recommended plan only); forward solid titanium, returns 40% titanium
     fwd: { color: SR.neutral, op: 0.75, label: 'FORWARD · fit → removal → shop → transit' },
     back: { color: SR.neutral, op: 0.35, label: 'RETURNS · back to stock or onto aircraft' },
-    bad: { color: SR.context, op: 0.9, dash: '5 4', label: 'CONDEMNED · beyond economic repair' },
+    bad: { color: SR.context, op: 0.9, dash: '5 4', label: byMode('SCRAPPED · not worth fixing', 'CONDEMNED · beyond economic repair') },
   };
   const tip = (f) => ({ title: `${STATE_META[f.from]?.label || f.from} → ${STATE_META[f.to]?.label || f.to}`, rows: [['Transitions', fmtInt(f.count)], ['Share of largest flow', fmtPct(f.count / maxC, 0)]] });
   if (w < 640) return drawFlowList(el, order, counts, fl, w, { kindOf, KIND, maxC, tip });
@@ -290,7 +315,7 @@ function drawFlowList(el, order, counts, fl, w, { kindOf, KIND, maxC, tip }) {
   const valW = 44;
   const barX = 0, barW = w - valW - 8;
   rows.forEach((r) => {
-    if (r.header) { dl(svg, { x: 0, y: r.y, text: r.header === 'fwd' ? 'FORWARD' : r.header === 'back' ? 'RETURNS' : 'CONDEMNED (BER)', color: KIND[r.header].color, mono: true }); return; }
+    if (r.header) { dl(svg, { x: 0, y: r.y, text: r.header === 'fwd' ? 'FORWARD' : r.header === 'back' ? 'RETURNS' : byMode('SCRAPPED', 'CONDEMNED (BER)'), color: KIND[r.header].color, mono: true }); return; }
     const { f, k } = r; const o = KIND[k];
     const g = svg.append('g').attr('class', `rr-arc rr-arc--${k}`).attr('transform', `translate(0,${r.y})`).attr('tabindex', 0).attr('role', 'img')
       .attr('aria-label', `${stateName(f.from)} to ${stateName(f.to)}: ${fmtInt(f.count)} transitions`);
@@ -313,12 +338,15 @@ function renderGantt(host, ros, now, r, ctx) {
   const overdue = ros.filter((o) => o.open && o.overdue);
   const worst = ps2 || overdue.slice().sort((a, b) => (b.late_d ?? 0) - (a.late_d ?? 0))[0];
   // the serial lives in the chase list below; a hyphenated serial wraps badly inside a headline
-  const head = !overdue.length ? 'Every open repair order is still inside its quoted due date'
-    : `${fmtInt(overdue.length)} repair orders are past quoted due${worst ? `; the worst is ${fmtDays(worst.late_d)} late at ${shopLabel(worst.shop)}` : ''}`;
+  const S = isSimple();
+  const head = S
+    ? (!overdue.length ? 'Every open repair job is still inside its promised date' : `${fmtInt(overdue.length)} repair jobs are past their promised date${worst ? `; the worst is ${fmtDays(worst.late_d)} late at ${shopLabel(worst.shop)}` : ''}`)
+    : !overdue.length ? 'Every open repair order is still inside its quoted due date'
+      : `${fmtInt(overdue.length)} repair orders are past quoted due${worst ? `; the worst is ${fmtDays(worst.late_d)} late at ${shopLabel(worst.shop)}` : ''}`;
   const f = chartFrame(host, {
-      implication: 'Overdue repairs eat float: chase the shops furthest past quote first.',
+    implication: byMode('Late repairs drain the spares pool. Chase the shops that are furthest past their promise first.', 'Overdue repairs eat float: chase the shops furthest past quote first.'),
     headline: head,
-    subtitle: `Bar = induction → return (or now) · tick = quoted due · hatched = days past due, red only beyond ${fmtInt(CRITICAL_LATE_D)} d · shops by worst delay${now != null ? ` · now ${fmtWeek(Math.floor(now / HPW))}` : ''}`,
+    subtitle: S ? `Each bar runs from the day a part went in to its return, or to now. The tick is the promised date. Hatching shows days late, red only beyond ${fmtInt(CRITICAL_LATE_D)} days.` : `Bar = induction → return (or now) · tick = quoted due · hatched = days past due, red only beyond ${fmtInt(CRITICAL_LATE_D)} d · shops by worst delay${now != null ? ` · now ${fmtWeek(Math.floor(now / HPW))}` : ''}`,
     provenance: prov(r.meta), source: 'rotables.json → repair_queue',
     table: { columns: [{ key: 'ro_id', label: 'RO' }, { key: 'serial', label: 'Serial' }, { key: 'shop', label: 'Shop', format: shopLabel }, { key: 'quoted_tat_d', label: 'Quoted TAT', num: true, format: fmtDays }, { key: 'elapsed_d', label: 'Elapsed / actual', num: true, format: fmtDays }, { key: 'late_d', label: 'Days vs due', num: true, format: (v) => (v == null ? '—' : fmtNum(v, 0)) }, { key: 'open', label: 'Open', format: (v) => (v ? 'yes' : 'no') }], rows: ros },
   });
@@ -329,15 +357,15 @@ function renderGantt(host, ros, now, r, ctx) {
   const chart = h('div', { class: 'rr-gantt' });
   scroll.append(chart);
   f.body.append(scroll, h('div', { class: 'rr-key', 'aria-hidden': 'true' },
-    h('span', {}, h('i', { style: { background: 'rgba(185,200,214,0.55)' } }), 'Open, inside quote'),
+    h('span', {}, h('i', { style: { background: 'rgba(185,200,214,0.55)' } }), byMode('Open, on time', 'Open, inside quote')),
     h('span', {}, h('i', { style: { background: 'rgba(185,200,214,0.22)' } }), 'Returned'),
-    h('span', {}, h('i', { class: 'rr-key-late' }), 'Past quoted due'),
+    h('span', {}, h('i', { class: 'rr-key-late' }), byMode('Past the promised date', 'Past quoted due')),
     h('span', {}, h('i', { style: { background: C.urgent } }), `Critical: > ${fmtInt(CRITICAL_LATE_D)} d past due`),
-    h('span', {}, h('i', { style: { background: C.text, width: '2px', height: '12px' } }), 'Quoted due date')));
+    h('span', {}, h('i', { style: { background: C.text, width: '2px', height: '12px' } }), byMode('Promised date', 'Quoted due date'))));
   const topOverdue = overdue.slice().sort((a, b) => ((b.late_d ?? 0) - (a.late_d ?? 0)) || (!!b.planted - !!a.planted)).slice(0, 3);
   if (topOverdue.length) {
     const chase = h('div', { class: 'rr-chase', role: 'list', 'aria-label': 'Overdue repair orders to chase first' },
-      h('div', { class: 'rr-chase-head' }, h('span', {}, 'Chase first'), h('span', { class: 'rr-chase-rule' }, '· most days past quoted due'), overdue.length > topOverdue.length ? h('span', { class: 'rr-chase-more' }, `+ ${fmtInt(overdue.length - topOverdue.length)} more overdue in the table below`) : null),
+      h('div', { class: 'rr-chase-head' }, h('span', {}, 'Chase first'), h('span', { class: 'rr-chase-rule' }, byMode('· most days past the promised date', '· most days past quoted due')), overdue.length > topOverdue.length ? h('span', { class: 'rr-chase-more' }, `+ ${fmtInt(overdue.length - topOverdue.length)} more ${byMode('late', 'overdue')} in the table below`) : null),
       ...topOverdue.map((o) => h('div', { class: `rr-alert ${isCritical(o) ? 'is-crit' : ''}`, role: 'listitem' },
         h('span', { class: 'rr-alert-late' }, isCritical(o) ? icon('alert', { label: 'critical' }) : null, `+${fmtDays(o.late_d)}`),
         h('span', { class: 'rr-alert-id mono' }, o.serial),
@@ -401,7 +429,7 @@ function drawGantt(el, rows, now, w) {
   const ih = yCur;
   g.append('g').selectAll('rect').data(bands).join('rect').attr('class', 'rr-shop-band').attr('x', -labelW + 4).attr('width', iw + labelW - 4).attr('y', (b) => b.y).attr('height', (b) => b.h).attr('rx', 6);
   g.append('g').selectAll('text').data(bands).join('text').attr('class', 'rr-shop-label').attr('x', -labelW + 12).attr('y', (b) => b.y + 17)
-    .text((b) => { const od = rows.filter((o) => o.shop === b.shop && o.open && o.overdue).length; return `${shopLabel(b.shop)} · ${b.n} RO${b.n === 1 ? '' : 's'}${od && od < b.n ? ` · ${od} overdue` : ''}`; });
+    .text((b) => { const od = rows.filter((o) => o.shop === b.shop && o.open && o.overdue).length; return `${shopLabel(b.shop)} · ${b.n} ${isSimple() ? 'job' : 'RO'}${b.n === 1 ? '' : 's'}${od && od < b.n ? ` · ${od} ${isSimple() ? 'late' : 'overdue'}` : ''}`; });
   axisBottom(g.append('g'), x, { ticks: narrow ? 3 : 6, format: (v) => fmtWeek(Math.floor(v / HPW)), height: ih });
   if (now != null) {
     g.append('line').attr('class', 'rr-now').attr('x1', x(now)).attr('x2', x(now)).attr('y1', 0).attr('y2', ih);
@@ -437,10 +465,11 @@ function renderTatDist(host, r) {
   const dists = (r.tat_distribution || []).filter((d) => Array.isArray(d.counts) && d.counts.length);
   if (!dists.length) return null;
   const slow = dists.slice().sort((a, b) => (b.mean_d / b.quoted_mean_d) - (a.mean_d / a.quoted_mean_d))[0];
+  const S = isSimple();
   const f = chartFrame(host, {
-      implication: 'Shop turnaround runs longer than quoted, so float sized on quotes comes up short.',
-    headline: `${shopLabel(slow.shop)} averages ${fmtDays(slow.mean_d)} against ${fmtDays(slow.quoted_mean_d)} quoted; one in ten takes over ${fmtDays(slow.p90_d)}`,
-    subtitle: `Share of completed ROs by shop TAT · ${slow.bin_width_d}-day bins · solid = actual mean, dashed = quoted · ${dists.map((d) => `${shopLabel(d.shop)} n=${fmtInt(d.n)}`).join(' · ')}`,
+    implication: byMode('Shops take longer than they promise, so a spares pool sized on promises comes up short.', 'Shop turnaround runs longer than quoted, so float sized on quotes comes up short.'),
+    headline: S ? `${shopLabel(slow.shop)} takes ${fmtDays(slow.mean_d)} on average against ${fmtDays(slow.quoted_mean_d)} promised; one in ten takes over ${fmtDays(slow.p90_d)}` : `${shopLabel(slow.shop)} averages ${fmtDays(slow.mean_d)} against ${fmtDays(slow.quoted_mean_d)} quoted; one in ten takes over ${fmtDays(slow.p90_d)}`,
+    subtitle: S ? `Share of finished repairs by ${termText('tat')}, in ${slow.bin_width_d}-day steps. Solid line = actual average, dashed = promised. ${dists.map((d) => `${shopLabel(d.shop)}: ${fmtInt(d.n)} jobs`).join(' · ')}` : `Share of completed ROs by shop TAT · ${slow.bin_width_d}-day bins · solid = actual mean, dashed = quoted · ${dists.map((d) => `${shopLabel(d.shop)} n=${fmtInt(d.n)}`).join(' · ')}`,
     provenance: prov(dists[0], prov(r.meta)), source: 'rotables.json → tat_distribution',
     table: { columns: [{ key: 'shop', label: 'Shop', format: shopLabel }, { key: 'n', label: 'ROs', num: true, format: fmtInt }, { key: 'quoted_mean_d', label: 'Quoted mean', num: true, format: fmtDays }, { key: 'mean_d', label: 'Actual mean', num: true, format: fmtDays }, { key: 'median_d', label: 'Median', num: true, format: fmtDays }, { key: 'p90_d', label: 'p90', num: true, format: fmtDays }], rows: dists },
   });
@@ -482,13 +511,14 @@ function renderTat(host, r) {
   const late = rows.filter((t) => t.actual_mean_d > t.quoted_d);
   const worst = rows.slice().sort((a, b) => (b.actual_mean_d - b.quoted_d) - (a.actual_mean_d - a.quoted_d))[0];
   const byShop = shops.map((s) => { const rs = rows.filter((t) => t.shop === s); return { shop: s, n: rs.length, ratio: median(rs.map((t) => t.actual_mean_d / t.quoted_d)) }; });
-  const headline = rows.length
-    ? `${fmtInt(late.length)} of ${fmtInt(rows.length)} PN–shop pairs run slower than quoted${worst ? `; ${worst.pn} is ${fmtDays(worst.actual_mean_d - worst.quoted_d)} over` : ''}`
-    : 'TAT comparison not run';
+  const S = isSimple();
+  const headline = !rows.length ? 'TAT comparison not run' : S
+    ? `${fmtInt(late.length)} of ${fmtInt(rows.length)} part and shop pairs take longer than promised${worst ? `; ${worst.pn} is ${fmtDays(worst.actual_mean_d - worst.quoted_d)} over` : ''}`
+    : `${fmtInt(late.length)} of ${fmtInt(rows.length)} PN–shop pairs run slower than quoted${worst ? `; ${worst.pn} is ${fmtDays(worst.actual_mean_d - worst.quoted_d)} over` : ''}`;
   const f = chartFrame(host, {
-      implication: 'Plan on measured turnaround, not the quote, for the shops that run late.',
+    implication: byMode('For shops that run late, plan on the measured repair time, not the promise.', 'Plan on measured turnaround, not the quote, for the shops that run late.'),
     headline,
-    subtitle: `Quoted vs actual mean TAT (whisker to p90), one dot per PN × shop · ${byShop.map((b) => `${shopLabel(b.shop)} median ${fmtNum(b.ratio, 2)}×`).join(' · ')}`,
+    subtitle: S ? 'Promised against actual repair time, one dot per part and shop. The whisker reaches the slowest one in ten. Dots above the line run late.' : `Quoted vs actual mean TAT (whisker to p90), one dot per PN × shop · ${byShop.map((b) => `${shopLabel(b.shop)} median ${fmtNum(b.ratio, 2)}×`).join(' · ')}`,
     provenance: prov(r.tat?.[0], prov(r.meta)), source: 'rotables.json → tat',
     table: { columns: [{ key: 'pn', label: 'PN' }, { key: 'shop', label: 'Shop', format: shopLabel }, { key: 'quoted_d', label: 'Quoted', num: true, format: fmtDays }, { key: 'actual_mean_d', label: 'Actual mean', num: true, format: fmtDays }, { key: 'p90_d', label: 'p90', num: true, format: fmtDays }, { key: 'n', label: 'ROs', num: true, format: fmtInt }], rows },
   });
@@ -508,11 +538,11 @@ function renderTat(host, r) {
     gridY(g.append('g'), y, iw, 4);
     axisLeft(g.append('g'), y, { ticks: 4, format: (v) => `${v} d` });
     axisBottom(g.append('g'), x, { ticks: w < 480 ? 3 : 5, format: (v) => `${v} d`, height: ih });
-    dl(g, { x: iw, y: ih + 30, text: 'QUOTED TAT →', anchor: 'end', color: C.faint });
+    dl(g, { x: iw, y: ih + 30, text: byMode('PROMISED REPAIR TIME →', 'QUOTED TAT →'), anchor: 'end', color: C.faint });
     // y = x reference
     const dmax = Math.min(x.domain()[1], y.domain()[1]);
-    refLine(g, { x1: x(0), y1: y(0), x2: x(dmax), y2: y(dmax), label: 'on quote', dx: -4, dy: 14, anchor: 'end' });
-    dl(g, { x: 6, y: 6, text: 'SLOWER THAN QUOTED ↑', color: C.faint });
+    refLine(g, { x1: x(0), y1: y(0), x2: x(dmax), y2: y(dmax), label: byMode('on time', 'on quote'), dx: -4, dy: 14, anchor: 'end' });
+    dl(g, { x: 6, y: 6, text: byMode('SLOWER THAN PROMISED ↑', 'SLOWER THAN QUOTED ↑'), color: C.faint });
     const r0 = d3().scaleSqrt().domain([0, d3().max(rows, (t) => t.n || 1)]).range([2.5, 7]);
     const pts = g.append('g').selectAll('g').data(rows).join('g').attr('transform', (t) => `translate(${x(t.quoted_d)},0)`);
     pts.filter((t) => t.p90_d != null).append('line').attr('y1', (t) => y(t.actual_mean_d)).attr('y2', (t) => y(t.p90_d)).attr('stroke', (t) => colorOf(t.shop)).attr('stroke-opacity', 0.45);
@@ -525,7 +555,7 @@ function renderTat(host, r) {
       // annotate into the empty lower-left / upper-left space, away from the point cloud
       const wx = x(worst.quoted_d), wy = y(worst.actual_mean_d);
       const cx = d3().mean(rows, (t) => x(t.quoted_d));
-      annotate(g, { x: wx, y: wy, dx: wx > cx ? -Math.min(wx - 8, 64) : 40, dy: wy < 60 ? 40 : -30, title: worst.pn, sub: `+${fmtDays(worst.actual_mean_d - worst.quoted_d)} vs quote` });
+      annotate(g, { x: wx, y: wy, dx: wx > cx ? -Math.min(wx - 8, 64) : 40, dy: wy < 60 ? 40 : -30, title: worst.pn, sub: `+${fmtDays(worst.actual_mean_d - worst.quoted_d)} ${byMode('late', 'vs quote')}` });
     }
   });
 }
@@ -541,6 +571,7 @@ function accelAssumption(r, method) {
 
 function exampleInputs(ex, r) {
   const tatRow = (r.tat || []).find((t) => t.pn === ex.pn);
+  const rec = r.recommended_id || 'I125';
   return {
     pn: ex.pn, station: ex.station || null,
     rate: num(pick(ex, 'rate_per_30d', 'removal_rate_per_30d', 'removals_per_30d')),
@@ -548,13 +579,14 @@ function exampleInputs(ex, r) {
     spares: num(pick(ex, 'spares', 'total_spares')) ?? (num(ex.current) != null ? num(ex.current) + (num(ex.loop_units) ?? 0) : null),
     loop: num(ex.loop_units) ?? 0,
     // S = shelf + units already in the repair loop (exporter spares_total when present, else derived)
-    presets: [['P0', ex.p0_units, 'P0'], ['P1', ex.p1_units, 'P1'], ['P2', ex.p2_units, 'P2'], [`${r.recommended_id || 'I125'} option`, ex.rec_units ?? ex.recommended, 'recommended']].filter(([, v]) => num(v) != null)
-      .map(([k, v, sk]) => [k, num(ex.spares_total?.[sk]) ?? num(v) + (num(ex.loop_units) ?? 0)]),
+    presets: [['P0', ex.p0_units, 'P0'], ['P1', ex.p1_units, 'P1'], ['P2', ex.p2_units, 'P2'], [rec, ex.rec_units ?? ex.recommended, 'recommended']].filter(([, v]) => num(v) != null)
+      .map(([code, v, sk]) => ({ code, value: num(ex.spares_total?.[sk]) ?? num(v) + (num(ex.loop_units) ?? 0), shelf: num(v) })),
     desc: ex.desc || '', deadline: ex.deadline || '', planted: ex.planted || null,
     cost: num(pick(ex, 'unit_cost_aed', 'unit_cost')),
     recommended: num(ex.recommended),
     reason: ex.reason || '',
-    stationView: ex.station_view || null,
+    // A10: per-outstation inputs (rate at the station, resupply time from AUH, the plans' units there)
+    stationViews: Array.isArray(ex.station_views) ? ex.station_views : [],
     provenance: ex.provenance || prov(r.meta),
   };
 }
@@ -565,18 +597,49 @@ const fmtAvail = (v) => (v == null ? '—' : v > 0.9995 ? '> 99.9%' : fmtPct(v, 
 const fmtEbo = (v) => (v == null ? '—' : v < 0.01 ? '< 0.01' : fmtNum(v, 2));
 /** Expected wait: hours under two days ("< 1 h", "5 h"), days above ("3.2 d"). */
 const fmtWait = (d) => (d == null ? '—' : d * 24 < 1 ? '< 1 h' : d < 2 ? `${fmtInt(d * 24)} h` : `${fmtNum(d, 1)} d`);
+const cap1 = (s) => String(s).replace(/^./, (c) => c.toUpperCase());
+/** A station view is usable only when every outstation input is present. */
+const svOk = (sv) => !!sv && num(sv.rate_per_30d) != null && num(sv.resupply_days) != null && !!sv.units && num(sv.units.P2) != null && sv.station;
+
 function renderFloatCalc(host, r, method, ctx) {
+  const S = isSimple();
   ctxRec = r.recommended_id || null;
+  const rec = ctxRec || 'I125';
+  const P = ctx.data.parts || {};
+  const partsByPn = new Map((P.parts || []).map((p) => [p.pn, p]));
+  const modes = r.calculator_modes || {};
   const examples = (r.float_examples || []).map((ex) => exampleInputs(ex, r));
   const accel = accelAssumption(r, method);
   const want = ctx.params.pn;
-  let cur = examples.find((e) => e.pn === want) || examples.find((e) => e.planted === 'PS1') || examples[0] || { pn: null, rate: null, tat: null, spares: null, cost: null };
+  let cur = examples.find((e) => e.pn === want) || examples.find((e) => e.planted === 'PS1') || examples[0] || { pn: null, rate: null, tat: null, spares: null, cost: null, presets: [], stationViews: [] };
+  // A10: two clearly labelled views. hub = pooled float over the network repair-loop time; outstation = one station's
+  // own shelf over the resupply time from AUH (rotables.json station_views). Deep link: ?view=outstation&station=BOM
+  let calcMode = ctx.params.view === 'outstation' ? 'outstation' : 'hub';
+  let station = ctx.params.station || null;
+  /** Why the outstation view is off for this part (null = available). */
+  const outstationIssue = (ex) => {
+    if (r.outstation_mode !== 'enabled') return byMode('The outstation view is off: this export does not include airport resupply inputs.', `Outstation view disabled: outstation_mode is "${r.outstation_mode ?? 'missing'}" in rotables.json.`);
+    if (!ex?.stationViews?.length) return byMode('The outstation view is off for this part: no airport resupply inputs were exported.', 'Outstation view disabled for this PN: no station_views exported.');
+    if (ex.stationViews.some((sv) => !svOk(sv))) return byMode('The outstation view is off for this part: some airport resupply inputs are missing.', 'Outstation view disabled for this PN: a station view is missing its rate, resupply time or units.');
+    return null;
+  };
+  const curView = () => (calcMode === 'outstation' ? cur.stationViews.find((sv) => sv.station === station) || null : null);
 
   host.append(h('div', { class: 'card-head' },
-    h('div', {}, h('div', { class: 'card-kicker' }, 'Float calculator · METRIC-inspired (Palm’s theorem), not full METRIC'), h('h3', { class: 'card-title' }, 'How many spares does a rotable need to cover its repair pipeline?')),
+    h('div', {}, h('div', { class: 'card-kicker' }, byMode('Spares calculator · a simple formula, not the full simulation', 'Float calculator · METRIC-inspired (Palm’s theorem), not full METRIC')), h('h3', { class: 'card-title' }, byMode('How many spares does a repairable part need to cover the wait?', 'How many spares does a rotable need to cover its repair pipeline?'))),
     h('div', { class: 'row' }, ...[...new Set(['DERIVED', cur.provenance || 'SIMULATED'])].map((x) => provChip(x)))));
 
-  const VT = { rate: (v) => `${fmtNum(v, 2)} removals per 30 days`, tat: (v) => `${fmtNum(v, 1)} days`, spares: (v) => `${fmtInt(v)} spares`, cost: (v) => fmtAED(v), extra: (v) => `${fmtInt(v)} more spare${v === 1 ? '' : 's'}`, cut: (v) => `${fmtInt(v)} day${v === 1 ? '' : 's'} shorter TAT` };
+  // ---- view switch (hub pooled / one outstation)
+  const modeSeg = h('div', { class: 'seg fc-mode-seg', role: 'radiogroup', 'aria-label': 'Calculator view', dataset: { role: 'calc-mode' } });
+  const stationSel = h('select', { class: 'select fc-station-sel', id: 'fc-station', 'aria-label': 'Outstation' });
+  const stationField = h('label', { class: 'fc-station-pick', for: 'fc-station' }, h('span', { class: 'fc-label' }, 'Airport'), stationSel);
+  const modeLabel = h('p', { class: 'fc-mode-label', dataset: { role: 'calc-mode-label' }, 'aria-live': 'polite' });
+  const modeNote = h('p', { class: 'fc-mode-note', dataset: { role: 'outstation-disabled' }, role: 'note', hidden: true });
+  const modeRow = h('div', { class: 'fc-mode' }, h('div', { class: 'fc-mode-row' }, h('span', { class: 'fc-label' }, 'View'), modeSeg, stationField), modeLabel, modeNote);
+  const escHost = h('div', { class: 'fc-esc' });
+  host.append(modeRow, escHost);
+
+  const VT = { rate: (v) => `${fmtNum(v, 2)} removals per 30 days`, tat: (v) => `${fmtNum(v, 1)} days`, spares: (v) => `${fmtInt(v)} spares`, cost: (v) => fmtAED(v), extra: (v) => `${fmtInt(v)} more spare${v === 1 ? '' : 's'}`, cut: (v) => `${fmtInt(v)} day${v === 1 ? '' : 's'} shorter` };
   const mkNum = (key, label, { min = 0, step = 1, hint, grouped = false } = {}) => {
     const id = `fc-${key}`;
     // grouped inputs show thousands separators ("47,977"), so they are text inputs parsed by num(stripCommas)
@@ -584,55 +647,69 @@ function renderFloatCalc(host, r, method, ctx) {
       : h('input', { class: 'input', type: 'number', id, min, step, inputmode: 'decimal', dataset: { input: key } });
     const range = h('input', { class: 'slider', type: 'range', min, step, 'aria-label': `${label} slider`, dataset: { range: key } });
     const vt = bindValueText(range, VT[key] || String);
-    return { key, input, range, vt, el: h('div', { class: 'fc-field' }, h('label', { for: id }, label), input, range, hint ? h('div', { class: 'fc-hint' }, hint) : null) };
+    const lab = h('label', { for: id }, label);
+    const hintEl = h('div', { class: 'fc-hint' }, hint || '');
+    return { key, input, range, vt, lab, hintEl, el: h('div', { class: 'fc-field' }, lab, input, range, hintEl) };
   };
   const sel = h('select', { class: 'select', id: 'fc-pn', 'aria-label': 'Prefill from rotable' },
-    examples.map((e) => h('option', { value: e.pn }, `${e.pn}${e.desc ? ` · ${e.desc}` : ''}${e.planted ? ` · ${e.planted}` : ''}`)));
+    examples.map((e) => h('option', { value: e.pn }, `${e.pn}${e.desc ? ` · ${e.desc}` : ''}${e.planted && !S ? ` · ${e.planted}` : ''}`)));
   if (cur.pn) sel.value = cur.pn;
-  const fRate = mkNum('rate', 'Removals per 30 d', { step: 0.01, hint: 'Unscheduled removals (U/S) at this stocking point' });
-  const fTat = mkNum('tat', 'Pipeline TAT, days', { step: 0.1, hint: 'Removal → serviceable again (transport + shop + return)' });
-  const fSp = mkNum('spares', 'Spares (S)', { step: 1, hint: 'Total spares: shelf + pipeline' });
-  const fCost = mkNum('cost', 'Unit cost, AED', { step: 1, hint: 'Exchange / purchase price per serial', grouped: true }); // step 1: the slider holds the field's exact value (47,977)
+  const fRate = mkNum('rate', 'Removals per 30 d', { step: 0.01 });
+  const fTat = mkNum('tat', 'Pipeline TAT, days', { step: 0.1 });
+  const fSp = mkNum('spares', 'Spares (S)', { step: 1 });
+  const fCost = mkNum('cost', byMode('Price of one part, AED', 'Unit cost, AED'), { step: 1, hint: byMode('Price to buy or swap one part', 'Exchange / purchase price per serial'), grouped: true }); // step 1: the slider holds the field's exact value (47,977)
   const fields = [fRate, fTat, fSp, fCost];
+  /** Field labels and hints name what the current view feeds in. */
+  const FIELD_TEXT = {
+    hub: {
+      rate: [byMode('Removals per 30 days', 'Removals per 30 d'), byMode('Broken parts taken off across the network', 'Unscheduled removals (U/S), network')],
+      tat: [byMode('Repair time, days', 'Pipeline TAT, days'), byMode('From removal to ready again, with shipping', `Removal → serviceable again (transport + shop + return) · ${modes.hub?.basis || 'network repair-loop time'}`)],
+      spares: [byMode('Spares in the pool', 'Spares (S)'), byMode('Spares on shelves plus parts already in repair', 'Total spares: shelf + pipeline')],
+    },
+    outstation: {
+      rate: [byMode('Removals per 30 days at this airport', 'Station removals per 30 d'), byMode('Broken parts taken off at this airport only', 'Unscheduled removals at this station')],
+      tat: [byMode('Resupply time from AUH, days', 'Resupply time from AUH, days'), byMode('Time to send a good part from the home base, with the wait there', `Transit from AUH + expected hub wait · ${modes.outstation?.basis || 'resupply time from AUH'}`)],
+      spares: [byMode('Spares on this airport’s shelf', 'Station units (S)'), byMode('Only this airport’s own spares count', 'Own units only (no pooling)')],
+    },
+  };
   const reason = h('div', { class: 'fc-hint fc-wide' });
   const presetBox = h('div', { class: 'fc-presets fc-wide', role: 'group', 'aria-label': 'Set spares to a policy level' });
+  const presetLabel = h('span', { class: 'fc-label' });
   const inputs = h('div', { class: 'fc-inputs' },
-    h('div', { class: 'fc-field fc-wide' }, h('label', { for: 'fc-pn' }, 'Prefill from a rotable'), sel), reason, ...fields.map((f) => f.el), h('div', { class: 'fc-field fc-wide' }, h('span', { class: 'fc-label' }, 'Set S to a policy level · shelf + in loop = S'), presetBox));
+    h('div', { class: 'fc-field fc-wide' }, h('label', { for: 'fc-pn' }, byMode('Fill in from a repairable part', 'Prefill from a rotable')), sel), reason, ...fields.map((f) => f.el), h('div', { class: 'fc-field fc-wide' }, presetLabel, presetBox));
 
   // outputs
-  const out = (key, label, isKey) => { const v = h('div', { class: 'fc-out-value', dataset: { out: key } }, '—'); return { v, el: h('div', { class: `fc-out ${isKey ? 'is-key' : ''}` }, h('div', { class: 'fc-out-label' }, label), v) }; };
+  const out = (key, label, isKey) => { const v = h('div', { class: 'fc-out-value', dataset: { out: key } }, '—'); const l = h('div', { class: 'fc-out-label' }, label); return { v, l, el: h('div', { class: `fc-out ${isKey ? 'is-key' : ''}` }, l, v) }; };
   const oMu = out('pipeline_mean', 'Pipeline mean λT');
-  const oA = out('availability', 'Availability P(X<S)', true);
-  const oE = out('ebo', 'Expected backorders');
-  const oW = out('expected_wait_days', 'Expected wait');
-  const oCap = out('capital_aed', 'Float capital');
+  const oA = out('availability', S ? cap1(termText('fill_rate')) : 'Availability P(X<S)', true);
+  const oE = out('ebo', S ? cap1(termText('ebo')) : 'Expected backorders');
+  const oW = out('expected_wait_days', byMode('Average wait per removal', 'Expected wait'));
+  const oCap = out('capital_aed', byMode('Money tied up in these spares', 'Float capital'));
   const outs = h('div', { class: 'fc-outs', role: 'status', 'aria-live': 'polite' }, oA.el, oMu.el, oE.el, oW.el, oCap.el);
-  // C9 (wave 4): the pooled network figure next to one outstation's own float, with a one-line explanation
   const stationBox = h('div', { class: 'fc-station', dataset: { out: 'station' } });
   const results = h('div', { class: 'fc-results' }, outs, stationBox);
   const chartHost = h('div');
 
   // levers
-  const lN = mkNum('extra', 'Buy N more spares', { min: 0, step: 1 });
+  const lN = mkNum('extra', byMode('Buy this many more spares', 'Buy N more spares'), { min: 0, step: 1 });
   const lD = mkNum('cut', 'Cut TAT by d days', { min: 0, step: 1 });
   const leverBox = h('div', { class: 'fc-levers', role: 'region', 'aria-label': 'Lever comparison' });
   const verdict = h('p', { class: 'fc-verdict', dataset: { out: 'verdict' } });
-  const assume = h('div', { class: 'fc-assume' },
-    accel ? [provChip(accel.provenance), h('span', {}, `Repair acceleration fee ${fmtAED(accel.value)} per day per unit (${accel.provenance === 'ASSUMED' ? 'ASSUMED' : accel.provenance}; ${accel.source})`)]
-      : [provChip('ASSUMED'), h('span', {}, 'Repair acceleration fee: not exported — TAT-cut cost not run')]);
+  const assume = h('div', { class: 'fc-assume' });
 
   // grid areas: inputs left / outputs + chart right at desktop; outputs first on narrow screens
   inputs.classList.add('fc-area-in'); results.classList.add('fc-area-out'); chartHost.classList.add('fc-area-chart');
   host.append(h('div', { class: 'fc-grid' }, inputs, results, chartHost));
-  host.append(h('div', { class: 'section-title mt-3' }, h('h2', { class: 't-16' }, 'Lever comparison: buy spares vs cut TAT'), h('span', { class: 'rule' })));
-  // wave 5: the lever tool compares at a stocking point where the levers bite. Default: the station view (e.g. BOM, 2 units);
-  // the reader can switch to the calculator inputs above.
-  let leverBasis = 'inputs'; // wave C (AV2-14): the levers act on the repair pipeline, i.e. the pooled network view
+  const leverTitle = h('h2', { class: 't-16' });
+  host.append(h('div', { class: 'section-title mt-3' }, leverTitle, h('span', { class: 'rule' })));
+  // the levers act on the calculator inputs of the current view (hub pooled or one outstation)
   const basisSeg = h('div', { class: 'seg fc-basis', role: 'radiogroup', 'aria-label': 'Compare the levers at' });
   host.append(h('div', { class: 'fc-basis-row' }, h('span', { class: 'fc-label' }, 'Compare at'), basisSeg), h('div', { class: 'fc-lever-controls' }, lN.el, lD.el), leverBox, verdict, assume);
-  host.append(h('p', { class: 'rr-method-note mt-2' }, 'Palm’s theorem: with Poisson removals at rate λ and any repair-time distribution of mean T, the number of units in the pipeline is Poisson(λT). Availability = P(X < S); EBO = E[max(X − S, 0)]; expected wait = EBO / λ. Single site, infinite repair capacity, no condemnation — hence “METRIC-inspired”, not a full multi-echelon METRIC.'));
+  host.append(S
+    ? h('p', { class: 'rr-method-note mt-2' }, 'The calculator uses a standard formula for repairable spares. It assumes one stocking point, no limit on shop space and no scrapped parts. Expert mode shows the maths.')
+    : h('p', { class: 'rr-method-note mt-2' }, 'Palm’s theorem: with Poisson removals at rate λ and any repair-time distribution of mean T, the number of units in the pipeline is Poisson(λT). Availability = P(X < S); EBO = E[max(X − S, 0)]; expected wait = EBO / λ. Single site, infinite repair capacity, no condemnation — hence “METRIC-inspired”, not a full multi-echelon METRIC. Hub view: T = network repair-loop time; outstation view: T = resupply time from AUH.'));
 
-  const frame = chartFrame(chartHost, { implication: 'Pooled availability flatters: the station\'s own units decide whether an aircraft waits.', headline: 'Float calculator', subtitle: 'Units in the repair pipeline', provenance: 'DERIVED', source: 'lib/floatcalc.js (mirrors src/gnm/policy/analytic.py)' });
+  const frame = chartFrame(chartHost, { implication: byMode('A pooled figure can flatter: at an outstation only the spares on that shelf decide whether a plane waits.', 'Pooled availability flatters: the station\'s own units decide whether an aircraft waits.'), headline: 'Float calculator', subtitle: 'Units in the repair pipeline', provenance: 'DERIVED', source: 'lib/floatcalc.js (mirrors src/gnm/policy/analytic.py)' });
   frame.root.dataset.story = 'float-pipeline';
 
   const state = { rate: null, tat: null, spares: null, cost: null, extra: 1, cut: 10 };
@@ -648,15 +725,85 @@ function renderFloatCalc(host, r, method, ctx) {
     Object.entries(all).forEach(([k, f]) => { if (k === key) return; f.input.value = f.input.dataset.grouped ? (state[k] == null ? '' : fmtCount(state[k])) : state[k] ?? ''; f.range.value = state[k] ?? 0; f.vt?.(); });
   };
   const round = (v, d) => (v == null ? null : Math.round(v * 10 ** d) / 10 ** d);
+  const presetText = (code, value, shelf, loop) => {
+    const nm = S ? displayName(code, { mode: 'short' }) : code;
+    if (S) return `${nm}: ${fmtInt(value)}`;
+    return loop ? `${nm} · ${fmtInt(shelf ?? value - loop)} + ${fmtInt(loop)} = ${fmtInt(value)}` : `${nm} · S = ${fmtInt(value)}`;
+  };
+
+  /** View switch + labels for the current mode and part. */
+  function renderMode() {
+    const issue = outstationIssue(cur);
+    if (issue && calcMode === 'outstation') calcMode = 'hub';
+    const views = issue ? [] : cur.stationViews;
+    if (calcMode === 'outstation' && !views.some((sv) => sv.station === station)) {
+      // default station: the exporter's highlighted station view when present, else the busiest outstation
+      const hi = (r.float_examples || []).find((e) => e.pn === cur.pn)?.station_view?.station;
+      station = views.find((sv) => sv.station === hi)?.station || views.slice().sort((a, b) => b.rate_per_30d - a.rate_per_30d)[0]?.station || null;
+    }
+    const optLabel = { hub: byMode('Hub pool', modes.hub?.label || 'Hub pooled view'), outstation: byMode('One outstation', modes.outstation?.label || 'Outstation view') };
+    modeSeg.replaceChildren(...['hub', 'outstation'].map((m) => h('button', {
+      type: 'button', role: 'radio', 'aria-checked': String(calcMode === m), dataset: { mode: m }, disabled: m === 'outstation' && !!issue,
+      title: m === 'outstation' && issue ? issue : '', onclick: () => setMode(m),
+    }, optLabel[m])));
+    stationSel.replaceChildren(...views.map((sv) => h('option', { value: sv.station }, `${sv.station}${sv.invalid_recommendation ? ' · flagged' : ''}`)));
+    if (station) stationSel.value = station;
+    stationField.hidden = calcMode !== 'outstation';
+    modeNote.hidden = !issue;
+    modeNote.replaceChildren(...(issue ? [icon('info'), h('span', {}, issue)] : []));
+    const basis = calcMode === 'outstation' ? (modes.outstation?.basis || 'resupply time from AUH') : (modes.hub?.basis || 'network repair-loop time');
+    modeLabel.dataset.mode = calcMode;
+    modeLabel.replaceChildren(
+      h('strong', {}, calcMode === 'outstation' ? `${optLabel.outstation} · ${station}` : optLabel.hub), ' · uses the ', h('span', { dataset: { role: 'calc-basis' } }, basis), '. ',
+      calcMode === 'outstation'
+        ? byMode(`Only the spares on ${station}’s own shelf count. AUH refills that shelf.`, cap1(modes.outstation?.note || ''))
+        : byMode('All spares are pooled. They cover parts that are away for repair.', cap1(modes.hub?.note || '')));
+    const ft = FIELD_TEXT[calcMode];
+    [['rate', fRate], ['tat', fTat], ['spares', fSp]].forEach(([k, f]) => { f.lab.textContent = ft[k][0]; f.hintEl.textContent = ft[k][1]; f.range.setAttribute('aria-label', `${ft[k][0]} slider`); });
+    oMu.l.textContent = S ? (calcMode === 'outstation' ? 'Parts on the way from AUH (average)' : 'Parts away for repair (average)') : calcMode === 'outstation' ? 'Resupply pipeline mean λT' : 'Pipeline mean λT';
+    const cutWhat = calcMode === 'outstation' ? byMode('resupply time', 'resupply') : byMode('repair time', 'TAT');
+    lD.lab.textContent = S ? `Cut ${cutWhat} by this many days` : `Cut ${cutWhat} by d days`;
+    lD.range.setAttribute('aria-label', `${lD.lab.textContent} slider`);
+    leverTitle.textContent = S ? `Compare two fixes: buy spares or cut the ${cutWhat}` : `Lever comparison: buy spares vs cut ${cutWhat}`;
+    presetLabel.textContent = calcMode === 'outstation' ? byMode(`Set the spares to a plan’s level at ${station}`, `Set S to a policy’s units at ${station}`) : byMode('Set the spares to a plan’s level', 'Set S to a policy level · shelf + in loop = S');
+    // A7: the hero part's escalation text, from parts.json
+    escHost.replaceChildren(...[escalationBlock(partsByPn.get(cur.pn), { compact: true })].filter(Boolean));
+    assume.replaceChildren(...(calcMode === 'outstation'
+      ? []
+      : accel ? [provChip(accel.provenance), h('span', {}, S ? `Assumed fee to speed up a repair: ${fmtAED(accel.value)} per day per part.` : `Repair acceleration fee ${fmtAED(accel.value)} per day per unit (${accel.provenance === 'ASSUMED' ? 'ASSUMED' : accel.provenance}; ${accel.source})`)]
+        : [provChip('ASSUMED'), h('span', {}, 'Repair acceleration fee: not exported — TAT-cut cost not run')]));
+  }
+  function setMode(m) {
+    calcMode = m;
+    load(cur);
+    ctx.setParams({ view: calcMode === 'outstation' ? 'outstation' : '', station: calcMode === 'outstation' ? station || '' : '' });
+  }
+  stationSel.addEventListener('change', () => { station = stationSel.value; ctx.setParams({ station }); load(cur); });
+
   const load = (ex) => {
     cur = ex;
-    // wave C: open on P2's S (the core plan); removals to 1 decimal, TAT to whole days
-    const recS = (ex.presets || []).find(([k]) => k === 'P2')?.[1];
-    Object.assign(state, { rate: round(ex.rate, 1), tat: round(ex.tat, 0), spares: recS ?? ex.spares, cost: ex.cost });
-    lD.range.max = Math.max(10, Math.floor(ex.tat ?? 10));
+    renderMode();
+    const sv = curView();
+    let presets;
+    if (sv) {
+      // outstation: the station's own removals over the resupply time from AUH; S = that station's units
+      presets = [['P0', sv.units.P0], ['P1', sv.units.P1], ['P2', sv.units.P2], [rec, sv.units.recommended]].filter(([, v]) => num(v) != null).map(([code, v]) => ({ code, value: num(v), shelf: num(v) }));
+      Object.assign(state, { rate: round(num(sv.rate_per_30d), 6), tat: round(num(sv.resupply_days), 6), spares: num(sv.units.P2), cost: ex.cost });
+    } else {
+      // wave C: open on P2's S (the core plan); removals to 1 decimal, TAT to whole days
+      presets = ex.presets || [];
+      const recS = presets.find((p) => p.code === 'P2')?.value;
+      Object.assign(state, { rate: round(ex.rate, 1), tat: round(ex.tat, 0), spares: recS ?? ex.spares, cost: ex.cost });
+    }
+    lD.range.max = Math.max(10, Math.floor(state.tat ?? 10));
     if (state.tat != null && state.cut > state.tat) state.cut = Math.floor(state.tat / 2);
-    reason.replaceChildren(`${ex.deadline ? `${ex.deadline} (hypothetical deadline class) · ` : ''}${ex.station && ex.station !== 'network' ? `${ex.station} · ` : 'network float · '}spares include ${fmtInt(ex.loop ?? 0)} units already in the repair loop. `, ex.reason ? h('details', { class: 'fc-why' }, h('summary', {}, `Why the frontier option ${ctxRec || 'I125'} holds ${ex.recommended != null ? fmtInt(ex.recommended) : 'these'} base-stock units`), h('p', {}, ex.reason)) : '');
-    presetBox.replaceChildren(...(ex.presets || []).map(([k, v]) => h('button', { type: 'button', class: 'btn btn--sm', 'aria-pressed': 'false', dataset: { preset: k, value: v }, onclick: () => { state.spares = v; sync(null); compute(); } }, (ex.loop ? `${k} · ${fmtInt(v - ex.loop)} + ${fmtInt(ex.loop)} = ${fmtInt(v)}` : `${k} · S = ${fmtInt(v)}`))));
+    const loop = sv ? 0 : ex.loop ?? 0;
+    reason.replaceChildren(...(sv
+      ? [S ? `${sv.station}: only the spares on this airport’s shelf count.` : `${ex.deadline ? `${ex.deadline} (hypothetical deadline class) · ` : ''}${sv.station} · station units only, resupplied from AUH.`]
+      : [S ? `Hub pool: the spares include ${fmtInt(loop)} part${loop === 1 ? '' : 's'} already in the repair loop.` : `${ex.deadline ? `${ex.deadline} (hypothetical deadline class) · ` : ''}network float · spares include ${fmtInt(loop)} units already in the repair loop. `,
+        !S && ex.reason ? h('details', { class: 'fc-why' }, h('summary', {}, `Why the frontier option ${rec} holds ${ex.recommended != null ? fmtInt(ex.recommended) : 'these'} base-stock units`), h('p', {}, ex.reason)) : '']));
+    presetBox.replaceChildren(...presets.map((p) => h('button', { type: 'button', class: 'btn btn--sm', 'aria-pressed': 'false', title: displayName(p.code), dataset: { preset: p.code, value: p.value }, onclick: () => { state.spares = p.value; sync(null); compute(); } }, presetText(p.code, p.value, p.shelf, loop))));
+    cur.livePresets = presets;
     setRanges(); sync(null); compute();
   };
   [...fields, lN, lD].forEach((f) => {
@@ -672,108 +819,126 @@ function renderFloatCalc(host, r, method, ctx) {
   });
   sel.addEventListener('change', () => { const ex = examples.find((e) => e.pn === sel.value); if (ex) { ctx.setParams({ pn: ex.pn }); load(ex); } });
 
-  /** Station view: one outstation's own float (no pooling), with the pooled-vs-station callout. */
-  function renderStation(res) {
-    const sv = cur.stationView;
-    if (!sv || !sv.units) { stationBox.replaceChildren(); stationBox.hidden = true; return; }
+  /** Station box: in the outstation view, every plan's units at this station (exported, Palm) + the A9 flag. */
+  function renderStation() {
+    const sv = curView();
+    const pnFlags = (P.invalid_allocations || []).filter((f) => f.pn === cur.pn);
+    if (!sv) {
+      const n = outstationIssue(cur) ? 0 : cur.stationViews.length;
+      const kids = [];
+      if (n) kids.push(h('p', { class: 'fc-station-note' }, icon('info'), h('span', {}, byMode(`This is the hub pool. Switch to “One outstation” to see one of ${fmtInt(n)} airports and its own shelf.`, `Hub pooled view. The outstation view sizes one of ${fmtInt(n)} stations on its resupply time from AUH.`))));
+      if (pnFlags.length) kids.push(allocationFlagNote(pnFlags, { text: P.invalid_allocation_text, compact: true }));
+      stationBox.replaceChildren(...kids);
+      stationBox.hidden = !kids.length;
+      return;
+    }
     stationBox.hidden = false;
-    const opt = ctxRec || 'I125';
-    // wave C: P2 is the core plan (teal); the frontier option is a neutral secondary row
-    const rows = [['P0', 'P0', ''], ['P2', 'P2 · core', 'is-rec'], ['recommended', `${opt} · option`, 'is-opt']].filter(([k]) => sv.units[k] != null);
-    const p2U = sv.units.P2, p2A = sv.availability?.P2, p0U = sv.units.P0, p0A = sv.availability?.P0;
-    const rs = sv.basis === 'resupply' && sv.resupply_days != null;
     const fmtA = (v) => (v == null ? '—' : v > 0.9995 ? '> 99.9%' : v > 0.99 ? fmtPct(v, 1) : fmtPct(v, 0));
-    stationBox.replaceChildren(
-      h('div', { class: 'fc-station-head' }, h('span', { class: 'fc-out-label' }, `Station view · ${sv.station}`), h('span', { class: 'fc-hint' }, `${fmtNum(sv.rate_per_30d, 1)} removals / 30 d · ${rs ? `${fmtNum(sv.resupply_days, 1)}-day resupply from AUH (transit + expected hub wait), as P2 sizes it` : `${fmtInt(sv.loop_days)}-day loop`} · own units only`)),
-      h('div', { class: 'fc-station-rows' }, rows.map(([k, label, cls]) => h('div', { class: `fc-station-row ${cls}`, dataset: { station: k } },
-        h('span', { class: 'fc-station-k' }, label), h('span', { class: 'fc-station-u' }, `${fmtInt(sv.units[k])} unit${sv.units[k] === 1 ? '' : 's'}`), h('span', { class: 'fc-station-a' }, fmtA(sv.availability?.[k]))))),
-      h('p', { class: 'fc-station-note' }, icon('info'), h('span', {}, rs
-        ? `Two views. Network (pooled) view, above: the ${fmtAvail(res.availability)} sizes the whole float on the repair pipeline. Station view: an aircraft at ${sv.station} needs a unit on the shelf there, and the shelf is refilled from AUH in about ${fmtNum(sv.resupply_days, 1)} days. P2's ${fmtInt(p2U)} unit${p2U === 1 ? '' : 's'} give ${fmtA(p2A)}; P0's ${fmtInt(p0U)} give ${fmtA(p0A)}, which is where P0's AOG hours come from.`
-        : `Pooled vs station: the ${fmtAvail(res.availability)} above pools every spare. An aircraft at ${sv.station} waits for one of the ${fmtInt(p2U)} unit${p2U === 1 ? '' : 's'} there: ${fmtA(p2A)} available.`)));
+    const rows = [['P0', ''], ['P1', ''], ['P2', 'is-rec'], ['recommended', 'is-opt']].filter(([k]) => sv.units[k] != null);
+    const code = (k) => (k === 'recommended' ? rec : k);
+    const flagsHere = pnFlags.filter((f) => f.station === sv.station);
+    stationBox.replaceChildren(...[
+      h('div', { class: 'fc-station-head' }, h('span', { class: 'fc-out-label' }, byMode(`Each plan at ${sv.station}`, `Station view · ${sv.station} · exported`)), h('span', { class: 'fc-hint' }, S ? `${fmtNum(sv.rate_per_30d, 2)} removals a month · ${fmtNum(sv.resupply_days, 1)} days to resupply from AUH · own spares only` : `${fmtNum(sv.rate_per_30d, 3)} removals / 30 d · ${fmtNum(sv.resupply_days, 2)}-day resupply from AUH (transit + expected hub wait), as P2 sizes it · own units only`)),
+      h('div', { class: 'fc-station-rows' }, rows.map(([k, cls]) => h('div', { class: `fc-station-row ${cls}`, dataset: { station: k } },
+        h('span', { class: 'fc-station-k' }, S ? displayName(code(k), { mode: 'short' }) : `${code(k)}${k === 'P2' ? ' · core' : k === 'recommended' ? ' · option' : ''}`),
+        h('span', { class: 'fc-station-u' }, `${fmtInt(sv.units[k])} unit${sv.units[k] === 1 ? '' : 's'}`), h('span', { class: 'fc-station-a' }, fmtA(sv.availability?.[k]))))),
+      sv.invalid_recommendation || flagsHere.length
+        ? (flagsHere.length ? allocationFlagNote(flagsHere, { text: P.invalid_allocation_text, compact: true })
+          : h('div', { class: 'pi-alloc-flags is-compact', role: 'note', dataset: { role: 'invalid-allocations' } }, icon('alert'), h('p', {}, h('strong', {}, 'Flagged: '), P.invalid_allocation_text || 'invalid recommendation', '.')))
+        : null].filter(Boolean));
   }
   let stopChart = null;
   function compute() {
     [fRate, fTat, fSp, fCost, lN, lD].forEach((f) => fillPct(f.range));
     const { rate, tat, spares, cost, extra, cut } = state;
+    const sv = curView();
     const ok = [rate, tat, spares, cost].every((v) => v != null && v >= 0);
     if (!ok) {
       [oMu, oA, oE, oW, oCap].forEach((o) => (o.v.textContent = 'not run'));
-      frame.root.querySelector('.chart-headline').textContent = 'Enter removal rate, TAT, spares and unit cost to size the float';
-      frame.root.querySelector('.chart-subtitle').textContent = 'Units in the repair pipeline · Poisson(λT)';
+      frame.root.querySelector('.chart-headline').textContent = byMode('Enter the removals, time, spares and price to size the pool', 'Enter removal rate, TAT, spares and unit cost to size the float');
+      frame.root.querySelector('.chart-subtitle').textContent = byMode('Parts away at once', 'Units in the repair pipeline · Poisson(λT)');
       stopChart?.(); frame.body.replaceChildren(h('div', { class: 'state' }, 'not run'));
       leverBox.replaceChildren(); verdict.textContent = '';
       return;
     }
-    const S = Math.round(spares);
-    const res = floatCalc(rate, tat, S, cost);
-    oMu.v.textContent = `${fmtNum(res.pipeline_mean, 1)} units`;
+    const Sn = Math.round(spares);
+    const res = floatCalc(rate, tat, Sn, cost);
+    oMu.v.textContent = `${fmtNum(res.pipeline_mean, sv ? 2 : 1)} units`;
     oA.v.textContent = fmtAvail(res.availability);
     oE.v.textContent = fmtEbo(res.ebo);
     oW.v.textContent = fmtWait(res.expected_wait_days);
     // exact values ride along in data-value (the text is rounded for reading; tests compare the exact maths)
     Object.assign(oMu.v.dataset, { value: res.pipeline_mean }); Object.assign(oA.v.dataset, { value: res.availability });
     Object.assign(oE.v.dataset, { value: res.ebo }); Object.assign(oW.v.dataset, { value: res.expected_wait_days });
-    presetBox.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.value === S)));
-    renderStation(res);
+    presetBox.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.value === Sn)));
+    renderStation();
     oCap.v.textContent = fmtAED(res.capital_aed);
-    frame.root.querySelector('.chart-headline').textContent = `${fmtInt(S)} pooled spare${S === 1 ? '' : 's'} cover ${fmtAvail(res.availability)} of removals against a mean pipeline of ${fmtNum(res.pipeline_mean, 1)} units`;
-    frame.root.querySelector('.chart-subtitle').textContent = `P(k units in the repair pipeline), X ~ Poisson(λT = ${fmtNum(rate, 1)}/30 d × ${fmtInt(tat)} d)${cur.pn ? ` for ${cur.pn}` : ''} · bars at k ≥ S are shortages`;
+    const sp = `spare${Sn === 1 ? '' : 's'}`;
+    frame.root.querySelector('.chart-headline').textContent = sv
+      ? (S ? `${fmtInt(Sn)} ${sp} at ${sv.station} give${Sn === 1 ? 's' : ''} a ${fmtAvail(res.availability)} chance the part is on the shelf` : `${fmtInt(Sn)} station unit${Sn === 1 ? '' : 's'} at ${sv.station} cover${Sn === 1 ? 's' : ''} ${fmtAvail(res.availability)} of removals; resupply pipeline ${fmtNum(res.pipeline_mean, 2)}`)
+      : (S ? `${fmtInt(Sn)} pooled ${sp} give${Sn === 1 ? 's' : ''} a ${fmtAvail(res.availability)} chance the part is on the shelf` : `${fmtInt(Sn)} pooled spare${Sn === 1 ? '' : 's'} cover ${fmtAvail(res.availability)} of removals against a mean pipeline of ${fmtNum(res.pipeline_mean, 1)} units`);
+    frame.root.querySelector('.chart-subtitle').textContent = S
+      ? `How likely it is that a given number of parts are ${sv ? 'on the way from AUH' : 'away for repair'} at once. Red bars mean more are away than there are spares.`
+      : sv ? `P(k units in the resupply pipeline), X ~ Poisson(λT = ${fmtNum(rate, 3)}/30 d × ${fmtNum(tat, 2)} d) for ${cur.pn} at ${sv.station} · bars at k ≥ S are shortages`
+        : `P(k units in the repair pipeline), X ~ Poisson(λT = ${fmtNum(rate, 1)}/30 d × ${fmtInt(tat)} d)${cur.pn ? ` for ${cur.pn}` : ''} · bars at k ≥ S are shortages`;
     stopChart?.();
-    stopChart = drawPmf(frame, res.pipeline_mean, S, res);
-    // levers: at the station view (own units, own loop) or at the calculator inputs
-    const sv = cur.stationView;
-    const useSt = false;
-    basisSeg.replaceChildren(...[['inputs', `Network (pooled) view · S = ${fmtInt(S)}`]]
-      .map(([k, label]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String((useSt ? 'station' : 'inputs') === k), dataset: { basis: k }, onclick: () => { leverBasis = k; compute(); } }, label)));
-    const L = useSt ? { rate: sv.rate_per_30d, tat: sv.loop_days, S: sv.units.recommended } : { rate, tat, S };
+    stopChart = drawPmf(frame, res.pipeline_mean, Sn, res);
+    // levers act on the current view's inputs
+    const viewName = sv ? byMode(`${sv.station} shelf`, `Outstation view · ${sv.station}`) : byMode('Hub pool', 'Network (pooled) view');
+    basisSeg.replaceChildren(h('button', { type: 'button', role: 'radio', 'aria-checked': 'true', dataset: { basis: 'inputs' }, onclick: () => compute() }, `${viewName} · ${S ? `${fmtInt(Sn)} ${sp}` : `S = ${fmtInt(Sn)}`}`));
+    const L = { rate, tat, S: Sn };
+    const fee = sv ? null : accel ? accel.value : null;
     const N = Math.max(0, Math.round(extra ?? 0)), D = Math.min(Math.max(0, cut ?? 0), L.tat);
-    const cl = compareLevers(L.rate, L.tat, L.S, cost, D, N, accel ? accel.value : 0);
+    const cl = compareLevers(L.rate, L.tat, L.S, cost, D, N, fee ?? 0);
     const gainA = cl.extra_spares.availability - cl.base.availability;
     const gainB = cl.tat_cut.availability - cl.base.availability;
-    // C6 (wave 4): highlight the CHEAPER lever per availability point (annual AED / pt), as the Capital lever panel does;
-    // "more availability" stays a neutral note in the verdict
+    // C6 (wave 4): highlight the CHEAPER lever per availability point (annual AED / pt)
     const annA = carryingValue(cl.extra_spares.incremental_capital_aed, method);
-    const annB = accel ? cl.tat_cut.incremental_annual_aed : null;
+    const annB = fee != null ? cl.tat_cut.incremental_annual_aed : null;
     const perPt = (ann, gain) => (ann != null && gain > 1e-9 ? ann / (gain * 100) : null);
     const cA = perPt(annA, gainA), cB = perPt(annB, gainB);
     const betterA = cA != null && (cB == null || cA < cB - 1e-6), betterB = cB != null && (cA == null || cB < cA - 1e-6);
-    const cell = (v, out, better) => h('td', { class: better ? 'is-better' : '', dataset: out ? { out } : undefined }, v);
+    const cell = (v, o, better) => h('td', { class: better ? 'is-better' : '', dataset: o ? { out: o } : undefined }, v);
     const rowC = (label, a, b, outA, outB) => h('tr', {}, h('th', { scope: 'row' }, label), cell(a, outA, betterA), cell(b, outB, betterB));
     const gainTxt = (o, gain) => [fmtAvail(o.availability), h('span', { class: 'fc-gain' }, ` ${gain >= 0 ? '+' : '−'}${fmtNum(Math.abs(gain) * 100, 1)} pts`)];
     const thLever = (title, key, better) => h('th', { scope: 'col', class: better ? 'is-better' : '', dataset: { lever: key } }, h('span', { class: 'fc-lever-title' }, title), better ? h('span', { class: 'fc-win' }, icon('check'), 'Cheaper per point') : null);
+    const cutWhat = sv ? byMode('resupply time', 'resupply') : byMode('repair time', 'TAT');
+    const buyT = `Buy ${fmtInt(N)} more spare${N === 1 ? '' : 's'}`, cutT = `Cut ${cutWhat} by ${fmtInt(D)} day${D === 1 ? '' : 's'}`;
     leverBox.replaceChildren(h('table', { class: 'fc-cmp' },
-      h('caption', { class: 'sr-only' }, 'Lever comparison: buy spares versus cut TAT'),
-      h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, h('span', { class: 'sr-only' }, 'Metric')),
-        thLever(`Buy ${fmtInt(N)} more spare${N === 1 ? '' : 's'}`, 'extra_spares', betterA),
-        thLever(`Cut TAT by ${fmtInt(D)} day${D === 1 ? '' : 's'}`, 'tat_cut', betterB))),
+      h('caption', { class: 'sr-only' }, `Lever comparison: buy spares versus cut ${cutWhat}`),
+      h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, h('span', { class: 'sr-only' }, 'Metric')), thLever(buyT, 'extra_spares', betterA), thLever(cutT, 'tat_cut', betterB))),
       h('tbody', {},
-        rowC('Availability', gainTxt(cl.extra_spares, gainA), gainTxt(cl.tat_cut, gainB), 'extra_spares_availability', 'tat_cut_availability'),
-        rowC('Expected backorders', fmtEbo(cl.extra_spares.ebo), fmtEbo(cl.tat_cut.ebo), 'extra_spares_ebo', 'tat_cut_ebo'),
-        rowC('Expected wait', fmtWait(cl.extra_spares.expected_wait_days), fmtWait(cl.tat_cut.expected_wait_days)),
-        rowC('One-off capital', fmtAED(cl.extra_spares.incremental_capital_aed), fmtAED(0), 'extra_spares_capital'),
-        rowC('Annual cost', h('span', {}, carrying(cl.extra_spares.incremental_capital_aed, method), h('span', { class: 'fc-gain' }, ' carrying')), h('span', {}, accel ? fmtAED(cl.tat_cut.incremental_annual_aed) : 'not run', h('span', { class: 'fc-gain' }, ' fees')), null, 'tat_cut_annual'),
-        rowC('Annual cost per pt', cA != null ? fmtAED(cA) : '—', cB != null ? fmtAED(cB) : '—', 'extra_spares_per_pt', 'tat_cut_per_pt'))));
+        rowC(byMode('Chance on the shelf', 'Availability'), gainTxt(cl.extra_spares, gainA), gainTxt(cl.tat_cut, gainB), 'extra_spares_availability', 'tat_cut_availability'),
+        rowC(byMode('Expected waits for a part', 'Expected backorders'), fmtEbo(cl.extra_spares.ebo), fmtEbo(cl.tat_cut.ebo), 'extra_spares_ebo', 'tat_cut_ebo'),
+        rowC(byMode('Average wait', 'Expected wait'), fmtWait(cl.extra_spares.expected_wait_days), fmtWait(cl.tat_cut.expected_wait_days)),
+        rowC(byMode('One-off cost', 'One-off capital'), fmtAED(cl.extra_spares.incremental_capital_aed), fmtAED(0), 'extra_spares_capital'),
+        rowC(byMode('Yearly cost', 'Annual cost'), h('span', {}, carrying(cl.extra_spares.incremental_capital_aed, method), h('span', { class: 'fc-gain' }, byMode(' to keep', ' carrying'))), h('span', {}, fee != null ? fmtAED(cl.tat_cut.incremental_annual_aed) : 'not run', h('span', { class: 'fc-gain' }, ' fees')), null, 'tat_cut_annual'),
+        rowC(byMode('Yearly cost per point', 'Annual cost per pt'), cA != null ? fmtAED(cA) : '—', cB != null ? fmtAED(cB) : '—', 'extra_spares_per_pt', 'tat_cut_per_pt'))));
     [['extra_spares_availability', cl.extra_spares.availability], ['tat_cut_availability', cl.tat_cut.availability], ['extra_spares_ebo', cl.extra_spares.ebo], ['tat_cut_ebo', cl.tat_cut.ebo]]
       .forEach(([k, v]) => { const c = leverBox.querySelector(`[data-out="${k}"]`); if (c) c.dataset.value = v; });
-    const ann = carryingValue(cl.extra_spares.incremental_capital_aed, method);
+    const ann = annA;
     const saturated = Math.max(gainA, gainB) < 0.0005;
-    const p0S = (cur.presets || []).find(([k]) => k === 'P0')?.[1];
-    const where = useSt ? `At ${sv.station} (${fmtInt(L.S)} units, ${fmtInt(L.tat)}-day loop), b` : 'B';
-    const cheaper = betterA ? `${where}uying ${fmtInt(N)} spare${N === 1 ? '' : 's'} is the cheaper lever per availability point` : betterB ? `${useSt ? `At ${sv.station}, c` : 'C'}utting TAT by ${fmtInt(D)} d is the cheaper lever per availability point` : null;
-    const more = gainA > gainB + 1e-9 ? `the spares add more availability` : gainB > gainA + 1e-9 ? `the TAT cut adds more availability` : 'both add the same availability';
-    const annualTxt = accel && ann != null ? `On an annual basis the spares cost ${fmtAED(ann)}/yr to carry versus ${fmtAED(cl.tat_cut.incremental_annual_aed)}/yr in acceleration fees for ${fmtNum((L.rate * 365) / 30, 1)} removals a year${useSt ? ` at ${sv.station}` : ''}.` : 'Annual cost comparison needs the carrying rate and acceleration fee from the assumption register.';
+    const p0S = (cur.livePresets || []).find((p) => p.code === 'P0')?.value;
+    const nYr = fmtNum((L.rate * 365) / 30, 1);
+    const annualTxt = fee != null && ann != null
+      ? (S ? `Each year the spares cost ${fmtAED(ann)} to keep, against ${fmtAED(cl.tat_cut.incremental_annual_aed)} in fees to speed up ${nYr} repairs.` : `On an annual basis the spares cost ${fmtAED(ann)}/yr to carry versus ${fmtAED(cl.tat_cut.incremental_annual_aed)}/yr in acceleration fees for ${nYr} removals a year.`)
+      : sv ? byMode('Faster resupply has no cost in the data, so only the spares’ cost is shown.', 'No resupply-acceleration cost is exported: only the spares’ carrying cost is compared.')
+        : 'Annual cost comparison needs the carrying rate and acceleration fee from the assumption register.';
     if (saturated) {
-      // the pooled float is already saturated (e.g. the Recommended S): say so, and offer the level where the levers bite
-      verdict.replaceChildren(h('strong', {}, `At S = ${fmtInt(L.S)} the float is saturated: neither lever moves availability. `),
-        p0S != null && p0S !== S ? h('button', { type: 'button', class: 'btn btn--sm btn--ghost fc-try-p0', onclick: () => { state.spares = p0S; sync(null); compute(); } }, `Compare the levers at P0 (S = ${fmtInt(p0S)})`) : null, ' ', annualTxt);
+      // already saturated (e.g. the Recommended S): say so, and offer the level where the levers bite
+      verdict.replaceChildren(h('strong', {}, S ? `With ${fmtInt(L.S)} ${sp} the chance is already as high as it gets: neither fix changes it. ` : `At S = ${fmtInt(L.S)} the float is saturated: neither lever moves availability. `),
+        p0S != null && p0S !== Sn ? h('button', { type: 'button', class: 'btn btn--sm btn--ghost fc-try-p0', onclick: () => { state.spares = p0S; sync(null); compute(); } }, S ? `Compare at the Simple Rulebook level (${fmtInt(p0S)} spares)` : `Compare the levers at P0 (S = ${fmtInt(p0S)})`) : null, ' ', annualTxt);
       return;
     }
+    const cheaper = betterA ? (S ? `Buying ${fmtInt(N)} more spare${N === 1 ? '' : 's'} is the cheaper way to raise the chance` : `Buying ${fmtInt(N)} spare${N === 1 ? '' : 's'} is the cheaper lever per availability point`)
+      : betterB ? (S ? `Cutting the ${cutWhat} by ${fmtInt(D)} days is the cheaper way to raise the chance` : `Cutting ${cutWhat} by ${fmtInt(D)} d is the cheaper lever per availability point`) : null;
+    const more = gainA > gainB + 1e-9 ? byMode('the spares add more', 'the spares add more availability') : gainB > gainA + 1e-9 ? byMode(`the shorter ${cutWhat} adds more`, `the ${cutWhat} cut adds more availability`) : byMode('both add the same', 'both add the same availability');
     verdict.replaceChildren(
-      h('strong', {}, cheaper || (gainA > gainB + 1e-9 ? `Buying ${fmtInt(N)} spare${N === 1 ? '' : 's'} lifts availability more` : gainB > gainA + 1e-9 ? `Cutting TAT by ${fmtInt(D)} d lifts availability more` : 'Both levers give the same availability')),
+      h('strong', {}, cheaper || (gainA > gainB + 1e-9 ? `${buyT} lifts the chance more` : gainB > gainA + 1e-9 ? `${cutT} lifts the chance more` : 'Both fixes give the same result')),
       cheaper ? `; ${more} (${fmtPts(gainA)} vs ${fmtPts(gainB)}). ` : ` (${fmtPts(gainA)} vs ${fmtPts(gainB)}). `, annualTxt);
   }
   setRanges();
-  if (cur.pn) load(cur); else compute();
+  if (cur.pn) load(cur); else { renderMode(); compute(); }
   if (!examples.length) reason.textContent = 'No float examples exported — enter values to explore.';
   return () => stopChart?.();
 }
@@ -844,13 +1009,16 @@ function renderPalmVsSim(host, r, hubId) {
   const gap = rows.slice().sort((a, b) => (a.sim - a.palm) - (b.sim - b.palm))[0];
   const pol = meta.policy || r.palm_vs_sim_policy;
   const hp = wavg(hub, 'palm'), hs = wavg(hub, 'sim');
-  const headline = hub.length
-    ? `Palm predicts ${fmtPct(hp)} fill at the hub; the simulation delivers ${fmtPct(hs)}`
-    : `Palm predicts ${fmtPct(wavg(rows, 'palm'))} fill; the simulation delivers ${fmtPct(wavg(rows, 'sim'))}`;
+  const S = isSimple();
+  const headline = S
+    ? (hub.length ? `At the hub the formula expects ${fmtPct(hp)} on the shelf; the simulation gives ${fmtPct(hs)}` : `The formula expects ${fmtPct(wavg(rows, 'palm'))} on the shelf; the simulation gives ${fmtPct(wavg(rows, 'sim'))}`)
+    : hub.length
+      ? `Palm predicts ${fmtPct(hp)} fill at the hub; the simulation delivers ${fmtPct(hs)}`
+      : `Palm predicts ${fmtPct(wavg(rows, 'palm'))} fill; the simulation delivers ${fmtPct(wavg(rows, 'sim'))}`;
   const f = chartFrame(host, {
-      implication: 'The simple formula is a good first estimate; the simulation shows where pooling and transport bite.',
+    implication: byMode('The simple formula is a good first guess. The simulation shows where pooling and shipping matter.', 'The simple formula is a good first estimate; the simulation shows where pooling and transport bite.'),
     headline,
-    subtitle: `Request-weighted${pol ? `, ${pol} floats` : ''}${out.length && hub.length ? ` · outstations ${fmtPct(wavg(out, 'palm'))} Palm vs ${fmtPct(wavg(out, 'sim'))} sim` : ''} · one dot per rotable × station, size = requests · ${meta.split || r.palm_vs_sim_split || 'selection'} seeds${meta.n_seeds ? ` (${meta.n_seeds})` : ''}`,
+    subtitle: S ? `One dot per part and airport; bigger dots had more requests.${pol ? ` Spares follow the plan “${displayName(pol, { mode: 'short' })}”.` : ''}${out.length && hub.length ? ` Outstations: formula ${fmtPct(wavg(out, 'palm'))}, simulation ${fmtPct(wavg(out, 'sim'))}.` : ''}` : `Request-weighted${pol ? `, ${pol} floats` : ''}${out.length && hub.length ? ` · outstations ${fmtPct(wavg(out, 'palm'))} Palm vs ${fmtPct(wavg(out, 'sim'))} sim` : ''} · one dot per rotable × station, size = requests · ${meta.split || r.palm_vs_sim_split || 'selection'} seeds${meta.n_seeds ? ` (${meta.n_seeds})` : ''}`,
     provenance: 'SIMULATED', source: 'rotables.json → palm_vs_sim',
     table: { columns: [{ key: 'pn', label: 'PN' }, { key: 'station', label: 'Station' }, { key: 'palm', label: 'Palm A', num: true, format: (v) => fmtPct(v) }, { key: 'sim', label: 'Sim fill', num: true, format: (v) => fmtPct(v) }, { key: 'n', label: 'Requests', num: true, format: fmtInt }], rows },
   });
@@ -866,23 +1034,28 @@ function renderPalmVsSim(host, r, hubId) {
     gridY(g.append('g'), y, iw, 4);
     axisLeft(g.append('g'), y, { ticks: 4, format: (v) => fmtPct(v, 0) });
     axisBottom(g.append('g'), x, { ticks: w < 480 ? 3 : 5, format: (v) => fmtPct(v, 0), height: ih });
-    dl(g, { x: iw, y: ih + 30, text: 'PALM AVAILABILITY →', anchor: 'end', color: C.faint });
-    dl(g, { x: 6, y: 6, text: 'SIMULATED FILL ↑', color: C.faint });
+    dl(g, { x: iw, y: ih + 30, text: byMode('FORMULA ESTIMATE →', 'PALM AVAILABILITY →'), anchor: 'end', color: C.faint });
+    dl(g, { x: 6, y: 6, text: byMode('SIMULATION ↑', 'SIMULATED FILL ↑'), color: C.faint });
     refLine(g, { x1: 0, y1: ih, x2: iw, y2: 0 });
-    dl(g, { x: iw * 0.18 + 8, y: ih - ih * 0.18 + 6, text: 'sim = Palm', color: C.faint, mono: true });
+    dl(g, { x: iw * 0.18 + 8, y: ih - ih * 0.18 + 6, text: byMode('same', 'sim = Palm'), color: C.faint, mono: true });
     const rr = d3().scaleSqrt().domain([0, d3().max(rows, (d) => d.n)]).range([2, 8]);
     const pts = g.append('g').selectAll('circle').data(rows.slice().sort((a, b) => a.hub - b.hub)).join('circle').attr('cx', (d) => x(d.palm)).attr('cy', (d) => y(d.sim)).attr('r', (d) => rr(d.n))
       .attr('fill', (d) => (d.hub ? SR.neutral : 'none')).attr('fill-opacity', (d) => (d.hub ? 0.6 : 0)).attr('stroke', (d) => (d.hub ? SR.neutral : SR.context)).attr('stroke-width', 1.25);
     withTooltip(pts, (d) => ({ title: `${d.pn} @ ${d.station}`, rows: [['Palm A', fmtPct(d.palm)], ['Sim fill', fmtPct(d.sim)], ['Gap', `${fmtNum((d.sim - d.palm) * 100, 1)} pts`], ['Requests', fmtInt(d.n)]] }));
     dl(g, { x: iw, y: ih - 28, text: '● Hub', anchor: 'end', color: C.text });
     dl(g, { x: iw, y: ih - 12, text: '○ Outstations', anchor: 'end', color: C.muted });
-    if (gap) annotate(g, { x: x(gap.palm), y: y(gap.sim), dx: x(gap.palm) > iw * 0.5 ? -34 : 34, dy: y(gap.sim) > ih * 0.6 ? -30 : 30, title: `${gap.pn} @ ${gap.station}`, sub: `Palm ${fmtPct(gap.palm, 0)} → sim ${fmtPct(gap.sim, 0)}` });
+    if (gap) annotate(g, { x: x(gap.palm), y: y(gap.sim), dx: x(gap.palm) > iw * 0.5 ? -34 : 34, dy: y(gap.sim) > ih * 0.6 ? -30 : 30, title: `${gap.pn} @ ${gap.station}`, sub: S ? `formula ${fmtPct(gap.palm, 0)} → sim ${fmtPct(gap.sim, 0)}` : `Palm ${fmtPct(gap.palm, 0)} → sim ${fmtPct(gap.sim, 0)}` });
   });
 }
 
 function whyList(r) {
   const reasons = (r.palm_vs_sim && !Array.isArray(r.palm_vs_sim) && Array.isArray(r.palm_vs_sim.reasons)) ? r.palm_vs_sim.reasons : null;
-  const items = reasons ? reasons.map((x) => [x.title || '', x.body || x]) : [
+  const items = reasons ? reasons.map((x) => [x.title || '', x.body || x]) : isSimple() ? [
+    ['Shops have limited space.', 'The formula assumes a shop can fix any number of parts at once. Real shops queue work, so a busy shop stretches the wait.'],
+    ['Some parts are scrapped.', 'Parts not worth fixing leave the loop. Buying new ones takes extra time, so the real wait is longer than the shop time.'],
+    ['Parts travel between airports.', 'Broken parts fly to AUH before repair, and good parts fly back out. An outstation refilled from the hub does better than its own formula says.'],
+    ['Demand comes in bursts.', 'Removals bunch up and repair times drift. The formula smooths all of this out.'],
+  ] : [
     ['Finite shop capacity.', 'Palm assumes ample repair servers. Real benches queue work; the simulator models bench capacity, so a busy shop stretches the pipeline beyond λT.'],
     ['Condemnation.', 'Beyond-economic-repair units leave the loop and are replaced by purchase orders with their own lead time, so the effective pipeline time is longer than the shop TAT.'],
     ['Transport and multi-echelon competition.', 'Cores travel to AUH before induction, and hub returns also refill outstation floats. An outstation resupplied from the hub in days sees far more than its own Palm figure.'],

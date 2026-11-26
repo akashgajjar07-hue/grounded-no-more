@@ -8,10 +8,14 @@
  * ABC × demand-class heatmap, and a part drill-down drawer with the sparse weekly demand strip.
  * Every number on screen comes from the JSON exports.
  */
-import { h, icon, pageHead, card, provChip, pill, segmented, dataTable, drawer, inlineSVG, fillExploded, blueprintAircraft } from '../ui.js';
+import { h, icon, pageHead, card, provChip, pill, segmented, dataTable, drawer, inlineSVG, fillExploded, blueprintAircraft, intro3, scopeLine } from '../ui.js';
 import { chartFrame, responsive, svgIn, axisBottom, axisLeft, theme, annotate, withTooltip, directLabel, refLine, markerRect, labelBox, fmtAED, fmtHours, fmtInt, fmtNum, fmtPct, fmtWeek } from '../charts/theme.js';
 import { assetURL } from '../data.js';
+import { isSimple, byMode } from '../lib/mode.js';
+import { term } from '../lib/glossary.js';
+import { displayName, nameTag } from '../lib/names.js';
 import { demandStrip, demandStats } from './parts-intelligence/strip.js';
+import { escalationBlock, allocationFlagNote, flagsAt } from './parts-intelligence/flags.js';
 
 /** directLabel whose colour survives the .gnm-label CSS fill. */
 const lab = (g, o) => { const t = directLabel(g, o); if (o.color) t.style('fill', o.color); return t; };
@@ -28,8 +32,17 @@ const LEVEL = {
   ok: { glyph: '●', text: 'OK', rank: 1 },
   unknown: { glyph: '○', text: 'No data', rank: 0 },
 };
-const CLS_NAME = { R: 'Rotable', E: 'Expendable', C: 'Consumable' };
+const CLS_EXPERT = { R: 'Rotable', E: 'Expendable', C: 'Consumable' };
+const CLS_SIMPLE = { R: 'Repairable', E: 'Thrown away', C: 'Used once' };
+/** v2.1: class names follow the reading mode (Simple: plain words). */
+const CLS_NAME = new Proxy({}, { get: (_, k) => (isSimple() ? CLS_SIMPLE : CLS_EXPERT)[k] });
 export const dcLabel = (c) => String(c || 'unclassified').replace('_', ' ');
+/** Plain-English demand class (same words as the Forecast Lab's Simple mode). */
+const DC_SIMPLE = { smooth: 'steady', erratic: 'uneven', intermittent: 'now and then', lumpy: 'now and then, in bursts', insufficient_data: 'too little history' };
+const DC_SHORT = { smooth: 'STEADY', erratic: 'UNEVEN', intermittent: 'NOW AND THEN', lumpy: 'IN BURSTS', insufficient_data: 'TOO LITTLE DATA' };
+const dcName = (c) => (isSimple() ? DC_SIMPLE[c] || dcLabel(c) : dcLabel(c));
+/** Plain-English rectification window. */
+const WINDOW_SIMPLE = { D0: 'next flight', D3: '3 days', D10: '10 days', NONE: 'none' };
 const riskPct = (v) => (v == null ? '—' : String(Math.round(v * 100)));
 const SVG_NS = 'http://www.w3.org/2000/svg';
 /** createElementNS + attributes (+ append to parent). */
@@ -96,10 +109,20 @@ export async function render(el, ctx) {
   // ------------------------------------------------------------------ header
   const nUrgent = parts.filter((p) => p.risk_level === 'urgent').length;
   const nIntermittent = parts.filter((p) => ['intermittent', 'lumpy'].includes(p.demand_class)).length;
+  const S = isSimple();
+  const PN = (n) => (S ? `part${n === 1 ? '' : 's'}` : `PN${n === 1 ? '' : 's'}`);
+  const planName = displayName(P.stock_basis_id || 'P2', { mode: 'short' });
   el.append(pageHead({
-    num: '02', eyebrow: 'Parts Intelligence', title: 'Where material shortage exposure sits on the aircraft',
-    lede: `${fmtInt(parts.length)} fictional part numbers for Falcon Hub Airways (fictional), mapped to their ATA chapter. ${fmtInt(nIntermittent)} have intermittent or lumpy demand and ${fmtInt(nUrgent)} carry urgent material shortage exposure. Select a system on the aircraft or in the list.`,
-    meta: [provChip(prov), h('span', { class: 'chip' }, `${fmtInt(parts.length)} PNs`), h('span', { class: 'chip' }, `${(P.ata_systems || []).length} ATA chapters`)],
+    num: '02', eyebrow: 'Parts Intelligence', title: byMode('Which parts could leave a plane waiting on the ground', 'Where material shortage exposure sits on the aircraft'),
+    lede: S
+      ? h('span', {}, `${fmtInt(parts.length)} made-up parts for a fictional airline, grouped by `, term('ata'), `. ${fmtInt(nIntermittent)} are `, term('intermittent'), `. ${fmtInt(nUrgent)} are urgent risks. Pick a system on the aircraft or in the list.`)
+      : `${fmtInt(parts.length)} fictional part numbers for Falcon Hub Airways (fictional), mapped to their ATA chapter. ${fmtInt(nIntermittent)} have intermittent or lumpy demand and ${fmtInt(nUrgent)} carry urgent material shortage exposure. Select a system on the aircraft or in the list.`,
+    meta: [provChip(prov), h('span', { class: 'chip' }, `${fmtInt(parts.length)} ${PN(parts.length)}`), h('span', { class: 'chip' }, `${(P.ata_systems || []).length} ${byMode('aircraft systems', 'ATA chapters')}`)],
+  }));
+  el.append(intro3({
+    what: ['Which aircraft systems and parts are most likely to leave a plane waiting for a spare.'],
+    why: ['A few parts cause most of the ', term('aog_hours'), '. Knowing which ones tells you where spares and fixes pay off.'],
+    action: 'Start with the urgent parts. Check their spares at each airport. Escalate any part that breaks far more often than its supplier said.',
   }));
 
   // ------------------------------------------------------------------ explorer: aircraft + list
@@ -108,10 +131,12 @@ export async function render(el, ctx) {
   const airHost = h('div', { class: 'pi-aircraft' });
   // phones: the selected system's top-part callout is an HTML line under the drawing (no room between badges)
   const airNote = h('div', { class: 'pi-air-note', hidden: true });
-  const legend = h('div', { class: 'pi-legend', 'aria-hidden': 'true' }, ...['urgent', 'review', 'ok'].map((l) => h('span', { class: `pi-legend-item is-${l}` }, h('b', {}, LEVEL[l].glyph), l === 'review' ? 'Review / watch' : LEVEL[l].text)), h('span', { class: 'pi-legend-item is-pip' }, h('b', { class: 'pi-legend-pip' }, 'n'), 'urgent PNs in system'), h('span', { class: 'faint' }, 'Shaded areas are indicative zones, not component locations · badge = system share of material shortage exposure · WATCH = OK system holding an urgent part'));
+  const legend = h('div', { class: 'pi-legend', 'aria-hidden': 'true' }, ...['urgent', 'review', 'ok'].map((l) => h('span', { class: `pi-legend-item is-${l}` }, h('b', {}, LEVEL[l].glyph), l === 'review' ? 'Review / watch' : LEVEL[l].text)), h('span', { class: 'pi-legend-item is-pip' }, h('b', { class: 'pi-legend-pip' }, 'n'), `urgent ${PN(2)} in system`),
+    h('span', { class: 'faint' }, byMode('Shaded areas are rough zones, not exact part locations. The badge is the system’s share of the risk. WATCH means an OK system holds an urgent part.', 'Shaded areas are indicative zones, not component locations · badge = system share of material shortage exposure · WATCH = OK system holding an urgent part')));
+  const explorerKicker = () => byMode(`Aircraft systems · ${fleet === 'WB' ? 'widebody' : 'narrowbody'} drawing · rough zones`, `Aircraft system explorer · ${fleet === 'WB' ? 'widebody' : 'narrowbody'} archetype · indicative zones`);
   const explorerCard = card({
     cls: 'span-7 md-span-12 pi-explorer', bp: true, prov,
-    kicker: `Aircraft system explorer · ${fleet === 'WB' ? 'widebody' : 'narrowbody'} archetype · indicative zones`,
+    kicker: explorerKicker(),
     title: explorerTitle(),
     // the story hook wraps the drawing AND the phone's top-part line, so story step 2 frames the part on phones too (wave 5)
     body: [h('div', { class: 'pi-air-wrap', 'data-story': 'aircraft' }, airHost, airNote), legend],
@@ -124,6 +149,14 @@ export async function render(el, ctx) {
     return { ata: a, name: sysName(a), n: sp.length, urgent: sp.filter((p) => p.risk_level === 'urgent').length, share: tot ? sp.reduce((x, p) => x + (+p.risk_hours || 0), 0) / tot : null, top: sp.slice().sort((x, y) => (y.risk_score || 0) - (x.risk_score || 0))[0] };
   }
   function explorerTitle() {
+    if (S) {
+      const fl = fleet === 'all' ? 'all-fleet' : FLEET_LABEL[fleet].toLowerCase();
+      const f = ata && ata !== 'all' ? (fleet === 'all' ? sysStat[ata] : fleetStat(ata)) : worst;
+      if (!f) return 'No risk scores exported';
+      const sh = f.share != null ? `${fmtPct(f.share, 0)} of ${fl} risk, ` : '';
+      if (ata && ata !== 'all') return `${f.name}: ${sh}${fmtInt(f.urgent)} urgent of ${fmtInt(f.n)} parts${fleet === 'all' && worst && worst.ata === f.ata ? ', the most of any system' : ''}`;
+      return `${f.name} carries the most risk: ${sh}${fmtInt(f.urgent)} urgent of ${fmtInt(f.n)} parts`;
+    }
     if (fleet !== 'all' && ata && ata !== 'all') {
       const f = fleetStat(ata);
       return `ATA ${f.ata} ${f.name.toLowerCase()}: ${f.share != null ? `${fmtPct(f.share, 0)} of ${FLEET_LABEL[fleet].toLowerCase()} shortage exposure, ` : ''}${fmtInt(f.urgent)} urgent of ${fmtInt(f.n)} PNs`;
@@ -141,11 +174,11 @@ export async function render(el, ctx) {
     b.closest('li')?.classList.toggle('is-empty', !s.n);
     b.replaceChildren(
       h('span', { class: 'pi-sys-ata mono' }, a),
-      h('span', { class: 'pi-sys-main' }, h('span', { class: 'pi-sys-name' }, s.name), h('span', { class: 'pi-sys-meta mono' }, `${fmtInt(s.n)} PNs · top risk ${riskPct(s.max)}`)),
+      h('span', { class: 'pi-sys-main' }, h('span', { class: 'pi-sys-name' }, s.name), h('span', { class: 'pi-sys-meta mono' }, `${fmtInt(s.n)} ${PN(s.n)} · top risk ${riskPct(s.max)}`)),
       // system level and urgent PARTS are separate facts: never a bare OK pill beside an urgent count
       h('span', { class: 'pi-sys-status' },
         pill(LEVEL[s.tone] && s.tone !== 'unknown' ? s.tone : 'unknown', s.word || LEVEL[s.level]?.text || LEVEL.unknown.text),
-        s.urgent ? h('span', { class: 'pi-sys-urg mono', title: 'Part numbers in this chapter at the urgent part-level band' }, `▲ ${fmtInt(s.urgent)} urgent PN${s.urgent === 1 ? '' : 's'}`) : null));
+        s.urgent ? h('span', { class: 'pi-sys-urg mono', title: 'Part numbers in this chapter at the urgent part-level band' }, `▲ ${fmtInt(s.urgent)} urgent ${PN(s.urgent)}`) : null));
   };
   const sysButtons = ATAS.map((a) => {
     const b = h('button', { type: 'button', 'aria-pressed': String(a === ata), dataset: { ata: a }, onclick: () => setAta(a) });
@@ -153,10 +186,17 @@ export async function render(el, ctx) {
     fillSys(b);
     return b;
   });
-  const allLabel = () => `All ${fmtInt(parts.filter(inFleet).length)} PNs`;
+  const allLabel = () => `All ${fmtInt(parts.filter(inFleet).length)} ${PN(2)}`;
   const allBtn = h('button', { type: 'button', class: 'btn btn--sm', 'aria-pressed': String(ata === 'all'), onclick: () => setAta('all') }, icon('layers'), h('span', { dataset: { role: 'all-label' } }, allLabel()));
-  const listKicker = () => `${FLEET_LABEL[fleet]} · ${fmtInt(parts.filter(inFleet).length)} PNs · list view`;
-  const listCard = card({ cls: 'span-5 md-span-12', kicker: listKicker(), title: 'Select an ATA chapter', prov: 'DERIVED', actions: allBtn, body: sysList, foot: h('span', {}, `${P.system_risk_bands_share ? `System level: urgent if the chapter holds ≥ ${fmtPct(P.system_risk_bands_share.urgent, 0)} of fleet material shortage exposure, review ≥ ${fmtPct(P.system_risk_bands_share.review, 0)}. ` : ''}${P.risk_bands_h ? `Part level: urgent ≥ ${fmtInt(P.risk_bands_h.urgent)} AOG h/yr, review ≥ ${fmtInt(P.risk_bands_h.review)} (assumed bands). ` : ''}Risk score 0–100 is log-scaled AOG hours. ${parts.filter((p) => !ATAS.includes(p.ata)).length} PNs sit in other chapters (see “All”).`) });
+  const listKicker = () => `${FLEET_LABEL[fleet]} · ${fmtInt(parts.filter(inFleet).length)} ${PN(2)} · list view`;
+  const nOther = parts.filter((p) => !ATAS.includes(p.ata)).length;
+  const bandsS = P.system_risk_bands_share, bandsP = P.risk_bands_h;
+  const listFoot = S
+    ? [bandsS ? `A system is urgent if it holds ${fmtPct(bandsS.urgent, 0)} or more of the fleet’s risk, and review at ${fmtPct(bandsS.review, 0)}. ` : '',
+      bandsP ? `A part is urgent at ${fmtInt(bandsP.urgent)} or more grounded hours a year, and review at ${fmtInt(bandsP.review)} (assumed). ` : '',
+      `The risk score runs from 0 to 100. ${nOther} ${PN(nOther)} sit in other systems (see “All”).`].join('')
+    : `${bandsS ? `System level: urgent if the chapter holds ≥ ${fmtPct(bandsS.urgent, 0)} of fleet material shortage exposure, review ≥ ${fmtPct(bandsS.review, 0)}. ` : ''}${bandsP ? `Part level: urgent ≥ ${fmtInt(bandsP.urgent)} AOG h/yr, review ≥ ${fmtInt(bandsP.review)} (assumed bands). ` : ''}Risk score 0–100 is log-scaled AOG hours. ${nOther} PNs sit in other chapters (see “All”).`;
+  const listCard = card({ cls: 'span-5 md-span-12', kicker: listKicker(), title: byMode('Pick an aircraft system', 'Select an ATA chapter'), prov: 'DERIVED', actions: allBtn, body: sysList, foot: h('span', {}, listFoot) });
 
   const fleetSeg = segmented({ label: 'Fleet', value: fleet, options: [{ value: 'NB', label: 'Narrowbody' }, { value: 'WB', label: 'Widebody' }, { value: 'all', label: 'All fleet' }], onChange: (v) => setFleet(v) });
   fleetSeg.dataset.role = 'fleet-filter';
@@ -172,22 +212,26 @@ export async function render(el, ctx) {
   const figHost = h('div', { class: 'bp-figure pi-exploded' });
   const slotKey = h('ol', { class: 'pi-slotkey list-reset' });
   const explodedTitle = h('h3', { class: 'card-title' });
-  const explodedCard = card({ cls: 'span-6 md-span-12', prov, kicker: 'Exploded schematic · fictional components', body: [explodedTitle, figHost, slotKey] });
+  const explodedCard = card({ cls: 'span-6 md-span-12', prov, kicker: byMode('Exploded drawing · made-up parts', 'Exploded schematic · fictional components'), body: [explodedTitle, figHost, slotKey] });
   const matrixCard = h('section', { class: 'card span-6 md-span-12' });
   el.append(h('div', { class: 'grid-12 mt-3' }, explodedCard, matrixCard));
 
   // ------------------------------------------------------------------ parts table
-  const search = h('input', { class: 'input pi-search', type: 'search', placeholder: 'Search PN or description', 'aria-label': 'Search parts by PN or description', oninput: (e) => { query = e.target.value.trim().toLowerCase(); refreshTable(); } });
-  const clsSeg = segmented({ label: 'Part class', value: cls, options: [{ value: 'all', label: 'All' }, { value: 'R', label: 'Rotable' }, { value: 'E', label: 'Expendable' }, { value: 'C', label: 'Consumable' }], onChange: (v) => { cls = v; refreshTable(); ctx.setParams({ cls: v === 'all' ? '' : v }); } });
+  const search = h('input', { class: 'input pi-search', type: 'search', placeholder: byMode('Search part number or name', 'Search PN or description'), 'aria-label': 'Search parts by part number or description', oninput: (e) => { query = e.target.value.trim().toLowerCase(); refreshTable(); } });
+  const clsSeg = segmented({ label: 'Part class', value: cls, options: [{ value: 'all', label: 'All' }, ...['R', 'E', 'C'].map((c) => ({ value: c, label: CLS_NAME[c] }))], onChange: (v) => { cls = v; refreshTable(); ctx.setParams({ cls: v === 'all' ? '' : v }); } });
   const columns = [
-    { key: 'pn', label: 'Part number', mono: true, render: (r) => h('span', { class: 'pi-pn' }, h('span', { class: 'mono' }, r.pn), r.planted ? h('span', { class: 'chip chip-mono pi-planted', title: 'Planted situation (a scenario the models should detect)' }, r.planted) : null) },
-    { key: 'desc', label: 'Description', render: (r) => h('span', { class: 'pi-desc', title: r.desc }, r.desc) },
-    { key: 'cls', label: 'Class', render: (r) => h('span', { class: `pi-cls pi-cls--${r.cls}`, title: CLS_NAME[r.cls] }, r.cls) },
-    { key: 'deadline', label: 'Window', mono: true },
-    { key: 'demand_class', label: 'Demand', format: (v) => dcLabel(v) },
-    { key: 'abc', label: 'ABC', mono: true },
+    { key: 'pn', label: 'Part number', mono: true, render: (r) => h('span', { class: 'pi-pn' }, h('span', { class: 'mono' }, r.pn),
+      r.planted ? h('span', { class: 'chip chip-mono pi-planted expert-only', title: 'Planted situation (a scenario the models should detect)' }, r.planted) : null,
+      // A9: parts whose frozen-plan allocation puts brakes at an outstation carry a visible flag
+      (r.allocation_flags || []).length ? h('span', { class: 'chip pi-flag-chip', dataset: { role: 'alloc-flag' }, title: P.invalid_allocation_text || 'invalid recommendation' }, icon('alert'), byMode('flagged', 'invalid alloc.')) : null,
+      r.escalation ? h('span', { class: 'chip pi-esc-chip', dataset: { role: 'esc-flag' }, title: r.escalation.text }, icon('alert'), 'escalate') : null) },
+    { key: 'desc', label: byMode('Name', 'Description'), render: (r) => h('span', { class: 'pi-desc', title: r.desc }, r.desc) },
+    { key: 'cls', label: byMode('Type', 'Class'), render: (r) => (S ? h('span', { class: 'pi-cls-word' }, CLS_NAME[r.cls]) : h('span', { class: `pi-cls pi-cls--${r.cls}`, title: CLS_NAME[r.cls] }, r.cls)) },
+    { key: 'deadline', label: byMode('Fix within', 'Window'), mono: !S, format: (v) => (S ? WINDOW_SIMPLE[v] || v : v) },
+    { key: 'demand_class', label: byMode('Needed', 'Demand'), format: (v) => dcName(v) },
+    { key: 'abc', label: byMode('Value class', 'ABC'), mono: true },
     // C7 (wave 4): this is the recommended plan's target (all stations), not on-hand stock
-    { key: 'stock_total', label: `${P.stock_basis_id || 'Plan'} target`, short: `${P.stock_basis_id || 'Plan'} target`, num: true, format: fmtInt },
+    { key: 'stock_total', label: S ? `${planName} target` : `${P.stock_basis_id || 'Plan'} target`, short: S ? 'Plan target' : `${P.stock_basis_id || 'Plan'} target`, num: true, format: fmtInt },
     { key: 'unit_cost', label: 'Unit cost', num: true, format: (v) => fmtAED(v) },
     { key: 'risk_score', label: 'Risk', short: 'Risk', num: true, render: (r) => h('span', { class: 'pi-risk-cell', title: riskTitle(r) }, riskPill(r), excChip(r)) },
   ];
@@ -208,6 +252,7 @@ export async function render(el, ctx) {
     return h('span', { class: `chip pi-exc pi-exc--${e.severity}`, title: `${e.type_label} · ${e.severity} planner action (${e.exception_id} at ${e.station}). Risk measures material shortage exposure; this action is about planning data.` }, icon(e.severity === 'urgent' ? 'alert' : 'clock'), `${e.type_label} · ${e.severity}`);
   }
   function riskTitle(r) {
+    if (S) return `${r.risk_hours != null ? `About ${fmtHours(r.risk_hours)} a year grounded waiting for this part (past record plus model). ` : ''}The score runs from 0 to 100.`;
     return `${r.risk_hours != null ? `${fmtHours(r.risk_hours)}/yr of AOG = ${fmtHours(r.aog_hours_hist_per_yr)} history + ${fmtNum(r.residual_aog_h_per_yr, 1)} h modelled residual. ` : ''}Score = ln(1 + AOG h) / ln(1 + fleet max), × 100.`;
   }
   const rowsFor = () => parts.filter((p) => inFleet(p) && (ata === 'all' || p.ata === ata) && (cls === 'all' || p.cls === cls) && (!query || p.pn.toLowerCase().includes(query) || String(p.desc).toLowerCase().includes(query)));
@@ -215,18 +260,23 @@ export async function render(el, ctx) {
   const tableCount = h('span', { class: 'chip' });
   const tableTitle = h('h3', { class: 'card-title' });
   const tableCard = h('section', { class: 'card span-12', dataset: { story: 'parts-table' } },
-    h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, 'Part master · demand class · stock · risk'), tableTitle), h('div', { class: 'row-wrap gap-1' }, tableCount, provChip(prov))),
+    h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, byMode('Every part · how often needed · spares · risk', 'Part master · demand class · stock · risk')), tableTitle), h('div', { class: 'row-wrap gap-1' }, tableCount, provChip(prov))),
     h('div', { class: 'pi-toolbar' }, search, clsSeg),
     table,
-    h('div', { class: 'card-foot pi-foot' }, h('span', {}, 'Rectification windows D0 / D3 / D10 are hypothetical; D3 and D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions; NONE = servicing fluids, never a downtime driver. Demand class from training weeks only. Click a row for the drill-down.'),
+    h('div', { class: 'card-foot pi-foot' }, h('span', {}, S
+      ? ['The ', term('rectification_window'), ' (next flight, 3 days or 10 days) is assumed, not taken from an airline. How often a part is needed comes from the training weeks only. Click a row for details.']
+      : 'Rectification windows D0 / D3 / D10 are hypothetical; D3 and D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions. NONE = servicing fluids, never a downtime driver. Demand class from training weeks only. Click a row for the drill-down.'),
       // v2 brake disclosure (exporter: parts.json brake_note, from the P0 gap diagnosis)
-      P.brake_note ? h('p', { class: 'pi-brake-note', dataset: { role: 'brake-note' } }, icon('info'), h('span', {}, P.brake_note)) : null));
+      P.brake_note ? h('p', { class: 'pi-brake-note', dataset: { role: 'brake-note' } }, icon('info'), h('span', {}, P.brake_note)) : null,
+      // A9: the frozen plan's outstation brake units stay in the numbers, flagged
+      (P.invalid_allocations || []).length ? allocationFlagNote(P.invalid_allocations, { text: P.invalid_allocation_text, compact: true }) : null,
+      scopeLine()));
   el.append(h('div', { class: 'grid-12 mt-3' }, tableCard));
   function refreshTable() {
     const rows = rowsFor();
     table.update(rows);
-    tableCount.textContent = `${fmtInt(rows.length)} PN${rows.length === 1 ? "" : "s"}`;
-    tableTitle.textContent = ata === 'all' ? 'All part numbers' : `ATA ${ata} · ${sysName(ata)}`;
+    tableCount.textContent = `${fmtInt(rows.length)} ${PN(rows.length)}`;
+    tableTitle.textContent = ata === 'all' ? byMode('All parts', 'All part numbers') : S ? sysName(ata) : `ATA ${ata} · ${sysName(ata)}`;
   }
   refreshTable();
 
@@ -394,8 +444,8 @@ export async function render(el, ctx) {
   // ------------------------------------------------------------------ exploded view
   async function drawExploded() {
     if (ata === 'all') {
-      explodedTitle.textContent = 'Select a system to see its exploded view';
-      figHost.replaceChildren(h('div', { class: 'state' }, icon('layers'), h('p', {}, 'The exploded schematic shows one ATA chapter at a time.')));
+      explodedTitle.textContent = byMode('Pick a system to see its parts drawing', 'Select a system to see its exploded view');
+      figHost.replaceChildren(h('div', { class: 'state' }, icon('layers'), h('p', {}, byMode('The drawing shows one aircraft system at a time.', 'The exploded schematic shows one ATA chapter at a time.'))));
       slotKey.replaceChildren();
       return;
     }
@@ -429,9 +479,9 @@ export async function render(el, ctx) {
         co.classList.add('pi-hot', `risk-${p.risk_level}`);
       }
     });
-    figHost.replaceChildren(h('div', { class: 'pi-exploded-stage' }, svg, overlay), h('p', { class: 'pi-exploded-cap' }, 'Schematic · not engineering data'));
+    figHost.replaceChildren(h('div', { class: 'pi-exploded-stage' }, svg, overlay), h('p', { class: 'pi-exploded-cap' }, byMode('Drawing · not engineering data', 'Schematic · not engineering data')));
     const matched = labels.filter((l) => l.pn);
-    explodedTitle.textContent = `ATA ${ata} · ${sysName(ata)}: ${matched.length} of ${ps.length} PNs drawn`;
+    explodedTitle.textContent = S ? `${sysName(ata)}: ${matched.length} of ${ps.length} parts drawn` : `ATA ${ata} · ${sysName(ata)}: ${matched.length} of ${ps.length} PNs drawn`;
     slotKey.replaceChildren(...labels.map((l) => {
       const p = byPn.get(l.pn);
       return h('li', {}, h('button', { type: 'button', class: 'pi-slotkey-btn', disabled: !p, onclick: () => p && openPart(p.pn) },
@@ -480,11 +530,15 @@ export async function render(el, ctx) {
     const counts = Object.fromEntries(['smooth', 'erratic', 'intermittent', 'lumpy'].map((c) => [c, pts.filter((p) => p.demand_class === c).length]));
     const sparse = counts.intermittent + counts.lumpy;
     const f = chartFrame(matrixCard, {
-      implication: 'Intermittent and lumpy demand needs methods built for zeros and safety stock sized on exposure.',
-      headline: sparse * 2 > pts.length ? `Most PNs demand rarely: ${fmtInt(sparse)} of ${fmtInt(pts.length)} are intermittent or lumpy` : `${fmtInt(sparse)} of ${fmtInt(pts.length)} classified PNs are intermittent or lumpy`,
-      subtitle: `ADI (weeks between demands, log) × CV² of demand sizes · training weeks ${fmtWeek(weeks[0])}–${fmtWeek(trainEnd)} · Syntetos–Boylan cut-offs ${ADI_CUT} / ${CV2_CUT}${nIns ? ` · ${nIns} PN${nIns === 1 ? '' : 's'} with insufficient history (< 3 demands) not plotted` : ''}`,
+      implication: byMode('Parts needed only now and then need forecasts built for the many zero weeks, and spares sized on risk.', 'Intermittent and lumpy demand needs methods built for zeros and safety stock sized on exposure.'),
+      headline: S
+        ? (sparse * 2 > pts.length ? `Most parts are needed rarely: ${fmtInt(sparse)} of ${fmtInt(pts.length)} only now and then` : `${fmtInt(sparse)} of ${fmtInt(pts.length)} parts are needed only now and then`)
+        : (sparse * 2 > pts.length ? `Most PNs demand rarely: ${fmtInt(sparse)} of ${fmtInt(pts.length)} are intermittent or lumpy` : `${fmtInt(sparse)} of ${fmtInt(pts.length)} classified PNs are intermittent or lumpy`),
+      subtitle: S
+        ? `One dot per part. Further right means longer gaps between orders. Higher means order sizes vary more. Training weeks ${fmtWeek(weeks[0])}–${fmtWeek(trainEnd)} only.${nIns ? ` ${nIns} ${PN(nIns)} with too little history ${nIns === 1 ? 'is' : 'are'} not shown.` : ''}`
+        : `ADI (weeks between demands, log) × CV² of demand sizes · training weeks ${fmtWeek(weeks[0])}–${fmtWeek(trainEnd)} · Syntetos–Boylan cut-offs ${ADI_CUT} / ${CV2_CUT}${nIns ? ` · ${nIns} PN${nIns === 1 ? '' : 's'} with insufficient history (< 3 demands) not plotted` : ''}`,
       provenance: 'DERIVED', source: 'parts.json (adi, cv2, demand_class)', story: 'parts-adi-matrix',
-      table: { columns: [{ key: 'pn', label: 'PN', mono: true }, { key: 'adi', label: 'ADI', num: true, format: (v) => fmtNum(v) }, { key: 'cv2', label: 'CV²', num: true, format: (v) => fmtNum(v) }, { key: 'demand_class', label: 'Class', format: dcLabel }], rows: pts },
+      table: { columns: [{ key: 'pn', label: 'PN', mono: true }, { key: 'adi', label: 'ADI', num: true, format: (v) => fmtNum(v) }, { key: 'cv2', label: 'CV²', num: true, format: (v) => fmtNum(v) }, { key: 'demand_class', label: 'Class', format: dcName }], rows: pts },
     });
     const keyEl = h('div', { class: 'pi-matrix-key' });
     f.body.after(keyEl);
@@ -507,8 +561,8 @@ export async function render(el, ctx) {
       axisLeft(g.append('g'), y, { ticks: 4, format: (v) => fmtNum(v, 1) });
       refLine(g, { x1: qx, y1: 0, x2: qx, y2: ih });
       refLine(g, { x1: 0, y1: qy, x2: iw, y2: qy });
-      g.append('text').attr('class', 'pi-axis-t').attr('x', iw).attr('y', ih + 30).attr('text-anchor', 'end').text('ADI · weeks between demands →');
-      g.append('text').attr('class', 'pi-axis-t').attr('x', -m.left + 2).attr('y', -2).text('CV² ↑');
+      g.append('text').attr('class', 'pi-axis-t').attr('x', iw).attr('y', ih + 30).attr('text-anchor', 'end').text(byMode('Weeks between orders →', 'ADI · weeks between demands →'));
+      g.append('text').attr('class', 'pi-axis-t').attr('x', -m.left + 2).attr('y', -2).text(byMode('Size varies ↑', 'CV² ↑'));
       const sel = (p) => ata !== 'all' && p.ata === ata;
       const ordered = pts.slice().sort((a, b) => sel(a) - sel(b));
       const px = (p) => x(Math.min(p.adi, xMax)), py = (p) => y(Math.min(p.cv2, yMax));
@@ -518,16 +572,16 @@ export async function render(el, ctx) {
         .attr('class', (p) => `pi-dot${sel(p) ? ' is-sel' : ''}${p.pn === ctx.params.pn ? ' is-pn' : ''}`)
         .attr('tabindex', (p) => (sel(p) ? 0 : null))
         .attr('role', (p) => (sel(p) ? 'button' : null))
-        .attr('aria-label', (p) => (sel(p) ? `${p.pn} ${dcLabel(p.demand_class)}, ADI ${fmtNum(p.adi)}, CV² ${fmtNum(p.cv2)}` : null))
+        .attr('aria-label', (p) => (sel(p) ? `${p.pn} ${dcName(p.demand_class)}, ADI ${fmtNum(p.adi)}, CV² ${fmtNum(p.cv2)}` : null))
         .style('cursor', 'pointer')
         .on('click', (e, p) => openPart(p.pn))
         .on('keydown', (e, p) => { if (e.key === 'Enter') openPart(p.pn); });
-      withTooltip(dots, (p) => ({ title: p.pn, rows: [['Description', p.desc], ['ADI', fmtNum(p.adi)], ['CV²', fmtNum(p.cv2)], ['Class', dcLabel(p.demand_class)], ['Risk', riskPct(p.risk_score)]] }));
+      withTooltip(dots, (p) => ({ title: p.pn, rows: [['Description', p.desc], [byMode('Weeks between orders', 'ADI'), fmtNum(p.adi)], [byMode('Size spread', 'CV²'), fmtNum(p.cv2)], [byMode('Needed', 'Class'), dcName(p.demand_class)], ['Risk', riskPct(p.risk_score)]] }));
       const obstacles = ordered.map((p) => markerRect(px(p), py(p), sel(p) ? 5 : 3.5, 1));
       const ov = (a, b) => Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
       const placed = [];
       // cut-off labels at the plot edge, clear of points
-      [{ text: `ADI ${ADI_CUT}`, x: qx + 4, ys: [-8, ih - 8, 12], anchor: 'start' }, { text: `CV² ${CV2_CUT}`, x: iw - 2, ys: [qy - 8, qy + 10], anchor: 'end' }].forEach((c) => {
+      (S ? [] : [{ text: `ADI ${ADI_CUT}`, x: qx + 4, ys: [-8, ih - 8, 12], anchor: 'start' }, { text: `CV² ${CV2_CUT}`, x: iw - 2, ys: [qy - 8, qy + 10], anchor: 'end' }]).forEach((c) => {
         const best = c.ys.map((yy) => ({ yy, cost: obstacles.concat(placed).reduce((s2, o) => s2 + ov(labelBox({ x: c.x, y: yy, text: c.text, anchor: c.anchor, mono: true }), o), 0) })).sort((a, b) => a.cost - b.cost)[0];
         g.append('text').attr('class', 'gnm-ref-label').attr('x', c.x).attr('y', best.yy).attr('dy', '0.32em').attr('text-anchor', c.anchor).text(c.text);
         placed.push(labelBox({ x: c.x, y: best.yy, text: c.text, anchor: c.anchor, mono: true }));
@@ -538,7 +592,8 @@ export async function render(el, ctx) {
         intermittent: { x0: qx, x1: iw, y0: qy, y1: ih }, lumpy: { x0: qx, x1: iw, y0: 0, y1: qy },
       };
       Object.entries(Q).forEach(([c, q]) => {
-        const text = `${c.toUpperCase()} ${fmtInt(counts[c])}`;
+        const qn = S ? DC_SHORT[c] : c.toUpperCase();
+        const text = `${qn} ${fmtInt(counts[c])}`;
         const cands = [
           { x: q.x0 + 8, y: q.y0 + 12, anchor: 'start' }, { x: q.x1 - 8, y: q.y0 + 12, anchor: 'end' },
           { x: q.x0 + 8, y: q.y1 - 10, anchor: 'start' }, { x: q.x1 - 8, y: q.y1 - 10, anchor: 'end' },
@@ -548,7 +603,7 @@ export async function render(el, ctx) {
           return { cd, box, cost: obstacles.reduce((s2, o) => s2 + ov(box, o), 0) + placed.reduce((s2, o) => s2 + ov(box, o), 0) * 3 + Math.max(0, -box.x) * 50 + Math.max(0, box.x + box.width - iw) * 50 + i * 0.5 };
         }).sort((a, b) => a.cost - b.cost)[0];
         const t = g.append('text').attr('class', 'pi-quad-t').attr('x', best.cd.x).attr('y', best.cd.y).attr('dy', '0.32em').attr('text-anchor', best.cd.anchor);
-        t.append('tspan').text(c.toUpperCase());
+        t.append('tspan').text(qn);
         t.append('tspan').attr('class', 'pi-quad-n').attr('dx', 6).text(fmtInt(counts[c]));
         placed.push(best.box);
       });
@@ -556,7 +611,7 @@ export async function render(el, ctx) {
       const focus = pts.filter(sel).sort((a, b) => b.risk_score - a.risk_score)[0];
       if (focus) {
         const fx = px(focus), fy = py(focus);
-        const title = focus.pn, sub = small ? `top risk · ATA ${ata}` : `top risk in ATA ${ata} · ${dcLabel(focus.demand_class)}`;
+        const title = focus.pn, sub = S ? (small ? 'top risk' : `top risk · ${dcName(focus.demand_class)}`) : small ? `top risk · ATA ${ata}` : `top risk in ATA ${ata} · ${dcLabel(focus.demand_class)}`;
         const bw = Math.max(title.length * 7.2, sub.length * 6.4) + 8, bh = 32;
         const cands = [];
         [28, 44, 64, 88].forEach((d) => [[1, -1], [1, 1], [-1, -1], [-1, 1], [1, 0], [-1, 0], [0, -1], [0, 1]].forEach(([sx, sy]) => cands.push({ sx, sy, d })));
@@ -576,7 +631,7 @@ export async function render(el, ctx) {
     });
     // each swatch + label is one nowrap item, so a swatch is never orphaned at a line end (wave 5)
     const item = (sw, t) => h('span', { class: 'pi-key-item' }, sw, t);
-    keyEl.replaceChildren(item(h('span', { class: 'pi-key-dot is-sel' }), ata === 'all' ? 'All systems shown in neutral' : `ATA ${ata} parts`), item(h('span', { class: 'pi-key-dot' }), 'other PNs'), item(h('span', { class: 'pi-key-sw' }), `intermittent / lumpy zone (ADI ≥ ${ADI_CUT})`));
+    keyEl.replaceChildren(item(h('span', { class: 'pi-key-dot is-sel' }), ata === 'all' ? 'All systems shown in neutral' : S ? `${sysName(ata)} parts` : `ATA ${ata} parts`), item(h('span', { class: 'pi-key-dot' }), `other ${PN(2)}`), item(h('span', { class: 'pi-key-sw' }), S ? 'needed only now and then' : `intermittent / lumpy zone (ADI ≥ ${ADI_CUT})`));
     return stop;
   }
 
@@ -589,14 +644,16 @@ export async function render(el, ctx) {
     const nA = aCells.reduce((s, c) => s + c.n, 0);
     const topA = aCells.slice().sort((a, b) => b.n - a.n)[0];
     const f = chartFrame(heatCard, {
-      implication: 'The costliest parts are the hardest to forecast, so they deserve the most planning attention.',
-      headline: topA && nA ? (['intermittent', 'lumpy', 'erratic'].includes(topA.dc) ? `${fmtInt(topA.n)} of ${fmtInt(nA)} A-class PNs have ${dcLabel(topA.dc)} demand: costly items are the hardest to forecast` : `${fmtInt(topA.n)} of ${fmtInt(nA)} A-class PNs have ${dcLabel(topA.dc)} demand`) : 'ABC × demand class',
-      subtitle: `Count of PNs · ABC by annual usage value (A = top 80%, B = next 15%) · demand class from ${fmtWeek(weeks[0])}–${fmtWeek(trainEnd)}`,
+      implication: byMode('The costliest parts are the hardest to forecast, so they need the most planning care.', 'The costliest parts are the hardest to forecast, so they deserve the most planning attention.'),
+      headline: S ? (topA && nA ? `${fmtInt(topA.n)} of ${fmtInt(nA)} top-value parts are needed ${dcName(topA.dc)}${['intermittent', 'lumpy', 'erratic'].includes(topA.dc) ? ': costly parts are the hardest to forecast' : ''}` : 'Value class by how often parts are needed') : topA && nA ? (['intermittent', 'lumpy', 'erratic'].includes(topA.dc) ? `${fmtInt(topA.n)} of ${fmtInt(nA)} A-class PNs have ${dcLabel(topA.dc)} demand: costly items are the hardest to forecast` : `${fmtInt(topA.n)} of ${fmtInt(nA)} A-class PNs have ${dcLabel(topA.dc)} demand`) : 'ABC × demand class',
+      subtitle: S ? `Number of parts. Value class A covers the parts behind the top 80% of yearly spend, B the next 15%, C the rest. Training weeks ${fmtWeek(weeks[0])}–${fmtWeek(trainEnd)}.` : `Count of PNs · ABC by annual usage value (A = top 80%, B = next 15%) · demand class from ${fmtWeek(weeks[0])}–${fmtWeek(trainEnd)}`,
       provenance: 'DERIVED', source: 'parts.json (abc, demand_class)',
-      table: { columns: [{ key: 'abc', label: 'ABC' }, { key: 'dc', label: 'Demand class', format: dcLabel }, { key: 'n', label: 'PNs', num: true }], rows: cells },
+      table: { columns: [{ key: 'abc', label: byMode('Value class', 'ABC') }, { key: 'dc', label: byMode('Needed', 'Demand class'), format: dcName }, { key: 'n', label: byMode('Parts', 'PNs'), num: true }], rows: cells },
     });
-    const ABBR = { smooth: 'S', erratic: 'E', intermittent: 'I', lumpy: 'L', insufficient_data: 'ID' };
-    const hmKey = h('p', { class: 'pi-hm-key' }, dcs.map((c) => `${ABBR[c]} ${dcLabel(c)}`).join(' · '));
+    const ABBR = S ? { smooth: 'ST', erratic: 'UN', intermittent: 'NT', lumpy: 'BU', insufficient_data: '?' } : { smooth: 'S', erratic: 'E', intermittent: 'I', lumpy: 'L', insufficient_data: 'ID' };
+    const HM_SIMPLE = { smooth: 'steady', erratic: 'uneven', intermittent: 'now & then', lumpy: 'in bursts', insufficient_data: 'too little data' };
+    const hmName = (c) => (S ? HM_SIMPLE[c] : dcLabel(c));
+    const hmKey = h('p', { class: 'pi-hm-key' }, dcs.map((c) => `${ABBR[c]} ${hmName(c)}`).join(' · '));
     f.body.after(hmKey);
     return responsive(f.body, (w) => {
       const small = w < 520;
@@ -608,8 +665,8 @@ export async function render(el, ctx) {
       const max = Math.max(1, ...cells.map((c) => c.n));
       const op = window.d3.scaleLinear().domain([0, max]).range([0.04, 0.85]);
       dcs.forEach((c, i) => {
-        const t = svg.append('text').attr('class', 'pi-hm-col').attr('x', labW + i * cw + cw / 2).attr('y', 18).attr('text-anchor', 'middle').text(small ? ABBR[c] : dcLabel(c));
-        t.append('title').text(dcLabel(c));
+        const t = svg.append('text').attr('class', 'pi-hm-col').attr('x', labW + i * cw + cw / 2).attr('y', 18).attr('text-anchor', 'middle').text(small ? ABBR[c] : hmName(c));
+        t.append('title').text(dcName(c));
       });
       svg.append('text').attr('class', 'pi-hm-col').attr('x', w - totW / 2).attr('y', 18).attr('text-anchor', 'middle').text('Σ');
       abcs.forEach((a, r) => {
@@ -619,7 +676,7 @@ export async function render(el, ctx) {
           const cell = cells.find((x) => x.abc === a && x.dc === c);
           const gx = labW + i * cw;
           const rect = svg.append('rect').attr('x', gx + 2).attr('y', yy + 2).attr('width', cw - 4).attr('height', rowH - 4).attr('rx', 6).attr('fill', theme.series.neutral).attr('fill-opacity', cell.n ? op(cell.n) : 0).attr('stroke', theme.color.line);
-          withTooltip(rect.datum(cell), (d) => ({ title: `${d.abc} · ${dcLabel(d.dc)}`, rows: [['PNs', fmtInt(d.n)]] }));
+          withTooltip(rect.datum(cell), (d) => ({ title: `${d.abc} · ${dcName(d.dc)}`, rows: [[byMode('Parts', 'PNs'), fmtInt(d.n)]] }));
           svg.append('text').attr('class', cell.n && op(cell.n) > 0.5 ? 'pi-hm-n is-dark' : 'pi-hm-n').attr('x', gx + cw / 2).attr('y', yy + rowH / 2).attr('dy', '0.32em').attr('text-anchor', 'middle').style('pointer-events', 'none').text(cell.n ? fmtInt(cell.n) : '·');
         });
         svg.append('text').attr('class', 'pi-hm-tot').attr('x', w - totW / 2).attr('y', yy + rowH / 2).attr('dy', '0.32em').attr('text-anchor', 'middle').text(fmtInt(cells.filter((c) => c.abc === a).reduce((s, c) => s + c.n, 0)));
@@ -628,7 +685,7 @@ export async function render(el, ctx) {
       const ky = topH + abcs.length * rowH + 14;
       const kg = svg.append('g').attr('transform', `translate(${labW},${ky})`);
       [0.1, 0.3, 0.5, 0.7, 0.85].forEach((o, i) => kg.append('rect').attr('x', i * 18).attr('y', -6).attr('width', 16).attr('height', 10).attr('rx', 2).attr('fill', theme.series.neutral).attr('fill-opacity', o));
-      lab(kg, { x: 5 * 18 + 8, y: 0, text: small ? `fewer → more PNs (max ${fmtInt(max)})` : `fewer → more PNs (max ${fmtInt(max)} per cell)`, color: theme.color.faint });
+      lab(kg, { x: 5 * 18 + 8, y: 0, text: small ? `fewer → more ${PN(2)} (max ${fmtInt(max)})` : `fewer → more ${PN(2)} (max ${fmtInt(max)} per cell)`, color: theme.color.faint });
       if (topA) {
         const i = dcs.indexOf(topA.dc);
         const r = abcs.indexOf('A');
@@ -641,12 +698,12 @@ export async function render(el, ctx) {
   function drawPlanted() {
     const pl = parts.filter((p) => p.planted).sort((a, b) => String(a.planted).localeCompare(String(b.planted)));
     plantedCard.replaceChildren(
-      h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, 'Planted situations · scenario design'), h('h3', { class: 'card-title' }, pl.length ? `${pl.length} PNs carry a planted situation the models must detect from history alone` : 'No planted situations exported')), provChip('SIMULATED')),
+      h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, byMode('Test cases built into the model', 'Planted situations · scenario design')), h('h3', { class: 'card-title' }, pl.length ? byMode(`${pl.length} parts hide a known problem the planning must find from history alone`, `${pl.length} PNs carry a planted situation the models must detect from history alone`) : 'No planted situations exported')), provChip('SIMULATED')),
       h('ul', { class: 'list-reset pi-planted-list' }, ...pl.map((p) => h('li', {}, h('button', { type: 'button', class: 'pi-planted-row', onclick: () => openPart(p.pn) },
         h('span', { class: 'chip chip-mono pi-planted' }, p.planted),
         h('span', { class: 'pi-planted-main' }, h('span', { class: 'mono' }, p.pn), h('span', { class: 'faint', title: p.desc }, p.desc)),
         riskPill(p), icon('chevron-right'))))),
-      h('div', { class: 'card-foot' }, h('span', {}, 'Planted in the simulator so the planning logic can be tested against a known answer. The planner sees only the demand and repair history.')));
+      h('div', { class: 'card-foot' }, h('span', {}, byMode('Built into the simulation so the planning can be checked against a known answer. The planner sees only the past orders and repairs.', 'Planted in the simulator so the planning logic can be tested against a known answer. The planner sees only the demand and repair history.'))));
   }
 
   // ------------------------------------------------------------------ state changes
@@ -665,7 +722,7 @@ export async function render(el, ctx) {
   }
   async function setFleet(f) {
     fleet = f;
-    const kk = explorerCard.querySelector('.card-kicker'); if (kk) kk.textContent = `Aircraft system explorer · ${f === 'WB' ? 'widebody' : 'narrowbody'} archetype · indicative zones`;
+    const kk = explorerCard.querySelector('.card-kicker'); if (kk) kk.textContent = explorerKicker();
     const tt = explorerCard.querySelector('.card-title'); if (tt) tt.textContent = explorerTitle();
     ctx.setParams({ fleet: f === 'all' ? '' : f });
     // wave C: everything below the filter is recomputed from the filtered part set
@@ -686,10 +743,10 @@ export async function render(el, ctx) {
   /** Side panel for the selected system: fleet-filtered exposure share, PN count, urgent exceptions, affected PNs. */
   function showPanel() {
     const fp = parts.filter(inFleet);
-    explorerCard.querySelector('.pi-fleet-note').textContent = `${fmtInt(fp.length)} of ${fmtInt(parts.length)} part numbers apply to ${FLEET_LABEL[fleet].toLowerCase()}${fleet === 'WB' ? ' · widebody drawing' : ' · narrowbody drawing'}`;
+    explorerCard.querySelector('.pi-fleet-note').textContent = `${fmtInt(fp.length)} of ${fmtInt(parts.length)} ${byMode('parts', 'part numbers')} apply to ${FLEET_LABEL[fleet].toLowerCase()}${fleet === 'WB' ? ' · widebody drawing' : ' · narrowbody drawing'}`;
     if (ata === 'all') {
       panelCard.replaceChildren(h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, 'Selected system'), h('h3', { class: 'card-title' }, 'Select a system on the aircraft or in the list'))),
-        h('p', { class: 'muted t-14 m-0' }, 'The panel shows the system\'s share of material shortage exposure, its part numbers, urgent exceptions and the parts that drive them, for the selected fleet.'));
+        h('p', { class: 'muted t-14 m-0' }, byMode('The panel shows the system’s share of the risk, its parts, its urgent actions and the parts behind them.', 'The panel shows the system\'s share of material shortage exposure, its part numbers, urgent exceptions and the parts that drive them, for the selected fleet.')));
       return;
     }
     const sp = fp.filter((p) => p.ata === ata);
@@ -701,18 +758,24 @@ export async function render(el, ctx) {
     const top = sp.slice().sort((a, b) => (b.risk_hours || 0) - (a.risk_hours || 0)).slice(0, 6);
     const stat = (k, v, sub) => h('div', { class: 'pi-pstat' }, h('div', { class: 'pi-pstat-k' }, k), h('div', { class: 'pi-pstat-v' }, v), sub ? h('div', { class: 'pi-pstat-s' }, sub) : null);
     const firstUrgent = urgentExc[0] || exc[0];
-    panelCard.replaceChildren(
-      h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, `Selected system · ${FLEET_LABEL[fleet]}`), h('h3', { class: 'card-title' }, `ATA ${ata} ${sysName(ata).toLowerCase()}`)), provChip(prov)),
+    // A7: a part flagged for escalation (the hero part) leads the panel; A9: flagged outstation brake allocations follow
+    const escParts = sp.filter((p) => p.escalation);
+    const flagged = sp.flatMap((p) => p.allocation_flags || []);
+    panelCard.replaceChildren(...[
+      h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, `Selected system · ${FLEET_LABEL[fleet]}`), h('h3', { class: 'card-title' }, S ? [sysName(ata), ' ', h('span', { class: 'mono-tag pi-ata-tag' }, `ATA ${ata}`)] : `ATA ${ata} ${sysName(ata).toLowerCase()}`)), provChip(prov)),
+      ...escParts.map((p) => escalationBlock(p, { onOpen: () => openPart(p.pn), compact: true })),
       h('div', { class: 'pi-pstats' },
-        stat('Shortage exposure share', share == null ? '—' : fmtPct(share, 0), `of the ${FLEET_LABEL[fleet].toLowerCase()} total`),
-        stat('Part numbers', fmtInt(sp.length), `${fmtInt(urgentPn.length)} urgent`),
-        stat('Urgent exceptions', fmtInt(urgentExc.length), `${fmtInt(exc.length)} open in all`)),
-      dataTable({ caption: `Part numbers driving ATA ${ata}`, bare: true, dense: true, rowKey: 'pn', onRowClick: (r) => openPart(r.pn), rows: top, mobileColumns: ['pn', 'risk_score', 'desc'],
-        columns: [{ key: 'pn', label: 'PN', mono: true }, { key: 'desc', label: 'Description', render: (r) => h('span', { class: 'pi-desc', title: r.desc }, r.desc) },
+        stat(byMode('Share of the risk', 'Shortage exposure share'), share == null ? '—' : fmtPct(share, 0), `of the ${FLEET_LABEL[fleet].toLowerCase()} total`),
+        stat(byMode('Parts', 'Part numbers'), fmtInt(sp.length), `${fmtInt(urgentPn.length)} urgent`),
+        stat(byMode('Urgent actions', 'Urgent exceptions'), fmtInt(urgentExc.length), `${fmtInt(exc.length)} open in all`)),
+      scopeLine({ cls: 'pi-panel-scope' }),
+      dataTable({ caption: S ? `Parts driving ${sysName(ata)}` : `Part numbers driving ATA ${ata}`, bare: true, dense: true, rowKey: 'pn', onRowClick: (r) => openPart(r.pn), rows: top, mobileColumns: ['pn', 'risk_score', 'desc'],
+        columns: [{ key: 'pn', label: byMode('Part', 'PN'), mono: true }, { key: 'desc', label: byMode('Name', 'Description'), render: (r) => h('span', { class: 'pi-desc', title: r.desc }, r.desc) },
           { key: 'risk_score', label: 'Risk', num: true, render: (r) => h('span', { class: 'pi-risk-cell' }, riskPill(r), excChip(r)) }] }),
+      flagged.length ? allocationFlagNote(flagged, { text: P.invalid_allocation_text, compact: true }) : null,
       h('div', { class: 'pi-panel-foot' },
-        h('a', { class: 'btn btn--sm', href: firstUrgent ? ctx.buildHash('actions', { id: firstUrgent.exception_id }) : '#/actions' }, icon('inbox'), firstUrgent ? `Open ${firstUrgent.exception_id} in the Planner Action Centre` : 'Open the Planner Action Centre'),
-        h('span', { class: 't-12 faint' }, 'Share = this system\'s material shortage exposure (AOG h/yr: history + modelled residual) over the fleet total.')));
+        h('a', { class: 'btn btn--sm', href: firstUrgent ? ctx.buildHash('actions', { id: firstUrgent.exception_id }) : '#/actions' }, icon('inbox'), firstUrgent ? (S ? 'Open the first urgent action' : `Open ${firstUrgent.exception_id} in the Planner Action Centre`) : 'Open the Planner Action Centre'),
+        h('span', { class: 't-12 faint' }, byMode('Share = this system’s expected grounded hours (past record plus model) over the fleet total.', 'Share = this system\'s material shortage exposure (AOG h/yr: history + modelled residual) over the fleet total.')))].filter(Boolean));
   }
 
   // ------------------------------------------------------------------ drill-down drawer
@@ -729,44 +792,70 @@ export async function render(el, ctx) {
     const head = h('div', { class: 'row-wrap gap-1' },
       riskPill(p, `Risk ${riskPct(p.risk_score)}`), excChip(p),
       h('span', { class: 'chip' }, CLS_NAME[p.cls] || p.cls),
-      h('span', { class: 'chip' }, dcLabel(p.demand_class)),
-      h('span', { class: 'chip' }, `ABC ${p.abc}`),
+      h('span', { class: 'chip' }, S ? `needed ${dcName(p.demand_class)}` : dcLabel(p.demand_class)),
+      h('span', { class: 'chip' }, `${byMode('Value class', 'ABC')} ${p.abc}`),
       provChip(p.provenance || prov));
     body.append(head);
+    // A7: the escalation text leads the drawer for a flagged part (the hero part)
+    if (p.escalation) body.append(escalationBlock(p, { first: true }));
     const ex = (p.exceptions || []).find((x) => x.severity === 'urgent' || x.severity === 'review');
     if (ex && p.risk_level !== ex.severity) {
-      body.append(h('p', { class: 'pi-exc-note t-12 muted', role: 'note' }, icon('info'), h('span', {}, `Risk ${riskPct(p.risk_score)} measures material shortage exposure (expected material-related downtime hours). The ${ex.severity} ${ex.type_label.toLowerCase()} action (${ex.exception_id}) is about planning data, so it ranks high on Mission and in the Action Centre while the risk score stays low.`)));
+      body.append(h('p', { class: 'pi-exc-note t-12 muted', role: 'note' }, icon('info'), h('span', {}, S
+        ? `Risk ${riskPct(p.risk_score)} measures expected grounded hours. The ${ex.severity} ${ex.type_label.toLowerCase()} action is about planning data. So it ranks high in the Action Centre while the risk score stays low.`
+        : `Risk ${riskPct(p.risk_score)} measures material shortage exposure (expected material-related downtime hours). The ${ex.severity} ${ex.type_label.toLowerCase()} action (${ex.exception_id}) is about planning data, so it ranks high on Mission and in the Action Centre while the risk score stays low.`)));
     }
     if (p.removal_mode === 'wear_planned' && P.brake_note) body.append(h('p', { class: 'pi-brake-note', role: 'note' }, icon('info'), h('span', {}, P.brake_note)));
     if (p.planted) {
-      body.append(h('div', { class: 'pi-planted-banner', role: 'note' }, icon('target'), h('div', {}, h('strong', {}, `Planted situation ${p.planted}`), h('p', { class: 'faint t-12' }, p.planted_note || 'A scenario planted in the simulator for the planning logic to detect from history alone.'))));
+      body.append(h('div', { class: 'pi-planted-banner', role: 'note' }, icon('target'), h('div', {}, h('strong', {}, S ? `Built-in test case ${p.planted}` : `Planted situation ${p.planted}`), h('p', { class: 'faint t-12' }, p.planted_note || byMode('A known problem built into the simulation. The planning must find it from history alone.', 'A scenario planted in the simulator for the planning logic to detect from history alone.')))));
     }
     const chartHost = h('div');
     body.append(chartHost);
-    body.append(h('dl', { class: 'meta-list' }, ...[
-      ['Description', p.desc], ['ATA', `${p.ata} · ${sysName(p.ata)}`], ['Class', `${CLS_NAME[p.cls] || p.cls} · rectification window ${p.deadline} (hypothetical)`], ['Removal', p.removal_mode === 'wear_planned' ? 'Planned (wear), known 5–10 days ahead' : p.removal_mode ? 'Unscheduled' : '—'], ['Fleet', p.applicability === 'NB' ? 'Narrowbody' : p.applicability === 'WB' ? 'Widebody' : p.applicability ? 'Both fleets' : '—'],
+    const fleetTxt = p.applicability === 'NB' ? 'Narrowbody' : p.applicability === 'WB' ? 'Widebody' : p.applicability ? 'Both fleets' : '—';
+    const metaRows = S ? [
+      ['Name', p.desc], ['Aircraft system', sysName(p.ata)], ['Type', `${CLS_NAME[p.cls] || p.cls} · fix within ${WINDOW_SIMPLE[p.deadline] || p.deadline} (assumed)`],
+      ['Removal', p.removal_mode === 'wear_planned' ? 'Planned (wear), known 5–10 days ahead' : p.removal_mode ? 'Unplanned' : '—'], ['Fleet', fleetTxt],
+      ['How often needed', dcName(p.demand_class)], ['Value class', p.abc], ['Unit cost', fmtAED(p.unit_cost)],
+      ['Grounded hours risk', p.risk_hours != null ? `${fmtHours(p.risk_hours)} a year (past record plus model)` : riskPct(p.risk_score)],
+      [`${planName} target (all airports)`, `${fmtInt(p.stock_total)} unit${p.stock_total === 1 ? '' : 's'}`],
+    ] : [
+      ['Description', p.desc], ['ATA', `${p.ata} · ${sysName(p.ata)}`], ['Class', `${CLS_NAME[p.cls] || p.cls} · rectification window ${p.deadline} (hypothetical)`], ['Removal', p.removal_mode === 'wear_planned' ? 'Planned (wear), known 5–10 days ahead' : p.removal_mode ? 'Unscheduled' : '—'], ['Fleet', fleetTxt],
       ['Demand class', `${dcLabel(p.demand_class)} · ADI ${fmtNum(p.adi)} · CV² ${fmtNum(p.cv2)}`], ['ABC', p.abc], ['Unit cost', fmtAED(p.unit_cost)],
       ['Material shortage exposure', p.risk_hours != null ? `${fmtHours(p.risk_hours)}/yr of AOG (history + modelled residual)` : riskPct(p.risk_score)],
       [`${P.stock_basis_id || 'Plan'} target (all stations)`, `${fmtInt(p.stock_total)} unit${p.stock_total === 1 ? '' : 's'}`],
+    ];
+    body.append(h('dl', { class: 'meta-list' }, ...[
+      ...metaRows,
       // canonical per-PN AOG metrics, labelled exactly as on Mission and the Action Centre
       ...['aog_h_52w', 'aog_h_52w_max_station'].filter((k) => Number.isFinite(p[k])).map((k) => [P.aog_metric_labels?.[k]?.label || k, `${fmtInt(p[k])} h${k === 'aog_h_52w_max_station' && p.aog_h_52w_max_station_id ? ` (${p.aog_h_52w_max_station_id})` : ''}`]),
-    ].flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])));
+    ].flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])), scopeLine());
     const st = Object.entries(p.stock_by_station || {});
     const maxSt = Math.max(1, ...st.map(([, q]) => q));
-    body.append(h('div', {}, h('div', { class: 'card-kicker mb-1' }, `Stock by station · ${P.stock_basis_id || 'target'} allocation`), P.stock_basis ? h('p', { class: 'faint t-12 mb-1' }, P.stock_basis) : null, h('ul', { class: 'list-reset pi-stock' }, ...st.map(([s, q]) => h('li', {}, h('span', { class: 'mono' }, s), h('span', { class: 'pi-stock-bar', 'aria-hidden': 'true' }, h('span', { style: { width: `${(q / maxSt) * 100}%` }, class: q ? '' : 'is-zero' })), h('span', { class: 'mono num' }, fmtInt(q)))))));
+    // A9: outstation brake units in the frozen plan keep their numbers and carry the invalid-recommendation flag
+    const basisId = P.stock_basis_id || 'P2';
+    const flags = p.allocation_flags || [];
+    body.append(h('div', { dataset: { role: 'stock-by-station' } },
+      h('div', { class: 'card-kicker mb-1' }, S ? `Spares by airport · ${planName}` : `Stock by station · ${P.stock_basis_id || 'target'} allocation`),
+      P.stock_basis ? h('p', { class: 'faint t-12 mb-1' }, S ? `Target spares in the ${planName}. For repairable parts this counts spares on the shelf, not parts away for repair.` : P.stock_basis) : null,
+      h('ul', { class: 'list-reset pi-stock' }, ...st.map(([s, q]) => {
+        const bad = flagsAt(flags, basisId, s);
+        return h('li', { class: bad.length ? 'is-flagged' : '', dataset: bad.length ? { flag: 'invalid_recommendation' } : undefined },
+          h('span', { class: 'mono' }, s), h('span', { class: 'pi-stock-bar', 'aria-hidden': 'true' }, h('span', { style: { width: `${(q / maxSt) * 100}%` }, class: q ? '' : 'is-zero' })), h('span', { class: 'mono num' }, fmtInt(q)),
+          bad.length ? h('span', { class: 'pi-stock-flag', title: bad[0].text }, icon('alert'), 'invalid') : null);
+      })),
+      flags.length ? allocationFlagNote(flags, { text: P.invalid_allocation_text }) : null));
     const fq = new URLSearchParams({ class: p.demand_class, part: p.cls, pn }).toString();
     const foot = [h('a', { class: 'btn btn--sm', href: `#/forecast?${fq}` }, icon('flask'), 'See in Forecast Lab')];
     if (p.cls === 'R') foot.push(h('a', { class: 'btn btn--sm', href: `#/rotables?pn=${encodeURIComponent(pn)}` }, icon('rotable'), 'Open in Rotable & Repair'));
-    const d = drawer({ kicker: `Part number · ATA ${p.ata}`, title: pn, body, foot,
+    const d = drawer({ kicker: S ? `Part number · ${sysName(p.ata)}` : `Part number · ATA ${p.ata}`, title: pn, body, foot,
       // F3 (wave 4): opened from a deep link there is no opener; Esc returns focus to the part's table row or its ATA hotspot
       returnFocus: () => [...document.querySelectorAll(`#view [data-story="parts-table"] [data-key="${pn}"]`)].find((e) => e.getClientRects().length) || document.querySelector(`#view .pi-sys[data-ata="${p.ata}"]`),
       onClose: () => { ctx.setParams({ pn: '' }); openDrawer = null; } }).open();
     openDrawer = d;
     requestAnimationFrame(() => {
       const f = chartFrame(chartHost, {
-      implication: 'A part with long gaps between demands needs a positioning decision, not just a reorder point.',
-        headline: all.nz ? `Demand in ${fmtInt(all.nz)} of ${fmtInt(all.weeks)} weeks (${fmtInt(all.total)} unit${all.total === 1 ? '' : 's'}); ${fmtPct(tr.zeroShare, 0)} of training weeks are zero` : `No demand recorded in ${fmtInt(all.weeks)} weeks`,
-        subtitle: `Units per week · ${fmtWeek(weeks[0])}–${fmtWeek(weeks[1])} · training ${fmtWeek(0)}–${fmtWeek(trainEnd)} | selection ${fmtWeek(selStart)}–${fmtWeek(weeks[1])} · simulated calendar`,
+      implication: byMode('A part with long gaps between orders needs a choice of where to keep spares, not just when to reorder.', 'A part with long gaps between demands needs a positioning decision, not just a reorder point.'),
+        headline: S ? (all.nz ? `Needed in ${fmtInt(all.nz)} of ${fmtInt(all.weeks)} weeks (${fmtInt(all.total)} unit${all.total === 1 ? '' : 's'}); ${fmtPct(tr.zeroShare, 0)} of training weeks had none` : `Not needed in ${fmtInt(all.weeks)} weeks`) : all.nz ? `Demand in ${fmtInt(all.nz)} of ${fmtInt(all.weeks)} weeks (${fmtInt(all.total)} unit${all.total === 1 ? '' : 's'}); ${fmtPct(tr.zeroShare, 0)} of training weeks are zero` : `No demand recorded in ${fmtInt(all.weeks)} weeks`,
+        subtitle: S ? `Units needed per week, ${fmtWeek(weeks[0])}–${fmtWeek(weeks[1])}. Training weeks ${fmtWeek(0)}–${fmtWeek(trainEnd)}, then check weeks ${fmtWeek(selStart)}–${fmtWeek(weeks[1])}. Simulated calendar.` : `Units per week · ${fmtWeek(weeks[0])}–${fmtWeek(weeks[1])} · training ${fmtWeek(0)}–${fmtWeek(trainEnd)} | selection ${fmtWeek(selStart)}–${fmtWeek(weeks[1])} · simulated calendar`,
         provenance: DH.meta?.provenance || 'SIMULATED', source: 'demand_history.json',
         table: { columns: [{ key: 'x', label: 'Week', format: fmtWeek }, { key: 'y', label: 'Qty', num: true }], rows: series.map((y, x) => ({ x, y })).filter((r) => r.y > 0) },
       });

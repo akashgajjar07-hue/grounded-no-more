@@ -90,7 +90,8 @@ def test_part_drawer_deep_link(site, browser, vp):  # noqa: F811
 def test_matrix_excludes_unclassified_and_states_training_window(site, browser):  # noqa: F811
     parts = _parts()["parts"]
     plotted = [p for p in parts if p.get("adi") is not None and p.get("cv2") is not None and p["demand_class"] != "insufficient_data"]
-    ctx, page, problems = open_page(browser, site + "#/parts?ata=all", "1440")
+    # v2.1: the method cut-offs are Expert-mode detail; Simple keeps the training window
+    ctx, page, problems = open_mode(browser, site + "#/parts?ata=all", "1440", "expert")
     try:
         frame = page.locator('[data-story="parts-adi-matrix"]')
         assert frame.locator("circle.pi-dot").count() == len(plotted)
@@ -248,5 +249,162 @@ def test_wave3_system_status_exploded_top_pn_and_neutral_zone(site, browser, vp)
                 const r = e.getBoundingClientRect(); return r.left < b.right && b.left < r.right && r.top < b.bottom && b.top < r.bottom; }).length; }""")
             assert hit == 0, hit
         assert not problems, problems
+    finally:
+        ctx.close()
+
+
+
+# ----------------------------------------------------------------------------- v2.1 (PAGE-2): plain English, A7, A9
+import re  # noqa: E402
+
+REPO = DOCS.parent
+
+
+def open_mode(browser, url, vp, mode):  # noqa: F811
+    """open_page with the reading mode preset in localStorage (Simple is the default)."""
+    w, h = VIEWPORTS[vp]
+    ctx = browser.new_context(viewport={"width": w, "height": h}, reduced_motion="reduce")
+    ctx.add_init_script(f"try {{ localStorage.setItem('gnm-mode', '{mode}'); }} catch (e) {{}}")
+    page = ctx.new_page()
+    problems: list[str] = []
+    page.on("console", lambda m: problems.append(f"console.{m.type}: {m.text}") if m.type == "error" else None)
+    page.on("pageerror", lambda e: problems.append(f"pageerror: {e}"))
+    page.on("requestfailed", lambda r: problems.append(f"requestfailed: {r.url}"))
+    page.on("response", lambda r: problems.append(f"HTTP {r.status}: {r.url}") if r.status >= 400 else None)
+    page.goto(url)
+    page.wait_for_function("document.documentElement.dataset.ready === 'true'", timeout=15000)
+    page.wait_for_timeout(1200)
+    return ctx, page, problems
+
+
+SIMPLE_JARGON = [r"\bPNs?\b", r"\bADI\b", "CV²", "Syntetos", "material shortage exposure", r"\bP2 target", r"\bABC\b",
+                 "Planted situation", "AOG h/yr", "log-scaled", r"\bP0\b", r"\bP1\b", r"\bP2\b", r"\bI125\b"]
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+@pytest.mark.parametrize("mode", ["simple", "expert"])
+def test_v21_modes_render_clean(site, browser, vp, mode):  # noqa: F811
+    ctx, page, problems = open_mode(browser, site + "#/parts?ata=32", vp, mode)
+    try:
+        page.wait_for_selector(".pi-aircraft svg .ata-hotspot")
+        audit(page, problems, min_frames=2)
+        assert page.evaluate(f"document.body.classList.contains('mode-{mode}')")
+        intro = page.locator('#view [data-role="intro3"]')
+        assert intro.count() == 1 and intro.locator(".intro3-row").count() == 3
+        assert page.locator('#view [data-role="scope"]').count() >= 2  # panel stats + table foot
+        txt = page.inner_text("#view")
+        if mode == "simple":
+            hits = [p for p in SIMPLE_JARGON if re.search(p, txt)]
+            assert not hits, hits
+            assert page.locator("#view .term").count() >= 2
+        else:
+            assert "ATA 32" in txt and "material shortage exposure" in txt
+    finally:
+        ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_v21_a7_escalation_in_panel_and_drawer(site, browser, vp):  # noqa: F811
+    data = _parts()
+    hero = [p for p in data["parts"] if p.get("escalation")]
+    assert hero, "parts.json has no escalation flag"
+    p = hero[0]
+    text = p["escalation"]["text"]
+    assert "escalate to reliability engineering and warranty review first" in text
+    ctx, page, problems = open_mode(browser, site + f"#/parts?ata={p['ata']}", vp, "simple")
+    try:
+        block = page.locator('.pi-panel [data-role="escalation"]')
+        assert block.count() == 1 and block.is_visible()
+        assert block.locator('[data-role="escalation-text"]').inner_text().strip() == text
+        # the panel's escalation block comes before the stats (prominent), and opens the drawer
+        order = page.evaluate("() => { const a = document.querySelector('.pi-panel [data-role=escalation]'); const b = document.querySelector('.pi-panel .pi-pstats'); return !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING); }")
+        assert order
+        block.locator(".pi-escalation-open").click()
+        drawer = page.locator(".drawer.is-open")
+        drawer.wait_for()
+        dtext = drawer.locator('[data-role="escalation-text"]')
+        assert dtext.count() == 1 and dtext.inner_text().strip() == text
+        assert dtext.is_visible()
+        assert dtext.bounding_box()["y"] < VIEWPORTS[vp][1], "escalation text is below the fold of the drawer"
+        # only flagged parts carry it
+        others = [x for x in data["parts"] if not x.get("escalation")]
+        page.keyboard.press("Escape")
+        page.goto(site + f"#/parts?pn={others[0]['pn']}")
+        page.locator(".drawer.is-open").wait_for()
+        page.wait_for_timeout(300)
+        assert page.locator('.drawer.is-open [data-role="escalation"]').count() == 0
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+@pytest.mark.parametrize("mode", ["simple", "expert"])
+def test_v21_a9_invalid_brake_allocations_flagged_not_removed(site, browser, mode):  # noqa: F811
+    data = _parts()
+    inv = data["invalid_allocations"]
+    text = data["invalid_allocation_text"]
+    assert inv and text == "invalid recommendation — brakes are not changed outside the hub in this model"
+    basis = data.get("stock_basis_id") or "P2"
+    flagged = sorted({f["pn"] for f in inv})
+    ctx, page, problems = open_mode(browser, site + "#/parts?ata=32", "1440", mode)
+    try:
+        # table: every flagged PN row carries a visible flag chip; the table foot lists all of them
+        for pn in flagged:
+            row = page.locator(f'[data-story="parts-table"] tbody tr[data-key="{pn}"]')
+            assert row.locator('[data-role="alloc-flag"]').count() == 1, pn
+        foot = page.locator('[data-story="parts-table"] [data-role="invalid-allocations"]')
+        assert foot.count() == 1 and text in foot.inner_text()
+        for f in inv:
+            assert f["pn"] in foot.inner_text() and f["station"] in foot.inner_text()
+        assert page.locator('.pi-panel [data-role="invalid-allocations"]').count() == 1
+        # drawer: frozen station numbers unchanged, flagged stations marked
+        byp = {p["pn"]: p for p in data["parts"]}
+        for pn in flagged:
+            page.goto(site + f"#/parts?pn={pn}")
+            page.locator(".drawer.is-open").wait_for()
+            page.wait_for_timeout(300)
+            box = page.locator('.drawer.is-open [data-role="stock-by-station"]')
+            items = box.locator(".pi-stock > li")
+            got = {items.nth(i).locator(".mono").first.inner_text(): (int(items.nth(i).locator(".num").inner_text()), items.nth(i).get_attribute("data-flag")) for i in range(items.count())}
+            assert {k: v[0] for k, v in got.items()} == byp[pn]["stock_by_station"], pn
+            want = {f["station"] for f in inv if f["pn"] == pn and f["policy"] == basis}
+            assert {k for k, v in got.items() if v[1] == "invalid_recommendation"} == want, pn
+            assert text in box.locator('[data-role="invalid-allocations"]').inner_text()
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+def test_v21_fleet_filter_still_recomputes(site, browser):  # noqa: F811
+    parts = _parts()["parts"]
+    wb = [p for p in parts if not p.get("applicability") or p["applicability"] in ("both", "WB")]
+    ctx, page, problems = open_mode(browser, site + "#/parts?ata=32", "1440", "simple")
+    try:
+        page.locator('[data-role="fleet-filter"]').get_by_role("radio", name="Widebody").click()
+        page.wait_for_timeout(800)
+        assert "fleet=WB" in page.url
+        assert str(len(wb)) in page.locator('[data-role="all-label"]').inner_text()
+        ata = page.evaluate("new URLSearchParams(location.hash.split('?')[1]).get('ata')")
+        n = sum(p["ata"] == ata for p in wb)
+        assert page.locator('[data-story="parts-table"] tbody tr').count() == n
+        assert f"{n} parts" in page.locator(f'.pi-sys[data-ata="{ata}"] .pi-sys-meta').inner_text()
+        assert "widebody" in page.locator(".pi-panel .card-kicker").inner_text().lower()
+        # brake disclosure kept
+        assert page.locator('[data-role="brake-note"]').count() == 1
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+def test_v21_readability_simple(site, browser):  # noqa: F811
+    ctx, page, problems = open_mode(browser, site + "#/parts?ata=32", "1440", "simple")
+    try:
+        r = page.evaluate("import('./js/lib/readability.js').then(R => R.readability())")
+        out = REPO / "reports/readability/parts-intelligence.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps({"view": "parts-intelligence", "mode": "simple", "grade": r["grade"], "maxSentenceWords": r["maxSentenceWords"],
+                                   "words": r["words"], "sentences": r["sentences"], "longSentences": r["longSentences"]}, indent=2, ensure_ascii=False) + "\n")
+        assert r["grade"] <= 9, r
+        assert r["maxSentenceWords"] <= 25, r["longest"]
     finally:
         ctx.close()

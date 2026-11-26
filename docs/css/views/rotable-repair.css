@@ -168,3 +168,38 @@
 .fc-basis { display: flex; flex-wrap: wrap; max-width: 100%; }
 .fc-basis button { height: auto; min-height: 30px; padding-block: 4px; text-align: left; }
 .fc-station-row.is-opt .fc-station-k { color: var(--text-muted); }
+
+/* v2.1 · A10 calculator views (hub pooled / one outstation) */
+.fc-mode { display: flex; flex-direction: column; gap: 8px; margin: 0 0 var(--s-2); padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-control); background: var(--c-titanium-a10); }
+.fc-mode-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.fc-mode-row > .fc-label, .fc-station-pick .fc-label { font-family: var(--font-ui); font-size: var(--fs-12); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.fc-mode-seg { display: flex; flex-wrap: wrap; max-width: 100%; }
+.fc-mode-seg button[disabled] { opacity: 0.45; cursor: not-allowed; }
+.fc-station-pick { display: inline-flex; align-items: center; gap: 8px; }
+.fc-station-pick[hidden] { display: none; }
+.fc-station-sel { min-width: 120px; }
+.fc-mode-label { margin: 0; font-size: var(--fs-14); line-height: 1.5; color: var(--text); }
+.fc-mode-label strong { font-weight: 600; }
+.fc-mode-note { display: flex; gap: 8px; align-items: flex-start; margin: 0; font-size: var(--fs-13); color: var(--status-review); }
+.fc-mode-note[hidden] { display: none; }
+.fc-mode-note .icon { flex: none; width: 14px; height: 14px; margin-top: 3px; }
+.fc-esc:empty { display: none; }
+.fc-esc { margin-bottom: var(--s-2); }
+.fc-station-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fc-station-row.is-opt { outline: 1px dashed var(--line-strong); outline-offset: -1px; }
+
+/* A7 escalation and A9 flags (same look as Parts Intelligence) */
+.pi-escalation { display: flex; gap: 12px; padding: 12px 14px; border-radius: var(--r-control); border: 1px solid var(--status-urgent); border-left-width: 4px; background: color-mix(in srgb, var(--status-urgent) 9%, var(--surface)); color: var(--text); }
+.pi-escalation > .icon { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--status-urgent); }
+.pi-escalation-main { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.pi-escalation-k { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: var(--fs-12); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--status-urgent); }
+.pi-escalation-k .mono { text-transform: none; letter-spacing: 0; color: var(--text); }
+.pi-escalation-desc { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text-muted); }
+.pi-escalation-text { margin: 0; font-size: var(--fs-14); line-height: 1.45; font-weight: 600; color: var(--text); }
+.pi-escalation-basis { margin: 0; font-size: var(--fs-12); color: var(--text-faint); }
+.pi-alloc-flags { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-control); border: 1px dashed var(--status-review); background: color-mix(in srgb, var(--status-review) 7%, var(--surface)); font-size: var(--fs-13); line-height: 1.5; color: var(--text); }
+.pi-alloc-flags > .icon { flex: none; width: 15px; height: 15px; margin-top: 3px; color: var(--status-review); }
+.pi-alloc-flags p { margin: 0; }
+.pi-alloc-flags-list { margin: 4px 0; display: flex; flex-direction: column; gap: 2px; }
+.pi-alloc-flags-list .mono { font-size: var(--fs-12); }
+.pi-alloc-flags-s { color: var(--text-muted); font-size: var(--fs-12); }

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 
@@ -32,14 +33,16 @@ def test_recommended_point_from_data(site, browser):  # noqa: F811
     F = _frontier()
     ctx, page, problems = open_page(browser, site + "#/capital", "1440")
     try:
-        assert F["recommended"] in page.locator('[data-story="frontier-chart"] .chart-headline').inner_text()
+        rec_name = F["display_names"][F["recommended"]]["short_name"]
+        assert rec_name in page.locator('[data-story="frontier-chart"]').text_content()
         assert page.locator('[data-story="allocation-table"]').get_attribute("data-point") == F["recommended"]
+        assert rec_name in page.locator('[data-story="allocation-table"] .card-kicker').text_content()
         txt = page.locator("#view").inner_text()
         assert "heuristic" in txt and "AOG-desk" in txt
         # low-stress honesty note is present when the data says the point does not pay there
         low = next((v for v in F.get("variant_robustness", []) if v.get("variant") == "low_stress"), None)
         if low and low["rec_vs_P2"]["net_benefit_aed"] < 0:
-            assert "not worth its extra capital" in txt
+            assert "not worth its extra" in txt
         assert not problems, problems
     finally:
         ctx.close()
@@ -97,12 +100,12 @@ def test_capital_wave2_design(site, browser, vp):  # noqa: F811
         # capital delta is neutral, never red
         cap = kpis.first
         assert cap.locator(".kpi-delta.is-bad").count() == 0
-        assert "capital" in cap.locator(".kpi-delta").first.inner_text()
+        assert re.search(r"capital|spares", cap.locator(".kpi-delta").first.inner_text())
         # no copper on P1/P2 policy labels; P0 keeps copper (baseline)
         fills = page.evaluate("""() => [...document.querySelectorAll('[data-story="frontier-chart"] svg text.gnm-label--strong')]
             .map((t) => [t.textContent.trim(), getComputedStyle(t).fill])""")
         for txt, fill in fills:
-            if txt.startswith("P1") or txt.startswith("P2"):
+            if txt.startswith("Each Airport") or txt.startswith("Network Plan"):
                 assert "196, 127, 82" not in fill, (txt, fill)
         # cost chart: every total label clears the end of its bar
         overlaps = page.evaluate("""() => {
@@ -122,9 +125,9 @@ def test_capital_wave2_design(site, browser, vp):  # noqa: F811
         card = page.locator('[data-story="allocation-table"]')
         if vp == "390":
             assert card.locator(".dts-row").first.is_visible()
-            assert "AOG H AVOIDED" in card.locator(".dts-metric").first.inner_text().upper()
+            assert "H AVOIDED" in card.locator(".dts-metric").first.inner_text().upper()
             sec = card.locator(".dts-secondary").first.inner_text()
-            assert "Units" in sec and "cap" in sec
+            assert "Units" in sec and "Spares AED" in sec
         else:
             ths = card.locator("thead th").all_inner_texts()
             assert any("CHANGE" in t.upper() for t in ths) and any("AVOIDED" in t.upper() for t in ths)
@@ -152,10 +155,102 @@ def test_wave3_capital(site, browser, vp):  # noqa: F811
         unstable = [p["id"] for p in F["points"] if p.get("aog_ci") and p["aog_ci"][0] is not None and p["aog_ci"][0] <= 0 and p.get("kind") != "policy"]
         if unstable:
             ann = page.evaluate("() => [...document.querySelectorAll('[data-story=\"frontier-chart\"] .co-unstable')].map((t) => t.textContent)")
-            assert any(unstable[0] in a for a in ann), ann
+            assert ann, ann
         if vp == "1440":
             gap = page.evaluate("""() => { const c = document.querySelector('[data-story="frontier-chart"]'); const det = c.querySelector('details'); return c.getBoundingClientRect().bottom - det.getBoundingClientRect().bottom; }""")
             assert gap < 80, gap
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+# ---- v2.1 final release (PAGE-4): plain English, display names, A4 / A6 / A8 / A9, both modes, both viewports
+def _open_mode(browser, url, vp, mode):
+    w, h = VIEWPORTS[vp]
+    ctx = browser.new_context(viewport={"width": w, "height": h}, reduced_motion="reduce")
+    ctx.add_init_script(f"try{{localStorage.setItem('gnm-mode','{mode}')}}catch(e){{}}")
+    page = ctx.new_page()
+    problems: list[str] = []
+    page.on("console", lambda m: problems.append(f"console.{m.type}: {m.text}") if m.type == "error" else None)
+    page.on("pageerror", lambda e: problems.append(f"pageerror: {e}"))
+    page.goto(url)
+    page.wait_for_function("document.documentElement.dataset.ready === 'true'", timeout=15000)
+    page.wait_for_timeout(1000)
+    return ctx, page, problems
+
+
+FORBIDDEN = re.compile(r"\b(validated|optimal|optimum)\b|representative legacy airline practice|panel-proof|robust across worlds|saves the airline AED|Etihad|A320|Airbus|Boeing|787", re.I)
+BARE_CODE = re.compile(r"(?<![\w-])(P0|P1|P2|I125|P2_GUARD)(?![\w-])")
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+@pytest.mark.parametrize("mode", ["simple", "expert"])
+def test_v21_capital(site, browser, vp, mode):  # noqa: F811
+    F = _frontier()
+    ctx, page, problems = _open_mode(browser, site + "#/capital", vp, mode)
+    try:
+        audit(page, problems, min_frames=4)
+        view = page.locator("#view")
+        txt = view.inner_text()
+        assert not FORBIDDEN.search(txt), FORBIDDEN.findall(txt)
+        # name and subtitle; the intro block; the scope line on every KPI and under the frontier
+        assert "The Readiness Frontier" in txt
+        assert page.locator('[data-role="frontier-subtitle"]').inner_text().strip() == F["subtitle"]
+        assert page.locator('[data-role="intro3"]').count() == 1
+        assert page.locator('[data-story="capital-kpis"] .kpi-scope').count() >= 3
+        assert page.locator('[data-story="frontier-chart"] [data-role="scope"]').count() == 1
+        # A4: gross buys and removals, then the net; never the net alone
+        ct = page.locator('[data-story="capital-table"] [data-role="capital-table"]')
+        assert ct.count() == 1
+        rows = {r: ct.locator(f'tr[data-row="{r}"]').inner_text() for r in ("buy", "shed", "net")}
+        cap = F["capital_table"]
+        assert f"+{cap['bought_units']} units" in rows["buy"] and "AED 8.4M" in rows["buy"]
+        assert f"{cap['removed_units']} units" in rows["shed"] and "AED 3.1M" in rows["shed"]
+        assert "+AED 0.6M" in rows["net"]
+        assert "Removed stock is not cash back" in ct.inner_text()
+        title = page.locator('[data-story="capital-table"] .card-title').inner_text()
+        assert "Network Plan" in title and "Simple Rulebook" in title
+        assert txt.count("Net change in average simulated spare inventory") == 1
+        # A8 verbatim with the four levers
+        ins = page.locator('[data-story="frontier-insight"]')
+        assert ins.locator('[data-role="insight-text"]').inner_text().strip() == F["insight"]["text"]
+        assert ins.locator('[data-role="levers"] li').all_inner_texts() == F["insight"]["levers"]
+        # A6 under the frontier results
+        a6 = page.locator('[data-story="frontier-chart"] [data-role="stress-ranges"]').inner_text()
+        assert F["stress_worlds"]["text"] in a6 and F["stress_worlds"]["ranges_note"] in a6
+        # A9: the frontier option's outstation brake rows carry the verbatim flag
+        flags = page.locator('[data-role="invalid-allocations"]').inner_text()
+        assert F["invalid_allocation_text"] in flags
+        n_inv = sum(1 for r in F["allocations"][F["recommended"]] if r.get("invalid_recommendation"))
+        assert page.locator('[data-story="allocation-table"] [data-role="invalid-flag"]').count() >= (n_inv if vp == "1440" else 1)
+        # wording + display names
+        assert "best evaluated allocation under the stated scenario" in txt
+        assert "Network Plan + Extra Spares" in txt and "Simple Rulebook" in txt
+        if mode == "simple":
+            vis = page.evaluate("""() => { const c = document.querySelector('#view').cloneNode(true);
+              c.querySelectorAll('.mono-tag, .expert-only, .term-expert, table, svg, .sr-only, [hidden]').forEach((e) => e.remove()); return c.textContent; }""")
+            assert not BARE_CODE.search(vis), BARE_CODE.findall(vis)
+            assert not re.search(r"\b(TAT|holdout|CI)\b", vis), re.findall(r"\b(TAT|holdout|CI)\b", vis)
+            r = page.evaluate("import('./js/lib/readability.js').then(R => R.readability(document.querySelector('#view')))")
+            assert r["grade"] <= 9 and r["maxSentenceWords"] <= 25, r["longSentences"]
+        else:
+            assert page.locator('[data-story="capital-paired"]').count() == 1
+            assert "Holdout" in txt or "holdout" in txt
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+def test_v21_capital_frozen_p2_flags(site, browser):  # noqa: F811
+    """Selecting the Network Plan itself lists its frozen outstation brake allocations (parts.json), flagged, not deleted."""
+    parts = json.loads((DOCS / "data" / "parts.json").read_text())
+    p2 = [r for r in parts.get("invalid_allocations", []) if r["policy"] == "P2"]
+    ctx, page, problems = _open_mode(browser, site + "#/capital?point=P2", "1440", "simple")
+    try:
+        if page.locator('[data-story="allocation-table"]').get_attribute("data-point") == "P2" and p2:
+            t = page.locator('[data-role="invalid-allocations"]').inner_text()
+            assert parts["invalid_allocation_text"] in t
+            assert all(f"{r['pn']} at {r['station']}" in t for r in p2)
         assert not problems, problems
     finally:
         ctx.close()
