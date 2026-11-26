@@ -845,7 +845,8 @@ def build_network() -> dict:
     for s in net["outstations"]:
         g = tr[(tr.from_station == net["hub"]) & (tr.to_station == s)]
         arcs.append({"from": net["hub"], "to": s, "aog_transport_h": num(net["aog_transport_hours"][net["hub"]][s]),
-                     "transfers": int((g.kind == "routine").sum()), "emergency": int((g.kind == "emergency").sum()),
+                     "transfers": int(len(g)), "routine": int((g.kind == "routine").sum()),
+                     "emergency": int((g.kind == "emergency").sum()),
                      "qty": int(g.qty.sum()), "provenance": "SIMULATED"})
     other = tr[tr.from_station != net["hub"]]
     lateral = tag(records(other.groupby(["from_station", "to_station", "kind"]).size().rename("count").reset_index()), "SIMULATED")
