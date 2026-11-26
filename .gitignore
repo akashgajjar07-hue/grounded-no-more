@@ -14,3 +14,17 @@ node_modules/
 .env
 outputs/cache/
 outputs/holdout_dryrun/
+# v2.1: never commit traces, videos, HTML reports or bulk audit output
+reports/traces/
+reports/playwright/
+reports/perf/traces/
+test-results/
+playwright-report/
+tests/e2e/reports/
+*.trace.json
+*.trace.zip
+*.zip
+*.har
+reports/audit/screens/
+# bulk design/audit screenshots stay local; final compressed set lives in reports/final_screens/
+docs/design-review/*.png
