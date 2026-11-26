@@ -272,9 +272,24 @@ def _wait_effect(page, before: dict, timeout_ms: int, download_box: list) -> tup
     return (["focus-change"] if st["focus"] != before["focus"] else []), round((time.perf_counter() - t0) * 1000, 1)
 
 
+def _open_rail_if_needed(page, loc) -> bool:
+    """At narrow widths the navigation rail is off-canvas until #menu-btn opens it (as a user would)."""
+    inside = loc.evaluate("(e) => !!e.closest('#app > nav, #nav') && e.id !== 'menu-btn'")
+    if not inside:
+        return False
+    closed = page.evaluate("(() => { const a = document.getElementById('app'); const m = document.getElementById('menu-btn');"
+                           " return !!(a && m && m.offsetParent !== null && !a.classList.contains('rail-open')); })()")
+    if closed:
+        page.evaluate("document.getElementById('menu-btn').click()")
+        page.wait_for_timeout(350)
+        return True
+    return False
+
+
 def _operate(page, d: dict, cfg: AuditConfig, download_box: list) -> str:
     loc = page.locator(d["selector"]).first
     k = d["kind"]
+    _open_rail_if_needed(page, loc)
     if loc.evaluate("(e) => e.classList.contains('skip-link')"):
         loc.focus()
         page.keyboard.press("Enter")
