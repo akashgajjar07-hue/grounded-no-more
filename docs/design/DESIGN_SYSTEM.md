@@ -12,6 +12,16 @@ dashboard. Everything is self-hosted and needs no build step.
 
 ---
 
+## v2.1 additions (override anything below that disagrees)
+
+- **Simple / Expert mode.** The top-bar toggle (`lib/mode.js`) defaults to Simple, sets `body.mode-simple` / `body.mode-expert` and re-renders the view on `gnm:mode`. `.simple-only` / `.expert-only` hide content per mode. Simple mode hides formulas, codes and method names.
+- **Plain English.** Write domain words with `term(key)` from `lib/glossary.js`. In Simple mode the first use adds the expert term in small grey brackets, and every term has a definition tooltip. Use `termText()` in SVG and attributes.
+- **Names.** Policies use `displayName()` / `nameTag()` from `lib/names.js`: Simple Rulebook (naive reference), Each Airport for Itself (simplified local comparator), Network Plan, Network Plan + Extra Spares. The code is a small `.mono-tag`, shown in Expert mode only.
+- **Every workspace starts with `intro3()`.** Every headline KPI carries the scope line (`kpiTile` adds it, and `scopeLine()` provides it elsewhere). Results numbers carry `readingNote()`. Capital uses `capitalTable()`, never the net alone. Anything added after the freeze gets `postPlanBadge()`.
+- **Footer.** Every page shows the disclaimer plus the credit line (`CREDIT_LINE`).
+- **Navigation.** PROJECT now lists the 60-second tour, Data & Method, About, Glossary and The Planner Behind the Project.
+- Full API with examples: `docs/agent_notes/v21_shell.md`.
+
 ## 0. Wave A rules (override anything below that disagrees)
 
 **Typography.**
@@ -331,3 +341,4 @@ on the element or an ancestor), **text past the right edge of its card, its `<sv
 | Call deadline classes D0/D3/D10 hypothetical | Call them MEL categories |
 | Keep the exact footer disclaimer | Paraphrase or remove it |
 | Respect reduced motion and keep focus visible | Animate for decoration or remove outlines |
+- Status word WATCH (wave C note): an OK-band system or station that holds an urgent part; amber review tone, documented in the Parts legend.

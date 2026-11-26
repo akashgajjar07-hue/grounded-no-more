@@ -145,6 +145,8 @@ export function card({ title, kicker, prov, actions, body, foot, cls = '', story
 }
 
 // --------------------------------------------------------------------------- KPI instrument tile
+/** v2.1 brief: the verbatim scope line every headline KPI carries. */
+export const SCOPE_LINE = 'across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part';
 /**
  * KPI tile from a kpis.json row: {id,label,value,unit,baseline,baseline_label?,delta,better,provenance,ci,spark,target}
  * baseline_label names the comparison when it is not the P0 baseline ("vs P2", footer "P2 AED 37M").
@@ -153,9 +155,11 @@ export function card({ title, kicker, prov, actions, body, foot, cls = '', story
  * opts.capital: capital deltas are NEUTRAL (titanium + arrow + "more/less capital"), never red/green.
  *   Default: auto — true when the KPI id or label mentions "capital". Pass false to force signed colouring.
  * opts.deltaTone: 'auto' (default) | 'neutral' | 'signed' — explicit override of the delta colour logic.
+ * opts.scope (or k.scope): the scope line under the tile (p.kpi-scope[data-role=scope]). Defaults to SCOPE_LINE (v2.1);
+ *   an empty / missing value falls back to the default, so no KPI renders without a scope line.
  */
 export const isCapitalKpi = (k) => /capital/i.test(`${k?.id || ''} ${k?.label || ''}`);
-export function kpiTile(k, { format, deltaFormat, sparkline, scale, hero = false, capital, deltaTone = 'auto' } = {}) {
+export function kpiTile(k, { format, deltaFormat, sparkline, scale, hero = false, capital, deltaTone = 'auto', scope } = {}) {
   const fmt = format || ((v) => String(v));
   const dfmt = deltaFormat || fmt;
   const isCap = capital ?? isCapitalKpi(k);
@@ -194,7 +198,9 @@ export function kpiTile(k, { format, deltaFormat, sparkline, scale, hero = false
     ruler,
     delta,
     spark,
-    h('div', { class: 'kpi-foot' }, h('span', {}, ci), h('span', {}, `${k.baseline_label || 'Baseline'} ${fmt(k.baseline)}`))
+    h('div', { class: 'kpi-foot' }, h('span', {}, ci), h('span', {}, `${k.baseline_label || 'Baseline'} ${fmt(k.baseline)}`)),
+    // v2.1: every KPI carries its scope line (opts.scope or k.scope overrides the text; it can never be removed)
+    h('p', { class: 'kpi-scope', dataset: { role: 'scope' } }, (typeof scope === 'string' && scope.trim()) || (typeof k.scope === 'string' && k.scope.trim()) || SCOPE_LINE)
   );
   if (sparkline && Array.isArray(k.spark)) requestAnimationFrame(() => sparkline(spark, k.spark, { better: k.better, color: isCap ? '#B9C8D6' : undefined }));
   return tile;
@@ -882,9 +888,69 @@ export function storyMode({ steps, navigate, onExit }) {
 
 // --------------------------------------------------------------------------- footer + states
 export const DISCLAIMER = 'Independent educational simulation. Not an airline system or an approved maintenance, airworthiness or dispatch tool. Models run offline; the site loads exported results.';
-/** Footer disclaimer component (exact wording is a project requirement — do not edit). */
+/** v2.1 brief §E4: the credit line on every page (verbatim). */
+export const CREDIT_LINE = 'Built by Akash Gajjar with AI-assisted development (Claude Code). Fictional airline, simulated data.';
+/**
+ * Site footer (the shell mounts ONE on every page): the disclaimer (exact wording is a project requirement — do not
+ * edit) + the E4 credit line (p[data-role=credit]) + optional meta.
+ */
 export function disclaimer({ meta } = {}) {
-  return h('footer', { class: 'disclaimer', role: 'contentinfo' }, icon('shield'), h('p', {}, DISCLAIMER), meta ? h('span', { class: 'disclaimer-meta' }, meta) : null);
+  return h('footer', { class: 'disclaimer', role: 'contentinfo' }, icon('shield'),
+    h('div', { class: 'disclaimer-text' }, h('p', {}, DISCLAIMER), h('p', { class: 'disclaimer-credit', dataset: { role: 'credit' } }, CREDIT_LINE)),
+    meta ? h('span', { class: 'disclaimer-meta' }, meta) : null);
+}
+export const siteFooter = disclaimer;
+
+// --------------------------------------------------------------------------- v2.1 shared copy blocks
+/** v2.1 brief §A2 (verbatim): goes under every results number block. */
+export const READING_NOTE = 'How to read these numbers: simulated downtime of the aircraft waiting for the part, across 120 modelled part numbers. Downtime of aircraft that donated a part (cannibalisation) is shown separately, not included. The Simple Rulebook is a deliberately simplified starting point, not a model of a competent airline. Part costs, reliability and sourcing are assumed. These are not forecasts of achievable airline savings.';
+/** v2.1 brief §A4 (verbatim) note under the capital table. */
+export const CAPITAL_NOTE = 'Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a discount.';
+export const POST_PLAN = 'post-plan, exploratory';
+export const INTRO_LABELS = { what: 'What this shows', why: 'Why it matters', action: 'What a planner would do' };
+
+/**
+ * The three intro lines every workspace starts with (brief §C2):
+ *   intro3({what: 'Which parts…', why: '…', action: '…'})  → section.intro3[data-role=intro3] (a <dl>)
+ * Values may be strings, Nodes or arrays (so term() can be used inside).
+ */
+export function intro3({ what, why, action, label = 'About this page' } = {}) {
+  const row = (k, v) => h('div', { class: 'intro3-row', dataset: { key: k } }, h('dt', {}, INTRO_LABELS[k]), h('dd', {}, v ?? '—'));
+  return h('section', { class: 'intro3', 'aria-label': label, dataset: { role: 'intro3' } }, h('dl', {}, row('what', what), row('why', why), row('action', action)));
+}
+
+/** The verbatim KPI scope line as a small paragraph: p.scope-line[data-role=scope]. opts.text overrides (non-empty). */
+export const scopeLine = ({ text, cls = '' } = {}) => h('p', { class: `scope-line ${cls}`.trim(), dataset: { role: 'scope' } }, (typeof text === 'string' && text.trim()) || SCOPE_LINE);
+
+/** The verbatim A2 reading note: aside.reading-note[data-role=reading-note]. */
+export const readingNote = ({ cls = '' } = {}) => h('aside', { class: `reading-note ${cls}`.trim(), dataset: { role: 'reading-note' } }, icon('info'), h('p', {}, READING_NOTE));
+
+/** "post-plan, exploratory" badge for anything added after the frozen holdout: span.chip.chip-postplan[data-role=postplan]. */
+export const postPlanBadge = (text = POST_PLAN) => h('span', { class: 'chip chip-postplan', dataset: { role: 'postplan' }, title: 'Added after the frozen v2 holdout results; kept separate and does not change them.' }, text);
+
+const aedM = (v) => `AED ${(Math.abs(+v) / 1e6).toFixed(1)}M`;
+const signed = (v, s) => `${+v > 0 ? '+' : +v < 0 ? '−' : ''}${s}`;
+/**
+ * The A4 capital table: gross buys, gross removals, THEN the net — never the net alone.
+ *   capitalTable(kpis.headline.core)                          // {remix, capital_aed: {mean}} → net = capital_aed.mean
+ *   capitalTable(remix, {net: 614985})                         // remix = {buy_units, buy_aed, shed_units, shed_aed}
+ * The net comes from opts.net ?? remix.net_aed ?? core.capital_aed.mean. Without a net the table shows the two gross
+ * lines + the note. Without the gross lines it renders nothing but an error state (a net alone is not allowed).
+ * → figure.capital-table[data-role=capital-table] with a <table> (rows tr[data-row=buy|shed|net]) and the note.
+ */
+export function capitalTable(src, { net, caption = 'Capital change: gross buys and removals, then the net' } = {}) {
+  const remix = src?.remix || src || {};
+  const netV = net ?? remix.net_aed ?? src?.capital_aed?.mean ?? (typeof src?.capital_aed === 'number' ? src.capital_aed : null);
+  const ok = [remix.buy_units, remix.buy_aed, remix.shed_units, remix.shed_aed].every((v) => v != null && !Number.isNaN(+v));
+  if (!ok) return stateBlock('error', 'Capital breakdown unavailable (the gross buy and removal lines are missing, so no net is shown).');
+  const tr = (key, label, units, value) => h('tr', { dataset: { row: key } }, h('th', { scope: 'row' }, label), h('td', { class: 'is-num' }, units), h('td', { class: 'is-num' }, value));
+  const table = h('table', { class: 'data-table data-table--dense capital-table-grid' },
+    h('caption', { class: 'sr-only' }, caption),
+    h('tbody', {},
+      tr('buy', 'New rotables bought', `${signed(remix.buy_units, Math.abs(+remix.buy_units))} units`, `≈ ${aedM(remix.buy_aed)} assumed value`),
+      tr('shed', 'Rotables removed', `${signed(-Math.abs(+remix.shed_units), Math.abs(+remix.shed_units))} units`, `≈ ${aedM(remix.shed_aed)}`),
+      netV != null ? tr('net', 'Net change in average simulated spare inventory', '', signed(netV, aedM(netV))) : null));
+  return h('figure', { class: 'capital-table', dataset: { role: 'capital-table' } }, table, h('figcaption', { class: 'capital-note' }, CAPITAL_NOTE));
 }
 
 /** Dashed note marking a placeholder area that a screen agent will replace. */

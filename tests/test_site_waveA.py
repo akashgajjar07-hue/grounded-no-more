@@ -92,7 +92,7 @@ def test_navigation_groups_and_shortcuts(site, browser):  # noqa: F811
     try:
         groups = page.evaluate("[...document.querySelectorAll('.nav-group')].map((g) => [g.querySelector('.nav-label').textContent, [...g.querySelectorAll('.nav-item')].map((i) => i.dataset.route)])")
         assert groups == [["Operations", ["mission", "actions", "aog"]], ["Material intelligence", ["parts", "forecast", "rotables"]],
-                          ["Strategic planning", ["network", "capital"]], ["Project", ["tour", "method", "about"]]], groups
+                          ["Strategic planning", ["network", "capital"]], ["Project", ["tour", "method", "about", "glossary", "planner"]]], groups
         for key, route in [("4", "rotables"), ("8", "actions"), ("0", "method"), ("1", "mission")]:
             page.locator("body").press(key)
             page.wait_for_function(f"location.hash.startsWith('#/{route}') && document.documentElement.dataset.ready === 'true'")

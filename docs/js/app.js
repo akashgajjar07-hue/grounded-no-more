@@ -19,11 +19,17 @@
  * ctx.setParams of a view that is no longer current is ignored (a stale drawer onClose can't rewrite the URL of the
  * next view). ctx.navigate always works (story mode is driven by a view's ctx.navigate).
  * Keyboard: 1–8 jump between workspaces, 0 = Data & Method, ? = shortcuts, S = story mode,
- * Esc closes overlays. 1–8 / 0 / S also work while a drawer or modal is open (overlays close first, then the
+ * Esc closes overlays.
+ * v2.1 reading mode (lib/mode.js): a Simple | Expert toggle sits in the top bar. On `gnm:mode` the router re-renders
+ * the current view in place (scroll position kept). A view may `export function onMode(mode, ctx)` and return
+ * anything but `false` to update itself instead. Before every view render the router calls resetTermUses(), so a
+ * term() shows its grey "(expert term)" bracket on its first use in each view. 1–8 / 0 / S also work while a drawer or modal is open (overlays close first, then the
  * shell navigates). A skip link jumps to the main content.
  */
 import { h, icon, ensureSprite, fixtureChip, disclaimer, modal, kbd, storyMode, stateBlock, closeAllOverlays, openOverlayCount } from './ui.js';
 import { loadMany, load, onFixture } from './data.js';
+import { initMode, modeToggle, MODE_EVENT } from './lib/mode.js';
+import { resetTermUses, hideTermTip } from './lib/glossary.js';
 
 export const ROUTES = [
   { id: 'mission', num: '01', label: 'Mission Control', icon: 'aircraft', module: './views/mission-control.js' },
@@ -36,6 +42,9 @@ export const ROUTES = [
   { id: 'actions', num: '08', label: 'Planner Action Centre', icon: 'inbox', module: './views/planner-action-centre.js' },
   { id: 'method', num: '—', label: 'Data & Method', icon: 'book', module: './views/data-method.js', key: '0' },
   { id: 'about', num: '—', label: 'About', icon: 'info', module: './views/about.js' },
+  // v2.1: owned by the page agents (glossary uses lib/glossary.js glossaryEntries())
+  { id: 'glossary', num: '—', label: 'Glossary', icon: 'book', module: './views/glossary.js' },
+  { id: 'planner', num: '—', label: 'The Planner Behind the Project', icon: 'info', module: './views/planner.js' },
 ];
 // keyboard: 1–8 keep their original workspace numbers (deep links and muscle memory stay stable), 0 = Data & Method
 ROUTES.forEach((r) => { if (!r.key && /^\d\d$/.test(r.num)) r.key = String(+r.num); });
@@ -44,7 +53,7 @@ export const NAV_GROUPS = [
   { id: 'operations', label: 'Operations', items: ['mission', 'actions', 'aog'] },
   { id: 'material', label: 'Material intelligence', items: ['parts', 'forecast', 'rotables'] },
   { id: 'strategic', label: 'Strategic planning', items: ['network', 'capital'] },
-  { id: 'project', label: 'Project', items: ['tour', 'method', 'about'] },
+  { id: 'project', label: 'Project', items: ['tour', 'method', 'about', 'glossary', 'planner'] },
 ];
 const groupOf = (id) => NAV_GROUPS.find((g) => g.items.includes(id));
 const DEFAULT = 'mission';
@@ -131,10 +140,10 @@ async function startStory() {
 }
 
 // --------------------------------------------------------------------------- render
-async function render() {
+async function render({ force = false, keepScroll = false } = {}) {
   const { id, params } = parseHash();
   // same-route query change that the view handles itself: no re-render
-  if (current && current.id === id && typeof current.mod?.onParams === 'function' && current.seq === renderSeq) {
+  if (!force && current && current.id === id && typeof current.mod?.onParams === 'function' && current.seq === renderSeq) {
     closeAllOverlays({ reason: 'params' });
     let handled;
     try { handled = current.mod.onParams(params, { ...current.ctx, params }); } catch (e) { console.error(e); handled = false; }
@@ -151,7 +160,9 @@ async function render() {
   cleanup = null;
   current = null;
   view.classList.remove('view-enter');
-  view.replaceChildren(stateBlock('loading'));
+  const scrollY0 = window.scrollY;
+  if (!keepScroll) view.replaceChildren(stateBlock('loading'));
+  hideTermTip();
   try {
     const mod = await import(route.module);
     const data = await loadMany(mod.data || []);
@@ -159,20 +170,22 @@ async function render() {
     closeAllOverlays({ reason: 'route' }); // anything a stale view opened while we were loading
     view.replaceChildren();
     void view.offsetWidth; // restart entry animation
-    view.classList.add('view-enter');
+    if (!keepScroll) view.classList.add('view-enter');
     const live = () => seq === renderSeq;
     const ctx = {
       route, params, data, load, buildHash, navigate,
       setParams: (p, o) => { if (live() && parseHash().id === id) setParams(p, o); },
     };
     current = { id, mod, ctx, seq };
+    resetTermUses();
     cleanup = (await mod.render(view, ctx)) || null;
   } catch (err) {
     console.error(err);
     if (seq === renderSeq) view.replaceChildren(stateBlock('error', `This workspace could not load (${err.message}).`));
   }
   if (seq === renderSeq) {
-    if (window.__gnmNavigated) { view.focus({ preventScroll: true }); window.scrollTo({ top: 0 }); }
+    if (keepScroll) window.scrollTo({ top: scrollY0 });
+    else if (window.__gnmNavigated) { view.focus({ preventScroll: true }); window.scrollTo({ top: 0 }); }
     window.__gnmNavigated = true;
     renderedResolve?.(); renderedResolve = null;
     document.documentElement.dataset.ready = 'true';
@@ -202,8 +215,21 @@ function devFlag() {
   try { window.__gnmDev = window.__gnmDev ?? (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || /[?&]dev\b/.test(location.search)); } catch { /* ignore */ }
 }
 
+/** Mode toggle → let the view update itself (onMode) or re-render it in place. */
+function onModeChange(e) {
+  const mode = e.detail?.mode;
+  if (current && typeof current.mod?.onMode === 'function' && current.seq === renderSeq) {
+    let handled;
+    try { handled = current.mod.onMode(mode, current.ctx); } catch (err) { console.error(err); handled = false; }
+    if (handled !== false) { resetTermUses(); return; }
+  }
+  closeAllOverlays({ reason: 'route' });
+  render({ force: true, keepScroll: true });
+}
+
 function boot() {
   devFlag();
+  initMode();
   ensureSprite();
   buildNav();
   const foot = $('#footer');
@@ -211,10 +237,12 @@ function boot() {
   $('#menu-btn').addEventListener('click', () => setRail(!$('#app').classList.contains('rail-open')));
   $('#rail-scrim').addEventListener('click', () => setRail(false));
   $('#help-btn').addEventListener('click', openHelp);
+  $('#mode-slot')?.replaceChildren(modeToggle());
+  document.addEventListener(MODE_EVENT, onModeChange);
   $('#story-btn').addEventListener('click', startStory);
   $('#rail-story')?.addEventListener('click', startStory);
   onFixture(() => { const slot = $('#fixture-slot'); if (!slot.childElementCount) slot.append(fixtureChip()); });
-  window.addEventListener('hashchange', render);
+  window.addEventListener('hashchange', () => render());
   document.addEventListener('keydown', onKey);
   if (!location.hash) history.replaceState(null, '', `#/${DEFAULT}`);
   render();
