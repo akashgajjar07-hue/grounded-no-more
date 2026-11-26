@@ -1,19 +1,19 @@
 -- Question: On which parts are recent purchase-order lead times drifting above the lead time the supplier quoted?
 -- Assumptions:
---   * Non-expedite POs only (reorder and condemn_replacement); expedite POs follow the AOG-desk cap, not the quote.
+--   * v2 has no outright AOG purchase: POs are reorders and condemnation replacements only (both included).
 --   * Realised lead = receipt - order; a PO still open and past its due date counts at its age so far
 --     (right-censored, so the realised figure is a lower bound).
 --   * "Recent" = received, or open past due, in the last 34 weeks (weeks 70-103), matching the planner
 --     action rule; "earlier" = received before that.
 --   * Quoted lead = part_master.lead_time_mean_d (the master data figure the legacy planner uses).
---   * Flag when recent / quoted >= 1.5 with at least 2 recent POs. PS4 (GN-30-E025) should surface.
+--   * Flag when recent / quoted >= 1.5 with at least 2 recent POs. PS4 (part_master.planted, a supplier change on
+--     an expendable) should surface.
 -- Provenance: SIMULATED history, ratios DERIVED.
--- Example output (from `python sql/run_all.py`):
+-- Example output (from `python sql/run_all.py --update-examples`):
 -- <<EXAMPLE>>
---         pn            description part_class  quoted_lead_d  earlier_pos  earlier_mean_lead_d  recent_pos  recent_open_past_due  recent_mean_lead_d  recent_vs_quoted planted
--- GN-30-E025 Windshield wiper motor          E           65.2            7                 71.2           3                     1               133.6              2.05     PS4
--- GN-34-E023     Static port heater          E           88.4            5                 86.1           3                     0               149.6              1.69        
--- (2 rows in total; full result in sql/results/05_lead_time_drift.csv)
+--         pn                  description part_class  quoted_lead_d  earlier_pos  earlier_mean_lead_d  recent_pos  recent_open_past_due  recent_mean_lead_d  recent_vs_quoted planted
+-- GN-33-E033 Emergency light battery pack          E           24.8            8                 22.0           3                     1                77.6              3.13     PS4
+-- (1 row in total; full result in sql/results/05_lead_time_drift.csv)
 -- <</EXAMPLE>>
 WITH params AS (SELECT 17472 AS as_of_h, 17472 - 34 * 168 AS recent_from_h),
 po AS (
@@ -24,7 +24,7 @@ po AS (
                      AND (p.receipt_h IS NOT NULL OR p.due_h < pr.as_of_h) THEN 'recent'
                 WHEN p.receipt_h IS NOT NULL THEN 'earlier' END                    AS win
     FROM purchase_orders p CROSS JOIN params pr
-    WHERE p.reason <> 'expedite'
+    WHERE p.reason IN ('reorder', 'condemn_replacement')
 )
 SELECT po.pn,
        pm.description,

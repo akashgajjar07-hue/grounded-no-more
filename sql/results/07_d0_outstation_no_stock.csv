@@ -1,21 +1,21 @@
 pn,description,part_class,station,d0_requests,d0_without_local_stock,share_without_stock,aog_events,aog_hours,p0_base_stock,p0_order_up_to,planted
-GN-32-R014,Carbon brake assembly,R,BOM,16,16,1.0,16,144.0,0,0,PS1
-GN-32-R014,Carbon brake assembly,R,CAI,10,10,1.0,9,99.0,0,0,PS1
-GN-32-R014,Carbon brake assembly,R,JED,10,10,1.0,10,90.0,0,0,PS1
-GN-28-R031,Fuel boost pump,R,FRA,6,6,1.0,6,119.0,0,0,PS2
-GN-36-R007,Bleed air valve,R,FRA,6,6,1.0,6,84.0,0,0,
-GN-36-R007,Bleed air valve,R,LHR,5,5,1.0,5,80.0,0,0,
-GN-32-R014,Carbon brake assembly,R,SIN,5,5,1.0,5,65.0,0,0,PS1
-GN-28-R031,Fuel boost pump,R,CAI,26,5,0.192,5,55.0,1,0,PS2
-GN-36-R007,Bleed air valve,R,CAI,4,4,1.0,4,44.0,0,0,
-GN-32-R014,Carbon brake assembly,R,LHR,3,3,1.0,3,48.0,0,0,PS1
-GN-28-R031,Fuel boost pump,R,BOM,20,3,0.15,3,33.0,1,0,PS2
-GN-49-R038,APU fuel control unit,R,BOM,3,3,1.0,3,27.0,0,0,
-GN-49-R038,APU fuel control unit,R,JED,3,3,1.0,3,27.0,0,0,
-GN-36-R007,Bleed air valve,R,SIN,2,2,1.0,2,26.0,0,0,
-GN-36-R007,Bleed air valve,R,BOM,2,2,1.0,2,18.0,0,0,
-GN-36-R007,Bleed air valve,R,JED,2,2,1.0,2,18.0,0,0,
-GN-49-R038,APU fuel control unit,R,LHR,1,1,1.0,1,16.0,0,0,
-GN-32-R014,Carbon brake assembly,R,FRA,1,1,1.0,1,14.0,0,0,PS1
-GN-34-C023,Connector backshell kit – variant B,C,FRA,14,1,0.071,1,14.0,0,2,
-GN-29-R016,Hydraulic accumulator,R,BOM,1,1,1.0,1,9.0,0,0,
+GN-32-R014,Nose wheel steering actuator (NB),R,BOM,14,14,1.0,14,266.0,0,0,PS1
+GN-32-R014,Nose wheel steering actuator (NB),R,CAI,9,9,1.0,9,206.0,0,0,PS1
+GN-32-R015,Main wheel and tyre assembly (NB),R,CAI,9,9,1.0,9,159.0,0,0,
+GN-32-R014,Nose wheel steering actuator (NB),R,JED,9,9,1.0,9,137.0,0,0,PS1
+GN-27-R006,Elevator servo control (NB),R,JED,8,8,1.0,8,104.0,0,0,
+GN-27-R032,Aileron power control unit (WB),R,LHR,6,6,1.0,6,114.0,0,0,
+GN-32-R016,Nose wheel and tyre assembly (NB),R,CAI,6,6,1.0,6,86.0,0,0,
+GN-27-R031,Elevator power control unit (WB),R,LHR,5,5,1.0,5,99.0,0,0,
+GN-32-R016,Nose wheel and tyre assembly (NB),R,JED,5,5,1.0,5,61.0,0,0,
+GN-27-R007,Aileron servo control (NB),R,JED,4,4,1.0,4,111.0,0,0,
+GN-27-R032,Aileron power control unit (WB),R,SIN,4,4,1.0,4,69.0,0,0,
+GN-32-R037,Main wheel and tyre assembly (WB),R,SIN,4,4,1.0,4,68.0,0,0,
+GN-27-R006,Elevator servo control (NB),R,CAI,4,4,1.0,4,62.0,0,0,
+GN-27-R007,Aileron servo control (NB),R,CAI,4,4,1.0,4,53.0,0,0,
+GN-27-R032,Aileron power control unit (WB),R,FRA,3,3,1.0,3,59.0,0,0,
+GN-27-R031,Elevator power control unit (WB),R,SIN,3,3,1.0,3,50.0,0,0,
+GN-27-R006,Elevator servo control (NB),R,BOM,3,3,1.0,3,39.0,0,0,
+GN-32-R037,Main wheel and tyre assembly (WB),R,BOM,3,3,1.0,3,38.0,0,0,
+GN-27-R007,Aileron servo control (NB),R,BOM,3,3,1.0,3,37.0,0,0,
+GN-27-R031,Elevator power control unit (WB),R,FRA,2,2,1.0,2,38.0,0,0,

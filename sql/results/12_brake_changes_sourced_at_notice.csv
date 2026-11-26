@@ -1,0 +1,10 @@
+pn,description,sourced_as,planned_changes,mean_notice_days,fitted_from_stock_on_the_day,mean_wait_after_due_h,downtime_events,downtime_hours
+GN-32-R013,Carbon brake assembly (NB),planned_covered,80,7.3,80,0.0,0,0.0
+GN-32-R013,Carbon brake assembly (NB),planned_transfer,10,7.1,10,0.0,0,0.0
+GN-32-R013,Carbon brake assembly (NB),planned_loan,11,7.2,0,0.0,0,0.0
+GN-32-R013,Carbon brake assembly (NB),robbery,1,9.5,0,78.0,1,83.0
+GN-32-R036,Carbon brake assembly (WB),planned_covered,88,7.5,88,0.0,0,0.0
+GN-32-R036,Carbon brake assembly (WB),planned_transfer,17,7.0,17,0.0,0,0.0
+GN-32-R036,Carbon brake assembly (WB),planned_loan,6,7.7,0,0.0,0,0.0
+GN-32-R036,Carbon brake assembly (WB),robbery,2,8.9,0,7.5,2,25.0
+GN-32-R036,Carbon brake assembly (WB),none,1,6.2,0,45.0,1,50.0

@@ -1,7 +1,8 @@
-lane,emergency_transfers,emergency_units,emergency_cost_aed,emergency_cost_aed_per_year,cost_per_emergency_aed,emergency_mean_hours,routine_transfers,routine_mean_days
-AUH>FRA,18,18,106200.0,53100.0,5900.0,14.0,377,3.9
-AUH>CAI,23,23,90850.0,45425.0,3950.0,11.0,534,4.0
-AUH>BOM,28,28,74200.0,37100.0,2650.0,9.0,688,4.0
-AUH>LHR,10,10,72000.0,36000.0,7200.0,16.0,416,4.0
-AUH>JED,24,24,63600.0,31800.0,2650.0,9.0,548,3.9
-AUH>SIN,9,9,47250.0,23625.0,5250.0,13.0,384,4.1
+lane,emergency_transfers,emergency_units,emergency_cost_aed,emergency_cost_aed_per_year,cost_per_emergency_aed,emergency_mean_hours,routine_transfers,routine_mean_days,loan_return_transfers
+AUH>LHR,17,17,122400.0,61200.0,7200.0,16.0,108,3.9,0
+AUH>CAI,28,28,110600.0,55300.0,3950.0,11.0,146,4.1,7
+AUH>SIN,18,18,94500.0,47250.0,5250.0,13.0,118,3.9,0
+AUH>JED,26,26,68900.0,34450.0,2650.0,9.0,169,3.9,5
+AUH>BOM,23,23,60950.0,30475.0,2650.0,9.0,228,3.8,7
+AUH>FRA,10,10,59000.0,29500.0,5900.0,14.0,108,3.9,0
+FRA>AUH,1,1,5900.0,2950.0,5900.0,14.0,5,3.8,0

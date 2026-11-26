@@ -5,8 +5,8 @@ Writes sql/results/<query>.csv (one per query). With --update-examples it also r
 "Example output" block of each .sql file (between the <<EXAMPLE>> markers) with the first rows of
 the real result, so the comment always shows output that the query actually produced.
 
-The DuckDB file holds views over data/processed/history/*.parquet (SIMULATED history of the
-fictional Falcon Hub Airways). If it is missing, run `python scripts/build_history.py` first.
+The DuckDB file holds views over data/processed/history/*.parquet (SIMULATED v2 history of the
+fictional Falcon Hub Airways, weeks 0-103 under the legacy policy P0). If it is missing, run `python scripts/build_history.py` first.
 
 Usage:
     python sql/run_all.py [--update-examples] [--rows N]
@@ -26,6 +26,7 @@ SQL_DIR = ROOT / "sql"
 RESULTS = SQL_DIR / "results"
 DB = ROOT / "data" / "processed" / "grounded.duckdb"
 EXAMPLE_RE = re.compile(r"(-- <<EXAMPLE>>\n)(.*?)(-- <</EXAMPLE>>)", re.S)
+ROWS_RE = re.compile(r"^-- Example rows: (\d+)$", re.M)  # optional per-file override of --rows
 
 
 def query_files() -> list[Path]:
@@ -62,6 +63,8 @@ def _example_block(df: pd.DataFrame, rows: int, max_width: int = 260) -> str:
 def update_example(path: Path, df: pd.DataFrame, rows: int) -> None:
     df.attrs["stem"] = path.stem
     text = path.read_text()
+    m = ROWS_RE.search(text)
+    rows = int(m.group(1)) if m else rows
     new = EXAMPLE_RE.sub(lambda m: m.group(1) + _example_block(df, rows) + m.group(3), text, count=1)
     if new != text:
         path.write_text(new)

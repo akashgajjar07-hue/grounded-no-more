@@ -1,21 +1,23 @@
 -- Question: What share of material requests is filled immediately from local stock, by station and part class
---           (C consumable, E expendable, R rotable), and how does the D0 (no-go) subset fare?
+--           (C consumable, E expendable, R rotable), and how does the D0 subset fare?
 -- Assumptions:
 --   * Source: material_requests, weeks 0-103 under P0. immediate_fill is the simulator's flag
---     (request issued from the requesting station's own shelf at need time).
---   * D0/D3/D10 are hypothetical simulation deadline classes, not MEL categories.
+--     (request issued from the requesting station's own shelf at need time). Includes line usage, A-check kit
+--     lines, unscheduled removals and wear-planned brake changes.
+--   * D0/D3/D10 are hypothetical rectification windows (0/72/240 h). D3/D10 are simplified analogues of MEL
+--     repair-interval categories B and C, not operator MEL decisions. Servicing fluids carry class NONE.
 -- Provenance: SIMULATED history, aggregation DERIVED.
--- Example output (from `python sql/run_all.py`):
+-- Example output (from `python sql/run_all.py --update-examples`):
 -- <<EXAMPLE>>
 -- station part_class  requests  filled_immediately  immediate_fill_rate  d0_requests  d0_immediate_fill_rate
---     AUH          C     17763               16969               0.9553          375                  0.9440
---     AUH          E      2161                1708               0.7904           25                  0.8800
---     AUH          R      1523                1387               0.9107          147                  0.9592
---     BOM          C      4067                4062               0.9988           68                  1.0000
---     BOM          E        25                  25               1.0000            3                  1.0000
---     BOM          R        52                  17               0.3269           42                  0.4048
---     CAI          C      3035                3035               1.0000           46                  1.0000
---     CAI          E        30                  30               1.0000            9                  1.0000
+--     AUH          C     18130               18130               1.0000            0                     NaN
+--     AUH          E      1676                1595               0.9517          130                  0.8923
+--     AUH          R      1548                1387               0.8960          355                  0.9099
+--     BOM          C      4439                4439               1.0000            0                     NaN
+--     BOM          E        43                  43               1.0000           31                  1.0000
+--     BOM          R        47                  13               0.2766           39                  0.3333
+--     CAI          C      3291                3290               0.9997            0                     NaN
+--     CAI          E        34                  34               1.0000           28                  1.0000
 -- (21 rows in total; full result in sql/results/02_immediate_fill_station_class.csv)
 -- <</EXAMPLE>>
 SELECT r.station,

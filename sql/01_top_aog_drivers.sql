@@ -1,28 +1,31 @@
 -- Question: Which part numbers, at which stations, drive the most material AOG (aircraft on ground) hours?
 -- Assumptions:
---   * Source: aog_events (groundings already merged per aircraft by the simulator), weeks 0-103 under policy P0.
---   * aog_events.pns can list several PNs; an event's hours are split equally across its PNs
+--   * Source: aog_events (material-related downtime, already merged per aircraft by the simulator), weeks 0-103
+--     of the v2 history under the legacy policy P0 ("OEM-recommended provisioning on quoted data").
+--   * v2 counts downtime only when the part is late: from need + rectification window to fill + fitting/RTS.
+--   * aog_events.pns is ';'-separated; an event's hours are split equally across its PNs
 --     (same attribution rule as docs/data/parts.json aog_hours_hist_per_yr).
 --   * Per-year figures divide the two-year history by 2.
+--   * planted comes from part_master.planted (metadata), never from a hard-coded PN.
 -- Provenance: SIMULATED history (fictional Falcon Hub Airways), aggregation DERIVED.
--- Example output (from `python sql/run_all.py`):
+-- Example output (from `python sql/run_all.py --update-examples`):
 -- <<EXAMPLE>>
---         pn                         description part_class station  aog_events  aog_hours  aog_hours_per_year  d0_no_stock_events  deadline_expired_events planted
--- GN-34-C023 Connector backshell kit – variant B          C     AUH          20      921.0               460.5                  20                        0        
--- GN-36-R024           Bleed monitoring computer          R     AUH           7      336.0               168.0                   0                        7        
--- GN-34-R012           Weather radar transceiver          R     AUH           7      331.0               165.5                   0                        7        
--- GN-49-R038               APU fuel control unit          R     AUH           3      318.0               159.0                   3                        0        
--- GN-36-R007                     Bleed air valve          R     AUH           2      240.0               120.0                   2                        0        
--- GN-29-C015                     Backup ring kit          C     JED           4      215.0               107.5                   0                        4        
--- GN-29-C015                     Backup ring kit          C     LHR           4      194.0                97.0                   0                        4        
--- GN-29-R005        Engine-driven hydraulic pump          R     AUH           6      180.0                90.0                   0                        6        
+--         pn                       description part_class station  aog_events  aog_hours  aog_hours_per_year  d0_no_stock_events  deadline_expired_events planted
+-- GN-32-R014 Nose wheel steering actuator (NB)          R     BOM          14      266.0               133.0                  14                        0     PS1
+-- GN-32-R014 Nose wheel steering actuator (NB)          R     CAI           9      206.0               103.0                   9                        0     PS1
+-- GN-32-R014 Nose wheel steering actuator (NB)          R     AUH           9      162.0                81.0                   9                        0     PS1
+-- GN-32-R015 Main wheel and tyre assembly (NB)          R     CAI           9      159.0                79.5                   9                        0        
+-- GN-32-R014 Nose wheel steering actuator (NB)          R     JED           9      137.0                68.5                   9                        0     PS1
+-- GN-27-R032   Aileron power control unit (WB)          R     LHR           6      114.0                57.0                   6                        0        
+-- GN-35-E032    Crew quick-donning oxygen mask          E     AUH          14      114.0                57.0                  14                        0        
+-- GN-27-R007        Aileron servo control (NB)          R     JED           4      111.0                55.5                   4                        0        
 -- (20 rows in total; full result in sql/results/01_top_aog_drivers.csv)
 -- <</EXAMPLE>>
 WITH exploded AS (
     SELECT a.aog_id, a.station, a.trigger, a.hours,
            trim(p.pn) AS pn,
-           len(string_split(a.pns, ',')) AS n_pns
-    FROM aog_events a, unnest(string_split(a.pns, ',')) AS p(pn)
+           len(string_split(a.pns, ';')) AS n_pns
+    FROM aog_events a, unnest(string_split(a.pns, ';')) AS p(pn)
 )
 SELECT e.pn,
        pm.description,
