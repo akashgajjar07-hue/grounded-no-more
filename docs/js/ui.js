@@ -1125,7 +1125,9 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
     root.remove();
     if (activeStory === api) activeStory = null;
     if (window.__gnmStory === api) delete window.__gnmStory;
-    opener?.focus?.({ preventScroll: true });
+    // focus back to what opened the tour; if that was the page itself (key S) or it is gone, to the main view
+    if (opener && opener !== document.body && opener.isConnected) opener.focus({ preventScroll: true });
+    else document.getElementById('view')?.focus({ preventScroll: true });
     onExit?.();
   }
   const api = {

@@ -216,10 +216,16 @@ def _new_page(pw, cfg: AuditConfig, base_url: str):
                               reduced_motion="reduce" if cfg.reduced_motion else "no-preference", accept_downloads=True)
     ctx.add_init_script(f"try {{ localStorage.setItem('gnm-mode', {json.dumps(cfg.mode)}); }} catch (e) {{}}")
     page = ctx.new_page()
+    page.set_default_timeout(8000)   # a control that vanished fails in 8 s instead of hanging 30 s
     errors: list[str] = []
-    page.on("console", lambda m: errors.append(f"console.{m.type}: {m.text}") if m.type == "error" else None)
-    page.on("pageerror", lambda e: None if "due to access control checks" in str(e) and "/assets/" in str(e)   # WebKit's wording for an aborted same-origin fetch
-            else errors.append(f"pageerror: {e}"))
+    # WebKit reports requests that a page load cancels as errors ("Load failed", "Importing a module script failed",
+    # "... due to access control checks"); within 3 s of a main-frame navigation they are not failures of the control
+    nav_t = [0.0]
+    page.on("framenavigated", lambda f: nav_t.__setitem__(0, time.perf_counter()) if f == page.main_frame else None)
+    ABORT = ("Importing a module script failed", "TypeError: Load failed", "due to access control checks")
+    after_nav = lambda m: any(a in m for a in ABORT) and time.perf_counter() - nav_t[0] < 3.0
+    page.on("console", lambda m: errors.append(f"console.{m.type}: {m.text}") if m.type == "error" and not after_nav(m.text) else None)
+    page.on("pageerror", lambda e: None if after_nav(str(e)) else errors.append(f"pageerror: {e}"))
     # fetches the browser cancels because the user navigated on are invisible to the user: not failures
     page.on("requestfailed", lambda r: None if any(x in str(r.failure) for x in ("cancelled", "ERR_ABORTED", "NS_BINDING_ABORTED"))
             else errors.append(f"requestfailed: {r.url} {r.failure}"))
@@ -302,7 +308,7 @@ def _operate(page, d: dict, cfg: AuditConfig, download_box: list) -> str:
     outside = loc.evaluate("(e) => { const o = [...document.querySelectorAll('[role=dialog].is-open, .drawer.is-open, .modal-card')]"
                            ".find((d) => !d.classList.contains('story') && d.getBoundingClientRect().width > 0"
                            " && (d.classList.contains('is-open') || !!document.querySelector('.scrim.is-open')));"
-                           " return !!o && !o.contains(e); }")
+                           " return !!o && !o.contains(e) && !e.closest('.story, .story-card, [role=dialog], .drawer, .modal-card'); }")
     if outside:
         page.keyboard.press("Escape")
         page.wait_for_timeout(200)
@@ -384,10 +390,25 @@ def audit_route(pw, base_url: str, cfg: AuditConfig) -> RouteReport:
                 vis_js = "(e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; }"
                 if not page.locator(d["selector"]).first.evaluate(vis_js, timeout=5000) and not page.locator(d["selector"]).first.evaluate("(e) => !!e.closest('details:not([open]), #app > nav, #nav')", timeout=5000):
                     _goto(page, base_url, cfg.route)   # e.g. a deep-link drawer closed by an earlier control: reopen it
+                    try:
+                        page.locator(d["selector"]).first.wait_for(state="visible", timeout=5000)
+                    except Exception:  # noqa: BLE001
+                        pass
                     if page.locator(d["selector"]).count() == 0 or not page.locator(d["selector"]).first.evaluate(vis_js, timeout=5000):
-                        r.note = "hidden after a re-render"
-                        rep.elements.append(r)
-                        continue
+                        # positional selectors into body-level overlays (drawer, tour card) go stale when a reload appends
+                        # them in another order: re-find the control by kind + label among visible elements
+                        found = page.evaluate("""([label, tag]) => {
+                          document.querySelectorAll('[data-audit-target]').forEach((e) => e.removeAttribute('data-audit-target'));
+                          const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
+                          const name = (e) => (e.getAttribute('aria-label') || e.textContent || '').replace(/\\s+/g, ' ').trim();
+                          const hit = [...document.querySelectorAll(tag)].find((e) => vis(e) && name(e).startsWith(label));
+                          if (hit) hit.setAttribute('data-audit-target', '1');
+                          return !!hit; }""", [d["label"].strip()[:60], d["selector"].split(">")[-1].strip().split(":")[0] or "*"])
+                        if not found:
+                            r.note = "hidden after a re-render"
+                            rep.elements.append(r)
+                            continue
+                        d = {**d, "selector": '[data-audit-target="1"]'}
                 selected = page.locator(d["selector"]).first.evaluate(
                     "(e) => e.getAttribute('role') === 'radio' && e.getAttribute('aria-checked') === 'true'", timeout=5000)
                 page.evaluate(OBSERVE_JS)
@@ -407,7 +428,12 @@ def audit_route(pw, base_url: str, cfg: AuditConfig) -> RouteReport:
                 elif selected and not r.effects:
                     r.note = "option already selected (no-op)"
             except Exception as exc:  # noqa: BLE001
-                r.ok, r.note = False, f"{type(exc).__name__}: {str(exc).splitlines()[0][:200]}"
+                if "Execution context was destroyed" in str(exc):
+                    # the control loaded another document (e.g. a cutaway part opens the parts page): that is its effect
+                    page.wait_for_load_state("load")
+                    r.ok, r.effects, r.note = True, ["navigation"], "loaded another page"
+                else:
+                    r.ok, r.note = False, f"{type(exc).__name__}: {str(exc).splitlines()[0][:200]}"
             r.errors = list(errors)
             if errors:
                 r.ok = False
