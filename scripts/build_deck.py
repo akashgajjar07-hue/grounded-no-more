@@ -1598,7 +1598,7 @@ def build_deck(N, A, CH, bg, total=10):
                                    c=C["aero_teal"] if st_["role"] == "hub" else C["ice"])))
         s.text(cx + 40, cy + 1, 130, 18, P(R(st_["name"].split(", ")[-1].replace(" International", ""),
                                              "small", s=8)))
-    s.text(70, 610, 340, 50, P(R(f"{AIRLINE} does not exist. D0/D3/D10 are hypothetical rectification windows; D3/D10 are "
+    s.text(70, 600, 340, 66, P(R(f"{AIRLINE} does not exist. D0/D3/D10 are hypothetical rectification windows; D3/D10 are "
                                  "simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions.", "small", s=8.2), ls=1.08))
     s.card(446, 150, 400, 520)
     s.text(468, 166, 360, 16, P(R("CALIBRATE → FREEZE → ONE HOLDOUT", "label", c=C["aero_teal"])))
@@ -1674,8 +1674,8 @@ def build_deck(N, A, CH, bg, total=10):
     for col_i, chunk in enumerate((lim[:half], lim[half:])):
         s.text(70 + col_i * 366, 192, 344, 330, [P(R(t + " ", "body", s=9.5, b=True), R(d_, "bodym", s=9.2), after=9,
                                                    ls=1.1) for t, d_ in chunk])
-    s.line(70, 462, 786, 462, HAIR, 0.6)
-    s.text(70, 476, 700, 16, P(R("THE HONEST FINDINGS, IN ONE PLACE", "label", c=C["faint"])))
+    s.line(70, 474, 786, 474, HAIR, 0.6)
+    s.text(70, 486, 700, 16, P(R("THE HONEST FINDINGS, IN ONE PLACE", "label", c=C["faint"])))
     tr = N["truth"]["MTBUR (rotables + expendables)"]
     hs_ = [(f"{hon['forecast_champions_best']}/{hon['forecast_cells']}",
             f"cells where the frozen forecast champion was best on the holdout (SBA "
@@ -1688,8 +1688,8 @@ def build_deck(N, A, CH, bg, total=10):
             f"{cid} material AOG/yr with the AOG routes switched off")]
     for i, (big_, txt_) in enumerate(hs_):
         x_ = 70 + i * 180
-        s.text(x_, 502, 170, 34, P(R(big_, "mid", s=17, c=C["amber"] if i else C["aero_teal"])))
-        s.text(x_, 536, 166, 100, P(R(txt_, "bodym", s=8.8), ls=1.1))
+        s.text(x_, 508, 170, 34, P(R(big_, "mid", s=17, c=C["amber"] if i else C["aero_teal"])))
+        s.text(x_, 542, 166, 100, P(R(txt_, "bodym", s=8.8), ls=1.1))
     s.card(826, 150, 406, 520)
     s.text(848, 166, 360, 16, P(R("AUTHOR", "label", c=C["faint"])))
     s.text(848, 190, 370, 110, [P(R("Akash Gajjar", "title", s=22), after=6),
@@ -1762,10 +1762,10 @@ def build_carousel(N, A, CH, bg):
     s.text(72, 120, 936, 70, P(R("A re-mixed float, not a bigger one.", "title", s=40, sp=-0.5)))
     s.text(72, 200, 936, 150, P(R(f"Against {N['base_label']}, positioning the network ({cm['out2']} outstation units) "
                                   f"cuts material AOG by {cm['red']} hours a year {cm['red_ci']}. {cm['remix']}",
-                                  "lede", s=21, c=C["ice"]), ls=1.15))
-    s.text(72, 356, 936, 24, P(R("MATERIAL AOG H / YEAR · SPARE CAPITAL · HOLDOUT, 20 PAIRED SEEDS", "label", s=11,
+                                  "lede", s=19.5, c=C["ice"]), ls=1.12))
+    s.text(72, 376, 936, 24, P(R("MATERIAL AOG H / YEAR · SPARE CAPITAL · HOLDOUT, 20 PAIRED SEEDS", "label", s=11,
                                  c=C["faint"])))
-    s.image(72, 388, 936, 470, CH.kpi_bars(600, 300))
+    s.image(72, 406, 936, 452, CH.kpi_bars(600, 300))
     s.text(72, 870, 936, 120, [
         bullet([R(f"Holds in all {len(core['worlds'])} simulated worlds and across ×0.5–×2 the hourly downtime penalty.",
                   "bodym", s=17)], after=10, ls=1.12),
