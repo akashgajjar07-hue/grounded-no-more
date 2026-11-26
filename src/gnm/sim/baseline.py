@@ -5,7 +5,7 @@ TAT, deadline class, part class), the applicability table, planned fleet utilisa
 the planned route mix, the maintenance programme and the quoted vendor transit / core-return times.
 It never looks at removal history.
 
-* Rotables: total spares S = smallest S with P(Poisson(m) <= S) >= protection level (95% D0, 90% D3/D10),
+* Rotables: total spares S = smallest S with P(Poisson(m) <= S - 1) >= protection level (95% D0, 90% D3/D10),
   m = quoted annual removals x quoted pipeline days / 365. Held at AUH as serviceable target
   S - (repair-loop units the engine seeds at the start; POL-6), plus 1 outstation unit for a D0 PN where the
   quoted station rate is >= 4/yr (line-station kit).
@@ -25,10 +25,12 @@ from gnm.sim.quoted import pipeline_days, quoted_weekly_demand  # noqa: F401  (q
 
 
 def poisson_spares(mean: float, protection: float) -> int:
-    """Smallest S with P(Poisson(mean) <= S) >= protection."""
+    """Smallest total spares S such that a demand finds a serviceable spare with probability >= protection,
+    i.e. P(Poisson(mean) <= S - 1) >= protection (V2-SIM-10: the protection level is defined on the same
+    quantity the engine measures as immediate fill, not on the ready rate P(N <= S))."""
     if mean <= 0:
         return 0
-    return int(poisson.ppf(protection, mean))
+    return int(poisson.ppf(protection, mean)) + 1
 
 
 def _cs_rows(world, weeks_min_by_class, max_mult, dmap, net, stations, hub):

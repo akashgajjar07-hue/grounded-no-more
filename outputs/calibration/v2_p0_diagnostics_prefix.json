@@ -1,0 +1,379 @@
+{
+  "status": "DIAGNOSTIC ONLY - v2 P0, no target band, nothing tuned or locked",
+  "variant": "central",
+  "policy": "P0 (OEM-recommended provisioning on quoted data)",
+  "history": {
+    "weeks": [
+      0,
+      103
+    ],
+    "seed": 7,
+    "immediate_fill_rate": 0.9798,
+    "rotable_immediate_fill_rate": 0.5876,
+    "expendable_immediate_fill_rate": 0.928,
+    "consumable_immediate_fill_rate": 1.0,
+    "aog_hours_per_year": 6700.5,
+    "aog_events_per_year": 152.0,
+    "aog_hours_per_aircraft_year": 167.5,
+    "year1": {
+      "immediate_fill_rate": 0.9823,
+      "rotable_immediate_fill_rate": 0.5913,
+      "expendable_immediate_fill_rate": 0.9725,
+      "consumable_immediate_fill_rate": 1.0,
+      "aog_hours_per_year": 6367.0,
+      "aog_events_per_year": 156.0
+    },
+    "year2": {
+      "immediate_fill_rate": 0.9773,
+      "rotable_immediate_fill_rate": 0.5839,
+      "expendable_immediate_fill_rate": 0.8869,
+      "consumable_immediate_fill_rate": 0.9999,
+      "aog_hours_per_year": 7034.0,
+      "aog_events_per_year": 148.0
+    },
+    "spare_capital_aed": 40625357.0,
+    "kpis": {
+      "immediate_fill_rate": 0.98,
+      "aog_hours": 6700.5,
+      "aog_events": 304.0,
+      "backorder_unit_hours": 31101.0,
+      "spare_capital_aed": 40625357.42,
+      "holding_cost_aed": 8125071.48,
+      "repair_cost_aed": 16971166.86,
+      "logistics_cost_aed": 178425.0,
+      "expedite_cost_aed": 4457134.53,
+      "aog_penalty_aed": 163482500.0,
+      "purchase_spend_aed": 13444070.69
+    },
+    "extra": {
+      "phantom_removals": 0,
+      "aog_route_failures": 45,
+      "loans": 183,
+      "loans_open_at_end": 1,
+      "robberies": 233,
+      "donors_open_at_end": 4
+    }
+  },
+  "aog_note": "breakdowns use per-request material-late hours (unmerged); the fleet totals use merged per-aircraft events",
+  "aog_by_trigger": {
+    "D0_no_stock": {
+      "requests": 281,
+      "hours_per_year": 3842.0,
+      "share": 0.5698
+    },
+    "deadline_expired": {
+      "requests": 26,
+      "hours_per_year": 2900.5,
+      "share": 0.4302
+    }
+  },
+  "aog_by_class": {
+    "R": {
+      "requests": 287,
+      "hours_per_year": 5748.5,
+      "share": 0.8526
+    },
+    "E": {
+      "requests": 20,
+      "hours_per_year": 994.0,
+      "share": 0.1474
+    }
+  },
+  "aog_by_station": {
+    "AUH": {
+      "requests": 166,
+      "hours_per_year": 4986.0,
+      "share": 0.7395
+    },
+    "BOM": {
+      "requests": 39,
+      "hours_per_year": 380.0,
+      "share": 0.0564
+    },
+    "JED": {
+      "requests": 39,
+      "hours_per_year": 377.0,
+      "share": 0.0559
+    },
+    "CAI": {
+      "requests": 32,
+      "hours_per_year": 367.0,
+      "share": 0.0544
+    },
+    "SIN": {
+      "requests": 11,
+      "hours_per_year": 242.0,
+      "share": 0.0359
+    },
+    "FRA": {
+      "requests": 8,
+      "hours_per_year": 230.5,
+      "share": 0.0342
+    },
+    "LHR": {
+      "requests": 12,
+      "hours_per_year": 160.0,
+      "share": 0.0237
+    }
+  },
+  "aog_by_archetype": {
+    "widebody": {
+      "requests": 101,
+      "hours_per_year": 3639.0,
+      "share": 0.5397
+    },
+    "narrowbody": {
+      "requests": 206,
+      "hours_per_year": 3103.5,
+      "share": 0.4603
+    }
+  },
+  "consumable_share_of_aog": 0.0,
+  "top10_aog_pns": [
+    {
+      "pn": "GN-32-R015",
+      "description": "Main wheel and tyre assembly (NB)",
+      "class": "R",
+      "deadline": "D0",
+      "unit_cost_aed": 15574.0,
+      "aog_requests": 65,
+      "aog_hours_per_year": 958.5
+    },
+    {
+      "pn": "GN-32-R036",
+      "description": "Carbon brake assembly (WB)",
+      "class": "R",
+      "deadline": "D0",
+      "unit_cost_aed": 270041.0,
+      "aog_requests": 41,
+      "aog_hours_per_year": 733.5
+    },
+    {
+      "pn": "GN-29-R034",
+      "description": "Electric motor pump (WB)",
+      "class": "R",
+      "deadline": "D3",
+      "unit_cost_aed": 92085.0,
+      "aog_requests": 4,
+      "aog_hours_per_year": 568.5
+    },
+    {
+      "pn": "GN-32-R013",
+      "description": "Carbon brake assembly (NB)",
+      "class": "R",
+      "deadline": "D0",
+      "unit_cost_aed": 149600.0,
+      "aog_requests": 41,
+      "aog_hours_per_year": 545.5
+    },
+    {
+      "pn": "GN-29-R035",
+      "description": "Engine-driven hydraulic pump (WB)",
+      "class": "R",
+      "deadline": "D3",
+      "unit_cost_aed": 126967.0,
+      "aog_requests": 4,
+      "aog_hours_per_year": 538.0
+    },
+    {
+      "pn": "GN-33-E033",
+      "description": "Emergency light battery pack",
+      "class": "E",
+      "deadline": "D10",
+      "unit_cost_aed": 4919.0,
+      "aog_requests": 2,
+      "aog_hours_per_year": 411.5
+    },
+    {
+      "pn": "GN-24-R029",
+      "description": "Auto-transformer rectifier unit (WB)",
+      "class": "R",
+      "deadline": "D10",
+      "unit_cost_aed": 74569.0,
+      "aog_requests": 1,
+      "aog_hours_per_year": 405.0
+    },
+    {
+      "pn": "GN-27-R032",
+      "description": "Aileron power control unit (WB)",
+      "class": "R",
+      "deadline": "D0",
+      "unit_cost_aed": 169624.0,
+      "aog_requests": 14,
+      "aog_hours_per_year": 403.0
+    },
+    {
+      "pn": "GN-32-R014",
+      "description": "Nose wheel steering actuator (NB)",
+      "class": "R",
+      "deadline": "D0",
+      "unit_cost_aed": 104446.0,
+      "aog_requests": 40,
+      "aog_hours_per_year": 380.0
+    },
+    {
+      "pn": "GN-36-E013",
+      "description": "Bleed temperature sensor (NB)",
+      "class": "E",
+      "deadline": "D10",
+      "unit_cost_aed": 1200.0,
+      "aog_requests": 1,
+      "aog_hours_per_year": 244.5
+    }
+  ],
+  "sourcing_routes": {
+    "AOG exchange/loan": {
+      "requests": 167,
+      "units": 167,
+      "mean_wait_h": 74.2,
+      "median_wait_h": 41.0
+    },
+    "local stock": {
+      "requests": 35331,
+      "units": 41376,
+      "mean_wait_h": 0.0,
+      "median_wait_h": 0.0
+    },
+    "local borrow": {
+      "requests": 16,
+      "units": 16,
+      "mean_wait_h": 26.6,
+      "median_wait_h": 5.0
+    },
+    "AOG local buy": {
+      "requests": 101,
+      "units": 101,
+      "mean_wait_h": 135.3,
+      "median_wait_h": 209.0
+    },
+    "unfilled at end": {
+      "requests": 2,
+      "units": 2,
+      "mean_wait_h": null,
+      "median_wait_h": null
+    },
+    "backorder -> PO receipt": {
+      "requests": 41,
+      "units": 41,
+      "mean_wait_h": 137.0,
+      "median_wait_h": 78.0
+    },
+    "backorder -> repair return": {
+      "requests": 158,
+      "units": 158,
+      "mean_wait_h": 109.2,
+      "median_wait_h": 83.5
+    },
+    "robbery (AUH)": {
+      "requests": 233,
+      "units": 233,
+      "mean_wait_h": 43.9,
+      "median_wait_h": 7.0
+    },
+    "AUH/network transfer": {
+      "requests": 135,
+      "units": 135,
+      "mean_wait_h": 18.9,
+      "median_wait_h": 11.0
+    }
+  },
+  "rotable_fill_analytic_vs_sim": {
+    "analytic_quoted_plan_split": 0.4578,
+    "analytic_simulated_station_split": 0.7795,
+    "simulated_history": 0.5876,
+    "note": "analytic = P0's own expectation from quoted MTBUR/TAT (Poisson pipeline at AUH, line-station unit at outstations); simulated reflects true rates (quotes are optimistic), queueing and variability"
+  },
+  "p0_rotable_plan_totals": {
+    "S_total": 203,
+    "loop_units": 115,
+    "auh_serviceable_target": 88,
+    "outstation_units": 4
+  },
+  "selection_p0": {
+    "seeds": [
+      100,
+      101,
+      102,
+      103,
+      104
+    ],
+    "weeks": [
+      104,
+      155
+    ],
+    "start_week": 78,
+    "mean": {
+      "immediate_fill_rate": 0.9775,
+      "rotable_immediate_fill_rate": 0.58464,
+      "expendable_immediate_fill_rate": 0.8946400000000001,
+      "consumable_immediate_fill_rate": 0.9999399999999999,
+      "aog_hours_per_year": 7554.6,
+      "aog_events_per_year": 147.8,
+      "spare_capital_aed": 41046036.81350528,
+      "aog_hours_kpi": 7554.6,
+      "aog_events_kpi": 147.8
+    },
+    "per_seed": [
+      {
+        "seed": 100,
+        "immediate_fill_rate": 0.9786,
+        "rotable_immediate_fill_rate": 0.6185,
+        "expendable_immediate_fill_rate": 0.8893,
+        "consumable_immediate_fill_rate": 1.0,
+        "aog_hours_per_year": 7414.0,
+        "aog_events_per_year": 153.0,
+        "spare_capital_aed": 40728070.29669788,
+        "aog_hours_kpi": 7414.0,
+        "aog_events_kpi": 153
+      },
+      {
+        "seed": 101,
+        "immediate_fill_rate": 0.976,
+        "rotable_immediate_fill_rate": 0.5321,
+        "expendable_immediate_fill_rate": 0.9029,
+        "consumable_immediate_fill_rate": 0.9999,
+        "aog_hours_per_year": 8281.0,
+        "aog_events_per_year": 170.0,
+        "spare_capital_aed": 42201025.37066966,
+        "aog_hours_kpi": 8281.0,
+        "aog_events_kpi": 170
+      },
+      {
+        "seed": 102,
+        "immediate_fill_rate": 0.9789,
+        "rotable_immediate_fill_rate": 0.6083,
+        "expendable_immediate_fill_rate": 0.9013,
+        "consumable_immediate_fill_rate": 0.9999,
+        "aog_hours_per_year": 5979.0,
+        "aog_events_per_year": 121.0,
+        "spare_capital_aed": 40574158.47780673,
+        "aog_hours_kpi": 5979.0,
+        "aog_events_kpi": 121
+      },
+      {
+        "seed": 103,
+        "immediate_fill_rate": 0.976,
+        "rotable_immediate_fill_rate": 0.5864,
+        "expendable_immediate_fill_rate": 0.8623,
+        "consumable_immediate_fill_rate": 0.9999,
+        "aog_hours_per_year": 10268.0,
+        "aog_events_per_year": 142.0,
+        "spare_capital_aed": 40534056.84940467,
+        "aog_hours_kpi": 10268.0,
+        "aog_events_kpi": 142
+      },
+      {
+        "seed": 104,
+        "immediate_fill_rate": 0.978,
+        "rotable_immediate_fill_rate": 0.5779,
+        "expendable_immediate_fill_rate": 0.9174,
+        "consumable_immediate_fill_rate": 1.0,
+        "aog_hours_per_year": 5831.0,
+        "aog_events_per_year": 153.0,
+        "spare_capital_aed": 41192873.07294741,
+        "aog_hours_kpi": 5831.0,
+        "aog_events_kpi": 153
+      }
+    ]
+  }
+}

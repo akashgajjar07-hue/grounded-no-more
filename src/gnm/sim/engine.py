@@ -707,7 +707,10 @@ class _Engine:
         if self.r_src[r] in (SRC_REM, SRC_PLAN) and self.is_rot[p]:
             self._core_removal(r, p, t)
         self.open_unf[p][j] += q
-        avail = self.on_hand[p][j] - (0 if self.r_dlh[r] == 0 else self.reserved[p][j])
+        # D0 needs may break kit reservations; a scheduled need (kit / planned removal) at its own need time is not
+        # blocked by other reservations either, because every reservation still open is for a LATER need (V2-SIM-12).
+        blocked = 0 if (self.r_dlh[r] == 0 or self.r_src[r] in (SRC_KIT, SRC_PLAN)) else self.reserved[p][j]
+        avail = self.on_hand[p][j] - blocked
         take = min(max(avail, 0), q)
         self.r_unc[r] = q
         if take:

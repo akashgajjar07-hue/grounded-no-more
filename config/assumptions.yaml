@@ -196,7 +196,7 @@ service_targets:                     # target cycle service level by deadline cl
 
 policy_baseline_P0:                  # (v2, AV-04) "OEM-recommended provisioning on quoted data"
   rotable_protection_level: {D0: 0.95, D3: 0.90, D10: 0.90}
-  rotable_float_rule: "total spares S = smallest S with P(Poisson(quoted annual removals x quoted pipeline days / 365) <= S) >= protection level (95% D0, 90% D3/D10); quoted pipeline = quoted shop TAT + quoted vendor transit both ways + quoted core return (50% outstation share). Held at AUH (serviceable target = S minus the repair-loop units the run starts with), plus 1 outstation unit (line-station kit) for a D0 PN where the quoted station rate >= 4/yr."
+  rotable_float_rule: "total spares S = smallest S with P(Poisson(quoted annual removals x quoted pipeline days / 365) <= S - 1) >= protection level (95% D0, 90% D3/D10), i.e. the protection level is the probability that a demand finds a spare on the shelf (V2-SIM-10); quoted pipeline = quoted shop TAT + quoted vendor transit both ways + quoted core return weighted by the share rectified at an outstation (D0 50%, D3/D10 per the hub-deferral practice, wear-planned 0) (V2-SIM-11). Held at AUH (serviceable target = S minus the repair-loop units the run starts with), plus 1 outstation unit (line-station kit) for a D0 PN where the quoted station rate >= 4/yr."
   rotable_outstation_min_quoted_removals_per_year: 4
   consumable_min_weeks_of_avg_demand: {C: 26, E: 13}
   consumable_max_multiple_of_min: 2.0

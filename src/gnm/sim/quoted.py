@@ -49,10 +49,18 @@ def quoted_weekly_demand(world: World) -> pd.DataFrame:
 
 
 def pipeline_days(world: World, pn: str) -> float:
-    """Quoted rotable pipeline time: quoted shop TAT + vendor transit both ways + core return
-    (outstation share of arrivals, 50% planning split)."""
+    """Quoted rotable pipeline time, on the engine's definition (V2-SIM-11): quoted shop TAT + vendor transit
+    both ways + core return (outstation -> AUH) weighted by the share of removals rectified at an outstation
+    under the airline's own practice: D0 removals stay where found (planning split 50% outstation arrivals);
+    deferrable D3/D10 removals are mostly rectified at the hub (generator.deferred_to_hub_share, the airline's
+    deferral practice); wear-planned removals are always done at the hub."""
     cfg = world.cfg
     p = world.parts.set_index("pn").loc[pn]
     shop = world.repair_shops.get(p.repair_shop, {"transit_days": 0.0})
-    ret = cfg["network"]["removed_unit_return_days"]["mean"] * 0.5
+    out_share = 0.5
+    if getattr(p, "removal_mode", "unscheduled") == "wear_planned":
+        out_share = 0.0
+    elif p.deadline_class != "D0":
+        out_share = 0.5 * (1.0 - float(cfg["generator"].get("deferred_to_hub_share", 0.0)))
+    ret = cfg["network"]["removed_unit_return_days"]["mean"] * out_share
     return float(p.repair_tat_mean_d) + 2 * float(shop["transit_days"]) + ret

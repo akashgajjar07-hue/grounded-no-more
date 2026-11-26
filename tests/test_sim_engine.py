@@ -302,7 +302,8 @@ def test_p0_oem_provisioning_rule():
         m = net[p.pn] * 52 * pipeline_days(w, p.pn) / 365
         prot = 0.95 if p.deadline_class == "D0" else 0.90
         S = plan.loc[p.pn, "S_total"]
-        assert poisson.cdf(S, m) >= prot and (S == 0 or poisson.cdf(S - 1, m) < prot)
+        # V2-SIM-10: protection = P(a demand finds a spare) = P(N <= S - 1)
+        assert poisson.cdf(S - 1, m) >= prot and (S <= 1 or poisson.cdf(S - 2, m) < prot)
         g = sp[sp.pn == p.pn].set_index("station").base_stock
         assert g["AUH"] == max(0, S - plan.loc[p.pn, "loop_units"])
         for st, bs in g.items():
@@ -422,3 +423,29 @@ def test_v2_fluids_never_aog_and_aog_includes_fitting():
         assert ev.end_h >= int(one.filled_h) + int(one.fitting_h)
     assert (res.requests.fitting_h[res.requests.pn.isin(set(w.parts.pn[w.parts.part_class == "R"]))]
             .between(2, 6)).all()
+
+
+def test_v2_scheduled_need_not_blocked_by_later_reservations():
+    """V2-SIM-12: a kit/planned need at its own need time may use stock reserved for LATER scheduled needs."""
+    import re
+    src = (SRC / "sim" / "engine.py").read_text()
+    assert "self.r_src[r] in (SRC_KIT, SRC_PLAN)" in src
+    w, sc, res = full_run()
+    rq = res.requests
+    kit = rq[rq.source.isin(["scheduled_kit", "planned_removal"])]
+    assert kit.immediate_fill.astype(bool).mean() > 0.9
+
+
+def test_v2_quoted_pipeline_matches_engine_definition():
+    """V2-SIM-11: P0's quoted pipeline uses the engine's core-return exposure (D0 50%, deferred mostly at hub,
+    wear-planned 0) and 2 x vendor transit; the engine seeds the loop with the same function."""
+    from gnm.sim.quoted import pipeline_days
+    w, _ = full_world()
+    p = w.parts.set_index("pn")
+    ret = w.cfg["network"]["removed_unit_return_days"]["mean"]
+    hub = w.cfg["generator"]["deferred_to_hub_share"]
+    for pn, r in p[p.part_class == "R"].iterrows():
+        tr = w.repair_shops[r.repair_shop]["transit_days"]
+        share = 0.0 if r.removal_mode == "wear_planned" else (0.5 if r.deadline_class == "D0" else 0.5 * (1 - hub))
+        assert abs(pipeline_days(w, pn) - (r.repair_tat_mean_d + 2 * tr + ret * share)) < 1e-9
+
