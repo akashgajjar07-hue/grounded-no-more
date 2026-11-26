@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Record the live-site demo video, README hero screenshot and README GIF with Playwright.
+"""Record the demo video, README hero screenshot and README GIF with Playwright.
 
-    python scripts/record_demo.py                 # all three
+    python scripts/record_demo.py                 # all three, from a local `python -m http.server` of docs/ (default)
     python scripts/record_demo.py --only video|hero|gif
-    python scripts/record_demo.py --url http://localhost:8000/   # e.g. a local `python -m http.server -d docs`
+    python scripts/record_demo.py --url https://akashgajjar07-hue.github.io/grounded-no-more/   # the live site instead
 
 Outputs
-* presentations/demo.webm      1440x900, ~80 s: Mission Control -> "Start the story" -> -> every ~9 s through every
-                               story step -> Capital Optimiser budget-slider sweep.
+* presentations/demo.webm      1440x900, 60-90 s: Mission Control -> "Start the story" -> a manual "next" press every
+                               ~9 s through every story step (the step count is read from docs/data/story.json; v2 has
+                               six) -> a pass over the Capital Optimiser (budget-slider sweep).
 * docs/assets/readme/hero.png  1440x900 screenshot of Mission Control above the fold.
 * docs/assets/readme/demo.gif  ~10 s GIF of the Capital Optimiser budget slider (Pillow, no ffmpeg needed), <= 6 MB.
 
@@ -16,16 +17,45 @@ Nothing is posted anywhere; the script only reads the public site.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import io
+import json
 import shutil
+import socket
+import subprocess
+import sys
 import tempfile
 import time
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+DOCS = ROOT / "docs"
 LIVE = "https://akashgajjar07-hue.github.io/grounded-no-more/"
 VIEW = {"width": 1440, "height": 900}
-STEP_S = 8.5
+STEP_S = 9.0  # seconds per story step (manual next presses ~8-10 s apart)
+
+
+@contextlib.contextmanager
+def local_server():
+    """Serve docs/ with `python -m http.server` on a free port; yields the base URL."""
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    proc = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1",
+                             "--directory", str(DOCS)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    base = f"http://127.0.0.1:{port}/"
+    try:
+        for _ in range(50):
+            try:
+                urllib.request.urlopen(base + "data/story.json", timeout=1).read()
+                break
+            except Exception:
+                time.sleep(0.2)
+        yield base
+    finally:
+        proc.terminate()
+        proc.wait(timeout=5)
 
 
 def wait_ready(page, selector, timeout=30000):
@@ -34,11 +64,22 @@ def wait_ready(page, selector, timeout=30000):
     page.wait_for_timeout(1200)
 
 
-def n_story_steps(page, base):
-    try:
-        return len(page.evaluate(f"fetch('{base}data/story.json').then(r=>r.json()).then(d=>d.steps)"))
-    except Exception:
-        return 8
+def n_story_steps():
+    """Story step count from docs/data/story.json (the file the site serves)."""
+    return len(json.loads((DOCS / "data" / "story.json").read_text())["steps"])
+
+
+def story_next(page):
+    """Advance the story the way a viewer would: click a visible Next button, else press the right arrow."""
+    for sel in ("[data-story-next]", ".story-next", "button:has-text('Next')"):
+        loc = page.locator(sel)
+        try:
+            if loc.count() and loc.first.is_visible():
+                loc.first.click()
+                return
+        except Exception:
+            pass
+    page.keyboard.press("ArrowRight")
 
 
 def capital_slider(page):
@@ -81,12 +122,12 @@ def record_video(base, out):
         page = ctx.new_page()
         page.goto(base + "#/mission", wait_until="networkidle")
         wait_ready(page, "[data-story='mission-hero']")
-        n = n_story_steps(page, base)
+        n = n_story_steps()
         page.wait_for_timeout(3000)  # let the viewer see Mission Control
         page.get_by_role("button", name="Start the story").first.click()
         page.wait_for_timeout(int(STEP_S * 1000))
         for i in range(1, n):
-            page.keyboard.press("ArrowRight")
+            story_next(page)
             page.wait_for_timeout(int(STEP_S * 1000))
         page.keyboard.press("Escape")
         page.wait_for_timeout(600)
@@ -162,16 +203,19 @@ def gif(base, out, width=960, max_mb=6.0):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--url", default=LIVE)
+    ap.add_argument("--url", default=None, help=f"site to record (default: local server of docs/; live: {LIVE})")
     ap.add_argument("--only", choices=["video", "hero", "gif"])
     a = ap.parse_args()
-    base = a.url if a.url.endswith("/") else a.url + "/"
-    if a.only in (None, "hero"):
-        hero(base, ROOT / "docs" / "assets" / "readme" / "hero.png")
-    if a.only in (None, "gif"):
-        gif(base, ROOT / "docs" / "assets" / "readme" / "demo.gif")
-    if a.only in (None, "video"):
-        record_video(base, ROOT / "presentations" / "demo.webm")
+    ctx = local_server() if a.url is None else contextlib.nullcontext(a.url)
+    with ctx as url:
+        base = url if url.endswith("/") else url + "/"
+        print(f"recording from {base}")
+        if a.only in (None, "hero"):
+            hero(base, ROOT / "docs" / "assets" / "readme" / "hero.png")
+        if a.only in (None, "gif"):
+            gif(base, ROOT / "docs" / "assets" / "readme" / "demo.gif")
+        if a.only in (None, "video"):
+            record_video(base, ROOT / "presentations" / "demo.webm")
 
 
 if __name__ == "__main__":
