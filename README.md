@@ -132,7 +132,7 @@ Method details: [METHODOLOGY.md](METHODOLOGY.md). Model scope: [MODEL_CARD.md](M
 
 **Checked against real data too.** The forecasting code was also run on a REAL public benchmark. Dataset: Monash Car Parts (without missing values), 2,674 monthly series, licence CC BY 4.0, data provenance REAL (metrics DERIVED). Best eligible method IMAPA with mean MASE 1.056 [1.011–1.109]; the all-zero forecast scores 0.777, which is why zero is never allowed to be a champion. Attribution: Car Parts dataset, Monash Time Series Forecasting Archive (Godahewa, Bergmeir, Webb, Hyndman & Montero-Manso, 2021), Zenodo record 4656021, licensed CC BY 4.0; original data from Hyndman (2015), R package expsmooth.
 
-**Tests:** 555/556 passing, 1 failing, 0 skipped (fast, slow and browser suites, `GNM_RELEASE=1`; `reports/junit.xml`, run at 2026-11-26 15:57).
+**Tests:** 556/556 passing, 0 failing, 0 skipped (fast, slow and browser suites, `GNM_RELEASE=1`; `reports/junit.xml`, run at 2026-11-26 16:08).
 
 ---
 

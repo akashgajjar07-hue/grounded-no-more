@@ -1,2 +1,2 @@
-# Full suite (fast + slow + browser), GNM_RELEASE=1, 2026-11-26T06:01Z, base commit e634eb7
-==== 467 passed in 305.12s ====
+# Full suite (fast + slow + browser), GNM_RELEASE=1, 2026-11-26T10:44Z, commit b01ce5d
+==== 556 passed in 344.44s ====

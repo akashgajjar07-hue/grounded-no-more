@@ -6,7 +6,7 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 
 ## 1. Tests
 
-556 tests, 1 failures, 0 errors, 0 skipped, 340 s, run at 2026-11-26T15:57:55.914666+05:30 (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast, slow and browser suites in one serial run).
+556 tests, 0 failures, 0 errors, 0 skipped, 344 s, run at 2026-11-26T16:08:22.410899+05:30 (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast, slow and browser suites in one serial run).
 
 | Area | Test modules | Tests | Failed | Skipped |
 |---|---|---|---|---|
@@ -18,10 +18,10 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 | Freeze and holdout discipline | `test_freeze` | 3 | 0 | 0 |
 | Site data export, reconciliation, rendered docs | `test_reconciliation`, `test_site_data`, `test_docs_rendered` | 48 | 0 | 0 |
 | SQL, workbook, notebooks | `test_sql`, `test_workbook`, `test_notebooks` | 63 | 0 | 0 |
-| Web app screens (browser) | `test_site_actions`, `test_site_aog`, `test_site_forecast`, `test_site_method`, `test_site_mission`, `test_site_network`, `test_site_optimiser`, `test_site_overlays`, `test_site_parts`, `test_site_rotables`, `test_site_shared_apis`, `test_site_wave3_shared`, `test_site_waveA`, `test_site_waveB` | 190 | 1 | 0 |
-| **Total** | 45 modules | **556** | **1** | **0** |
+| Web app screens (browser) | `test_site_actions`, `test_site_aog`, `test_site_forecast`, `test_site_method`, `test_site_mission`, `test_site_network`, `test_site_optimiser`, `test_site_overlays`, `test_site_parts`, `test_site_rotables`, `test_site_shared_apis`, `test_site_wave3_shared`, `test_site_waveA`, `test_site_waveB` | 190 | 0 | 0 |
+| **Total** | 45 modules | **556** | **0** | **0** |
 
-Failing in this run: `test_site_mission::test_wave2_story_targets_are_tight`.
+No test failed.
 
 Doc rendering is checked by `tests/test_docs_rendered.py`: no result placeholder survives, the README results table and headline match `docs/data/kpis.json`, the P2 headline and the baseline sentence (8 vs 44 outstation rotables) are present, and the README never claims a result "at every tested setting".
 
