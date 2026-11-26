@@ -46,7 +46,7 @@ const SKILLS = [
   ]],
 ];
 
-/** The six unanswered questions ([simple, expert] where the wording differs). No forbidden words ("optimal"). */
+/** The six unanswered questions ([simple, expert] where the wording differs). Wording follows the v2.1 forbidden-word list. */
 const QUESTIONS = [
   ['How to handle parts needed only now and then', 'Intermittent demand handling'],
   'Why maximum local stock isn’t the best plan',
