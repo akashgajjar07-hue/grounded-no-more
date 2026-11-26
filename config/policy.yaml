@@ -4,6 +4,10 @@
 # they are read from config/assumptions.yaml (service_targets, economics).
 # Every entry carries provenance + rationale. "Falcon Hub Airways (fictional)" does not exist.
 
+service_target_none: 0.85            # v2 class NONE (servicing fluids, line usage, never an AOG driver): same as D10
+service_target_none_provenance: ASSUMED
+service_target_none_rationale: "assumptions.yaml service_targets covers D0/D3/D10 only; fluids have no rectification window, so the lowest (D10) target is used."
+
 forecast:
   final_origin_week: 104             # final forecasts are fitted on weeks 0..103 (history only)
   dispersion_window_weeks: 52        # weekly variance-to-mean ratio (VMR) is estimated on the last 52 history weeks

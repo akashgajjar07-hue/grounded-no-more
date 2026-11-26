@@ -25,7 +25,7 @@ AOG_CONFIG_PATH = ROOT / "config" / "aog_lab.yaml"
 TABLE_NAMES = (
     "aircraft_master", "part_master", "part_applicability", "maintenance_schedule", "removal_events",
     "material_requests", "inventory_transactions", "repair_orders", "purchase_orders", "transfers",
-    "aog_events", "stock_snapshots", "policy_p0_stock_params", "serialised_components",
+    "aog_events", "stock_snapshots", "policy_p0_stock_params", "serialised_components", "aog_loans", "aog_robberies",
 )
 
 
@@ -54,7 +54,7 @@ class Network:
     aog_h: dict          # (from, to) -> next-flight-out hours (symmetric)
     em_cost: dict        # (from, to) -> AED per AOG shipment
     routine_h: float     # mean routine transport hours
-    routine_ok_h: float  # slack above which a transfer ships routine
+    routine_ok_h: float  # slack at/above which a transfer ships routine (planned ETA + margin, AV-07)
     line_cost: float
     shop_transit_h: dict  # shop -> hours shop -> AUH
 
@@ -81,7 +81,8 @@ def network_from_config(cfg: dict | None = None, acfg: dict | None = None) -> Ne
     slack_sd = float(acfg["routine_option"]["slack_sd"])
     shops = cfg["repair_shops"]
     transit = {s: float(shops["vendor_transit_days_from_auh"].get(s, 0)) * 24 for s in shops if isinstance(shops[s], dict)}
-    return Network(tuple(st), net["hub"], aog, em, rt["mean"] * 24, (rt["mean"] + slack_sd * rt["sd"]) * 24,
+    margin = float(cfg["engine"].get("deferred_margin_h", 24))
+    return Network(tuple(st), net["hub"], aog, em, rt["mean"] * 24, (rt["mean"] + slack_sd * rt["sd"]) * 24 + margin,
                    float(cfg["economics"]["routine_shipment_aed_per_line"]), transit)
 
 
@@ -157,12 +158,18 @@ class HistoryView:
         return {s: self.ledger.on_hand(pn, s, t, before_txn) for s in self.net.stations}
 
     def kit_commitments(self, pn, station, t, horizon_h=None) -> int:
-        """Kit quantity already known at t (notice_h <= t) and not yet started (due_h > t)."""
+        """Scheduled quantity already known at t and not yet due: kit lines (notice_h <= t < due_h) and
+        wear-planned removals (known_h <= t < need_h)."""
         ms = self.t["maintenance_schedule"]
         m = ms[(ms.pn == pn) & (ms.station == station) & (ms.notice_h <= t) & (ms.due_h > t)]
         if horizon_h is not None:
             m = m[m.due_h <= t + horizon_h]
-        return int(m.qty.sum())
+        mr = self.t["material_requests"]
+        pl = mr[(mr.source == "planned_removal") & (mr.pn == pn) & (mr.station == station)
+                & (mr.known_h <= t) & (mr.need_h > t)]       # (v2) wear-planned changes are reserved like kits
+        if horizon_h is not None:
+            pl = pl[pl.need_h <= t + horizon_h]
+        return int(m.qty.sum()) + int(pl.qty.sum())
 
     def open_ros(self, pn, t) -> pd.DataFrame:
         """Repair orders at a shop at t, not returned and not yet known to be condemned."""
@@ -178,6 +185,15 @@ class HistoryView:
         p = po[(po.pn == pn) & (po.order_h < t)]
         p = p[p.receipt_h.isna() | (p.receipt_h > t)]
         return p.sort_values(["due_h", "po_id"])
+
+    def busy_donors(self, pn, t) -> set:
+        """Tails robbed of this PN before t and not yet reinstated (status known at t)."""
+        rb = self.t.get("aog_robberies")
+        if rb is None or rb.empty:
+            return set()
+        r = rb[(rb.pn == pn) & (rb.robbed_h < t)]
+        r = r[r.reinstated_h.isna() | (r.reinstated_h >= t)]
+        return set(r.donor_tail)
 
     def d0_demand_rate(self, pn, station, t, lookback_weeks) -> tuple[int, float]:
         """D0 requests for pn at station in the lookback window before t -> (count, per hour)."""
@@ -204,8 +220,16 @@ def poisson_protection(rate_per_h: float, hours: float, service_level: float) ->
     return 1000
 
 
-def deadline_hours(dc: str) -> int:
-    return int(DEADLINE_HOURS[dc])
+def deadline_hours(dc: str):
+    """Rectification window in hours; None for NONE (servicing fluids never drive AOG)."""
+    v = DEADLINE_HOURS[dc]
+    return None if v is None else int(v)
+
+
+def fitting_mid_h(cfg: dict, part_class: str) -> float:
+    """Midpoint of engine.fitting_hours for the class (fitting / ops check / release to service)."""
+    v = cfg["engine"]["fitting_hours"][part_class]
+    return float(sum(v) / 2) if isinstance(v, list) else float(v)
 
 
 @lru_cache(maxsize=1)

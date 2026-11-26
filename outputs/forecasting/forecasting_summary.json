@@ -22,75 +22,77 @@
     "tsb",
     "zero"
   ],
-  "champions_sha256": "3399c6aec948ea418999cefe9c576926e32a62d2d0830821137301a90c2ba3dc",
+  "champions_sha256": "0b1c78288bdb25646bd751de6e110c0a5f7943e63d4b4de42cebab6386464542",
   "champion_counts_parts": {
-    "sba": 40,
-    "tsb": 38,
-    "naive": 38,
-    "imapa": 4
+    "sba": 64,
+    "tsb": 32,
+    "reliability": 24
   },
   "reliability_vs_croston": [
     {
       "part_class": "C",
-      "reliability_mase": 0.7934518791,
+      "reliability_mase": 0.8010392613,
       "reliability_ci": [
-        0.7284117734,
-        0.8781772947
+        0.7443,
+        0.8607
       ],
       "best_croston_family": "sba",
-      "croston_family_mase": 0.7752774515,
+      "croston_family_mase": 0.8046542012,
       "croston_family_ci": [
-        0.7278608927,
-        0.8298223664
+        0.7468,
+        0.8712
       ],
-      "reliability_better": false,
+      "mase_verdict": "reliability better",
+      "reliability_better": true,
       "cis_overlap": true,
-      "reliability_pinball_q90": 1.7192592593,
-      "croston_family_pinball_q90": 1.8644444444
+      "reliability_pinball_q90": 2.0303703704,
+      "croston_family_pinball_q90": 2.4151851852
     },
     {
       "part_class": "E",
-      "reliability_mase": 0.9662907864,
+      "reliability_mase": 0.9335398259,
       "reliability_ci": [
-        0.8586026897,
-        1.0954535237
+        0.8553,
+        1.0142
       ],
       "best_croston_family": "tsb",
-      "croston_family_mase": 0.9426016637,
+      "croston_family_mase": 0.9342129209,
       "croston_family_ci": [
-        0.8370720773,
-        1.0787041218
+        0.834,
+        1.0411
       ],
+      "mase_verdict": "tie (|diff| < 0.001)",
       "reliability_better": false,
       "cis_overlap": true,
-      "reliability_pinball_q90": 0.3,
-      "croston_family_pinball_q90": 0.3823809524
+      "reliability_pinball_q90": 0.2571428571,
+      "croston_family_pinball_q90": 0.3028571429
     },
     {
       "part_class": "R",
-      "reliability_mase": 0.9022583619,
+      "reliability_mase": 1.0063135827,
       "reliability_ci": [
-        0.8242581256,
-        0.98312067
+        0.927,
+        1.1062
       ],
-      "best_croston_family": "tsb",
-      "croston_family_mase": 0.8845534779,
+      "best_croston_family": "sba",
+      "croston_family_mase": 1.0056872194,
       "croston_family_ci": [
-        0.7942248875,
-        0.9827034114
+        0.9196,
+        1.1115
       ],
+      "mase_verdict": "tie (|diff| < 0.001)",
       "reliability_better": false,
       "cis_overlap": true,
-      "reliability_pinball_q90": 0.245,
-      "croston_family_pinball_q90": 0.2691666667
+      "reliability_pinball_q90": 0.2295833333,
+      "croston_family_pinball_q90": 0.2433333333
     }
   ],
   "lead_time_regime_shifts": [
-    "GN-30-E025"
+    "GN-33-E033"
   ],
   "timings_s": {
     "evaluation": 4.0,
-    "stock_eval": 1.4,
-    "final": 0.7
+    "stock_eval": 1.3,
+    "final": 0.6
   }
 }

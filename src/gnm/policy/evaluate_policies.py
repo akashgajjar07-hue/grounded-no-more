@@ -35,7 +35,25 @@ POL_OUT = OUTPUTS / "policies"
 KPI_COLS = [c.name for c in schemas.TABLES["policy_results"].cols if c.name not in ("policy_id", "seed", "split")]
 COST_COMPONENTS = ["holding_cost_aed", "repair_cost_aed", "logistics_cost_aed", "expedite_cost_aed", "aog_penalty_aed"]
 SUMMARY_KPIS = ["immediate_fill_rate", "aog_hours", "aog_events", "backorder_unit_hours", "spare_capital_aed",
-                "total_annual_cost_aed"] + COST_COMPONENTS + ["purchase_spend_aed"]
+                "total_annual_cost_aed"] + COST_COMPONENTS + ["aog_event_cost_aed", "aog_hourly_penalty_aed",
+                                                              "purchase_spend_aed"]
+KPI_LABELS = {
+    "immediate_fill_rate": "Immediate fill rate (share of requested qty issued from local serviceable stock at need time)",
+    "aog_hours": "Expected material-related downtime hours per year (material AOG hours, config economics.aog_hour_definition)",
+    "aog_events": "Material-related downtime events per year (merged per aircraft)",
+    "backorder_unit_hours": "Material shortage exposure (unfilled request-unit-hours per year)",
+    "spare_capital_aed": "Spare capital, AED (time-average value of owned spares; NOT part of annual cost)",
+    "total_annual_cost_aed": "Total annual cost, AED = holding + repair + logistics + expedite/AOG-route + AOG penalty (capital excluded)",
+    "holding_cost_aed": "Holding cost, AED/yr (carrying rate x spare capital)",
+    "repair_cost_aed": "Repair cost, AED/yr", "logistics_cost_aed": "Routine logistics, AED/yr",
+    "expedite_cost_aed": "Emergency logistics + AOG-route fees (exchange, loan, borrow, local buy premium, robbery labour), AED/yr",
+    "aog_penalty_aed": "AOG penalty, AED/yr (hourly rate x hours + fixed cost per event; planning scenario)",
+    "aog_event_cost_aed": "Fixed AOG-event cost part of the penalty, AED/yr",
+    "aog_hourly_penalty_aed": "Hourly part of the AOG penalty, AED/yr",
+    "purchase_spend_aed": "Purchase spend, AED/yr (consumption replenishment; not in total cost)",
+    "aog_hours_expiry_artefact": "Downtime hours/yr from needs left unfilled after an earmarked shelf-life shipment expired on arrival (engine bug, reported)",
+    "aog_hours_excl_expiry_artefact": "Expected material-related downtime hours/yr excluding the expiry-on-arrival engine artefact",
+}
 PAIRS = [("P1", "P0"), ("P2", "P0"), ("P2", "P1")]
 
 
@@ -46,13 +64,29 @@ def total_annual_cost(k) -> float:
 
 
 def penalty_sensitivity(df: pd.DataFrame, mults=None) -> pd.DataFrame:
-    """Total annual cost with the AOG penalty scaled by m (operations unchanged, so recomputed from KPIs)."""
+    """Total annual cost with the HOURLY AOG penalty scaled by m (config aog_penalty_sensitivity); the fixed
+    per-event cost (v2) is kept at x1. Operations are unchanged, so this is recomputed from the KPIs."""
     mults = mults or load_config()["economics"]["aog_penalty_sensitivity"]
     out = df.copy()
-    base = out[COST_COMPONENTS].sum(axis=1) - out["aog_penalty_aed"]
+    ev = out["aog_event_cost_aed"] if "aog_event_cost_aed" in out else 0.0
+    hourly = out["aog_penalty_aed"] - ev
+    base = out[COST_COMPONENTS].sum(axis=1) - out["aog_penalty_aed"] + ev
     for m in mults:
-        out[f"total_cost_pen_x{m:g}"] = base + float(m) * out["aog_penalty_aed"]
+        out[f"total_cost_pen_x{m:g}"] = base + float(m) * hourly
     return out
+
+
+def aog_event_cost(world: World, res, k0w: int, k1w: int) -> float:
+    """Annualised fixed AOG-event cost part of ``aog_penalty_aed`` (v2: per merged event starting in the
+    KPI window, by the tail's archetype; config economics.aog_event_cost_aed)."""
+    ev_cfg = world.cfg["economics"].get("aog_event_cost_aed")
+    if not ev_cfg or res.aog_events is None or not len(res.aog_events):
+        return 0.0
+    k0, k1 = k0w * HOURS_PER_WEEK, (k1w + 1) * HOURS_PER_WEEK
+    arch = dict(zip(world.aircraft["tail"], world.aircraft["archetype"]))
+    e = res.aog_events
+    e = e[(e.start_h >= k0) & (e.start_h < k1)]
+    return float(e["tail"].map(arch).map(ev_cfg).astype(float).sum()) * 52.0 / (k1w - k0w + 1)
 
 
 # ---------------------------------------------------------------------------------- statistics
@@ -121,6 +155,11 @@ def reduce_detail(world: World, res, variant: str, k0w: int, k1w: int) -> tuple[
     ev = ev.assign(win_h=ov, part_class=ev.pns.str.split(";").str[0].map(cls),
                    started=(ev.start_h >= k0) & (ev.start_h < k1))
     base = {"variant": variant, "policy_id": res.policy_id, "seed": res.seed}
+    routes = ("robbery", "exchange_loan", "local_borrow", "local_buy")
+    rr = rq["aog_route_result"].astype("string").fillna("") if "aog_route_result" in rq else pd.Series("", index=rq.index)
+
+    def _routes(mask):
+        return {f"route_{x}": int((rr[mask] == x).sum()) for x in routes}
     srows, crows = [], []
     for st in world.stations.station:
         r = rq[rq.station == st]
@@ -130,13 +169,15 @@ def reduce_detail(world: World, res, variant: str, k0w: int, k1w: int) -> tuple[
                       "rotable_fill_rate": float(r[r.part_class == "R"].immediate_fill.astype(bool).mean())
                       if (r.part_class == "R").any() else np.nan,
                       "aog_hours": float(e.win_h.sum() * ann), "aog_events": int(e.started.sum()),
-                      "aog_hours_D0": float(e[e.trigger == "D0_no_stock"].win_h.sum() * ann)})
+                      "aog_hours_D0": float(e[e.trigger == "D0_no_stock"].win_h.sum() * ann),
+                      **_routes(rq.station == st)})
     for c in ("C", "E", "R"):
         r = rq[rq.part_class == c]
         e = ev[ev.part_class == c]
         crows.append({**base, "part_class": c, "requests": int(len(r)), "qty": int(r.qty.sum()),
                       "immediate_fill_rate": float(r.imm_qty.sum() / r.qty.sum()) if r.qty.sum() else np.nan,
-                      "aog_hours": float(e.win_h.sum() * ann), "aog_events": int(e.started.sum())})
+                      "aog_hours": float(e.win_h.sum() * ann), "aog_events": int(e.started.sum()),
+                      **_routes(rq.part_class == c)})
     return srows, crows
 
 
@@ -176,7 +217,46 @@ def policies_for_variant(world: World, variant: str, champions: pd.DataFrame, ce
     return {"policies": pols, "forecasts": ff}
 
 
+def expiry_artefact_hours(res, k0w: int, k1w: int) -> tuple[float, int]:
+    """Annualised AOG hours (KPI window) of events driven by a request that was never filled although an
+    earmarked shipment for it arrived: the engine purges expired shelf-life batches on arrival, and the
+    need, already marked as covered, is never re-sourced (simulator bug reported to the lead, not fixed
+    here). Returns (hours, number of such requests)."""
+    k0, k1 = k0w * HOURS_PER_WEEK, (k1w + 1) * HOURS_PER_WEEK
+    rq, tr, ev = res.requests, res.transfers, res.aog_events
+    if rq is None or not len(rq) or tr is None or not len(tr) or ev is None or not len(ev):
+        return 0.0, 0
+    earm = set(tr.request_id.dropna().astype(int))
+    stuck = rq[rq.filled_h.isna() & rq.request_id.isin(earm)]
+    ids = set(stuck.request_id.astype(int).astype(str))
+    if not ids:
+        return 0.0, 0
+    hit = ev.request_ids.str.split(";").map(lambda xs: bool(ids.intersection(xs)))
+    e = ev[hit]
+    ov = (np.minimum(e.end_h.to_numpy(), k1) - np.maximum(e.start_h.to_numpy(), k0)).clip(0)
+    return float(ov.sum()) * 52.0 / (k1w - k0w + 1), int(len(ids))
+
+
 # ---------------------------------------------------------------------------------- runner
+def warm_scenario_cache(seeds, week_from: int, week_to: int, variant: str) -> None:
+    """Generate / validate the cached Scenarios in the parent process before ``run_many``.
+
+    ``run_many`` workers given (seed, ...) tuples each call load_or_generate_scenario; with several
+    policies per seed, workers can race on writing the same cache pickle and a reader can see a
+    truncated file (observed: UnpicklingError / EOFError). Warming the cache serially avoids that;
+    unreadable cache files are removed and regenerated (cache only, no data)."""
+    import pickle
+    from gnm.sim.api import CACHE, load_or_generate_scenario
+    for s in seeds:
+        for f in CACHE.glob(f"scenario_*_{variant}_{int(s)}_{int(week_from)}_{int(week_to)}.pkl"):
+            try:
+                with open(f, "rb") as fh:
+                    pickle.load(fh)
+            except Exception:
+                f.unlink()
+        load_or_generate_scenario(int(s), int(week_from), int(week_to), True, variant)
+
+
 def run_variant(world: World, variant: str, policies: dict, seeds, ecfg: dict, processes=None,
                 check_pairing: bool = True) -> dict:
     from gnm.sim.engine import run_many
@@ -184,6 +264,7 @@ def run_variant(world: World, variant: str, policies: dict, seeds, ecfg: dict, p
     kpi_rows, srows, crows = [], [], []
     batch = int(ecfg.get("seeds_per_batch", 5))
     seeds = list(seeds)
+    warm_scenario_cache(seeds, ecfg["week_from"], ecfg["week_to"], variant)
     for i in range(0, len(seeds), batch):
         chunk = seeds[i:i + batch]
         scs = [(s, ecfg["week_from"], ecfg["week_to"], True, variant) for s in chunk]
@@ -197,8 +278,12 @@ def run_variant(world: World, variant: str, policies: dict, seeds, ecfg: dict, p
                         raise AssertionError(f"requests differ across policies for seed {s} ({variant})")
             for r in group:
                 assert r.seed == s
+                evc = aog_event_cost(world, r, ecfg["kpi_from_week"], ecfg["kpi_to_week"])
+                art = expiry_artefact_hours(r, ecfg["kpi_from_week"], ecfg["kpi_to_week"])
                 kpi_rows.append({"policy_id": r.policy_id, "seed": int(s), "split": "selection", **r.kpis,
-                                 "variant": variant})
+                                 "variant": variant, "aog_event_cost_aed": evc,
+                                 "aog_hourly_penalty_aed": r.kpis["aog_penalty_aed"] - evc,
+                                 "aog_hours_expiry_artefact": art[0], "n_requests_expiry_artefact": art[1]})
                 a, b = reduce_detail(world, r, variant, ecfg["kpi_from_week"], ecfg["kpi_to_week"])
                 srows += a
                 crows += b
@@ -216,6 +301,8 @@ def _agg_breakdown(df: pd.DataFrame, key: str) -> list:
             ci = paired_ci(x) if x.size else {"mean": np.nan, "ci_lo": np.nan, "ci_hi": np.nan}
             row[m] = ci["mean"]
             row[f"{m}_ci"] = [ci["ci_lo"], ci["ci_hi"]]
+        for m in [c for c in g.columns if c.startswith("route_")]:
+            row[f"{m}_per_year"] = float(g[m].mean())        # 52-week KPI window -> per year
         rows.append(row)
     return rows
 
@@ -269,19 +356,23 @@ def evaluate(variants=None, seeds=None, processes=None, out_dir: Path | None = N
     res = pd.concat(kp, ignore_index=True)
     stations = pd.concat(st, ignore_index=True)
     classes = pd.concat(cl, ignore_index=True)
-    cols = schemas.TABLES["policy_results"].colnames + ["variant"]
+    cols = schemas.TABLES["policy_results"].colnames + ["variant", "aog_event_cost_aed", "aog_hourly_penalty_aed",
+                                                        "aog_hours_expiry_artefact", "n_requests_expiry_artefact"]
     res = res[cols]
     for v, g in res.groupby("variant"):
         errs = schemas.validate_table("policy_results", g)
         if errs:
             raise ValueError(errs)
+    res = res.reset_index(drop=True)
     res.to_parquet(out / "selection_results.parquet", index=False)
     stations.to_parquet(out / "selection_station_kpis.parquet", index=False)
     classes.to_parquet(out / "selection_class_kpis.parquet", index=False)
     ext = penalty_sensitivity(res)
     ext["total_annual_cost_aed"] = ext[COST_COMPONENTS].sum(axis=1)
+    ext["aog_hours_excl_expiry_artefact"] = ext["aog_hours"] - ext["aog_hours_expiry_artefact"]
     mults = load_config()["economics"]["aog_penalty_sensitivity"]
-    kpis = SUMMARY_KPIS + [f"total_cost_pen_x{m:g}" for m in mults]
+    kpis = SUMMARY_KPIS + [f"total_cost_pen_x{m:g}" for m in mults] + ["aog_hours_expiry_artefact",
+                                                                       "aog_hours_excl_expiry_artefact"]
     summary = {
         "provenance": "SIMULATED",
         "split": "selection",
@@ -289,6 +380,8 @@ def evaluate(variants=None, seeds=None, processes=None, out_dir: Path | None = N
         "kpi_weeks": [ecfg["kpi_from_week"], ecfg["kpi_to_week"]],
         "ci_method": "95% paired t over seeds (n-1 df); bootstrap percentile CI over seeds as a check",
         "total_cost_definition": "holding + repair + logistics + expedite + AOG penalty (capital excluded)",
+        "labels": KPI_LABELS,
+        "penalty_sensitivity_definition": "hourly AOG rate x m, fixed per-event cost unchanged",
         "aog_penalty_multipliers": mults,
         "variants": summarise(ext, kpis=kpis, n_boot=int(ecfg["n_boot"])),
         "by_station": _agg_breakdown(stations, "station"),
@@ -323,6 +416,7 @@ def palm_vs_sim(world: World, policy: PolicySpec, forecasts: pd.DataFrame, seeds
     seeded = pipeline_units_at_start(world)
     acc = {}
     seeds = list(seeds)
+    warm_scenario_cache(seeds, ecfg["week_from"], ecfg["week_to"], variant)
     for i in range(0, len(seeds), int(ecfg.get("seeds_per_batch", 5))):
         chunk = seeds[i:i + int(ecfg.get("seeds_per_batch", 5))]
         outs = run_many(world, [(s, ecfg["week_from"], ecfg["week_to"], True, variant) for s in chunk], [policy],
@@ -379,6 +473,7 @@ def threshold_sensitivity(world: World, forecasts: pd.DataFrame, thetas, seeds, 
     from gnm.sim.baseline import build_p0
     from gnm.sim.engine import run_many
     ecfg = fp.load_policy_config()["evaluation"]
+    warm_scenario_cache(seeds, ecfg["week_from"], ecfg["week_to"], variant)
     pols = [build_p0(world)]
     for th in thetas:
         pc = copy.deepcopy(fp.load_policy_config())

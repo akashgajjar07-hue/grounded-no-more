@@ -187,9 +187,16 @@ def run_forecast_evaluation(inputs: dict, origins=None, seed: int = 0) -> dict:
     return {"errors": err, "leaderboard": board, "leaderboard_by_class": board_cls, "champions": champs}
 
 
-def _service(deadline: str) -> float:
+def service_level(deadline: str) -> float:
+    """Cycle-service / fill target by rectification window: config service_targets (D0/D3/D10); the v2
+    class NONE (servicing fluids, never an AOG driver) uses config/policy.yaml service_target_none."""
     st = load_config()["service_targets"]
-    return float(st[deadline])
+    if deadline in st:
+        return float(st[deadline])
+    return float(load_policy_config()["service_target_none"])
+
+
+_service = service_level
 
 
 def run_stock_eval(hist: dict, origins=(78, 86), methods=STOCK_EVAL_METHODS, end_week: int = 103) -> pd.DataFrame:
@@ -427,6 +434,7 @@ def station_context(hist: dict, world, stations, prior_weight: float = 4.0) -> d
     rq = hist["material_requests"]
     pm = hist["part_master"].set_index("pn")
     pen_cfg = world.cfg["economics"]["aog_penalty_aed_per_hour"]
+    ev_cfg = world.cfg["economics"].get("aog_event_cost_aed", {a: 0.0 for a in pen_cfg})
     arch = dict(zip(hist["aircraft_master"]["tail"], hist["aircraft_master"]["archetype"]))
     fl = hist["flight_exposure"]
     arr = fl.assign(a=fl["tail"].map(arch)).groupby(["arr_station", "a"]).size()
@@ -449,7 +457,14 @@ def station_context(hist: dict, world, stations, prior_weight: float = 4.0) -> d
             tw = sum(w.values())
             pen = (sum(w[a] * float(pen_cfg[a]) for a in w) / tw) if tw > 0 else \
                 float(np.mean([pen_cfg[a] for a in archs])) if archs else float(np.mean(list(pen_cfg.values())))
-            out[(pn, st)] = {"p_d0": p0, "p_d10": p10, "aog_penalty_aed_h": pen, "n_requests_hist": int(n)}
+            if tw > 0:
+                ev = sum(w[a] * float(ev_cfg[a]) for a in w) / tw
+                nb = w.get("narrowbody", 0.0) / tw
+            else:
+                ev = float(np.mean([ev_cfg[a] for a in archs])) if archs else float(np.mean(list(ev_cfg.values())))
+                nb = (float(np.mean([a == "narrowbody" for a in archs])) if archs else 0.5)
+            out[(pn, st)] = {"p_d0": p0, "p_d10": p10, "aog_penalty_aed_h": pen, "aog_event_cost_aed": ev,
+                             "nb_share": nb, "n_requests_hist": int(n)}
     return out
 
 
@@ -599,10 +614,14 @@ def reliability_vs_croston(leaderboard_by_class: pd.DataFrame) -> pd.DataFrame:
         fam = g.loc[[m for m in ("croston", "sba", "tsb") if m in g.index]]
         best = fam.mase.idxmin()
         r, b = g.loc["reliability"], g.loc[best]
-        rows.append({"part_class": cls, "reliability_mase": r.mase, "reliability_ci": [r.mase_ci_lo, r.mase_ci_hi],
-                     "best_croston_family": best, "croston_family_mase": b.mase,
-                     "croston_family_ci": [b.mase_ci_lo, b.mase_ci_hi],
-                     "reliability_better": bool(r.mase < b.mase),
+        tie = abs(float(r.mase) - float(b.mase)) < 1e-3
+        rows.append({"part_class": cls, "reliability_mase": float(r.mase),
+                     "reliability_ci": [round(float(r.mase_ci_lo), 4), round(float(r.mase_ci_hi), 4)],
+                     "best_croston_family": best, "croston_family_mase": float(b.mase),
+                     "croston_family_ci": [round(float(b.mase_ci_lo), 4), round(float(b.mase_ci_hi), 4)],
+                     "mase_verdict": "tie (|diff| < 0.001)" if tie else ("reliability better" if r.mase < b.mase
+                                                                          else "croston family better"),
+                     "reliability_better": bool(r.mase < b.mase and not tie),
                      "cis_overlap": bool(not (r.mase_ci_hi < b.mase_ci_lo or b.mase_ci_hi < r.mase_ci_lo)),
                      "reliability_pinball_q90": r.get("pinball_q90", np.nan),
                      "croston_family_pinball_q90": b.get("pinball_q90", np.nan)})

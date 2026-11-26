@@ -1,111 +1,120 @@
-"""Sourcing-option engine evaluated at the moment of a material request.
+"""Sourcing-option engine evaluated at the moment of a material request (v2).
 
-Inputs are a :class:`Snapshot` holding only what the AOG desk knew at ``need_h``: serviceable
-on-hand per station from transactions before the request, kit commitments already notified,
-open repair orders with their *quoted* due dates, open purchase orders with their *quoted* due
-dates, trailing D0 demand per station (for protection levels), and aircraft grounded or in check.
-Actual receipt/return times are never read (tests/test_aog_options.py perturbs them).
+A :class:`Snapshot` holds only what the AOG desk knew at ``need_h``: serviceable on-hand per station
+from transactions before the request, notified kit commitments, open repair orders and purchase
+orders at their *quoted* dates (and whether an RO had started work), transfers already in transit,
+trailing D0 demand per station, and which same-type aircraft are already robbed. The per-request
+random draws the engine uses for route availability and response are never read: probabilistic
+routes are valued from their published odds (``assumptions.yaml: aog_sourcing``).
 
-Options
--------
-a  Local serviceable stock
-b  AUH emergency transfer (next-flight-out; routine shipment when the deadline allows)
-c  Lateral transfer from another outstation, keeping its protection level
-d  Pool exchange (P3 terms; NOT_CONTRACTED unless config/aog_lab.yaml says so)
-e  Accelerated repair of the earliest unit at the shop
-f  Expedited new purchase (AOG-desk market buy)
-g  Robbery / cannibalisation from a grounded or in-check aircraft (human decision, never ranked)
-h  Await supply already inbound (open PO / RO at its quoted due date, after earlier backorders)
+Options (mirroring the v2 engine's routes)
+------------------------------------------
+local              Local serviceable stock
+hub_transfer       AUH transfer (next-flight-out; routine when the window allows, AV-07)
+lateral            Lateral transfer from another outstation, keeping its protection level
+local_borrow       Outstation third-party loan / inter-airline borrow (rotables, odds by station x type)
+robbery            Robbery from a same-type aircraft at AUH — engineering/quality approval, human decision
+exchange_loan      AOG exchange / loan (rotables, odds and response by type, fee + daily fee, no pool growth)
+local_buy          Local AOG buy / borrow (consumables and expendables)
+inbound            Await supply already in the pipeline (transfer in transit, open PO, RO return)
+repair_queue_jump  Pay the shop to jump its queue (AV-21: queue wait removed, work time kept) — estimate
+pool               Pool exchange — NOT_CONTRACTED (greyed)
 
-exposure_aed = max(0, wait_h - deadline_slack_h) x AOG penalty per hour (archetype) + direct cost.
+Material shortage exposure (consistent with the v2 engine accounting, AV-10):
+    late      = wait_h > window_h
+    aog_h     = wait_h + fitting_h - window_h   if late else 0
+    exposure  = aog_h x rate/h (archetype) + fixed cost per event (archetype, if late) + direct cost
 """
 from __future__ import annotations
 
 import math
 from dataclasses import asdict, dataclass, field
 
+import pandas as pd
+
 from gnm.config import load_config
-from gnm.schemas import DEADLINE_HOURS
 
-from .data import HistoryView, Network, load_aog_config, poisson_protection
+from .data import HistoryView, Network, deadline_hours, fitting_mid_h, load_aog_config, poisson_protection
 
+KEYS = ("local", "hub_transfer", "lateral", "local_borrow", "robbery", "exchange_loan", "local_buy", "inbound",
+        "repair_queue_jump", "pool")
 OPTION_LABELS = {
-    "a": "Local serviceable stock",
-    "b": "Emergency transfer from AUH",
-    "c": "Lateral transfer from another outstation",
-    "d": "Pool exchange",
-    "e": "Accelerated repair (earliest unit at shop)",
-    "f": "Expedite new purchase",
-    "g": "Robbery / cannibalisation",
-    "h": "Await inbound supply (open order)",
+    "local": "Local serviceable stock",
+    "hub_transfer": "Transfer from AUH",
+    "lateral": "Lateral transfer from another outstation",
+    "local_borrow": "Local borrow / third-party loan at the outstation",
+    "robbery": "Robbery from an aircraft at AUH (human decision)",
+    "exchange_loan": "AOG exchange / loan",
+    "local_buy": "Local AOG buy / borrow",
+    "inbound": "Await supply already inbound",
+    "repair_queue_jump": "Repair queue-jump with AOG surcharge (estimate)",
+    "pool": "Pool exchange",
 }
 
 REASON_CODES = {
     "LOCAL_STOCK": "Serviceable unit on the shelf at the requesting station",
     "NO_STOCK": "No serviceable unit at the source(s)",
-    "COMMITTED_TO_KIT": "Units on hand are committed to notified scheduled-check kits (only AOG needs may break them)",
-    "ROBS_KIT_RESERVATION": "Feasible only by breaking a scheduled-check kit reservation (allowed for an aircraft already AOG)",
+    "COMMITTED_TO_KIT": "Units on hand are reserved for notified scheduled needs (only D0 needs may break them)",
+    "ROBS_KIT_RESERVATION": "Feasible only by breaking a scheduled-need reservation (allowed for a D0 need)",
     "NOT_APPLICABLE_AT_HUB": "The request is at AUH itself",
     "STOCK_AT_HUB": "Serviceable unit available at AUH",
     "NEXT_FLIGHT_OUT": "Ships next-flight-out / hand-carry",
-    "ROUTINE_SHIPMENT": "Deadline slack covers routine transport; ships routine at line cost",
-    "BELOW_PROTECTION_LEVEL": "Donor stations hold stock but only at or below their own D0 protection level",
+    "ROUTINE_SHIPMENT": "Window covers routine transit + margin; ships routine at line cost",
+    "BELOW_PROTECTION_LEVEL": "Donor stations hold stock only at or below their own D0 protection level",
     "LATERAL_OK": "Donor outstation keeps its protection level after shipping",
-    "NOT_CONTRACTED": "No pool-exchange agreement in force (P0 history); P3 terms shown for reference",
+    "ROTABLES_ONLY": "Route applies to rotables only",
+    "CONSUMABLES_EXPENDABLES_ONLY": "Route applies to consumables and expendables only",
+    "OUTSTATION_ONLY": "Local borrow exists only at outstations",
+    "HUB_ONLY": "Robbery is modelled at AUH only (hangar aircraft in check / parked)",
+    "NO_LOCAL_MARKET": "No local borrow source at this station for this fleet type",
+    "AVAILABILITY_UNCERTAIN": "Route available only with probability p; failed attempts are retried",
+    "NO_DONOR_AIRCRAFT": "No same-type aircraft with the PN fitted that is not already a donor",
+    "HUMAN_DECISION_REQUIRED": "Engineering/quality approval required — human decision; never auto-recommended",
+    "LOAN_FEE_ACCRUES": "Daily fee accrues until the own unit replaces the borrowed unit (estimated)",
+    "NOT_CONTRACTED": "No pool-exchange agreement in force (P0); P3 terms shown for reference",
     "NOT_POOLED_PART_CLASS": "Pool covers rotables only",
     "POOL_OK": "Pool exchange contracted",
-    "NOT_REPAIRABLE": "Part class is not repaired (consumable/expendable)",
     "NO_OPEN_RO": "No unit of this PN at a repair shop",
-    "RO_OVERDUE": "Earliest RO is already past its quoted due date; remaining time assumed",
-    "NO_TIME_SAVED": "Acceleration cannot shorten the remaining shop time",
-    "DOES_NOT_BEAT_ALTERNATIVES": "Accelerated return is not faster than another feasible option",
-    "ACCELERATION_OK": "Paying the shop to prioritise beats the other feasible options",
-    "EXPEDITE_MARKET_BUY": "AOG-desk purchase at expedite lead time and premium",
-    "OPEN_PO_EXISTS": "An order for this PN is already open (see option h)",
-    "NO_OPEN_SUPPLY": "No open PO or RO for this PN",
+    "NO_QUEUE_TO_JUMP": "Every unit at the shop has already started work: priority cannot shorten work content",
+    "DOES_NOT_BEAT_ALTERNATIVES": "Queue-jump return is not faster than another feasible option",
+    "QUEUE_JUMP_OK": "Queue-jump return beats the other feasible options",
+    "ESTIMATE": "Estimate: quoted TAT and a flat surcharge, not a shop quote",
+    "NO_OPEN_SUPPLY": "Nothing inbound for this PN",
     "OPEN_PO_INBOUND": "Earliest usable inbound unit is an open purchase order",
-    "INBOUND_TRANSFER": "A replenishment shipment to this station is already in transit (ETA from ship time + planned transit)",
+    "INBOUND_TRANSFER": "A shipment to this station is already in transit (ETA = ship time + planned transit)",
     "RO_RETURN_INBOUND": "Earliest usable inbound unit is a repair return",
     "QUEUED_BEHIND_BACKORDERS": "Earlier unfilled requests claim the first inbound units",
-    "SUPPLY_OVERDUE": "Inbound order is past its quoted due date; remaining time assumed",
-    "EXCEEDS_DEADLINE": "Wait is longer than the deadline slack: the aircraft is AOG for the difference",
-    "HUMAN_DECISION_REQUIRED": "Requires engineering/quality approval — human decision; never auto-recommended",
-    "NO_DONOR_AIRCRAFT": "No aircraft grounded or in check at this station with this PN fitted",
+    "SUPPLY_OVERDUE": "Inbound order is past its quoted date; remaining time assumed",
+    "EXCEEDS_DEADLINE": "Wait exceeds the rectification window: material-related downtime for the difference plus fitting",
 }
 
 HUMAN_CHECKS = {
     "common": [
-        "Confirm the deadline class against the actual deferral decision (the simulation's D0/D3/D10 are hypothetical classes, not MEL categories).",
-        "Confirm part applicability for the tail: part number interchangeability, effectivity and modification / service-bulletin status.",
+        "Confirm the rectification window against the actual deferral decision (D0/D3/D10 are hypothetical simulation classes, not operator MEL decisions).",
+        "Confirm part applicability for the tail: interchangeability, effectivity and modification / service-bulletin status.",
     ],
     "transfer": [
         "Confirm the unit's release certificate (EASA Form 1 / FAA 8130-3 or equivalent) and traceability travel with it.",
-        "Check shelf-life / storage limits and packaging for the move.",
         "Book next-flight-out or hand-carry and pre-clear customs at the receiving station.",
     ],
-    "lateral": [
-        "Agree with the donor station; raise its replenishment so its own D0 cover is restored.",
+    "lateral": ["Agree with the donor station and raise its replenishment so its own D0 cover is restored."],
+    "loan": [
+        "Check the lender's release certificate, back-to-birth traceability where required, and mod status.",
+        "Agree the commercial terms: exchange/loan fee, daily fee, core-return condition and return date.",
+        "Plan the hand-back: the own unit replaces the borrowed unit when it becomes serviceable.",
     ],
-    "repair": [
-        "Get the shop's committed release date in writing before approving the acceleration fee.",
-        "Confirm the unit is released with a certificate of airworthiness for the repair performed.",
-    ],
-    "purchase": [
-        "Verify the seller's traceability and release certificate (new or overhauled) before committing.",
-        "Approve the expedite premium within delegated financial authority.",
-    ],
-    "supply": [
-        "Confirm the open order's status with the supplier/shop and earmark the inbound unit for this aircraft.",
-    ],
-    "local": [
-        "Confirm the shelf unit's certificate and condition before issue.",
-    ],
+    "buy": ["Buy only from an approved source with a release certificate; record the AOG premium."],
+    "supply": ["Confirm the inbound unit's status with the supplier/shop/stores and earmark it for this aircraft."],
+    "repair": ["Get the shop's written priority and release date before approving the surcharge (estimate only)."],
+    "local": ["Confirm the shelf unit's certificate and condition before issue."],
     "robbery": [
-        "Robbery is never automatic: it needs engineering and quality approval, and owner/lessor approval where the donor is leased.",
-        "Both aircraft records must be updated; the donor aircraft now carries the shortage and needs its own sourcing plan.",
+        "Robbery needs engineering and quality approval (and owner/lessor approval where the donor is leased).",
+        "Both aircraft records must be updated; the donor carries the shortage until it is reinstated from the next AUH unit.",
     ],
 }
-_CHECK_GROUP = {"a": "local", "b": "transfer", "c": "transfer", "d": "transfer", "e": "repair", "f": "purchase", "h": "supply"}
+_CHECK_GROUP = {"local": "local", "hub_transfer": "transfer", "lateral": "transfer", "local_borrow": "loan",
+                "exchange_loan": "loan", "local_buy": "buy", "inbound": "supply", "repair_queue_jump": "repair",
+                "pool": "loan", "robbery": "robbery"}
 
 
 @dataclass
@@ -114,102 +123,137 @@ class Snapshot:
     pn: str
     part_class: str
     unit_cost: float
-    quoted_lead_d: float
     station: str
     need_h: int
     qty: int
     deadline_class: str
     archetype: str
-    penalty_per_h: float
-    on_hand: dict                 # station -> serviceable on-hand
-    committed: dict = field(default_factory=dict)      # station -> notified kit qty not yet started
+    on_hand: dict                                      # station -> serviceable on-hand
+    repair_cost: float = 0.0
+    quoted_tat_d: float = 0.0
+    repair_shop: str | None = None
+    committed: dict = field(default_factory=dict)      # station -> reserved for notified scheduled needs
     protection: dict = field(default_factory=dict)     # station -> protection level for own D0 demand
-    d0_counts: dict = field(default_factory=dict)      # station -> trailing D0 requests (evidence)
-    open_ros: list = field(default_factory=list)       # [{ro_id, shop, quoted_due_h, serial}]
+    d0_counts: dict = field(default_factory=dict)
+    open_ros: list = field(default_factory=list)       # [{ro_id, shop, quoted_due_h, serial, started}]
     open_pos: list = field(default_factory=list)       # [{po_id, qty, due_h, reason}]
-    backorders_ahead: int = 0     # earlier unfilled requests for this PN (network), not yet covered by a shipment
-    inbound_transfers: list = field(default_factory=list)   # [{transfer_id, from, qty, eta_h}] in transit to station
-    station_backorders_ahead: int = 0   # of which at this station
-    donors: list = field(default_factory=list)         # [{tail, why}]
+    inbound_transfers: list = field(default_factory=list)   # [{transfer_id, from, qty, eta_h}]
+    backorders_ahead: int = 0
+    station_backorders_ahead: int = 0
+    donor_candidates: int = 0                          # same-type tails with the PN fitted, not already donors
     request_id: int | None = None
     tail: str | None = None
 
     @property
-    def slack_h(self) -> int:
-        return int(DEADLINE_HOURS[self.deadline_class])
+    def window_h(self):
+        return deadline_hours(self.deadline_class)
 
 
-def exposure(wait_h: float, slack_h: float, penalty_per_h: float, direct_cost: float) -> float:
-    return max(0.0, float(wait_h) - float(slack_h)) * float(penalty_per_h) + float(direct_cost)
+def exposure(wait_h, window_h, fit_h, rate_h, event_cost, direct_cost) -> tuple[float, float]:
+    """(aog_h, exposure_aed). Material counts as late only if it arrives after the window (AV-10)."""
+    late = float(wait_h) > float(window_h)
+    aog = (float(wait_h) + float(fit_h) - float(window_h)) if late else 0.0
+    return aog, aog * float(rate_h) + (float(event_cost) if late else 0.0) + float(direct_cost)
 
 
-def _opt(key, feasible, codes, wait_h=None, cost=0.0, snap=None, **kw):
-    o = {"key": key, "option": OPTION_LABELS[key], "feasible": bool(feasible), "reason_codes": list(codes),
-         "wait_h": (None if wait_h is None else float(round(wait_h, 1))), "direct_cost": float(round(cost, 2)),
-         "greyed": False, "human_decision": False, "rank": None}
-    o.update(kw)
-    if wait_h is not None and snap is not None:
-        o["aog_h"] = float(round(max(0.0, wait_h - snap.slack_h), 1))
-        o["exposure_aed"] = float(round(exposure(wait_h, snap.slack_h, snap.penalty_per_h, cost), 2))
-        o["deadline_met"] = bool(wait_h <= snap.slack_h)
-        if feasible and wait_h > snap.slack_h and "EXCEEDS_DEADLINE" not in o["reason_codes"]:
-            o["reason_codes"].append("EXCEEDS_DEADLINE")
-    else:
-        o.update(aog_h=None, exposure_aed=None, deadline_met=False)
-    return o
+class _Ctx:
+    def __init__(self, snap, net, cfg, acfg):
+        self.s, self.net, self.cfg, self.acfg = snap, net, cfg, acfg
+        eco = cfg["economics"]
+        self.rate = float(eco["aog_penalty_aed_per_hour"][snap.archetype])
+        self.ev = float(eco["aog_event_cost_aed"][snap.archetype])
+        self.fit = fitting_mid_h(cfg, snap.part_class)
+        self.win = snap.window_h if snap.window_h is not None else math.inf
+
+    def opt(self, key, feasible, codes, wait_h=None, cost=0.0, **kw):
+        o = {"key": key, "option": OPTION_LABELS[key], "feasible": bool(feasible), "reason_codes": list(codes),
+             "wait_h": None if wait_h is None else float(round(wait_h, 1)), "direct_cost": float(round(cost, 2)),
+             "greyed": False, "human_decision": False, "estimate": False, "rank": None,
+             "availability_p": 1.0, "fitting_h": self.fit}
+        o.update(kw)
+        if wait_h is not None:
+            aog, ex = exposure(wait_h, self.win, self.fit, self.rate, self.ev, cost)
+            o.update(aog_h=float(round(aog, 1)), exposure_aed=float(round(ex, 2)), deadline_met=bool(aog == 0))
+            if feasible and aog > 0 and "EXCEEDS_DEADLINE" not in o["reason_codes"]:
+                o["reason_codes"].append("EXCEEDS_DEADLINE")
+        else:
+            o.update(aog_h=None, exposure_aed=None, deadline_met=False)
+        return o
+
+    def leg(self, src, elapsed=0.0):
+        """src -> station: routine if the remaining window covers planned routine transit + margin (AV-07)."""
+        st = self.s.station
+        if src == st:
+            return 0.0, 0.0, "AT_STATION"
+        if self.win - elapsed >= self.net.routine_ok_h:
+            return self.net.routine_h, self.net.line_cost, "ROUTINE_SHIPMENT"
+        return float(self.net.hours(src, st)), self.net.em_cost[(src, st)], "NEXT_FLIGHT_OUT"
 
 
-def _avail(snap: Snapshot, st: str) -> tuple[int, int]:
-    """(available, on_hand). D0 needs may break kit reservations (engine SIM-6); D3/D10 may not."""
-    oh = int(snap.on_hand.get(st, 0))
-    com = 0 if snap.slack_h == 0 else int(snap.committed.get(st, 0))
-    return oh - com, oh
+def _sequence(routes, retry_h):
+    """Expected (wait, cost, cycle success prob, share won by the first route) when the desk tries
+    `routes` [(p, mid_wait, cost), ...] in order in one attempt and retries the cycle every retry_h."""
+    fail, ew, ec, wins = 1.0, 0.0, 0.0, []
+    for p, mid, cost in routes:
+        w = fail * p
+        ew += w * mid
+        ec += w * cost
+        wins.append(w)
+        fail *= (1.0 - p)
+    s = 1.0 - fail
+    if s <= 0:
+        return None, None, 0.0, 0.0
+    return ew / s + (retry_h or 0.0) * fail / s, ec / s, s, wins[0] / s
+
+
+def _expected_wait(p, lo, hi, retry_h):
+    mid = (lo + hi) / 2.0
+    if p <= 0:
+        return None
+    return mid + (retry_h or 0.0) * (1.0 - p) / p
 
 
 def evaluate_options(snap: Snapshot, net: Network, cfg: dict | None = None, acfg: dict | None = None) -> list[dict]:
     cfg = cfg or load_config()
     acfg = acfg or load_aog_config()
-    eco = cfg["economics"]
-    hub, st, q = net.hub, snap.station, snap.qty
+    c = _Ctx(snap, net, cfg, acfg)
+    ags = cfg["aog_sourcing"]
+    hub, st, q, cls = net.hub, snap.station, snap.qty, snap.part_class
+    rot = cls == "R"
+    retry = float((ags.get("retry_hours") or {}).get(cls) or 0.0)
     opts = {}
 
-    # (a) local
-    av, oh = _avail(snap, st)
+    def avail(station):
+        oh = int(snap.on_hand.get(station, 0))
+        com = 0 if snap.window_h == 0 else int(snap.committed.get(station, 0))
+        return oh - com, oh
+
+    # local
+    av, oh = avail(st)
     if av >= q:
-        opts["a"] = _opt("a", True, ["LOCAL_STOCK"], 0, 0.0, snap, source=st, evidence={"on_hand": oh})
+        opts["local"] = c.opt("local", True, ["LOCAL_STOCK"], 0.0, 0.0, source=st, evidence={"on_hand": oh})
     else:
-        codes = ["COMMITTED_TO_KIT"] if oh >= q else ["NO_STOCK"]
-        opts["a"] = _opt("a", False, codes, None, 0.0, snap, source=st,
-                         evidence={"on_hand": oh, "kit_committed": int(snap.committed.get(st, 0))})
+        opts["local"] = c.opt("local", False, ["COMMITTED_TO_KIT" if oh >= q else "NO_STOCK"], source=st,
+                              evidence={"on_hand": oh, "reserved": int(snap.committed.get(st, 0))})
 
-    # (b) AUH transfer
-    def ship(src, elapsed_h=0.0):
-        """Hub/outstation -> station leg: routine if the remaining slack covers routine transit."""
-        if src == st:
-            return 0.0, 0.0, "AT_STATION"
-        if snap.slack_h - elapsed_h >= net.routine_ok_h:
-            return net.routine_h, net.line_cost, "ROUTINE_SHIPMENT"
-        return net.hours(src, st), net.em_cost[(src, st)], "NEXT_FLIGHT_OUT"
-
+    # AUH transfer
     if st == hub:
-        opts["b"] = _opt("b", False, ["NOT_APPLICABLE_AT_HUB"], None, 0.0, snap, source=hub)
+        opts["hub_transfer"] = c.opt("hub_transfer", False, ["NOT_APPLICABLE_AT_HUB"], source=hub)
     else:
-        oh_h = int(snap.on_hand.get(hub, 0))
-        com_h = int(snap.committed.get(hub, 0))
-        av_h = oh_h - (0 if snap.slack_h == 0 else com_h)
-        ev = {"on_hand_auh": oh_h, "kit_committed_auh": com_h}
+        av_h, oh_h = avail(hub)
+        ev = {"on_hand_auh": oh_h, "reserved_auh": int(snap.committed.get(hub, 0))}
         if av_h >= q:
-            w, c, mode = ship(hub)
+            w, cost, mode = c.leg(hub)
             codes = ["STOCK_AT_HUB", mode]
-            if snap.slack_h == 0 and oh_h - com_h < q:
+            if snap.window_h == 0 and oh_h - int(snap.committed.get(hub, 0)) < q:
                 codes.append("ROBS_KIT_RESERVATION")
-            opts["b"] = _opt("b", True, codes, w, c * (1 if mode == "NEXT_FLIGHT_OUT" else q), snap, source=hub,
-                             mode=("routine" if mode == "ROUTINE_SHIPMENT" else "next_flight_out"), evidence=ev)
+            opts["hub_transfer"] = c.opt("hub_transfer", True, codes, w, cost, source=hub,
+                                         mode="routine" if mode == "ROUTINE_SHIPMENT" else "next_flight_out", evidence=ev)
         else:
-            opts["b"] = _opt("b", False, ["COMMITTED_TO_KIT" if oh_h >= q else "NO_STOCK"], None, 0.0, snap,
-                             source=hub, evidence=ev)
+            opts["hub_transfer"] = c.opt("hub_transfer", False, ["COMMITTED_TO_KIT" if oh_h >= q else "NO_STOCK"],
+                                         source=hub, evidence=ev)
 
-    # (c) lateral from another outstation
+    # lateral
     rows = []
     for k in net.stations:
         if k in (hub, st):
@@ -217,53 +261,21 @@ def evaluate_options(snap: Snapshot, net: Network, cfg: dict | None = None, acfg
         oh_k = int(snap.on_hand.get(k, 0))
         com_k = int(snap.committed.get(k, 0))
         pl = int(snap.protection.get(k, 0))
-        spare = oh_k - com_k - pl
-        rows.append({"station": k, "on_hand": oh_k, "kit_committed": com_k, "protection_level": pl,
-                     "d0_requests_lookback": int(snap.d0_counts.get(k, 0)), "spare": spare,
+        rows.append({"station": k, "on_hand": oh_k, "reserved": com_k, "protection_level": pl,
+                     "d0_requests_lookback": int(snap.d0_counts.get(k, 0)), "spare": oh_k - com_k - pl,
                      "hours": net.hours(k, st)})
     ok = sorted([r for r in rows if r["spare"] >= q], key=lambda r: (r["hours"], r["station"]))
     if ok:
         k = ok[0]["station"]
-        opts["c"] = _opt("c", True, ["LATERAL_OK", "NEXT_FLIGHT_OUT"], net.hours(k, st), net.em_cost[(k, st)], snap,
-                         source=k, evidence={"donors": rows})
+        opts["lateral"] = c.opt("lateral", True, ["LATERAL_OK", "NEXT_FLIGHT_OUT"], net.hours(k, st), net.em_cost[(k, st)],
+                                source=k, evidence={"donors": rows})
     else:
-        codes = ["BELOW_PROTECTION_LEVEL"] if any(r["on_hand"] - r["kit_committed"] >= q for r in rows) else ["NO_STOCK"]
-        opts["c"] = _opt("c", False, codes, None, 0.0, snap, source=None, evidence={"donors": rows})
+        codes = ["BELOW_PROTECTION_LEVEL"] if any(r["on_hand"] - r["reserved"] >= q for r in rows) else ["NO_STOCK"]
+        opts["lateral"] = c.opt("lateral", False, codes, evidence={"donors": rows})
 
-    # (d) pool exchange
-    pcfg, pool = acfg["pool_exchange"], cfg["pool_exchange_P3"]
-    pw = float(pool["response_hours"])
-    pc = float(pool["fee_pct_of_unit"]) * snap.unit_cost * q
-    if snap.part_class not in pcfg["scope_part_classes"]:
-        opts["d"] = _opt("d", False, ["NOT_POOLED_PART_CLASS"], None, 0.0, snap, greyed=True)
-    elif not pcfg["contracted"]:
-        o = _opt("d", False, ["NOT_CONTRACTED"], pw, pc, snap, greyed=True,
-                 evidence={"terms": "pool_exchange_P3", "response_hours": pw, "fee_pct_of_unit": pool["fee_pct_of_unit"],
-                           "annual_access_fee_aed": pool["annual_access_fee_aed"]})
-        o["indicative"] = True
-        opts["d"] = o
-    else:
-        opts["d"] = _opt("d", True, ["POOL_OK"], pw, pc, snap)
-
-    # (f) expedite purchase (needed before (e) is judged)
-    ec = cfg["engine"]
-    cap = (ec.get("expedite_max_days") or {}).get(snap.part_class)
-    lead_d = snap.quoted_lead_d * float(ec["expedite_lead_time_factor"])
-    if cap is not None:
-        lead_d = min(lead_d, float(cap))
-    sw, sc, _ = ship(hub, lead_d * 24)
-    fw = lead_d * 24 + sw
-    prem = float(eco["expedite_purchase_premium_pct"]) * snap.unit_cost * q
-    fc = prem + sc
-    fcodes = ["EXPEDITE_MARKET_BUY"] + (["OPEN_PO_EXISTS"] if snap.open_pos else [])
-    opts["f"] = _opt("f", True, fcodes, fw, fc, snap, source="market",
-                     evidence={"expedite_lead_d": round(lead_d, 2), "premium_aed": round(prem, 2),
-                               "unit_price_aed_excluded": round(snap.unit_cost * q, 2)})
-
-    # (h) await inbound supply, after earlier backorders
-    racc = acfg["repair_acceleration"]
-    over_h = float(racc["overdue_assumed_remaining_days"]) * 24
-    cands = []   # (ready_h from need, cost, ref, kind, extra)
+    # inbound supply (needed for loan-duration estimates)
+    over_h = 7 * 24.0
+    cands = []
     trs = sorted(snap.inbound_transfers, key=lambda x: (x["eta_h"], x["transfer_id"]))
     for tr_ in trs[snap.station_backorders_ahead:]:
         for _ in range(int(tr_.get("qty", 1))):
@@ -281,75 +293,160 @@ def evaluate_options(snap: Snapshot, net: Network, cfg: dict | None = None, acfg
         rem, over = due - snap.need_h, False
         if rem <= 0:
             rem, over = over_h, True
-        sw, sc, _ = ship(hub, rem)
+        sw, sc, _ = c.leg(hub, rem)
         cands.append((rem + sw, sc, f"{kind}{ref}", kind, {"quoted_due_h": due, "remaining_h": round(rem, 1),
                                                          "leg_h": round(sw, 1), "overdue": over}))
     cands.sort(key=lambda x: (x[0], x[1], x[2]))
     n_in = len(trs) + len(hubq)
     if len(cands) >= q:
-        w, c, ref, kind, extra = cands[q - 1]
+        w, cost, ref, kind, extra = cands[q - 1]
         codes = [{"T": "INBOUND_TRANSFER", "PO": "OPEN_PO_INBOUND", "RO": "RO_RETURN_INBOUND"}[kind]]
         if (kind == "T" and snap.station_backorders_ahead) or (kind != "T" and snap.backorders_ahead):
             codes.append("QUEUED_BEHIND_BACKORDERS")
         if extra.pop("overdue", False):
             codes.append("SUPPLY_OVERDUE")
-        opts["h"] = _opt("h", True, codes, w, c, snap, source=ref,
-                         evidence={"inbound_ref": ref, **extra, "backorders_ahead": snap.backorders_ahead,
-                                   "station_backorders_ahead": snap.station_backorders_ahead, "inbound_units": n_in})
+        opts["inbound"] = c.opt("inbound", True, codes, w, cost, source=ref,
+                                evidence={"inbound_ref": ref, **extra, "backorders_ahead": snap.backorders_ahead,
+                                          "station_backorders_ahead": snap.station_backorders_ahead, "inbound_units": n_in})
+        own_unit_h = w
     else:
-        opts["h"] = _opt("h", False, ["NO_OPEN_SUPPLY" if not n_in else "QUEUED_BEHIND_BACKORDERS"], None, 0.0, snap,
-                         evidence={"inbound_units": n_in, "backorders_ahead": snap.backorders_ahead})
+        opts["inbound"] = c.opt("inbound", False, ["NO_OPEN_SUPPLY" if not n_in else "QUEUED_BEHIND_BACKORDERS"],
+                                evidence={"inbound_units": n_in, "backorders_ahead": snap.backorders_ahead})
+        sw, _, _ = c.leg(hub, 1e9)
+        transit = float(net.shop_transit_h.get(snap.repair_shop, 0.0)) if snap.repair_shop else 0.0
+        own_unit_h = snap.quoted_tat_d * 24 + transit + (0 if st == hub else net.hours(hub, st))
 
-    # (e) accelerated repair
-    if snap.part_class != "R":
-        opts["e"] = _opt("e", False, ["NOT_REPAIRABLE"], None, 0.0, snap)
-    elif not snap.open_ros:
-        opts["e"] = _opt("e", False, ["NO_OPEN_RO"], None, 0.0, snap)
+    def loan_cost(fixed, daily_pct, wait):
+        days = max(0.0, own_unit_h - wait) / 24.0
+        return fixed + daily_pct * snap.unit_cost * days * q, round(days, 1)
+
+    # exchange / loan (rotables): the desk's fall-back market route at every station
+    ex = ags["exchange_loan"]
+    ex_route = None
+    if not rot:
+        opts["exchange_loan"] = c.opt("exchange_loan", False, ["ROTABLES_ONLY"])
     else:
-        r = sorted(snap.open_ros, key=lambda x: (x["quoted_due_h"], x["ro_id"]))[0]
-        codes = []
-        rem = r["quoted_due_h"] - snap.need_h
-        if rem <= 0:
-            rem = over_h
-            codes.append("RO_OVERDUE")
-        floor = float(racc["min_remaining_days"]) * 24 + float(net.shop_transit_h.get(r.get("shop"), 0))
-        acc = max(floor, rem * (1 - float(racc["max_cut_share"])))
-        acc = min(acc, rem)
-        saved_d = (rem - acc) / 24
-        sw, sc, _ = ship(hub, acc)
-        w = acc + sw
-        c = saved_d * float(eco["repair_acceleration_cost_aed_per_day_per_unit"]) + sc
-        others = [o["wait_h"] for k, o in opts.items() if o["feasible"] and k in "abcdfh" and o["wait_h"] is not None]
-        best_other = min(others) if others else math.inf
-        ev = {"ro_id": int(r["ro_id"]), "serial": r.get("serial"), "shop": r.get("shop"),
-              "quoted_due_h": int(r["quoted_due_h"]), "remaining_h": round(rem, 1),
-              "accelerated_remaining_h": round(acc, 1), "days_saved": round(saved_d, 2),
-              "best_alternative_wait_h": (None if best_other == math.inf else best_other)}
-        if saved_d <= 0:
-            opts["e"] = _opt("e", False, codes + ["NO_TIME_SAVED"], w, c, snap, evidence=ev)
-        elif w >= best_other:
-            opts["e"] = _opt("e", False, codes + ["DOES_NOT_BEAT_ALTERNATIVES"], w, c, snap, evidence=ev)
+        p_ex = float(ex["availability"][snap.archetype])
+        lo, hi = ex["response_hours"][snap.archetype]
+        w = _expected_wait(p_ex, lo, hi, retry)
+        cost, days = loan_cost(float(ex["fee_pct_of_list"][snap.archetype]) * snap.unit_cost * q,
+                               float(ex["loan_fee_pct_of_list_per_day"]), w)
+        ex_route = (p_ex, (lo + hi) / 2.0, cost)
+        opts["exchange_loan"] = c.opt("exchange_loan", True, ["AVAILABILITY_UNCERTAIN", "LOAN_FEE_ACCRUES"], w, cost,
+                                      availability_p=p_ex, response_h=[lo, hi], source="AOG exchange/loan market",
+                                      evidence={"wait_if_available_h": (lo + hi) / 2, "retry_h": retry,
+                                                "fee_pct_of_list": ex["fee_pct_of_list"][snap.archetype],
+                                                "est_loan_days": days, "pool_growth": False})
+
+    # local borrow (rotables, outstations), with exchange/loan as the same-attempt fall-back (engine order)
+    lb = ags["local_borrow"]
+    if not rot:
+        opts["local_borrow"] = c.opt("local_borrow", False, ["ROTABLES_ONLY"])
+    elif st == hub:
+        opts["local_borrow"] = c.opt("local_borrow", False, ["OUTSTATION_ONLY"])
+    else:
+        p = float(lb["availability"][snap.archetype].get(st, 0.0))
+        lo, hi = lb["response_hours"]
+        if p <= 0:
+            opts["local_borrow"] = c.opt("local_borrow", False, ["NO_LOCAL_MARKET"], availability_p=0.0)
         else:
-            opts["e"] = _opt("e", True, codes + ["ACCELERATION_OK"], w, c, snap, evidence=ev)
+            mid = (lo + hi) / 2.0
+            bcost, days = loan_cost(float(lb["fee_aed_fixed"]) * q, float(lb["loan_fee_pct_of_list_per_day"]), mid)
+            w, cost, s_, share = _sequence([(p, mid, bcost), ex_route], retry)
+            opts["local_borrow"] = c.opt("local_borrow", True, ["AVAILABILITY_UNCERTAIN", "LOAN_FEE_ACCRUES"], w, cost,
+                                         availability_p=p, response_h=[lo, hi], source=f"local market {st}",
+                                         fallback="exchange_loan",
+                                         evidence={"wait_if_available_h": mid, "retry_h": retry, "est_loan_days": days,
+                                                   "cycle_success_p": round(s_, 3), "share_won_by_borrow": round(share, 3),
+                                                   "borrow_cost_aed": round(bcost, 2)})
 
-    # (g) robbery — shown, never ranked
-    rb = acfg["robbery"]
-    if snap.donors:
-        opts["g"] = _opt("g", False, ["HUMAN_DECISION_REQUIRED"], float(rb["work_hours"]), float(rb["labour_cost_aed"]),
-                         snap, human_decision=True, evidence={"donors": snap.donors})
+    # robbery (AUH only; human decision), with exchange/loan as the same-attempt fall-back (engine order)
+    rb = ags["robbery"]
+    if not rot:
+        opts["robbery"] = c.opt("robbery", False, ["ROTABLES_ONLY", "HUMAN_DECISION_REQUIRED"], human_decision=True)
+    elif st != hub or not rb.get("enabled", True):
+        opts["robbery"] = c.opt("robbery", False, ["HUB_ONLY", "HUMAN_DECISION_REQUIRED"], human_decision=True)
+    elif snap.donor_candidates <= 0:
+        opts["robbery"] = c.opt("robbery", False, ["NO_DONOR_AIRCRAFT", "HUMAN_DECISION_REQUIRED"], human_decision=True)
     else:
-        opts["g"] = _opt("g", False, ["HUMAN_DECISION_REQUIRED", "NO_DONOR_AIRCRAFT"], None, 0.0, snap,
-                         human_decision=True, evidence={"donors": []})
-    # a robbery option's exposure/deadline fields are informational only
-    out = [opts[k] for k in "abcdefgh"]
+        p = float(rb["availability"])
+        lo, hi = rb["response_hours"]
+        mid = (lo + hi) / 2.0
+        labour = float(cfg["economics"]["fitting_labour_aed_per_hour"]) * c.fit * float(rb["labour_multiplier"]) * q
+        w, cost, s_, share = _sequence([(p, mid, labour), ex_route], retry)
+        opts["robbery"] = c.opt("robbery", False, ["HUMAN_DECISION_REQUIRED", "AVAILABILITY_UNCERTAIN"], w, cost,
+                                human_decision=True, availability_p=p, response_h=[lo, hi], flag=rb["flag"],
+                                fallback="exchange_loan",
+                                evidence={"donor_candidates": snap.donor_candidates, "wait_if_available_h": mid,
+                                          "labour_aed": round(labour, 2), "cycle_success_p": round(s_, 3),
+                                          "share_won_by_robbery": round(share, 3), "assumption": rb.get("assumption")})
+
+    # local buy (C/E)
+    bu = ags["local_buy"]
+    if rot:
+        opts["local_buy"] = c.opt("local_buy", False, ["CONSUMABLES_EXPENDABLES_ONLY"])
+    else:
+        p = float(bu["availability"])
+        lo, hi = bu["response_hours"]
+        w = _expected_wait(p, lo, hi, retry)
+        prem = float(bu["premium_pct"]) * snap.unit_cost * q
+        opts["local_buy"] = c.opt("local_buy", True, ["AVAILABILITY_UNCERTAIN"], w, prem, availability_p=p,
+                                  response_h=[lo, hi], source=f"local supplier {st}",
+                                  evidence={"premium_aed": round(prem, 2), "unit_price_aed_excluded": round(snap.unit_cost * q, 2),
+                                            "wait_if_available_h": (lo + hi) / 2, "retry_h": retry})
+
+    # repair queue-jump (AV-21)
+    qj = acfg["repair_queue_jump"]
+    if not rot:
+        opts["repair_queue_jump"] = c.opt("repair_queue_jump", False, ["ROTABLES_ONLY"], estimate=True)
+    elif not snap.open_ros:
+        opts["repair_queue_jump"] = c.opt("repair_queue_jump", False, ["NO_OPEN_RO"], estimate=True)
+    else:
+        queued = [r for r in snap.open_ros if not r.get("started")]
+        if not queued:
+            opts["repair_queue_jump"] = c.opt("repair_queue_jump", False, ["NO_QUEUE_TO_JUMP", "ESTIMATE"], estimate=True,
+                                              evidence={"open_ros": len(snap.open_ros)})
+        else:
+            r = sorted(queued, key=lambda x: (x["quoted_due_h"], x["ro_id"]))[0]
+            back = snap.quoted_tat_d * 24 + float(net.shop_transit_h.get(r.get("shop"), 0.0))
+            sw, sc, _ = c.leg(hub, back)
+            w = back + sw
+            cost = float(qj["surcharge_pct_of_repair_cost"]) * snap.repair_cost + sc
+            others = [o["wait_h"] for k, o in opts.items() if o["feasible"] and not o["human_decision"] and o["wait_h"] is not None]
+            best_other = min(others) if others else math.inf
+            ev = {"ro_id": int(r["ro_id"]), "serial": r.get("serial"), "shop": r.get("shop"),
+                  "quoted_due_h": int(r["quoted_due_h"]), "estimated_return_h": round(back, 1),
+                  "surcharge_pct": qj["surcharge_pct_of_repair_cost"],
+                  "best_alternative_wait_h": None if best_other == math.inf else best_other}
+            if w < best_other:
+                opts["repair_queue_jump"] = c.opt("repair_queue_jump", True, ["QUEUE_JUMP_OK", "ESTIMATE"], w, cost,
+                                                  estimate=True, source=f"RO{r['ro_id']}", evidence=ev)
+            else:
+                opts["repair_queue_jump"] = c.opt("repair_queue_jump", False, ["DOES_NOT_BEAT_ALTERNATIVES", "ESTIMATE"],
+                                                  w, cost, estimate=True, evidence=ev)
+
+    # pool (not contracted)
+    pcfg, pool = acfg["pool_exchange"], cfg["pool_exchange_P3"]
+    pw = float(pool["response_hours"])
+    pc = float(pool["fee_pct_of_unit"]) * snap.unit_cost * q
+    if cls not in pcfg["scope_part_classes"]:
+        opts["pool"] = c.opt("pool", False, ["NOT_POOLED_PART_CLASS"], greyed=True)
+    elif not pcfg["contracted"]:
+        opts["pool"] = c.opt("pool", False, ["NOT_CONTRACTED"], pw, pc, greyed=True, indicative=True,
+                             evidence={"terms": "pool_exchange_P3", "response_hours": pw,
+                                       "fee_pct_of_unit": pool["fee_pct_of_unit"]})
+    else:
+        opts["pool"] = c.opt("pool", True, ["POOL_OK"], pw, pc)
+
+    out = [opts[k] for k in KEYS]
     rank_options(out)
     return out
 
 
 def rank_options(options: list[dict]) -> list[dict]:
-    """Rank feasible, non-human options by (exposure, wait, direct cost, key)."""
+    """Rank feasible, non-human options by (exposure, wait, direct cost, key order)."""
     fe = [o for o in options if o["feasible"] and not o["human_decision"]]
-    fe.sort(key=lambda o: (o["exposure_aed"], o["wait_h"], o["direct_cost"], o["key"]))
+    fe.sort(key=lambda o: (o["exposure_aed"], o["wait_h"], o["direct_cost"], KEYS.index(o["key"])))
     for o in options:
         o["rank"] = None
     for i, o in enumerate(fe, 1):
@@ -358,98 +455,92 @@ def rank_options(options: list[dict]) -> list[dict]:
 
 
 def best_option(options: list[dict]) -> dict | None:
-    r = [o for o in options if o["rank"] == 1]
-    return r[0] if r else None
+    return next((o for o in options if o["rank"] == 1), None)
 
 
 def human_panel(snap: Snapshot, options: list[dict]) -> dict:
     best = best_option(options)
     ranked = sorted([o for o in options if o["rank"]], key=lambda o: o["rank"])
-    rob = next(o for o in options if o["key"] == "g")
+    rob = next(o for o in options if o["key"] == "robbery")
+    rob_note = None
+    if rob["wait_h"] is not None:
+        rob_note = (f"Robbery from a same-type aircraft at AUH: p = {rob['availability_p']:.2f}, expected wait "
+                    f"{rob['wait_h']:.0f} h, exposure AED {rob['exposure_aed']:,.0f} — engineering/quality approval "
+                    f"required, human decision; not auto-recommended.")
     if best is None:
-        return {"recommended": None, "why": "No feasible sourcing option was found at request time.",
-                "checks": HUMAN_CHECKS["common"], "robbery_note": "Robbery may be the only route — human decision."}
-    why = (f"Lowest AOG exposure of {len(ranked)} feasible option(s): wait {best['wait_h']:.0f} h against a "
-           f"{snap.slack_h} h deadline slack ({best['aog_h']:.0f} h AOG), direct cost AED {best['direct_cost']:,.0f}, "
-           f"exposure AED {best['exposure_aed']:,.0f}.")
+        return {"recommended": None, "why": "No feasible sourcing option at request time.",
+                "checks": HUMAN_CHECKS["common"], "robbery_note": rob_note, "robbery_checks": HUMAN_CHECKS["robbery"]}
+    win = snap.window_h
+    p_txt = "" if best["availability_p"] >= 1 else f" (first-attempt odds {best['availability_p']:.0%}, expected wait incl. retries)"
+    why = (f"Lowest material shortage exposure of {len(ranked)} feasible option(s): wait {best['wait_h']:.0f} h{p_txt} "
+           f"against a {win} h window, expected material-related downtime {best['aog_h']:.0f} h, direct cost "
+           f"AED {best['direct_cost']:,.0f}, exposure AED {best['exposure_aed']:,.0f}.")
     if len(ranked) > 1:
         ru = ranked[1]
-        why += (f" Runner-up: {ru['option']} (wait {ru['wait_h']:.0f} h, exposure AED {ru['exposure_aed']:,.0f}).")
+        why += f" Runner-up: {ru['option']} (wait {ru['wait_h']:.0f} h, exposure AED {ru['exposure_aed']:,.0f})."
     checks = HUMAN_CHECKS["common"] + HUMAN_CHECKS[_CHECK_GROUP[best["key"]]]
-    if best["key"] == "c":
+    if best["key"] == "lateral":
         checks = checks + HUMAN_CHECKS["lateral"]
-    rob_note = ("Robbery from " + ", ".join(d["tail"] for d in rob["evidence"]["donors"]) +
-                " is possible but requires engineering/quality approval — human decision.") if rob["evidence"]["donors"] \
-        else "No donor aircraft grounded or in check at this station."
     return {"recommended": best["key"], "recommended_label": best["option"], "source": best.get("source"),
-            "why": why, "checks": checks, "robbery_note": rob_note, "robbery_checks": HUMAN_CHECKS["robbery"]}
+            "estimate": best["estimate"], "why": why, "checks": checks, "robbery_note": rob_note,
+            "robbery_checks": HUMAN_CHECKS["robbery"]}
 
 
 # ---------------------------------------------------------------------------------------------
+def _isna(x) -> bool:
+    try:
+        return x is None or bool(pd.isna(x))
+    except (TypeError, ValueError):
+        return False
+
+
 def build_snapshot(view: HistoryView, req) -> Snapshot:
     """Snapshot for a material_requests row, using only information available at need_h."""
     rid, pn, st, t = int(req.request_id), str(req.pn), str(req.station), int(req.need_h)
     cutoff = view.request_cutoff(rid, t)
     part = view.parts.loc[pn]
     pl_cfg = view.acfg["protection_level"]
-    on_hand = view.stock_at(pn, t, cutoff)
-    committed = {s: view.kit_commitments(pn, s, t) for s in view.net.stations}
     prot, d0 = {}, {}
     for s in view.net.stations:
         n, rate = view.d0_demand_rate(pn, s, t, int(pl_cfg["lookback_weeks"]))
         d0[s] = n
         prot[s] = poisson_protection(rate, view.net.routine_h, float(pl_cfg["service_level"]))
-    ros = [{"ro_id": int(r.ro_id), "shop": r.shop, "quoted_due_h": int(r.quoted_due_h), "serial": r.serial}
+    ros = [{"ro_id": int(r.ro_id), "shop": r.shop, "quoted_due_h": int(r.quoted_due_h), "serial": r.serial,
+            "started": bool(not _isna(r.start_h) and int(r.start_h) <= t)}
            for r in view.open_ros(pn, t).itertuples()]
     pos = [{"po_id": int(p.po_id), "qty": int(p.qty), "due_h": int(p.due_h), "reason": p.reason}
            for p in view.open_pos(pn, t).itertuples()]
-    # earlier requests still unfilled at t: known to the desk as the backorder list
     mr = view.t["material_requests"]
     ahead = mr[(mr.pn == pn) & (mr.need_h < t) & (mr.request_id != rid)]
     ahead = ahead[ahead.filled_h.isna() | (ahead.filled_h > t)]
-    # a request already covered by a shipment in transit does not claim inbound supply
     tr = view.t["transfers"]
     covered = set(tr[(tr.pn == pn) & (tr.ship_h <= t) & tr.request_id.notna()].request_id.astype(int))
+    if "aog_route_h" in ahead:      # needs already on an AOG route (borrow/exchange/robbery) do not claim inbound
+        on_route = ahead.aog_route_result.isin(["robbery", "exchange_loan", "local_borrow", "local_buy", "planned_loan"]) \
+            & ahead.aog_route_h.notna() & (ahead.aog_route_h <= t)
+        ahead = ahead[~on_route]
     ahead = ahead[~ahead.request_id.astype(int).isin(covered)]
-    intr = tr[(tr.pn == pn) & (tr.to_station == st) & (tr.ship_h < t) & (tr.arrive_h >= t) & tr.request_id.isna()]
+    intr = tr[(tr.pn == pn) & (tr.to_station == st) & (tr.ship_h < t) & (tr.arrive_h >= t) & tr.request_id.isna()
+              & (tr.kind != "loan_return")]
     inbound = [{"transfer_id": int(x.transfer_id), "from": x.from_station, "qty": int(x.qty),
                 "eta_h": int(x.ship_h + (view.net.routine_h if x.kind == "routine" else view.net.hours(x.from_station, st)))}
                for x in intr.itertuples()]
-    tail = None if pd_isna(req["tail"]) else str(req["tail"])
+    tail = None if _isna(req["tail"]) else str(req["tail"])
     arch = view.arch.get(tail, "narrowbody")
-    return Snapshot(pn=pn, part_class=str(part.part_class), unit_cost=float(part.unit_cost_aed),
-                    quoted_lead_d=float(part.lead_time_mean_d), station=st, need_h=t, qty=int(req.qty),
-                    deadline_class=str(req.deadline_class), archetype=arch, penalty_per_h=view.penalty(tail),
-                    on_hand=on_hand, committed=committed, protection=prot, d0_counts=d0, open_ros=ros, open_pos=pos,
-                    backorders_ahead=int(ahead.qty.sum()), inbound_transfers=inbound,
-                    station_backorders_ahead=int(ahead[ahead.station == st].qty.sum()), donors=find_donors(view, pn, st, t, tail),
-                    request_id=rid, tail=tail)
-
-
-def pd_isna(x) -> bool:
-    try:
-        return x is None or bool(x != x) or str(x) in ("<NA>", "nan", "None")
-    except (TypeError, ValueError):
-        return False
-
-
-def find_donors(view: HistoryView, pn: str, station: str, t: int, tail: str | None) -> list[dict]:
-    """Aircraft at the station at t that are grounded (open AOG) or in a scheduled check and carry the PN."""
     app = view.t["part_applicability"]
     fits = set(app[(app.pn == pn) & (app.qty_per_aircraft > 0)].archetype)
-    out = []
-    ae = view.t["aog_events"]
-    g = ae[(ae.station == station) & (ae.start_h <= t) & (ae.end_h > t) & (ae["tail"] != tail)]
-    for r in g.itertuples():
-        if view.arch.get(r.tail) in fits:
-            out.append({"tail": r.tail, "why": f"grounded since h{int(r.start_h)} (AOG {int(r.aog_id)})"})
-    ms = view.t["maintenance_schedule"]
-    dt = int(view.cfg.get("generator", {}).get("a_check_downtime_h", 12))
-    chk = ms[(ms.station == station) & (ms.due_h <= t) & (ms.due_h + dt > t) & (ms["tail"] != tail)].drop_duplicates("task_id")
-    for r in chk.itertuples():
-        if view.arch.get(r.tail) in fits and r.tail not in {d["tail"] for d in out}:
-            out.append({"tail": r.tail, "why": f"in {r.check_type} since h{int(r.due_h)}"})
-    return out
+    busy = view.busy_donors(pn, t)
+    donors = [x for x, a in view.arch.items() if a == arch and a in fits and x != tail and x not in busy]
+    return Snapshot(pn=pn, part_class=str(part.part_class), unit_cost=float(part.unit_cost_aed), station=st, need_h=t,
+                    qty=int(req.qty), deadline_class=str(req.deadline_class), archetype=arch,
+                    on_hand=view.stock_at(pn, t, cutoff),
+                    repair_cost=0.0 if _isna(part.repair_cost_aed) else float(part.repair_cost_aed),
+                    quoted_tat_d=0.0 if _isna(part.repair_tat_mean_d) else float(part.repair_tat_mean_d),
+                    repair_shop=None if _isna(part.repair_shop) else str(part.repair_shop),
+                    committed={s: view.kit_commitments(pn, s, t) for s in view.net.stations},
+                    protection=prot, d0_counts=d0, open_ros=ros, open_pos=pos, inbound_transfers=inbound,
+                    backorders_ahead=int(ahead.qty.sum()), station_backorders_ahead=int(ahead[ahead.station == st].qty.sum()),
+                    donor_candidates=len(donors), request_id=rid, tail=tail)
 
 
 def snapshot_dict(snap: Snapshot) -> dict:
