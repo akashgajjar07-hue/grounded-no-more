@@ -95,7 +95,7 @@ const EV_LABEL = {
   quarterly_usage: 'Quarterly usage', unit_cost_aed: 'Unit cost', excess_value_aed: 'Excess value', shelf_life_weeks: 'Shelf life', expired_units_history: 'Units expired in history',
   po_id: 'Replacement PO', order_week: 'Ordered', po_overdue: 'PO overdue', value_aed: 'Unit value',
   txn_id: 'Receipt transaction', ref: 'Receipt reference', received_h: 'Received (sim hour)', received_week: 'Received', receipts_in_window: 'Receipts in window', rule: 'Rule', simulated: 'Simulated flag', provenance: 'Provenance',
-  risk_score: 'Risk score', deadline: 'Deadline class (hypothetical)', stock_total: 'Stock total',
+  risk_score: 'Material shortage exposure (score)', deadline: 'Deadline class (hypothetical)', stock_total: 'Stock total',
 };
 function fmtEv(k, v) {
   if (v === null || v === undefined || v === '') return 'not recorded';

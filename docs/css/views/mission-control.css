@@ -1,30 +1,21 @@
 /* 01 · Mission Control — view styles (loaded once by js/views/mission-control.js).
    Uses design-system tokens only; no new colours. */
 
-/* ------------------------------------------------------------------ hero */
-.mc-hero { position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--s-3); padding: var(--s-3) var(--s-4) var(--s-3) var(--s-6); overflow: hidden; min-height: 0; }
-.mc-hero::before { /* faint radial lift behind the drawing */
-  content: ''; position: absolute; right: -10%; top: -20%; width: 70%; height: 140%; pointer-events: none;
-  background: radial-gradient(closest-side, rgba(34, 199, 184, 0.10), transparent 70%);
-}
+/* ------------------------------------------------------------------ hero (wave A: compact, ~260 px at 1440) */
+.mc-hero { position: relative; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: var(--s-3); padding: 20px var(--s-4); overflow: hidden; min-height: 0; }
 .mc-copy { position: relative; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
-.mc-eyebrow { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.16em; text-transform: uppercase; color: var(--primary); }
-.mc-eyebrow .faint { color: var(--text-faint); }
-.mc-title { margin: var(--s-2) 0 0; font-family: var(--font-display); font-size: 60px; font-weight: 600; line-height: 0.98; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text); }
-.mc-title span { display: block; }
-.mc-title .mc-title-accent { color: var(--primary); }
-.mc-tagline { margin-top: var(--s-2); max-width: 44ch; font-family: var(--font-display); font-size: 18px; line-height: 1.4; color: var(--text); }
-.mc-story { margin-top: var(--s-2); max-width: 60ch; font-size: var(--fs-14); line-height: 1.6; color: var(--text-muted); }
-.mc-story b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
-.mc-cta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); margin-top: var(--s-3); }
-.mc-meta { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-top: var(--s-2); }
-
+.mc-title { margin: 0; font-family: var(--font-display); font-size: 44px; font-weight: 700; line-height: 1.02; letter-spacing: 0.01em; color: var(--text); }
+.mc-tagline { margin-top: 6px; font-family: var(--font-ui); font-size: 18px; font-weight: 600; line-height: 1.35; color: var(--primary); }
+.mc-oneline { margin-top: 6px; max-width: 64ch; font-size: var(--fs-15); line-height: 1.55; color: var(--text-muted); }
+.mc-scope { margin-top: 6px; font-size: var(--fs-14); color: var(--text); font-variant-numeric: tabular-nums; }
+.mc-byline { margin-top: 10px; font-size: var(--fs-13); color: var(--text-faint); }
+.mc-cta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); margin-top: 14px; }
 .mc-figwrap { position: relative; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-.mc-fig { position: relative; height: 412px; }
+.mc-fig { position: relative; height: 228px; }
 .mc-fig > svg { width: 100%; height: 100%; display: block; }
-.mc-fig .bp-gridfill { display: none; }
+.mc-fig .bp-gridfill { display: inline; } /* wave A: the blueprint grid stays around aircraft illustrations */
 /* the missing part: urgent red instead of the teal active glow (icon + text tag carries the meaning too) */
-.mc-fig .ata-hotspot.is-missing .hs-shape { stroke: var(--c-red); fill: var(--c-red); fill-opacity: 0.22; }
+.mc-fig .ata-hotspot.is-missing .hs-shape { stroke: var(--c-red); stroke-width: 1.75; fill: var(--c-red); fill-opacity: 0.16; }
 .mc-fig .ata-hotspot.is-missing .hs-badge circle { stroke: var(--c-red); fill: var(--c-red); }
 .mc-fig .ata-hotspot.is-missing .hs-badge text { fill: var(--c-midnight); }
 .mc-fig .ata-hotspot.is-missing .hs-shape { animation: mc-blink 2.4s var(--ease) infinite; }
@@ -32,13 +23,13 @@
 @media (prefers-reduced-motion: reduce) { .mc-fig .ata-hotspot.is-missing .hs-shape { animation: none; } }
 
 .mc-fault {
-  position: absolute; left: 0; top: 0; display: flex; align-items: flex-start; gap: 10px; max-width: min(232px, calc(50% - 56px));
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: flex-start; gap: 10px; max-width: min(220px, calc(50% - 40px));
   padding: 12px 14px; border-radius: var(--r-control); background: rgba(15, 30, 46, 0.92); border: 1px solid rgba(231, 107, 100, 0.45);
   box-shadow: var(--shadow-pop); text-decoration: none; color: inherit; transition: border-color var(--dur-fast) var(--ease);
 }
 .mc-fault:hover { border-color: var(--c-red); }
 .mc-fault .icon { flex: none; width: 18px; height: 18px; color: var(--c-red); margin-top: 1px; }
-.mc-fault-k { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.05em; text-transform: uppercase; color: var(--c-red); }
+.mc-fault-k { font-family: var(--font-ui); font-size: var(--fs-12); letter-spacing: 0.05em; text-transform: uppercase; color: var(--c-red); }
 .mc-fault-pn { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 4px; font-family: var(--font-mono); font-size: var(--fs-14); font-weight: 600; color: var(--text); }
 .mc-fault-at { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-muted); }
 .mc-fault-risk { padding: 0 6px; border-radius: 4px; border: 1px solid rgba(231, 107, 100, 0.45); font-size: var(--fs-12); font-weight: 500; color: var(--c-red); }
@@ -48,7 +39,10 @@
 .mc-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gutter); margin-top: var(--gutter); }
 .mc-kpis .kpi { gap: 8px; padding-top: var(--s-2); }
 .mc-kpis .kpi-spark { height: 32px; }
-.mc-kpis .kpi-label { min-height: 2.7em; }
+.mc-kpis .kpi-label { min-height: 0; }
+.mc-kpis .kpi { padding: var(--s-2) var(--s-2) 12px; }
+.mc-kpis .kpi-spark { display: none; }
+.mc-cmp-more { display: inline-flex; margin-top: var(--s-1); font-size: var(--fs-13); }
 .mc-kpi-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .mc-kpis .kpi-top .chip-prov { display: none; }
 
@@ -66,7 +60,7 @@
 }
 .mc-pr:last-child { border-bottom: 0; }
 a.mc-pr:hover { background: var(--c-teal-a08); }
-.mc-pr--head { padding-top: 0; padding-bottom: 8px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
+.mc-pr--head { padding-top: 0; padding-bottom: 8px; font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
 .mc-pr .num { text-align: right; font-variant-numeric: tabular-nums; }
 .mc-pr-part, .mc-pr-sig { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .mc-pr-pn { font-family: var(--font-mono); font-size: var(--fs-14); font-weight: 600; color: var(--text); white-space: nowrap; }
@@ -90,8 +84,7 @@ a.mc-pr:hover { background: var(--c-teal-a08); }
 
 /* ------------------------------------------------------------------ responsive */
 @media (max-width: 1279px) {
-  .mc-hero { padding: var(--s-4); gap: var(--s-3); }
-  .mc-title { font-size: 56px; }
+  .mc-hero { padding: var(--s-3); gap: var(--s-3); }
 }
 @media (max-width: 1099px) {
   .mc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -99,15 +92,15 @@ a.mc-pr:hover { background: var(--c-teal-a08); }
 }
 @media (max-width: 899px) {
   .mc-hero { grid-template-columns: minmax(0, 1fr); min-height: 0; }
-  .mc-fig { height: 320px; }
+  .mc-fig { height: 260px; }
   .mc-fault { position: relative; left: auto; bottom: auto; max-width: none; margin-top: var(--s-2); }
 }
 @media (max-width: 767px) {
   .mc-hero { padding: var(--s-3) var(--s-2); }
-  .mc-title { font-size: 44px; }
-  .mc-tagline { font-size: var(--fs-16); margin-top: var(--s-2); }
+  .mc-title { font-size: 34px; }
+  .mc-tagline { font-size: var(--fs-16); }
   .mc-cta .btn--ghost { padding-left: 0; } /* stacked under the primary button: align the text to its left edge */
-  .mc-fig { height: 280px; }
+  .mc-fig { height: 240px; }
   .mc-kpis { gap: var(--s-1); margin-top: var(--s-2); }
   .mc-kpis .kpi-label { min-height: 0; }
   .mc-kpis .kpi-delta { flex-wrap: wrap; font-size: var(--fs-12); }
@@ -133,7 +126,8 @@ a.mc-pr:hover { background: var(--c-teal-a08); }
   .mc-pr-ml { display: inline; color: var(--text-faint); }
 }
 .mc-kpi-ref { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); margin-top: auto; }
-.mc-kpis .kpi-foot { margin-top: 0; }
+.mc-kpis .kpi { display: flex; flex-direction: column; }
+.mc-kpis .kpi-foot { margin-top: auto; }
 
 /* baseline → recommended dumbbell (replaces the sparkline when no time series is exported) */
 .mc-db { padding: 6px 0 0; }
@@ -215,3 +209,9 @@ a.mc-pr:hover { background: var(--c-teal-a08); }
 .mc-fault-sys { letter-spacing: 0; }
 @media (max-width: 899px) { .mc-fault > .icon { top: 12px; } }
 .mc-fault-sys { font-size: 11px; }
+
+/* wave A: narrower desktops / tablets keep the hero compact: the fault card drops its long lines */
+@media (max-width: 1279px) {
+  .mc-fault-d, .mc-fault-sys { display: none; }
+  .mc-fault { max-width: 180px; }
+}

@@ -10,7 +10,7 @@
 /* keyboard-only selector: visually hidden until something inside it has focus */
 .np-picker:not(:focus-within) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .np-picker:focus-within { flex-basis: 100%; }
-.np-legend-k { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); }
+.np-legend-k { font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); }
 .np-legend-k:not(:first-child) { margin-left: var(--s-1); }
 .np-note { font-size: var(--fs-12); color: var(--text-faint); margin: 8px 0 0; line-height: 1.4; }
 .np-picker button { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.06em; padding: 6px 10px; min-height: 32px; border-radius: var(--r-chip); border: 1px solid var(--line-strong); background: transparent; color: var(--text-muted); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
@@ -23,14 +23,14 @@
 .np-drill-name { font-size: var(--fs-14); color: var(--text-muted); margin-top: 6px; }
 .np-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-control); overflow: hidden; margin-top: var(--s-2); }
 .np-fact { background: var(--surface); padding: 10px 12px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.np-fact-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
+.np-fact-label { font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
 .np-fact-value { font-family: var(--font-display); font-size: var(--fs-20); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.np-sub { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); margin: var(--s-2) 0 8px; }
+.np-sub { font-family: var(--font-ui); font-size: var(--fs-12); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); margin: var(--s-2) 0 8px; }
 .np-pol { width: 100%; border-collapse: collapse; font-size: var(--fs-14); }
 .np-pol th, .np-pol td { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
 .np-pol th:first-child, .np-pol td:first-child { text-align: left; }
-.np-pol th { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); font-weight: 500; }
-.np-pol td { font-family: var(--font-mono); font-size: var(--fs-12); }
+.np-pol th { font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); font-weight: 500; }
+.np-pol td { font-family: var(--font-mono); font-size: var(--fs-13); }
 .np-pol tr.is-best td { color: var(--c-teal-hi); }
 .np-pol .ci { color: var(--text-faint); display: block; font-size: 11px; white-space: nowrap; }
 .np-link { margin-top: var(--s-2); }
@@ -85,3 +85,4 @@
 .np-pol tr.is-rec td { background: color-mix(in srgb, var(--primary) 7%, transparent); }
 .np-pol tr.is-rec td:first-child { color: var(--c-teal-hi); font-weight: 600; box-shadow: inset 2px 0 0 var(--primary); }
 .np-pol .np-rec-note { text-align: left !important; font-family: var(--font-ui); font-size: 11px; line-height: 1.45; color: var(--text-muted); white-space: normal; }
+.np-legend .np-line--dash { background: none; border-top: 2px dashed currentColor; height: 0; }

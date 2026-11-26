@@ -35,7 +35,18 @@ export const ROUTES = [
   { id: 'aog', num: '07', label: 'AOG Response Lab', icon: 'clock', module: './views/aog-response-lab.js' },
   { id: 'actions', num: '08', label: 'Planner Action Centre', icon: 'inbox', module: './views/planner-action-centre.js' },
   { id: 'method', num: '—', label: 'Data & Method', icon: 'book', module: './views/data-method.js', key: '0' },
+  { id: 'about', num: '—', label: 'About', icon: 'info', module: './views/about.js' },
 ];
+// keyboard: 1–8 keep their original workspace numbers (deep links and muscle memory stay stable), 0 = Data & Method
+ROUTES.forEach((r) => { if (!r.key && /^\d\d$/.test(r.num)) r.key = String(+r.num); });
+/** Wave A navigation groups (display order); the route ids, numbers and shortcut keys are unchanged. */
+export const NAV_GROUPS = [
+  { id: 'operations', label: 'Operations', items: ['mission', 'actions', 'aog'] },
+  { id: 'material', label: 'Material intelligence', items: ['parts', 'forecast', 'rotables'] },
+  { id: 'strategic', label: 'Strategic planning', items: ['network', 'capital'] },
+  { id: 'project', label: 'Project', items: ['tour', 'method', 'about'] },
+];
+const groupOf = (id) => NAV_GROUPS.find((g) => g.items.includes(id));
 const DEFAULT = 'mission';
 const SITE = 'GROUNDED NO MORE';
 
@@ -78,22 +89,18 @@ function setParams(params, { merge = true } = {}) {
 
 // --------------------------------------------------------------------------- shell
 function buildNav() {
-  const main = ROUTES.filter((r) => r.id !== 'method');
-  const method = ROUTES.find((r) => r.id === 'method');
-  const item = (r, key) =>
-    h('a', { class: 'nav-item', href: `#/${r.id}`, dataset: { route: r.id } }, h('span', { class: 'nav-num' }, r.num), h('span', {}, r.label), h('span', { class: 'nav-key', 'aria-hidden': 'true' }, key));
-  $('#nav').replaceChildren(
-    h('div', { class: 'nav-label' }, 'Workspaces'),
-    ...main.map((r, i) => item(r, String(i + 1))),
-    h('div', { class: 'nav-label mt-3' }, 'Reference'),
-    item(method, '0')
-  );
+  const item = (r) =>
+    h('a', { class: 'nav-item', href: `#/${r.id}`, dataset: { route: r.id }, 'aria-keyshortcuts': r.key || null }, h('span', { class: 'nav-ic', 'aria-hidden': 'true' }, icon(r.icon)), h('span', { class: 'nav-text' }, r.label), r.key ? h('span', { class: 'nav-key', 'aria-hidden': 'true' }, r.key) : null);
+  const tour = h('button', { class: 'nav-item nav-item--btn', type: 'button', dataset: { route: 'tour' }, 'aria-keyshortcuts': 'S', onclick: () => { setRail(false); startStory(); } }, h('span', { class: 'nav-ic', 'aria-hidden': 'true' }, icon('play')), h('span', { class: 'nav-text' }, '60-second tour'), h('span', { class: 'nav-key', 'aria-hidden': 'true' }, 'S'));
+  $('#nav').replaceChildren(...NAV_GROUPS.map((g) => h('div', { class: 'nav-group', role: 'group', 'aria-labelledby': `nav-g-${g.id}`, dataset: { group: g.id } },
+    h('div', { class: 'nav-label', id: `nav-g-${g.id}` }, g.label),
+    ...g.items.map((id) => (id === 'tour' ? tour : item(ROUTES.find((r) => r.id === id)))))));
 }
 
 function markActive(id) {
   document.querySelectorAll('.nav-item').forEach((a) => (a.dataset.route === id ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
   const r = ROUTES.find((x) => x.id === id);
-  $('#crumbs').replaceChildren(h('span', { class: 'mono' }, r.num === '—' ? 'REFERENCE' : `WORKSPACE ${r.num}`), h('span', { class: 'faint', 'aria-hidden': 'true' }, '/'), h('strong', {}, r.label));
+  $('#crumbs').replaceChildren(h('span', { class: 'crumb-group' }, groupOf(id)?.label || 'Project'), h('span', { class: 'faint', 'aria-hidden': 'true' }, '/'), h('strong', {}, r.label));
   document.title = `${r.label} · ${SITE}`;
 }
 
@@ -105,8 +112,7 @@ function setRail(open) {
 function openHelp() {
   if (helpModal?.isOpen) return;
   const rows = [
-    [h('span', { class: 'row' }, kbd('1'), '–', kbd('8')), 'Jump to workspace 01–08'],
-    [kbd('0'), 'Data & Method'],
+    ...ROUTES.filter((r) => r.key).sort((a, b) => (a.key === '0') - (b.key === '0') || a.key - b.key).map((r) => [kbd(r.key), `${r.label} · ${groupOf(r.id)?.label || ''}`]),
     [kbd('S'), 'Start story mode (guided tour)'],
     [kbd('?'), 'Show this help'],
     [kbd('Esc'), 'Close dialogs, drawers and the tour'],
@@ -185,8 +191,7 @@ function onKey(e) {
     if (!nav && e.key !== '?') return;
     if (nav) { e.preventDefault(); closeAllOverlays({ reason: 'route' }); }
   }
-  if (/^[1-8]$/.test(e.key)) { const r = ROUTES[+e.key - 1]; navigate(`#/${r.id}`); }
-  else if (e.key === '0') navigate('#/method');
+  if (/^[0-8]$/.test(e.key)) { const r = ROUTES.find((x) => x.key === e.key); if (r) navigate(`#/${r.id}`); }
   else if (e.key === '?') { e.preventDefault(); openHelp(); }
   else if (e.key === 's' || e.key === 'S') startStory();
   else if (e.key === 'Escape') setRail(false);
@@ -202,12 +207,12 @@ function boot() {
   ensureSprite();
   buildNav();
   const foot = $('#footer');
-  foot.replaceWith(disclaimer({ meta: 'Falcon Hub Airways is fictional' }));
+  foot.replaceWith(disclaimer({ meta: 'Simulated planning snapshot · Falcon Hub Airways is fictional' }));
   $('#menu-btn').addEventListener('click', () => setRail(!$('#app').classList.contains('rail-open')));
   $('#rail-scrim').addEventListener('click', () => setRail(false));
   $('#help-btn').addEventListener('click', openHelp);
   $('#story-btn').addEventListener('click', startStory);
-  $('#rail-story').addEventListener('click', startStory);
+  $('#rail-story')?.addEventListener('click', startStory);
   onFixture(() => { const slot = $('#fixture-slot'); if (!slot.childElementCount) slot.append(fixtureChip()); });
   window.addEventListener('hashchange', render);
   document.addEventListener('keydown', onKey);

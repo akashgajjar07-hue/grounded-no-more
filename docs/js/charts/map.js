@@ -85,7 +85,7 @@ function boxPolygon({ lon, lat }, n = 24) {
  *          inset?: boolean, aspect?: number, labelSub?: (s)=>string, label?: string}} opts
  */
 export async function renderNetworkMap(host, opts = {}) {
-  const { stations = [], arcs = [], onSelect, inset = true, insetMinWidth = 900, aspect = 0.56, labelSub, label = 'Network map', nodeRadius, nodeColor, tooltipRows, onDraw, nodeAria, labelOffsets = {}, arcLabel, autoLabels = true } = opts;
+  const { stations = [], arcs = [], proposed = [], onSelect, inset = true, insetMinWidth = 900, aspect = 0.56, labelSub, label = 'Network map', nodeRadius, nodeColor, tooltipRows, onDraw, nodeAria, labelOffsets = {}, arcLabel, autoLabels = true } = opts;
   let selected = opts.selected || null;
   const atlas = await loadAtlas();
   host.classList.add('map-host');
@@ -98,13 +98,16 @@ export async function renderNetworkMap(host, opts = {}) {
     const hgt = Math.max(260, Math.round(w * aspect));
     host.querySelectorAll('svg.map-main, .map-inset').forEach((n) => n.remove());
     const svg = d3().select(host).append('svg').attr('class', 'map-main').attr('viewBox', `0 0 ${w} ${hgt}`).attr('width', w).attr('height', hgt).attr('role', 'img').attr('aria-label', label);
-    const projection = d3().geoConicConformal().parallels([12, 46]).rotate([-50, 0]).fitExtent([[12, 12], [w - 12, hgt - 12]], boxPolygon(EXTENT)).clipExtent([[0, 0], [w, hgt]]);
+    // wave A: the projection is fitted to the network itself (AUH, Europe, the Middle East and Asia), not a world box
+    const pad = Math.max(36, Math.round(w * 0.06));
+    const fitTo = stations.length >= 2 ? { type: 'MultiPoint', coordinates: stations.map((s) => [s.lon, s.lat]) } : boxPolygon(EXTENT);
+    const projection = d3().geoConicConformal().parallels([12, 46]).rotate([-50, 0]).fitExtent([[pad, pad * 1.35], [w - pad - 28, hgt - pad * 1.2]], fitTo).clipExtent([[0, 0], [w, hgt]]);
     const path = d3().geoPath(projection);
     const defs = svg.append('defs');
 
     svg.append('path').datum(d3().geoGraticule10()).attr('class', 'map-graticule').attr('d', path);
     svg.append('path').datum(atlas.land).attr('class', 'map-land').attr('d', path);
-    svg.append('path').datum(atlas.borders).attr('d', path).attr('fill', 'none').attr('stroke', 'rgba(185,200,214,0.09)').attr('stroke-width', 0.5);
+    svg.append('path').datum(atlas.borders).attr('class', 'map-border').attr('d', path);
 
     // arcs
     const arcLayer = svg.append('g').attr('class', 'map-arcs');
@@ -121,7 +124,8 @@ export async function renderNetworkMap(host, opts = {}) {
       grad.append('stop').attr('offset', '0%').attr('stop-color', theme.series.neutral).attr('stop-opacity', 0.15);
       grad.append('stop').attr('offset', '100%').attr('stop-color', theme.series.neutral).attr('stop-opacity', 0.7);
       const geo = { type: 'LineString', coordinates: [[A.lon, A.lat], [B.lon, B.lat]] };
-      arcLayer.append('path').datum(a).attr('class', 'map-arc').attr('d', path(geo)).attr('stroke', `url(#${gid})`).attr('stroke-width', 1 + 2.2 * ((a.transfers || 1) / maxT))
+      // route hierarchy: width follows history transfer volume (1–5 px), so the busy hub routes read first
+      arcLayer.append('path').datum(a).attr('class', 'map-arc map-arc--hist').attr('d', path(geo)).attr('stroke', `url(#${gid})`).attr('stroke-width', 1 + 4 * Math.sqrt((a.transfers || 1) / maxT))
         .on('pointerenter', (e) => tooltip.show(e, { title: `${a.from} → ${a.to}`, rows: [['AOG transport', `${a.aog_transport_h ?? '—'} h`], ['Transfers', fmtInt(a.transfers)], ['Emergency', fmtInt(a.emergency)]] }))
         .on('pointermove', (e) => tooltip.move(e)).on('pointerleave', () => tooltip.hide());
       // sample the arc into small boxes so station labels avoid sitting on top of it
@@ -134,6 +138,22 @@ export async function renderNetworkMap(host, opts = {}) {
         const chip = chipLabel(arcChipLayer, { x: mid[0], y: mid[1], text: String(txt), color: theme.color.text });
         obstacles.push(chip.datum().box);
       }
+    });
+    // proposed movements (recommended plan): dashed teal arrows, visually distinct from the solid history arcs
+    const propLayer = svg.append('g').attr('class', 'map-proposed');
+    defs.append('marker').attr('id', `${uid}-arr`).attr('viewBox', '0 0 10 10').attr('refX', 9).attr('refY', 5).attr('markerWidth', 7).attr('markerHeight', 7).attr('orient', 'auto').attr('markerUnits', 'userSpaceOnUse')
+      .append('path').attr('d', 'M0,1L10,5L0,9Z').attr('fill', theme.series.recommended);
+    proposed.forEach((m) => {
+      const A = byId[m.from], B = byId[m.to];
+      if (!A || !B) return;
+      const p0 = projection([A.lon, A.lat]), p1 = projection([B.lon, B.lat]);
+      const dx = p1[0] - p0[0], dy = p1[1] - p0[1], L = Math.hypot(dx, dy) || 1;
+      const rB = (nodeRadius ? nodeRadius(B) : 6) + 5;
+      const end = [p1[0] - (dx / L) * rB, p1[1] - (dy / L) * rB];
+      const bend = [(p0[0] + end[0]) / 2 - (dy / L) * L * 0.12, (p0[1] + end[1]) / 2 + (dx / L) * L * 0.12];
+      propLayer.append('path').datum(m).attr('class', 'map-arc map-arc--proposed').attr('d', `M${p0[0]},${p0[1]}Q${bend[0]},${bend[1]} ${end[0]},${end[1]}`).attr('marker-end', `url(#${uid}-arr)`)
+        .on('pointerenter', (e) => tooltip.show(e, { title: `Proposed · ${m.from} → ${m.to}`, rows: [['Movement', m.label || 'positioning'], ['Basis', m.basis || 'recommended plan']] }))
+        .on('pointermove', (e) => tooltip.move(e)).on('pointerleave', () => tooltip.hide());
     });
     stations.forEach((s) => { const [x, y] = projection([s.lon, s.lat]); const r = nodeRadius ? nodeRadius(s) : s.role === 'hub' ? 8 : 5.5; obstacles.push(markerRect(x, y, r + 1, 2)); });
     const placedLabels = [];

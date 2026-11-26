@@ -72,9 +72,16 @@ const PROV_HELP = {
   SIMULATED: 'SIMULATED — produced by the synthetic generator',
 };
 /** Provenance chip: REAL (teal) / DERIVED (titanium) / ASSUMED (amber) / SIMULATED (copper). */
-export function provChip(p = 'DERIVED') {
+/**
+ * Provenance chip. Wave A: SIMULATED is the default state of the whole site, announced once by the shell's
+ * "Simulation" indicator, so a SIMULATED chip renders visually quiet (screen-reader text + title, no badge).
+ * REAL / DERIVED / ASSUMED chips stay visible because they mark the items that are NOT simulated.
+ * provChip(p, {force: true}) shows the SIMULATED badge anyway (the provenance legend on Data & Method).
+ */
+export function provChip(p = 'DERIVED', { force = false } = {}) {
   const key = String(p).toUpperCase();
-  return h('span', { class: `chip chip-prov chip-prov--${key.toLowerCase()}`, title: PROV_HELP[key] || key, 'aria-label': `Provenance: ${PROV_HELP[key] || key}` }, key);
+  const quiet = key === 'SIMULATED' && !force;
+  return h('span', { class: `chip chip-prov chip-prov--${key.toLowerCase()}${quiet ? ' chip-prov--quiet sr-only' : ''}`, title: PROV_HELP[key] || key, 'aria-label': `Provenance: ${PROV_HELP[key] || key}`, dataset: { prov: key } }, key);
 }
 
 /** The amber hatched "FIXTURE DATA" warning chip. */
@@ -90,11 +97,22 @@ const PILL = {
   info: ['info', 'Info'],
 };
 /** Status pill — icon + text, never colour alone. status: ok | review | urgent | unknown | info */
+/**
+ * Wave A: pills are sentence case (uppercase letter-spacing is reserved for small section labels). An all-caps pill
+ * text from data ("HIGH · TOP OUTSTATION", "WATCH") becomes "High · top outstation"; codes stay as written
+ * (BOM, AOG, PS1, D0, I125, OK).
+ */
+export function sentenceCase(t) {
+  if (typeof t !== 'string' || /[a-z]/.test(t)) return t;
+  const keep = (w) => (/\d/.test(w) || (w.length <= 3 && !['HUB', 'LOW', 'MET', 'TOP', 'NOT', 'AND', 'FOR', 'THE', 'OUT'].includes(w)));
+  const out = t.replace(/[A-Z][A-Z0-9]*/g, (w) => (keep(w) ? w : w.toLowerCase()));
+  return out.replace(/[a-z]/, (c) => c.toUpperCase());
+}
 export function pill(status = 'unknown', text) {
   const s = PILL[status] ? status : 'unknown';
   const [ic, label] = PILL[s];
   const cls = s === 'info' ? 'unknown' : s;
-  const t = text ?? label;
+  const t = sentenceCase(text ?? label);
   // the full text rides along as a tooltip, so a pill clipped by a narrow container never loses its meaning
   return h('span', { class: `pill pill--${cls}`, title: typeof t === 'string' ? t : null }, icon(ic), h('span', { class: 'pill-text' }, t));
 }
@@ -498,7 +516,7 @@ export function drawer({ title, kicker, body, foot, onClose, persistOnParams = f
 }
 
 /** Centred modal dialog. modal({title, body}) → {open(), close(), isOpen}. Registered like drawer(). */
-export function modal({ title, body, persistOnParams = false } = {}) {
+export function modal({ title, body, persistOnParams = false, returnFocus } = {}) {
   const scrim = h('div', { class: 'scrim' });
   const cardEl = h('div', { class: 'modal-card', role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, h('div', { class: 'row-between mb-3' }, h('h2', { class: 't-20' }, title), h('button', { class: 'btn btn--ghost btn--icon', type: 'button', 'aria-label': 'Close', onclick: () => api.close() }, icon('close'))), body);
   const wrap = h('div', { class: 'modal' }, cardEl);
@@ -586,8 +604,9 @@ export async function inlineSVG(name) {
  * callout labels (labels move to an HTML legend the caller renders).
  * Returns {svg, setActive(ata), destroy()}.
  */
-export async function blueprintAircraft(host, { active, onSelect, compactBelow = 1000, label = 'Aircraft systems' } = {}) {
-  const svg = await inlineSVG('blueprint-aircraft-top.svg');
+export async function blueprintAircraft(host, { active, onSelect, compactBelow = 1000, label = 'Aircraft systems', fleet = 'narrowbody' } = {}) {
+  // wave A: original plan-view archetypes (aircraft-narrowbody.svg / aircraft-widebody.svg); same hotspot API
+  const svg = await inlineSVG(fleet === 'widebody' ? 'aircraft-widebody.svg' : 'aircraft-narrowbody.svg');
   host.classList.add('bp-figure');
   host.replaceChildren(svg);
   const full = svg.getAttribute('viewBox');

@@ -10,12 +10,12 @@
 /* wave 2: the inbox is a column grid (scan, don't read): severity · part/station · issue · on hand/target · AOG h · D0 · action · due */
 .pac-table { border-top: 1px solid var(--line); }
 .pac-grid { display: grid; grid-template-columns: 92px minmax(140px, 1fr) minmax(170px, 1.2fr) 64px 56px 52px minmax(200px, 1.9fr) 64px; gap: var(--s-2); align-items: center; }
-.pac-grid-head { padding: 10px var(--s-1); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); border-bottom: 1px solid var(--line-strong); }
+.pac-grid-head { padding: 10px var(--s-1); font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); border-bottom: 1px solid var(--line-strong); }
 .pac-grid-head .is-num, .pac-grid .is-num { text-align: right; justify-self: end; }
 .pac-list > li + li { border-top: 1px solid var(--line); }
 .pac-row { width: 100%; min-height: 48px; padding: 8px var(--s-1); text-align: left; border-radius: var(--r-control); transition: background var(--dur-fast) var(--ease); font-size: var(--fs-14); color: var(--text); }
 .pac-row:hover, .pac-row:focus-visible { background: var(--c-teal-a08); }
-.pac-row .pill { height: 22px; padding: 0 8px 0 6px; font-size: 11px; gap: 4px; }
+.pac-row .pill { height: 24px; padding: 0 8px 0 6px; font-size: var(--fs-13); gap: 4px; }
 .pac-row .pill .icon { width: 12px; height: 12px; }
 .pac-c-part { font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pac-c-part b { font-weight: 500; color: var(--text); }

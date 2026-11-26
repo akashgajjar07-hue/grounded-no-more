@@ -92,3 +92,4 @@
 }
 .co-hero svg .co-unstable { fill: var(--text-faint); font-family: var(--font-mono); font-size: 11px; }
 .co-rule-body { display: flex; flex-direction: column; gap: var(--s-1); } /* wave 4: 8 px between the rule and its footnote */
+@media (min-width: 768px) and (max-width: 1199px) { .co-kpis--3 > .kpi { grid-column: span 4; } } /* wave A: tablets keep the three KPIs in one row */

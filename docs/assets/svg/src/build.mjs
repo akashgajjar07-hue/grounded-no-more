@@ -17,7 +17,7 @@ const write = (name, svg) => {
 const top = await import('./aircraft-top.mjs');
 ctx.top = top.build();
 write('blueprint-aircraft-top.svg', ctx.top);
-for (const m of ['aircraft-elevations', 'exploded', 'misc']) {
+for (const m of ['aircraft-elevations', 'aircraft-plan', 'exploded', 'misc']) {
   const mod = await import(`./${m}.mjs`);
   for (const [name, svg] of Object.entries(mod.files(ctx))) write(name, svg);
 }

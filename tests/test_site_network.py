@@ -68,7 +68,7 @@ def test_map_nodes_keyboard_reachable(site):
         page.keyboard.press("Enter")
         assert "station=JED" in page.url
         label = node.get_attribute("aria-label")
-        assert "risk" in label.lower()
+        assert "exposure" in label.lower()   # wave A wording: material shortage exposure
         assert not problems, problems
     finally:
         ctx.close()
@@ -107,7 +107,7 @@ def test_wave2_design_fixes(site, viewport):
         assert "#c47f52" not in fills
         if viewport == "390":
             # the decision column (projected risk) stays visible on a phone
-            assert page.locator('.data-table-stack .dts-metric--pill[aria-label^="Risk"]').count() >= 1
+            assert page.locator('.data-table-stack .dts-metric--pill[aria-label^="Exposure"]').count() >= 1
         assert not problems, problems
     finally:
         ctx.close()

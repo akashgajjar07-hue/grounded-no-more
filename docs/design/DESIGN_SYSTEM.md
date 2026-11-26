@@ -12,6 +12,74 @@ dashboard. Everything is self-hosted and needs no build step.
 
 ---
 
+## 0. Wave A rules (override anything below that disagrees)
+
+**Typography.**
+
+| Role | Font · size / weight | Token |
+|---|---|---|
+| Hero title | Space Grotesk 44–48 / 700 | `--fs-hero` (46 px; Mission uses 44 px) |
+| Workspace heading (h1) | Space Grotesk 28–32 / 600 | `--fs-workspace` 30 px (28 px on phones) |
+| KPI value | Space Grotesk 34–40 / 600 | `--fs-kpi` 38 px |
+| Chart heading | **Inter** 18–20 / 600 | `--fs-chart` 19 px |
+| Card heading | Inter 16 / 600 | `--fs-card` |
+| Body | Inter 14–15 | `--fs-15` (body), `--fs-14` |
+| Table and decision text | Inter, **≥ 13 px** | `--fs-13` minimum (cells, stacked rows, pills) |
+
+- **IBM Plex Mono** is used *only* for PNs, serials, timestamps, codes (station codes, ATA, plan ids) and numeric values.
+- **Uppercase letter-spaced** text is used *only* for small section labels (kickers, field labels, table headers, nav
+  group labels), set in Inter 600, never Plex Mono. Status pills are sentence case (`pill()` sentence-cases all-caps data
+  text but keeps codes such as BOM, AOG, PS1 and D0).
+
+**Colour.**
+- `--c-muted-titanium #8FA5B7` is the secondary-text colour (`--text-faint`; 7.0:1 on midnight).
+- **No opacity or rgba on meaningful text.** Copper and red text are always full strength. `tests/_sitefx.py` audits it.
+- Red and amber are used *only* for operational exceptions (urgent / review).
+- **Provenance.** SIMULATED is the default state of the whole site, so the shell shows **one** neutral "Simulation"
+  indicator (top bar, with a tooltip that explains provenance). A SIMULATED `provChip()` renders visually quiet: it
+  keeps screen-reader text, a title and the `.chip-prov` element, so every chart, KPI and table still carries its
+  provenance in the DOM, the chart "View data" table and the source line. REAL / DERIVED / ASSUMED chips stay visible,
+  because they mark what is *not* simulated. `provChip(p, {force: true})` shows the SIMULATED badge where provenance is
+  the subject: the Data & Method legend and the assumption register.
+
+**Blueprint grid.** 3–5% opacity (`--c-grid` 3%, `--c-grid-major` 5%). Cards are opaque, so the grid never runs
+behind dense tables or charts. It stays around aircraft illustrations (the drawings' own `bp-gridfill`) and section
+headers.
+
+**Navigation.** Four labelled groups: OPERATIONS (Mission Control, Planner Action Centre, AOG Response Lab) ·
+MATERIAL INTELLIGENCE (Parts Intelligence, Forecast Lab, Rotable & Repair) · STRATEGIC PLANNING (Network Positioning,
+Capital Optimiser) · PROJECT (60-second tour, Data & Method, About). Route ids, deep links and the shortcut keys
+(1–8 = original workspace numbers, 0 = Data & Method, S = tour) are unchanged, and the help modal lists them by name.
+
+**Aircraft drawings.** `aircraft-narrowbody.svg` and `aircraft-widebody.svg` are generated from parameters by
+`docs/assets/svg/src/aircraft-plan.mjs`. They are original orthographic plan views with no tracing.
+
+| Line type | Stroke |
+|---|---|
+| Silhouette | 1.8 px `#B9C8D6` |
+| Major structure (control-surface boundaries, section lines) | 1.1 px `#71899C` |
+| Secondary (slats, spoilers, fairings, windscreen) | 0.7 px `#51697D` |
+| Gear bays / spars | dashed `#51697D` |
+| Construction (centreline, nacelle and reference lines) | 0.5 px dashed `#334C61` |
+| Unselected zone | 0.9 px muted titanium |
+| Selected zone | 2.25 px teal |
+| Urgent marker | 1.75 px red |
+
+ATA areas are soft **indicative zones**: rounded shapes, an "indicative zone" tag on the selected zone and a sheet
+note. They are never component locations. The hotspot API (`#ata-XX.ata-hotspot[data-ata]`, `.hs-shapes`,
+`.hs-badge`, `.bp-callout`, `data-compact-viewbox`) is unchanged. The widebody archetype has no bleed-system callout.
+
+**Wording.**
+
+| Prefer | Never |
+|---|---|
+| material shortage exposure | aircraft risk score |
+| expected material-related downtime hours | aircraft ready |
+| material requirement covered | approved to fly |
+| simulated planning snapshot | live data |
+
+JSON field names stay as they are.
+
 ## 1. Tokens
 
 | Group | Values |

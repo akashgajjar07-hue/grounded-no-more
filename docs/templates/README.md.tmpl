@@ -10,9 +10,9 @@
 
 ![GROUNDED NO MORE: Mission Control view](docs/assets/readme/hero.png)
 
-An aviation spare-parts intelligence project for a fictional airline, **Falcon Hub Airways (fictional)**. It forecasts sparse, removal-driven demand, sizes rotable floats against repair turnaround, decides what to hold at the hub and what to push to outstations, and shows how much grounding risk each extra dirham of spares capital buys. Everything runs from one seeded pipeline and ends in a static web app a materials planner could use on a Monday morning.
+An aviation spare-parts intelligence project for a fictional airline, **Falcon Hub Airways (fictional)**. It forecasts sparse, removal-driven demand, sizes rotable floats against repair turnaround, decides what to hold at the hub and what to push to outstations, and shows how much material shortage exposure each extra dirham of spares capital removes. Everything runs from one seeded pipeline and ends in a static web app a materials planner could use on a Monday morning.
 
-> **All airline data in this project is simulated.** Station coordinates are real (OurAirports). Every parameter is in [`config/assumptions.yaml`](config/assumptions.yaml) with a provenance tag. Nothing here is measured aviation reliability or any operator's data.
+> **All airline data in this project is simulated: every screen is a simulated planning snapshot.** Station coordinates are real (OurAirports). Every parameter is in [`config/assumptions.yaml`](config/assumptions.yaml) with a provenance tag. Nothing here is measured aviation reliability or any operator's data.
 
 ---
 
@@ -33,7 +33,7 @@ The full worked example for GN-32-R014 at BOM is in the [study guide](STUDY_GUID
 Headline numbers are from the **holdout**: 20 paired seeds (1000–1019), 52 weeks, run once after the freeze, central calibration variant. Selection-seed numbers appear only where labelled.
 
 **1. Which parts drive AOG risk?**
-Of 120 part numbers, {{RESULT:parts.top_risk.count}} are flagged urgent (at least 25 risk-hours a year: legacy-history AOG hours plus modelled residual AOG under the recommended plan). Together they account for {{RESULT:parts.top_risk.share_of_aog_hours_pct}} of the legacy (P0) history's AOG hours. The riskiest part is {{RESULT:parts.top_risk.rank1.pn}}, at {{RESULT:parts.top_risk.rank1.risk_hours}} risk-hours a year, with most of its grounding hours at {{RESULT:parts.top_risk.rank1.station}}.
+Of 120 part numbers, {{RESULT:parts.top_risk.count}} are flagged urgent (at least 25 hours a year of material shortage exposure: legacy-history AOG hours plus modelled residual AOG under the recommended plan). Together they account for {{RESULT:parts.top_risk.share_of_aog_hours_pct}} of the legacy (P0) history's AOG hours. The riskiest part is {{RESULT:parts.top_risk.rank1.pn}}, at {{RESULT:parts.top_risk.rank1.risk_hours}} risk-hours a year, with most of its grounding hours at {{RESULT:parts.top_risk.rank1.station}}.
 
 **2. Which forecasting method wins, by demand class? Does the reliability model beat the Croston family?**
 Frozen champions by Syntetos–Boylan class (chosen on the selection window): smooth: {{RESULT:forecast.champion.smooth.method}}; erratic: {{RESULT:forecast.champion.erratic.method}}; intermittent: {{RESULT:forecast.champion.intermittent.method}}; lumpy: {{RESULT:forecast.champion.lumpy.method}}. On the holdout, the frozen intermittent-rotable champion ranked {{RESULT:forecast.champion.intermittent_R.holdout_rank}}, which is reported as-is; the policies size rotables on the reliability rate instead, so they do not depend on it.
@@ -61,7 +61,7 @@ At week {{RESULT:actions.week.as_of}} the Planner Action Centre raises {{RESULT:
 | **AOG Response Lab** | Replays the simulated history's groundings. For each one, compares local stock, emergency transfer, lateral, accelerated repair, expedite purchase and (indicative only) pool exchange on wait time, cost and whether the deadline holds. |
 | **Planner Action Centre** | A weekly inbox of exceptions (shortfall at an outstation, overdue repair order, excess stock, lead-time jump) with evidence and a recommended action. |
 | **Forecast Lab** | Demand classification (ADI, CV²), method leaderboard by class, and a check of how well each method recovers the hidden true rates. |
-| **Rotable & Repair** | Serial lifecycle flows, the live repair queue, TAT and float sizing from Palm's theorem. |
+| **Rotable & Repair** | Serial lifecycle flows, the simulated repair queue, TAT and float sizing from Palm's theorem. |
 | **Network Positioning** | Hub and six outstations, stock and risk by station, transfer replay and policy comparison. |
 
 ---

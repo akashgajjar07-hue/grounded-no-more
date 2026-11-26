@@ -23,7 +23,7 @@
   --c-deep-steel: #132638;
   --c-card: #0F1E2E;
   --c-hairline: rgba(185, 200, 214, 0.14);
-  --c-grid: rgba(34, 199, 184, 0.07);
+  --c-grid: rgba(34, 199, 184, 0.03);       /* wave A: blueprint grid at 3–5% */
   --c-aero-teal: #22C7B8;
   --c-titanium: #B9C8D6;
   --c-copper: #C47F52;
@@ -34,9 +34,10 @@
 
   /* ---- derived (not in tokens.json; computed from it, see DESIGN_SYSTEM.md) ---- */
   --c-teal-hi: #7FF3E6;                     /* glow / active highlight only */
-  --c-text-faint: #8A9BAD;                  /* tertiary text: slate lifted to pass AA (6.6:1 on midnight) */
+  --c-muted-titanium: #8FA5B7;              /* wave A: secondary text (7.0:1 on midnight), never with opacity */
+  --c-text-faint: var(--c-muted-titanium);  /* tertiary/secondary text = muted titanium */
   --c-hairline-strong: rgba(185, 200, 214, 0.26);
-  --c-grid-major: rgba(34, 199, 184, 0.11);
+  --c-grid-major: rgba(34, 199, 184, 0.05);
   --c-teal-a08: rgba(34, 199, 184, 0.08);
   --c-teal-a14: rgba(34, 199, 184, 0.14);
   --c-teal-a24: rgba(34, 199, 184, 0.24);
@@ -73,12 +74,20 @@
   --font-ui: 'Inter', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --fs-12: 0.75rem;
+  --fs-13: 0.8125rem;   /* minimum for any table / decision text */
   --fs-14: 0.875rem;
+  --fs-15: 0.9375rem;   /* body */
   --fs-16: 1rem;
   --fs-20: 1.25rem;
   --fs-28: 1.75rem;
   --fs-40: 2.5rem;
   --fs-64: 4rem;
+  /* wave A type scale (DESIGN_SYSTEM.md §2) */
+  --fs-hero: 46px;      /* hero title 44–48 / 700 */
+  --fs-workspace: 30px; /* workspace heading 28–32 / 600 */
+  --fs-kpi: 38px;       /* KPI value 34–40 / 600 */
+  --fs-chart: 19px;     /* chart heading, Inter 18–20 / 600 */
+  --fs-card: 16px;      /* card heading 16 / 600 */
 
   /* ---- space (8-px base) ---- */
   --s-0: 0;

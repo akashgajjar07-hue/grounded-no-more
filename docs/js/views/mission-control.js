@@ -97,37 +97,38 @@ export async function render(el, ctx) {
       icon('alert'),
       h('div', {},
         h('div', { class: 'mc-fault-k' }, `${cap(hot.severity)} part`),
-        h('div', { class: 'mc-fault-sys', title: `System level = the chapter's share of fleet risk-hours${num(sysOf[hotAta]?.risk_share) ? ` (${fmtPct(sysOf[hotAta].risk_share, 0)})` : ''}, as on Parts Intelligence` }, `ATA ${hotAta}${hotSys ? ` · system ${hotSysWord}` : ''}`),
+        h('div', { class: 'mc-fault-sys', title: `System level = the chapter's share of fleet material shortage exposure${num(sysOf[hotAta]?.risk_share) ? ` (${fmtPct(sysOf[hotAta].risk_share, 0)})` : ''}, as on Parts Intelligence` }, `ATA ${hotAta}${hotSys ? ` · system ${hotSysWord}` : ''}`),
         h('div', { class: 'mc-fault-pn' }, hot.pn),
-        h('div', { class: 'mc-fault-at' }, h('span', {}, hot.station), num(hotPart?.risk_score) ? h('span', { class: 'mc-fault-risk', title: 'Part-level risk score, 0–100 (log-scaled AOG hours)' }, `risk ${Math.round(hotPart.risk_score * 100)}`) : null),
+        h('div', { class: 'mc-fault-at' }, h('span', {}, hot.station), num(hotPart?.risk_score) ? h('span', { class: 'mc-fault-risk', title: 'Part-level material shortage exposure, 0–100 (log-scaled AOG hours)' }, `risk ${Math.round(hotPart.risk_score * 100)}`) : null),
         h('div', { class: 'mc-fault-d' }, [hotPart?.desc, hot.evidence?.deadline ? `deadline class ${hot.evidence.deadline} (hypothetical)` : null].filter(Boolean).join(' · ') || hot.summary)))
     : null;
   // accessible list alternative for the drawing's hotspots
   const ataList = h('ul', { class: 'sr-only', 'aria-label': 'Aircraft systems (open Parts Intelligence)' },
     HOTSPOTS.map((a) => h('li', {}, h('a', { href: ctx.buildHash('parts', { ata: a, pn: a === hotAta ? hot.pn : undefined }) }, `ATA ${a} ${ataName[a] || ''}${a === hotAta ? ` — urgent missing part ${hot.pn} at ${hot.station}` : ''}`))));
 
+  // Wave A hero: compact (~260 px at 1440), exact copy, the narrowbody plan view with the most urgent part marked
   const hero = card({
     cls: 'mc-hero-card', bp: true, story: 'mission-hero', flush: true,
     body: h('div', { class: 'mc-hero' },
       h('div', { class: 'mc-copy' },
-        h('div', { class: 'mc-eyebrow' }, '01 · Mission Control ', h('span', { class: 'faint' }, '· Falcon Hub Airways (fictional)')),
-        h('h1', { class: 'mc-title' }, h('span', {}, 'Grounded'), h('span', { class: 'mc-title-accent' }, 'No More')),
-        h('p', { class: 'mc-tagline' }, 'A single missing part can ground an aircraft. Know which ones, where, and what to do about it.'),
-        story,
+        h('h1', { class: 'mc-title' }, 'GROUNDED NO MORE'),
+        h('p', { class: 'mc-tagline' }, 'The right spare. The right station. Before the aircraft needs it.'),
+        h('p', { class: 'mc-oneline' }, 'An aviation materials-planning simulation connecting intermittent-demand forecasting, rotable repair planning and inventory optimisation to aircraft readiness.'),
+        h('p', { class: 'mc-scope' }, '40 aircraft · 2 fleet families · 7 stations · Independent simulation'),
         h('div', { class: 'mc-cta' },
-          h('button', { class: 'btn btn--primary', type: 'button', onclick: startTour, dataset: { story: 'mission-start' } }, icon('play'), 'Start the story'),
-          h('a', { class: 'btn btn--ghost', href: '#/actions' }, 'Open action centre', icon('chevron-right'))),
-        h('div', { class: 'mc-meta' }, provChip(kpis.meta?.provenance || 'SIMULATED'), h('span', { class: 'chip chip-mono' }, seedText), h('span', { class: 'chip chip-mono' }, `Baseline ${baseLabel}`))),
+          h('button', { class: 'btn btn--primary', type: 'button', onclick: startTour, dataset: { story: 'mission-start' } }, icon('play'), '60-second tour'),
+          h('a', { class: 'btn btn--ghost', href: '#/method' }, 'Methodology', icon('chevron-right'))),
+        h('p', { class: 'mc-byline' }, 'Portfolio project by Akash Gajjar, MSc Supply Chain Management, University of Liverpool')),
       h('div', { class: 'mc-figwrap' }, fig, fault, ataList)),
   });
   el.append(hero);
 
-  inlineSVG('blueprint-aircraft-top.svg').then((svg) => {
+  inlineSVG('aircraft-narrowbody.svg').then((svg) => {
     if (!fig.isConnected && !el.contains(fig)) return;
     svg.setAttribute('viewBox', svg.dataset.compactViewbox || svg.getAttribute('viewBox'));
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
     svg.classList.add('bp-compact');
-    svg.setAttribute('aria-label', 'Plan view of a generic twin-engine airliner (original schematic) with ATA system hotspots');
+    svg.setAttribute('aria-label', 'Plan view of a single-aisle twin-engine airliner archetype (original schematic) with indicative ATA system zones');
     svg.querySelectorAll('.ata-hotspot').forEach((g) => {
       const a = g.dataset.ata;
       const missing = a === hotAta;
@@ -159,8 +160,9 @@ export async function render(el, ctx) {
     id: 'open_actions', label: 'Open planner actions', value: (actions.actions || []).length, unit: '', provenance: actions.meta?.provenance || 'DERIVED', ci: null, delta: null, baseline: null,
   };
   const tiles = [
-    fr && { ...fr, label: fr.label && /material/i.test(fr.label) ? fr.label : 'Immediate material fill rate' },
-    ao && { ...ao, label: ao.label && /material/i.test(ao.label) ? ao.label : 'Material AOG hours / year' },
+    // wave A wording: "material requirement covered", "expected material-related downtime hours"
+    fr && { ...fr, label: 'Material requirement covered immediately' },
+    ao && { ...ao, label: 'Expected material-related downtime h / yr' },
     sc,
     openK,
   ].filter(Boolean).map((k) => kpiInstrument(k, baseLabel, ranked, k.recommended_id || recId || 'Rec.', actions));
@@ -173,8 +175,6 @@ export async function render(el, ctx) {
 
   // ---- P0 / P1 / P2 / recommended strip
   const cmpCard = h('section', { class: 'card', dataset: { story: 'mission-compare' } });
-  left.append(cmpCard);
-  cleanups.push(compareStrip(cmpCard, { policies, frontier, seedText, baseLabel }));
 
   // ---- top 5 priority part numbers: a scannable grid, actions grouped by PN (critic #5)
   const all = actions.actions || [];
@@ -199,18 +199,22 @@ export async function render(el, ctx) {
       h('span', { class: 'mc-pr-sev' }, pill(SEV_RANK[a.severity] != null ? a.severity : 'unknown')),
       h('span', { class: 'mc-pr-part' }, h('span', { class: 'mc-pr-pn' }, a.pn), h('span', { class: 'mc-pr-where', title: g.stations.join(', ') }, where),
         // C10 (wave 4): the exception type, so a low-risk PN ranked urgent for planning data is not puzzling
-        h('span', { class: 'mc-pr-type', title: `${a.type_label || a.type}: a planning exception, not a grounding-risk score` }, a.type_label || a.type)),
+        h('span', { class: 'mc-pr-type', title: `${a.type_label || a.type}: a planning exception, not a material shortage exposure` }, a.type_label || a.type)),
       h('span', { class: 'mc-pr-sig', title: sig.k }, h('span', { class: 'mc-pr-v' }, sig.v), h('span', { class: 'mc-pr-step' }, TYPE_STEP[a.type] || 'Review')),
       h('span', { class: 'mc-pr-aog num', title: aogLabel }, h('span', { class: 'mc-pr-ml' }, 'Worst stn '), g.aog ? [fmtHours(g.aog), g.aogSt ? h('span', { class: 'mc-pr-st', title: g.stations.includes(g.aogSt) ? null : `No open exception at ${g.aogSt}; its 52-week AOG hours are still the worst for this PN` }, ` · ${g.aogSt}`, g.stations.includes(g.aogSt) ? null : h('span', { class: 'mc-pr-noex' }, 'no exception there')) : null] : '—'),
       h('span', { class: 'mc-pr-due num' }, h('span', { class: 'mc-pr-ml' }, 'Due '), num(g.due) ? fmtWeek(g.due) : '—'),
       h('span', { class: 'mc-pr-do', 'aria-hidden': 'true' }, icon('chevron-right')));
   });
   left.append(card({
-    story: 'mission-actions', kicker: 'Planner priorities', prov: actions.meta?.provenance || 'DERIVED',
+    story: 'mission-actions', kicker: 'Today’s planning priorities', prov: actions.meta?.provenance || 'DERIVED',
     title: all.length ? `${fmtInt(nUrg)} urgent actions on ${fmtInt(nUrgPn)} part numbers; top ${fmtInt(groups.length)} shown` : 'No open actions exported',
     body: h('div', { class: 'mc-prio', role: 'list' }, head, rowsEl.map((r) => { r.setAttribute('role', 'listitem'); return r; })),
     foot: [h('span', { title: aogMeta?.definition || aogLabel }, `Ranked by severity then risk · ${aogLabel}, as in the Action Centre`), h('a', { class: 'card-link', href: '#/actions' }, 'Open Planner Action Centre', icon('chevron-right'))],
   }));
+
+  // the policy comparison follows the priorities (wave A: simple bars here; the CI chart lives in Capital Optimiser)
+  left.append(cmpCard);
+  cleanups.push(compareStrip(cmpCard, { policies, frontier, seedText, baseLabel }));
 
   // ---- network mini-map
   const mapCard = h('section', { class: 'card', dataset: { story: 'mission-map' } });
@@ -223,9 +227,9 @@ export async function render(el, ctx) {
   const topOut = byRisk.find((s) => s.role !== 'hub');
   const mf = chartFrame(mapCard, {
     headline: topOut && topOut !== topS
-      ? `${topOut.station} is the riskiest outstation (${fmtPct(topOut.risk, 0)} of ${topS.role === 'hub' ? 'hub ' : ''}${topS.station})`
+      ? `${topOut.station} has the most outstation shortage exposure (${fmtPct(topOut.risk, 0)} of ${topS.role === 'hub' ? 'hub ' : ''}${topS.station})`
       : topS ? `${topS.station} carries the most grounding exposure` : 'Station risk not run',
-    subtitle: `Risk = ${network.risk_definition || 'material AOG exposure vs the worst station'} · ${hub ? `${hub.station} hub + ${nOut} outstations · ` : ''}arc width = transfers`,
+    subtitle: `Material shortage exposure = ${network.risk_definition || 'P0 holdout material AOG h vs the worst station'} · ${hub ? `${hub.station} hub + ${nOut} outstations · ` : ''}line width = history transfers`,
     provenance: network.meta?.provenance || 'SIMULATED', source: 'network.json',
     table: { columns: [{ key: 'station', label: 'Station', mono: true }, { key: 'role', label: 'Role' }, { key: 'risk', label: 'Risk', num: true, format: (v) => fmtPct(v, 0) }, { key: 'serviceable_units', label: 'Serviceable units', num: true, format: fmtInt }, { key: 'stock_value', label: 'Stock value', num: true, format: fmtAED }], rows: byRisk },
   });
@@ -260,9 +264,9 @@ export async function render(el, ctx) {
         return h('li', {}, h('a', { class: `mc-sys-row is-${lv}`, href: ctx.buildHash('parts', { ata: a.ata }), 'aria-label': `ATA ${a.ata} ${a.name}: ${word}, system level ${lvWord(lv)}, ${fmtPct(a.risk_share, 0)} of fleet risk-hours, ${nU} urgent part numbers` },
           h('span', { class: 'mc-sys-ata mono' }, a.ata),
           h('span', { class: 'mc-sys-name' }, a.name, h('span', { class: 'faint mono' }, ` · ${fmtPct(a.risk_share, 0)}`)),
-          h('span', { class: 'mc-sys-st', title: `System level ${lvWord(lv)} (share of fleet risk-hours)${nU ? `; ${nU} urgent part number${nU === 1 ? '' : 's'}` : ''}` }, pill(['urgent', 'review', 'ok'].includes(tone) ? tone : 'unknown', word), nU ? h('span', { class: 'mc-sys-urg mono' }, `▲ ${fmtInt(nU)} urgent PN${nU === 1 ? '' : 's'}`) : null)));
+          h('span', { class: 'mc-sys-st', title: `System level ${lvWord(lv)} (share of fleet material shortage exposure)${nU ? `; ${nU} urgent part number${nU === 1 ? '' : 's'}` : ''}` }, pill(['urgent', 'review', 'ok'].includes(tone) ? tone : 'unknown', word), nU ? h('span', { class: 'mc-sys-urg mono' }, `▲ ${fmtInt(nU)} urgent PN${nU === 1 ? '' : 's'}`) : null)));
       })),
-      foot: [h('span', {}, `Top ${fmtInt(nShow)} of ${fmtInt(sysRows.length)} by share of fleet risk-hours · system level and urgent parts are rated separately`), h('a', { class: 'card-link', href: '#/parts' }, 'Parts Intelligence', icon('chevron-right'))],
+      foot: [h('span', {}, `Top ${fmtInt(nShow)} of ${fmtInt(sysRows.length)} by share of fleet material shortage exposure · system level and urgent parts are rated separately`), h('a', { class: 'card-link', href: '#/parts' }, 'Parts Intelligence', icon('chevron-right'))],
     }));
   }
 
@@ -429,69 +433,38 @@ function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
     headline = `${best.name} has the lowest modelled material AOG (${fmtHours(best.value)} a year)`;
   }
   const fSplit = frontier?.split || frontier?.meta?.split;
-  const vals = rows.flatMap((r) => [r.lo, r.hi]).filter((v) => num(v) && v > 0);
-  const log = vals.length && Math.max(...vals) / Math.min(...vals) > 8;
+  // Wave A: simple horizontal bars of expected material AOG hours per policy, spare capital as a label. The detailed
+  // mean-and-CI chart lives in Capital Optimiser only.
   const f = chartFrame(host, {
-    headline,
-    subtitle: `Material AOG h/yr · mean and 95% CI${ciNote ? ` (${ciNote.replace('95% intervals ', '')})` : ''} · ${seedText}${fSplit && !seedText.includes(fSplit) ? ` (recommended point: ${fSplit} seeds)` : ''}${log ? ' · log scale' : ''} · right: spare capital`,
+    headline: headline.replace(/; the intervals overlap$/, ''),
+    subtitle: `Expected material-related downtime: material AOG h/yr, mean · ${seedText}${fSplit && !seedText.includes(fSplit) ? ` (recommended point: ${fSplit} seeds)` : ''} · label: spare capital · intervals in Capital Optimiser`,
     provenance: policies.meta?.provenance || 'SIMULATED', source: 'policies.json + frontier.json',
     table: { columns: [{ key: 'name', label: 'Policy' }, { key: 'label', label: 'Description' }, { key: 'value', label: 'AOG h/yr', num: true, format: fmtHours }, { key: 'lo', label: 'CI low', num: true, format: fmtHours }, { key: 'hi', label: 'CI high', num: true, format: fmtHours }, { key: 'capital', label: 'Spare capital', num: true, format: fmtAED }], rows },
   });
   if (!rows.length) { f.body.append(h('p', { class: 'faint t-14' }, 'Not run.')); return null; }
-
+  f.body.after(h('a', { class: 'card-link mc-cmp-more', href: '#/capital' }, 'Intervals and the full frontier in Capital Optimiser', icon('chevron-right')));
   return responsive(f.body, (w) => {
     const narrow = w < 560;
-    const rowH = narrow ? 58 : 50;
-    const m = narrow ? { top: 8, right: 8, bottom: 28, left: 8 } : { top: 8, right: 112, bottom: 28, left: Math.min(240, Math.max(196, w * 0.34)) };
-    const iw = Math.max(60, w - m.left - m.right), ih = rows.length * rowH;
-    const svg = svgIn(f.body, w, ih + m.top + m.bottom, 'Material AOG hours by policy, mean and 95% interval');
-    const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
-    const lo = Math.min(...vals), hi = Math.max(...vals);
-    const x = log ? d3().scaleLog().domain([lo / 1.35, hi * 1.35]).range([0, iw]) : d3().scaleLinear().domain([0, hi * 1.1]).nice().range([0, iw]);
-    // log ticks at 1-3-10 steps
-    let ticks = null;
-    if (log) {
-      ticks = [];
-      for (let e = Math.floor(Math.log10(lo / 1.35)); e <= Math.ceil(Math.log10(hi * 1.35)); e++) [1, 3].forEach((mlt) => { const t = mlt * 10 ** e; if (t >= x.domain()[0] && t <= x.domain()[1]) ticks.push(t); });
-      if (narrow && ticks.length > 4) ticks = ticks.filter((t) => String(t)[0] === '1');
-    }
-    const ax = g.append('g');
-    if (ticks) styleAxis(ax.attr('transform', `translate(0,${ih})`).call(d3().axisBottom(x).tickValues(ticks).tickFormat(fmtHours).tickSize(4).tickPadding(6).tickSizeOuter(0)));
-    else axisBottom(ax, x, { ticks: narrow ? 3 : 5, format: fmtHours, height: ih });
-    // faint vertical guides at ticks
-    g.append('g').attr('class', 'gnm-grid').selectAll('line').data(ticks || x.ticks(5)).join('line').attr('x1', (d) => x(d)).attr('x2', (d) => x(d)).attr('y1', 0).attr('y2', ih);
-
+    const rowH = narrow ? 52 : 44;
+    const lw = narrow ? 0 : Math.min(230, Math.max(180, w * 0.32));
+    const rw = narrow ? 0 : 150;
+    const iw = Math.max(80, w - lw - rw);
+    const H = rows.length * rowH + 8;
+    const svg = svgIn(f.body, w, H, 'Expected material AOG hours by policy, with spare capital');
+    const max = Math.max(...rows.map((r) => r.value));
+    const x = d3().scaleLinear().domain([0, max * 1.04]).range([0, iw]);
     const color = (r) => (r.role === 'rec' ? theme.series.recommended : r.role === 'base' ? theme.series.baseline : theme.series.neutral);
     rows.forEach((r, i) => {
-      const y0 = i * rowH;
-      const cy = narrow ? y0 + 38 : y0 + rowH / 2;
-      const row = g.append('g').attr('class', 'mc-cmp-row').datum(r);
-      row.append('rect').attr('x', narrow ? 0 : -m.left).attr('y', y0 + 2).attr('width', narrow ? iw : w).attr('height', rowH - 4).attr('rx', 6).attr('fill', r.role === 'rec' ? 'rgba(34,199,184,0.06)' : 'transparent');
-      // labels
-      if (narrow) {
-        row.append('text').attr('class', r.role === 'rec' ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 8).attr('y', y0 + 16).attr('dy', '0.32em').text(truncate(r.role === 'rec' ? r.name : `${r.name} · ${shortPol(r.label)}`, iw * 0.58));
-        row.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', iw - 8).attr('y', y0 + 16).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', r.role === 'rec' ? theme.color.text : theme.color.muted).text(`${fmtHours(r.value)}${num(r.capital) ? ` · ${fmtAED(r.capital)}` : ''}`);
-      } else {
-        row.append('text').attr('class', r.role === 'rec' ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', -m.left + 16).attr('y', cy - 8).attr('dy', '0.32em').attr('fill', r.role === 'rec' ? theme.color.text : null).text(r.name);
-        row.append('text').attr('class', 'gnm-label').attr('x', -m.left + 16).attr('y', cy + 9).attr('dy', '0.32em').attr('fill', theme.color.faint).text(truncate(r.label, m.left - 28));
-        row.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', iw + m.right - 16).attr('y', cy - 8).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', r.role === 'rec' ? theme.color.text : theme.color.muted).text(fmtHours(r.value));
-        if (num(r.capital)) row.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', iw + m.right - 16).attr('y', cy + 9).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', theme.color.faint).text(fmtAED(r.capital));
-      }
-      // whisker + dot
-      const c = color(r);
-      row.append('line').attr('x1', x(r.lo)).attr('x2', x(r.hi)).attr('y1', cy).attr('y2', cy).attr('stroke', c).attr('stroke-width', r.role === 'rec' ? 2.5 : 1.5).attr('stroke-opacity', 0.85);
-      [r.lo, r.hi].forEach((v) => row.append('line').attr('x1', x(v)).attr('x2', x(v)).attr('y1', cy - 5).attr('y2', cy + 5).attr('stroke', c).attr('stroke-opacity', 0.85));
-      row.append('circle').attr('cx', x(r.value)).attr('cy', cy).attr('r', r.role === 'rec' ? 6 : 4.5).attr('fill', r.role === 'rec' ? c : theme.color.bg).attr('stroke', c).attr('stroke-width', 2);
+      const y0 = i * rowH + 4;
+      const row = svg.append('g').attr('class', 'mc-cmp-row').datum(r);
+      const by = narrow ? y0 + 26 : y0 + rowH / 2 - 7;
+      const name = r.role === 'rec' ? r.name : `${r.name} · ${shortPol(r.label)}`;
+      row.append('text').attr('class', r.role === 'rec' ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 0).attr('y', narrow ? y0 + 12 : y0 + rowH / 2).attr('dy', '0.32em').text(narrow ? name : truncate(name, lw - 16));
+      row.append('rect').attr('x', lw).attr('y', by).attr('height', 14).attr('rx', 3).attr('width', Math.max(2, x(r.value))).attr('fill', color(r)).attr('fill-opacity', r.role === 'rec' ? 0.95 : 0.8);
+      const val = `${fmtHours(r.value)}${num(r.capital) ? ` · ${fmtAED(r.capital)}` : ''}`;
+      if (narrow) row.append('text').attr('class', 'gnm-label gnm-label--mono').attr('x', w).attr('y', y0 + 12).attr('dy', '0.32em').attr('text-anchor', 'end').text(val);
+      else row.append('text').attr('class', 'gnm-label gnm-label--mono').attr('x', lw + x(r.value) + 8).attr('y', by + 7).attr('dy', '0.32em').text(val);
     });
-    // one annotation: the recommended reduction versus the baseline
-    if (base && rec) {
-      const i = rows.indexOf(rec);
-      const cy = narrow ? i * rowH + 38 : i * rowH + rowH / 2;
-      const pct = Math.round((1 - rec.value / base.value) * 100);
-      const xEnd = x(rec.hi) + 6;
-      const room = iw - xEnd;
-      if (room > 90) g.append('text').attr('class', 'gnm-annot-text').attr('x', xEnd + 8).attr('y', cy).attr('dy', '0.32em').attr('fill', theme.color.accent).text(`${pct >= 0 ? '−' : '+'}${Math.abs(pct)}% vs ${base.name}`);
-    }
-    withTooltip(g.selectAll('g.mc-cmp-row'), (d) => ({ title: `${d.name} · ${d.label}`, rows: [['Mean AOG h/yr', fmtHours(d.value)], ['95% CI', `${fmtHours(d.lo)} – ${fmtHours(d.hi)}`], ['Spare capital', fmtAED(d.capital)]] }));
+    withTooltip(svg.selectAll('g.mc-cmp-row'), (d) => ({ title: `${d.name} · ${d.label}`, rows: [['Mean AOG h/yr', fmtHours(d.value)], ['Spare capital', fmtAED(d.capital)]] }));
   });
 }

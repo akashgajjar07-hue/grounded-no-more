@@ -1,0 +1,15 @@
+/* About · author, role, skills, downloads, transparent note, decision questions (headings only) */
+.ab-body { display: flex; flex-direction: column; gap: var(--s-2); font-size: var(--fs-15); color: var(--text-muted); line-height: 1.6; }
+.ab-body p { margin: 0; }
+.ab-facts { display: flex; flex-direction: column; gap: 8px; color: var(--text); }
+.ab-facts li { display: flex; gap: 10px; align-items: flex-start; }
+.ab-facts .icon { flex: none; width: 16px; height: 16px; margin-top: 4px; color: var(--text-faint); }
+.ab-h { font-family: var(--font-ui); font-size: var(--fs-15); font-weight: 600; color: var(--text); margin: 0; }
+.ab-links { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+.ab-note { color: var(--text); font-size: var(--fs-15); padding: 12px 16px; border-left: 2px solid var(--c-titanium); background: var(--panel); border-radius: 0 var(--r-control) var(--r-control) 0; }
+.ab-skills { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-3); }
+@media (max-width: 1023px) { .ab-skills { grid-template-columns: minmax(0, 1fr); gap: var(--s-2); } }
+.ab-list { margin: 8px 0 0; padding-left: 18px; color: var(--text-muted); font-size: var(--fs-14); line-height: 1.6; }
+.ab-q { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2) var(--s-3); }
+@media (max-width: 767px) { .ab-q { grid-template-columns: minmax(0, 1fr); } }
+.ab-q-item { padding: 12px 16px; border: 1px dashed var(--line-strong); border-radius: var(--r-control); min-height: 64px; }

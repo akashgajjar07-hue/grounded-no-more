@@ -78,8 +78,8 @@ export async function render(el, ctx) {
   const nUrgent = parts.filter((p) => p.risk_level === 'urgent').length;
   const nIntermittent = parts.filter((p) => ['intermittent', 'lumpy'].includes(p.demand_class)).length;
   el.append(pageHead({
-    num: '02', eyebrow: 'Parts Intelligence', title: 'Where the grounding risk sits on the aircraft',
-    lede: `${fmtInt(parts.length)} fictional part numbers for Falcon Hub Airways (fictional), mapped to their ATA chapter. ${fmtInt(nIntermittent)} have intermittent or lumpy demand and ${fmtInt(nUrgent)} carry an urgent grounding-risk score. Select a system on the aircraft or in the list.`,
+    num: '02', eyebrow: 'Parts Intelligence', title: 'Where material shortage exposure sits on the aircraft',
+    lede: `${fmtInt(parts.length)} fictional part numbers for Falcon Hub Airways (fictional), mapped to their ATA chapter. ${fmtInt(nIntermittent)} have intermittent or lumpy demand and ${fmtInt(nUrgent)} carry urgent material shortage exposure. Select a system on the aircraft or in the list.`,
     meta: [provChip(prov), h('span', { class: 'chip' }, `${fmtInt(parts.length)} PNs`), h('span', { class: 'chip' }, `${(P.ata_systems || []).length} ATA chapters`)],
   }));
 
@@ -88,10 +88,10 @@ export async function render(el, ctx) {
   const airHost = h('div', { class: 'pi-aircraft' });
   // phones: the selected system's top-part callout is an HTML line under the drawing (no room between badges)
   const airNote = h('div', { class: 'pi-air-note', hidden: true });
-  const legend = h('div', { class: 'pi-legend', 'aria-hidden': 'true' }, ...['urgent', 'review', 'ok'].map((l) => h('span', { class: `pi-legend-item is-${l}` }, h('b', {}, LEVEL[l].glyph), l === 'review' ? 'Review / watch' : LEVEL[l].text)), h('span', { class: 'pi-legend-item is-pip' }, h('b', { class: 'pi-legend-pip' }, 'n'), 'urgent PNs in system'), h('span', { class: 'faint' }, 'Badge = system share of fleet risk-hours · WATCH = OK system holding an urgent part'));
+  const legend = h('div', { class: 'pi-legend', 'aria-hidden': 'true' }, ...['urgent', 'review', 'ok'].map((l) => h('span', { class: `pi-legend-item is-${l}` }, h('b', {}, LEVEL[l].glyph), l === 'review' ? 'Review / watch' : LEVEL[l].text)), h('span', { class: 'pi-legend-item is-pip' }, h('b', { class: 'pi-legend-pip' }, 'n'), 'urgent PNs in system'), h('span', { class: 'faint' }, 'Shaded areas are indicative zones, not component locations · badge = system share of material shortage exposure · WATCH = OK system holding an urgent part'));
   const explorerCard = card({
     cls: 'span-7 md-span-12 pi-explorer', bp: true, prov,
-    kicker: 'Aircraft system explorer · plan view · generic twin, fictional',
+    kicker: 'Aircraft system explorer · narrowbody archetype · indicative zones',
     title: explorerTitle(),
     // the story hook wraps the drawing AND the phone's top-part line, so story step 2 frames the part on phones too (wave 5)
     body: [h('div', { class: 'pi-air-wrap', 'data-story': 'aircraft' }, airHost, airNote), legend],
@@ -99,8 +99,8 @@ export async function render(el, ctx) {
   /** F8 (wave 4): the headline follows the selected ATA; with "All" (or nothing selected) it names the riskiest system. */
   function explorerTitle() {
     const s = ata && ata !== 'all' ? sysStat[ata] : null;
-    if (s) return `ATA ${s.ata} ${s.name.toLowerCase()}: ${s.share != null ? `${fmtPct(s.share, 0)} of fleet risk-hours, ` : ''}${fmtInt(s.urgent)} urgent of ${fmtInt(s.n)} PNs${worst && worst.ata === s.ata ? ', the most of any system' : ''}`;
-    return worst ? `ATA ${worst.ata} ${worst.name.toLowerCase()} carries the most risk: ${worst.share != null ? fmtPct(worst.share, 0) + ' of fleet risk-hours, ' : ''}${worst.urgent} urgent of ${worst.n} PNs` : 'No risk scores exported';
+    if (s) return `ATA ${s.ata} ${s.name.toLowerCase()}: ${s.share != null ? `${fmtPct(s.share, 0)} of fleet shortage exposure, ` : ''}${fmtInt(s.urgent)} urgent of ${fmtInt(s.n)} PNs${worst && worst.ata === s.ata ? ', the most of any system' : ''}`;
+    return worst ? `ATA ${worst.ata} ${worst.name.toLowerCase()} carries the most exposure: ${worst.share != null ? fmtPct(worst.share, 0) + ' of fleet shortage exposure, ' : ''}${worst.urgent} urgent of ${worst.n} PNs` : 'No risk scores exported';
   }
 
   const sysList = h('ul', { class: 'pi-syslist list-reset', role: 'list', 'aria-label': 'ATA systems (list alternative to the aircraft diagram)' });
@@ -117,7 +117,7 @@ export async function render(el, ctx) {
     return b;
   });
   const allBtn = h('button', { type: 'button', class: 'btn btn--sm', 'aria-pressed': String(ata === 'all'), onclick: () => setAta('all') }, icon('layers'), `All ${fmtInt(parts.length)} PNs`);
-  const listCard = card({ cls: 'span-5 md-span-12', kicker: 'Systems · list view', title: 'Select an ATA chapter', prov: 'DERIVED', actions: allBtn, body: sysList, foot: h('span', {}, `${P.system_risk_bands_share ? `System level: urgent if the chapter holds ≥ ${fmtPct(P.system_risk_bands_share.urgent, 0)} of fleet risk-hours, review ≥ ${fmtPct(P.system_risk_bands_share.review, 0)}. ` : ''}${P.risk_bands_h ? `Part level: urgent ≥ ${fmtInt(P.risk_bands_h.urgent)} AOG h/yr, review ≥ ${fmtInt(P.risk_bands_h.review)} (assumed bands). ` : ''}Risk score 0–100 is log-scaled AOG hours. ${parts.filter((p) => !ATAS.includes(p.ata)).length} PNs sit in other chapters (see “All”).`) });
+  const listCard = card({ cls: 'span-5 md-span-12', kicker: 'Systems · list view', title: 'Select an ATA chapter', prov: 'DERIVED', actions: allBtn, body: sysList, foot: h('span', {}, `${P.system_risk_bands_share ? `System level: urgent if the chapter holds ≥ ${fmtPct(P.system_risk_bands_share.urgent, 0)} of fleet material shortage exposure, review ≥ ${fmtPct(P.system_risk_bands_share.review, 0)}. ` : ''}${P.risk_bands_h ? `Part level: urgent ≥ ${fmtInt(P.risk_bands_h.urgent)} AOG h/yr, review ≥ ${fmtInt(P.risk_bands_h.review)} (assumed bands). ` : ''}Risk score 0–100 is log-scaled AOG hours. ${parts.filter((p) => !ATAS.includes(p.ata)).length} PNs sit in other chapters (see “All”).`) });
 
   el.append(h('div', { class: 'grid-12' }, explorerCard, listCard));
 
@@ -158,7 +158,7 @@ export async function render(el, ctx) {
     // urgent actions only (wave 5): review-level housekeeping (quarantine, excess) stays in the drawer, not as row noise
     const e = (r.exceptions || []).find((x) => x.severity === 'urgent');
     if (!e || r.risk_level === e.severity) return null;
-    return h('span', { class: `chip pi-exc pi-exc--${e.severity}`, title: `${e.type_label} · ${e.severity} planner action (${e.exception_id} at ${e.station}). Risk scores grounding exposure; this action is about planning data.` }, icon(e.severity === 'urgent' ? 'alert' : 'clock'), `${e.type_label} · ${e.severity}`);
+    return h('span', { class: `chip pi-exc pi-exc--${e.severity}`, title: `${e.type_label} · ${e.severity} planner action (${e.exception_id} at ${e.station}). Risk measures material shortage exposure; this action is about planning data.` }, icon(e.severity === 'urgent' ? 'alert' : 'clock'), `${e.type_label} · ${e.severity}`);
   }
   function riskTitle(r) {
     return `${r.risk_hours != null ? `${fmtHours(r.risk_hours)}/yr of AOG = ${fmtHours(r.aog_hours_hist_per_yr)} history + ${fmtNum(r.residual_aog_h_per_yr, 1)} h modelled residual. ` : ''}Score = ln(1 + AOG h) / ln(1 + fleet max), × 100.`;
@@ -192,7 +192,7 @@ export async function render(el, ctx) {
   drawPlanted();
 
   // ------------------------------------------------------------------ aircraft
-  const air = await blueprintAircraft(airHost, { active: ata === 'all' ? null : ata, onSelect: (a) => setAta(a), compactBelow: 1e6, label: 'Plan view of a generic twin-engine aircraft (fictional) with ATA system hotspots' });
+  const air = await blueprintAircraft(airHost, { active: ata === 'all' ? null : ata, onSelect: (a) => setAta(a), compactBelow: 1e6, label: 'Plan view of a single-aisle twin-engine airliner archetype (original schematic) with indicative ATA system zones' });
   decorateAircraft(air.svg);
   const airRO = new ResizeObserver(() => requestAnimationFrame(layoutAircraft));
   airRO.observe(airHost);
@@ -242,6 +242,8 @@ export async function render(el, ctx) {
       g.querySelectorAll('.hs-badge > circle, .hs-pulse').forEach((c) => c.setAttribute('r', R));
       const num = g.querySelector('.hs-badge > text:not(.hs-risk)');
       if (num) num.style.fontSize = `${Math.max(17, 12 * u)}px`;
+      const zt = g.querySelector('.hs-zone-t');
+      if (zt) { zt.style.fontSize = `${11 * u}px`; zt.style.strokeWidth = `${4 * u}px`; }
       const lbl = g.querySelector('.hs-risk');
       if (lbl) { lbl.setAttribute('x', cx); lbl.setAttribute('y', cy + R + 9 * u); lbl.style.textAnchor = 'middle'; lbl.style.fontSize = `${11 * u}px`; lbl.style.strokeWidth = `${4 * u}px`; }
       const pip = g.querySelector('.hs-pip');
@@ -619,7 +621,7 @@ export async function render(el, ctx) {
     body.append(head);
     const ex = (p.exceptions || []).find((x) => x.severity === 'urgent' || x.severity === 'review');
     if (ex && p.risk_level !== ex.severity) {
-      body.append(h('p', { class: 'pi-exc-note t-12 muted', role: 'note' }, icon('info'), h('span', {}, `Risk ${riskPct(p.risk_score)} measures grounding exposure (AOG hours). The ${ex.severity} ${ex.type_label.toLowerCase()} action (${ex.exception_id}) is about planning data, so it ranks high on Mission and in the Action Centre while the risk score stays low.`)));
+      body.append(h('p', { class: 'pi-exc-note t-12 muted', role: 'note' }, icon('info'), h('span', {}, `Risk ${riskPct(p.risk_score)} measures material shortage exposure (expected material-related downtime hours). The ${ex.severity} ${ex.type_label.toLowerCase()} action (${ex.exception_id}) is about planning data, so it ranks high on Mission and in the Action Centre while the risk score stays low.`)));
     }
     if (p.planted) {
       body.append(h('div', { class: 'pi-planted-banner', role: 'note' }, icon('target'), h('div', {}, h('strong', {}, `Planted situation ${p.planted}`), h('p', { class: 'faint t-12' }, p.planted_note || 'A scenario planted in the simulator for the planning logic to detect from history alone.'))));
@@ -629,7 +631,7 @@ export async function render(el, ctx) {
     body.append(h('dl', { class: 'meta-list' }, ...[
       ['Description', p.desc], ['ATA', `${p.ata} · ${sysName(p.ata)}`], ['Class', `${CLS_NAME[p.cls] || p.cls} · deadline ${p.deadline} (hypothetical)`],
       ['Demand class', `${dcLabel(p.demand_class)} · ADI ${fmtNum(p.adi)} · CV² ${fmtNum(p.cv2)}`], ['ABC', p.abc], ['Unit cost', fmtAED(p.unit_cost)],
-      ['Grounding risk', p.risk_hours != null ? `${fmtHours(p.risk_hours)}/yr of AOG (history + modelled residual)` : riskPct(p.risk_score)],
+      ['Material shortage exposure', p.risk_hours != null ? `${fmtHours(p.risk_hours)}/yr of AOG (history + modelled residual)` : riskPct(p.risk_score)],
       [`${P.stock_basis_id || 'Plan'} target (all stations)`, `${fmtInt(p.stock_total)} unit${p.stock_total === 1 ? '' : 's'}`],
       // canonical per-PN AOG metrics, labelled exactly as on Mission and the Action Centre
       ...['aog_h_52w', 'aog_h_52w_max_station'].filter((k) => Number.isFinite(p[k])).map((k) => [P.aog_metric_labels?.[k]?.label || k, `${fmtInt(p[k])} h${k === 'aog_h_52w_max_station' && p.aog_h_52w_max_station_id ? ` (${p.aog_h_52w_max_station_id})` : ''}`]),

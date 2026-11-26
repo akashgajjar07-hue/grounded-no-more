@@ -57,7 +57,7 @@ export async function render(el, ctx) {
   }));
 
   // ---------------------------------------------------------------- legend
-  el.append(h('div', { class: 'dm-legend' }, PROV.map((p) => card({ body: [h('div', { class: 'row' }, provChip(p), h('span', { class: 'dm-count' }, `${fmtInt(srcN[p])} src · ${fmtInt(asmN[p])} asm`)), h('p', {}, PROV_TEXT[p])] }))));
+  el.append(h('div', { class: 'dm-legend' }, PROV.map((p) => card({ body: [h('div', { class: 'row' }, provChip(p, { force: true }), h('span', { class: 'dm-count' }, `${fmtInt(srcN[p])} src · ${fmtInt(asmN[p])} asm`)), h('p', {}, PROV_TEXT[p])] }))));
 
   // ---------------------------------------------------------------- provenance flow
   const flowCard = h('section', { class: 'card mt-3', dataset: { story: 'method-provenance' } });
@@ -89,7 +89,7 @@ export async function render(el, ctx) {
       columns: [
         { key: 'name', label: 'Source', render: (r) => (r.url ? h('a', { href: r.url, target: '_blank', rel: 'noopener noreferrer' }, r.name) : r.name) },
         { key: 'licence', label: 'Licence' }, { key: 'used_for', label: 'Used for' },
-        { key: 'provenance', label: 'Provenance', render: (r) => provChip(r.provenance) },
+        { key: 'provenance', label: 'Provenance', render: (r) => provChip(r.provenance, { force: true }) },
       ],
     })),
   }));
@@ -104,7 +104,7 @@ export async function render(el, ctx) {
     columns: [
       { key: 'key', label: 'Key', mono: true },
       { key: 'value', label: 'Value', mono: true, format: (v, r) => `${v == null ? '—' : String(v).replace(/^"(.*)"$/, '$1')}${r.unit ? ` ${r.unit}` : ''}` },
-      { key: 'provenance', label: 'Tag', render: (r) => provChip(r.provenance) },
+      { key: 'provenance', label: 'Tag', render: (r) => provChip(r.provenance, { force: true }) },
       { key: 'rationale', label: 'Rationale', render: (r) => (r._same ? h('span', { class: 'dm-same', title: r.rationale }, '↑ same rationale as above') : (r.rationale ?? (String(r.key).startsWith('meta.') ? h('span', { class: 'faint' }, 'Site metadata (labels, not a modelling choice)') : '—'))) },
     ],
   });

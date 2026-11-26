@@ -77,7 +77,7 @@ def test_part_drawer_deep_link(site, browser, vp):  # noqa: F811
             assert drawer.locator('a[href^="#/rotables"]').count() == 1
         if parts[pn].get("planted"):
             assert drawer.locator(".pi-planted-banner").count() == 1
-        overflow = page.evaluate("""() => [...document.querySelectorAll('.drawer *')].filter(e => !e.closest('svg') && !e.closest('.table-wrap') && !e.children.length && e.textContent.trim() && e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflow !== 'visible').map(e => e.textContent.slice(0, 40))""")
+        overflow = page.evaluate("""() => [...document.querySelectorAll('.drawer *')].filter(e => !e.closest('svg') && !e.closest('.table-wrap') && !e.closest('.sr-only') && !e.children.length && e.textContent.trim() && e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflow !== 'visible').map(e => e.textContent.slice(0, 40))""")
         assert not overflow, overflow
         page.keyboard.press("Escape")
         page.wait_for_timeout(400)

@@ -11,7 +11,7 @@
  *  4. Station table
  * Coordinates are REAL (OurAirports); everything else is SIMULATED. Numbers come from the JSON only.
  */
-import { h, icon, pageHead, card, provChip, pill, dataTable } from '../ui.js';
+import { h, icon, pageHead, card, provChip, pill, dataTable, drawer } from '../ui.js';
 import { renderNetworkMap } from '../charts/map.js';
 import { chartFrame, responsive, svgIn, axisBottom, directLabel, annotate, withTooltip, truncate, theme, fmtAED, fmtInt, fmtPct, fmtHours, fmtNum, fmtWeek, reducedMotion } from '../charts/theme.js';
 
@@ -146,7 +146,7 @@ export async function render(el, ctx) {
   el.append(pageHead({
     num: '05', eyebrow: 'Network Positioning',
     title: 'Where the stock sits, and how fast it can move',
-    lede: `${hub ? hub.station : 'The hub'} supports ${fmtInt(stations.length - 1)} outstations for Falcon Hub Airways (fictional). Node size is serviceable stock, ring colour is projected risk (with icon and text), arc weight is simulated transfer volume. Station coordinates are real (OurAirports); the network activity is simulated.`,
+    lede: `${hub ? hub.station : 'The hub'} supports ${fmtInt(stations.length - 1)} outstations for Falcon Hub Airways (fictional). Node size is material shortage exposure, ring colour is its band (with icon and text), solid line weight is simulated transfer volume and dashed teal lines are proposed positioning. Station coordinates are real (OurAirports); the network activity is simulated.`,
     meta: [provChip('REAL'), provChip(prov(n.meta))],
   }));
 
@@ -163,6 +163,9 @@ export async function render(el, ctx) {
   const mapCard = h('section', { class: 'card card--bp', dataset: { story: 'map' } });
   const totalTransfers = arcs.reduce((a, b) => a + (num(b.transfers) ?? 0), 0);
   const totalEmerg = arcs.reduce((a, b) => a + (num(b.emergency) ?? 0), 0);
+  // wave A: proposed movements = where the recommended plan positions more rotables than P2 (its base), from AUH
+  const proposed = hub ? stations.filter((x) => x.role !== 'hub' && x.by_policy?.[recId] && x.by_policy?.P2 && x.by_policy[recId].rotable_units > x.by_policy.P2.rotable_units)
+    .map((x) => ({ from: hub.station, to: x.station, label: `+${fmtInt(x.by_policy[recId].rotable_units - x.by_policy.P2.rotable_units)} rotable${x.by_policy[recId].rotable_units - x.by_policy.P2.rotable_units === 1 ? '' : 's'} positioned (${recId} vs P2)`, basis: `${recId} allocation (proposed, not a history transfer)` })) : [];
   const busiest = arcs.slice().sort((a, b) => (b.transfers ?? 0) - (a.transfers ?? 0))[0];
   const topRisk = stations.filter((s) => s.role !== 'hub').sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0))[0];
   const topAll = stations.slice().sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0))[0];
@@ -178,9 +181,9 @@ export async function render(el, ctx) {
       : topAll && topRisk
       ? (topAll.role === 'hub'
         ? `The ${topAll.station} hub carries the most projected AOG risk; ${topRisk.station} leads outstations at ${fmtPct(topRisk.risk, 0)} of it`
-        : `${topAll.station} carries the highest projected risk (${fmtPct(topAll.risk, 0)}); ${fmtInt(totalEmerg)} of ${fmtInt(totalTransfers)} transfers were emergencies`)
+        : `${topAll.station} carries the highest material shortage exposure (${fmtPct(topAll.risk, 0)}); ${fmtInt(totalEmerg)} of ${fmtInt(totalTransfers)} transfers were emergencies`)
       : 'Hub-and-spoke network',
-    subtitle: `Node size = serviceable units (recommended plan) · ring = projected risk (hub on its own; outstations vs the riskiest outstation) · line width = ${fmtInt(totalTransfers)} history transfers`,
+    subtitle: `Node size = material shortage exposure (P0 holdout AOG h, vs the worst station) · ring = exposure band · solid lines = ${fmtInt(totalTransfers)} history transfers (width = volume) · dashed teal = proposed ${recId} positioning · labels: ${recId} rotable units`,
     provenance: prov(n.meta), source: 'network.json → stations, arcs',
     table: { columns: [{ key: 'from', label: 'From' }, { key: 'to', label: 'To' }, { key: 'transfers', label: 'Transfers', num: true, format: fmtInt }, { key: 'emergency', label: 'Emergency', num: true, format: fmtInt }, { key: 'aog_transport_h', label: 'AOG transport', num: true, format: fmtHours }], rows: arcs },
   });
@@ -188,10 +191,11 @@ export async function render(el, ctx) {
   const bandsPresent = ['low', 'watch', 'ok', 'review', 'urgent'].filter((b) => stations.some((s) => riskBand(s) === b));
   mapF.body.append(mapHost, h('div', { class: 'np-map-foot' }, picker,
     h('div', { class: 'np-legend', 'aria-hidden': 'true' },
-      h('span', { class: 'np-legend-k' }, 'Risk ring'),
+      h('span', { class: 'np-legend-k' }, 'Exposure ring'),
       ...bandsPresent.map((b) => h('span', { style: { color: RISK[b].color } }, h('i', { class: 'np-ring' }), RISK[b].word.toLowerCase())),
-      h('span', { class: 'np-legend-k' }, 'Transfers'),
-      h('span', { style: { color: SR.neutral } }, h('i', { class: 'np-line' }), 'routine'),
+      h('span', { class: 'np-legend-k' }, 'Movements'),
+      h('span', { style: { color: SR.neutral } }, h('i', { class: 'np-line' }), 'history transfers'),
+      proposed.length ? h('span', { style: { color: theme.series.recommended } }, h('i', { class: 'np-line np-line--dash' }), `proposed (${recId})`) : null,
       totalEmerg ? h('span', { style: { color: SR.urgent } }, h('i', { class: 'np-line' }), 'emergency (replay)') : null)));
   const drill = h('section', { class: 'card', dataset: { story: 'station-drill' }, 'aria-live': 'polite' });
   // wave 4: the hub-vs-outstation finding sits under the map, so the left column matches the tall station panel (no dead space)
@@ -199,14 +203,15 @@ export async function render(el, ctx) {
   el.append(h('div', { class: 'np-hero mt-3' }, h('div', { class: 'np-left' }, mapCard, shareCard), drill));
 
   const map = await renderNetworkMap(mapHost, {
-    stations, arcs, selected,
-    onSelect: (id) => choose(id, false),
+    stations, arcs, selected, proposed,
+    onSelect: (id) => { choose(id, false); openStation(id); },
     // sub-label sits directly under the IATA code: units, plus the risk word only when it is not low (no glyph, so it never reads as another airport)
     labelSub: (s) => { const b = riskBand(s); const risk = b === 'ok' || b === 'low' ? '' : ` · ${RISK[b].word}`; return `${fmtInt(s.serviceable_units)} u${risk}`; },
-    nodeRadius: (s) => 4 + 10 * Math.sqrt((num(s.serviceable_units) ?? 0) / maxUnits),
+    // wave A: node size = material shortage exposure (P0 holdout AOG h vs the worst station); units are in the label
+    nodeRadius: (s) => 4.5 + 11 * Math.sqrt(Math.max(0, num(s.risk) ?? 0)),
     nodeColor: (s) => RISK[riskBand(s)].color,
-    nodeAria: (s) => `${s.station} ${s.name || ''}: ${fmtInt(s.serviceable_units)} serviceable units, projected risk ${RISK[riskBand(s)].word}`,
-    tooltipRows: (s) => [['Role', s.role], ['Serviceable units', fmtInt(s.serviceable_units)], ['Stock value', fmtAED(s.stock_value)], ['Requests', fmtInt(s.requests)], ['Projected risk', `${RISK[riskBand(s)].glyph} ${riskText(s, stations)}`], ...(s.role !== 'hub' ? [['Risk vs hub', fmtPct(s.risk, 0)]] : [])],
+    nodeAria: (s) => `${s.station} ${s.name || ''}: ${fmtInt(s.serviceable_units)} serviceable units, material shortage exposure ${RISK[riskBand(s)].word}`,
+    tooltipRows: (s) => [['Role', s.role], ['Serviceable units', fmtInt(s.serviceable_units)], ['Stock value', fmtAED(s.stock_value)], ['Requests', fmtInt(s.requests)], ['Material shortage exposure', `${RISK[riskBand(s)].glyph} ${riskText(s, stations)}`], ...(s.role !== 'hub' ? [['Risk vs hub', fmtPct(s.risk, 0)]] : [])],
     label: 'Network map of Falcon Hub Airways (fictional) stations',
     // the hub's arcs leave to the west and east; its label block sits above-right, clear of them and of the Gulf outstations
     labelOffsets: hub ? { [hub.station]: [12, -30, 'start'] } : {},
@@ -214,6 +219,30 @@ export async function render(el, ctx) {
   cleanups.push(() => map.destroy());
   if (!alive) return () => {};
 
+  /** Station details drawer (every map station is clickable); the full panel stays on the page. */
+  let stDrawer = null;
+  function openStation(id) {
+    const s = byId[id];
+    if (!s) return;
+    stDrawer?.close?.();
+    const rb = RISK[riskBand(s)];
+    const row = (k, v) => [h('dt', {}, k), h('dd', {}, v)];
+    const u = s.by_policy || {};
+    stDrawer = drawer({
+      kicker: s.role === 'hub' ? 'Hub station' : 'Outstation', title: `${s.station} · ${s.name || ''}`, persistOnParams: true,
+      body: h('div', { class: 'stack-3' },
+        h('div', { class: 'row-wrap' }, pill(rb.pill, riskText(s, stations)), provChip(prov(n.meta))),
+        h('dl', { class: 'meta-list' },
+          ...row(`${recId} rotable units`, fmtInt(u[recId]?.rotable_units ?? s.serviceable_units)),
+          ...row('Stock value', fmtAED(s.stock_value)),
+          ...row('Material shortage exposure', s.role === 'hub' ? `${fmtPct(s.risk, 0)} (worst station)` : `${fmtPct(s.risk, 0)} of the worst station`),
+          ...row('Requests (2-yr history)', fmtInt(s.requests)),
+          ...(s.aog_hours_hist != null ? row('AOG h · W0–W103 history (2 yr, P0)', fmtHours(s.aog_hours_hist)) : []),
+          ...(u.P2 ? row('Units by plan', ['P0', 'P1', 'P2', recId].filter((k) => u[k]).map((k) => `${k} ${fmtInt(u[k].rotable_units)}`).join(' · ')) : [])),
+        h('p', { class: 't-12 faint m-0' }, 'Simulated planning snapshot. The station panel on this page has the policy comparison with intervals.')),
+      foot: [h('a', { class: 'btn btn--sm', href: ctx.buildHash('parts', { station: s.station }) }, 'Parts at this station', icon('chevron-right'))],
+    }).open();
+  }
   function choose(id, fromPicker) {
     selected = id;
     if (fromPicker) map.select(id);
@@ -229,8 +258,8 @@ export async function render(el, ctx) {
     if (!s) {
       const ranked = stations.slice().sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0));
       drill.append(h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, 'Station drill-down'), h('h3', { class: 'card-title' }, 'Select a station on the map or below')), provChip(prov(n.meta))),
-        h('p', { class: 'muted t-14' }, 'Each station shows its serviceable units, request volume, projected risk, transfer traffic and how P0, P1 and P2 perform there.'),
-        h('div', { class: 'np-sub' }, 'Highest projected risk first'),
+        h('p', { class: 'muted t-14' }, 'Each station shows its serviceable units, request volume, material shortage exposure, transfer traffic and how P0, P1 and P2 perform there.'),
+        h('div', { class: 'np-sub' }, 'Highest material shortage exposure first'),
         h('div', { class: 'np-rank' }, ranked.map((x) => h('button', { type: 'button', class: 'np-rank-item', onclick: () => choose(x.station, true) },
           h('span', { class: 'np-rank-name' }, h('span', { class: 'mono' }, x.station), h('span', { class: 'faint t-12' }, x.name || '')), pill(RISK[riskBand(x)].pill, riskText(x, stations))))));
       return;
@@ -309,7 +338,7 @@ export async function render(el, ctx) {
 
   // ---------------------------------------------------------------- 4. station table
   el.append(h('div', { class: 'mt-3' }, card({
-    kicker: 'Stations', title: 'Stock and exposure by station, highest projected risk first', prov: prov(n.meta),
+    kicker: 'Stations', title: 'Stock and material shortage exposure by station, highest first', prov: prov(n.meta),
     body: dataTable({
       caption: 'Stations', dense: true,
       columns: [
@@ -318,7 +347,7 @@ export async function render(el, ctx) {
         { key: 'serviceable_units', label: 'Serviceable', short: 'Units', num: true, format: fmtInt },
         { key: 'stock_value', label: 'Stock value', short: 'Stock', num: true, format: (v) => fmtAED(v) },
         { key: 'requests', label: 'Requests', num: true, format: fmtInt },
-        { key: 'risk', label: 'Projected risk', short: 'Risk', render: (s) => pill(RISK[riskBand(s)].pill, riskText(s, stations)) },
+        { key: 'risk', label: 'Shortage exposure', short: 'Exposure', render: (s) => pill(RISK[riskBand(s)].pill, riskText(s, stations)) },
       ],
       rows: stations, sort: { key: 'risk', dir: 'desc' }, onRowClick: (s) => choose(s.station, true),
       mobileColumns: ['station', 'risk', 'stock_value', 'serviceable_units'], stickyFirst: true,

@@ -17,7 +17,7 @@
 .fl-controls { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-3); margin-bottom: var(--s-2); }
 .fl-control { display: flex; flex-direction: column; gap: 6px; min-width: 0; max-width: 100%; }
 .fl-control .seg { flex-wrap: wrap; }
-.fl-control-l, .fl-chip-l { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); }
+.fl-control-l, .fl-chip-l { font-family: var(--font-ui); font-size: var(--fs-12); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); }
 
 /* leaderboard rows */
 .fl-sep { stroke: var(--line-strong); stroke-dasharray: 2 3; }

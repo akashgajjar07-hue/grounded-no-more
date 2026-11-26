@@ -417,7 +417,7 @@ class Slide:
 
     def footer(self, num, source, total=10):
         self.line(48, 682, 1232, 682, HAIR_BG, 0.75)
-        self.text(48, 689, 1060, 14, P(R(f"GROUNDED NO MORE · {AIRLINE} · simulated data · {source}",
+        self.text(48, 689, 1060, 14, P(R(f"GROUNDED NO MORE · {AIRLINE} · simulated planning snapshot · {source}",
                                          "small", s=7.5)))
         self.text(1032, 689, 200, 14, P(R(f"{num:02d} / {total:02d}", "label", s=7.5, c=C["faint"]), al="r"))
 
@@ -815,7 +815,7 @@ class Charts:
         ax.set_xlim(1.6, 4000)
         ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:,.0f}"))
         ax.xaxis.set_minor_formatter(NullFormatter())
-        ax.set_xlabel("Material AOG hours / year (log) · holdout mean and 95% CI", fontsize=8)
+        ax.set_xlabel("Expected material-related downtime: material AOG hours / year (log) · holdout mean and 95% CI", fontsize=8)
         for t in ax.get_yticklabels():
             t.set_color(C["titanium"])
         for t in ax.get_xticklabels():
