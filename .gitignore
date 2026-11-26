@@ -13,3 +13,4 @@ node_modules/
 *.log
 .env
 outputs/cache/
+outputs/holdout_dryrun/
