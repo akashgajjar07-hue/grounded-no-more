@@ -129,17 +129,24 @@ export function card({ title, kicker, prov, actions, body, foot, cls = '', story
  * KPI tile from a kpis.json row: {id,label,value,unit,baseline,delta,better,provenance,ci,spark,target}
  * opts.format(value) → string (defaults chosen by unit), opts.sparkline(el, values) to draw the spark.
  * opts.scale: {min, max} for the instrument ruler (optional).
+ * opts.capital: capital deltas are NEUTRAL (titanium + arrow + "more/less capital"), never red/green.
+ *   Default: auto — true when the KPI id or label mentions "capital". Pass false to force signed colouring.
+ * opts.deltaTone: 'auto' (default) | 'neutral' | 'signed' — explicit override of the delta colour logic.
  */
-export function kpiTile(k, { format, deltaFormat, sparkline, scale, hero = false } = {}) {
+export const isCapitalKpi = (k) => /capital/i.test(`${k?.id || ''} ${k?.label || ''}`);
+export function kpiTile(k, { format, deltaFormat, sparkline, scale, hero = false, capital, deltaTone = 'auto' } = {}) {
   const fmt = format || ((v) => String(v));
   const dfmt = deltaFormat || fmt;
-  const good = k.delta === 0 ? 'flat' : (k.better === 'lower' ? k.delta < 0 : k.delta > 0) ? 'good' : 'bad';
+  const isCap = capital ?? isCapitalKpi(k);
+  const neutral = deltaTone === 'neutral' || (deltaTone === 'auto' && isCap);
+  const good = k.delta === 0 ? 'flat' : neutral ? 'neutral' : (k.better === 'lower' ? k.delta < 0 : k.delta > 0) ? 'good' : 'bad';
   const [num, unit] = splitUnit(fmt(k.value));
   const delta = h(
     'span',
     { class: `kpi-delta is-${good}` },
     icon(k.delta < 0 ? 'arrow-down' : k.delta > 0 ? 'arrow-up' : 'minus'),
     `${k.delta > 0 ? '+' : k.delta < 0 ? '−' : ''}${dfmt(Math.abs(k.delta))}`,
+    isCap && k.delta ? h('span', { class: 'kpi-delta-word' }, k.delta > 0 ? ' more capital' : ' less capital') : null,
     h('span', { class: 'kpi-delta-ref' }, ' vs baseline'),
     h('span', { class: 'sr-only' }, good === 'good' ? ' (improvement)' : good === 'bad' ? ' (worse)' : '')
   );
@@ -166,7 +173,7 @@ export function kpiTile(k, { format, deltaFormat, sparkline, scale, hero = false
     spark,
     h('div', { class: 'kpi-foot' }, h('span', {}, ci), h('span', {}, `Baseline ${fmt(k.baseline)}`))
   );
-  if (sparkline && Array.isArray(k.spark)) requestAnimationFrame(() => sparkline(spark, k.spark, { better: k.better }));
+  if (sparkline && Array.isArray(k.spark)) requestAnimationFrame(() => sparkline(spark, k.spark, { better: k.better, color: isCap ? '#B9C8D6' : undefined }));
   return tile;
 }
 /** "AED 43.9M" + "AED 45.4M" → "AED 43.9–45.4M"; "196 h" + "263 h" → "196–263 h" */
@@ -191,18 +198,32 @@ function splitUnit(s) {
 // --------------------------------------------------------------------------- data table
 /**
  * Dense sortable data table.
- *   dataTable({columns: [{key, label, num, mono, sortable=true, format(v,row), render(row)→Node}],
- *              rows, sort: {key, dir:'desc'}, onRowClick(row), selectedKey, rowKey, maxHeight, dense, caption})
- * Returns the wrapper element; `.update(rows)` re-renders the body.
+ *   dataTable({columns: [{key, label, num, mono, sortable=true, format(v,row), render(row)→Node, short?}],
+ *              rows, sort: {key, dir:'desc'}, onRowClick(row), selected, rowKey, maxHeight, dense, caption, bare,
+ *              mobileColumns: ['pn', 'risk_score', 'stock_total'], stack = true, stickyFirst = false})
+ * Mobile (see DESIGN_SYSTEM §2):
+ *  - mobileColumns: priority list of column keys. Below 768 px the table shows only these columns.
+ *  - At ≤ 480 px (when stack !== false) each row becomes a two-line stacked card: mobileColumns[0] on line 1
+ *    (mono for mono columns), mobileColumns[1] right-aligned in a metric pill, the rest on line 2 in 12 px faint
+ *    "Label value" pairs. A compact sort control replaces the header. `short` overrides a column label there.
+ *  - stickyFirst: the first column stays pinned (position: sticky; left: 0) with a hairline shadow while the
+ *    table scrolls horizontally.
+ * Returns the wrapper element; `.update(rows)` re-renders the body, `.setSelected(key)` moves the selection.
  */
-export function dataTable({ columns, rows, sort, onRowClick, rowKey, selected, maxHeight, dense = false, caption, bare = false }) {
-  let state = { rows: rows || [], sort: sort || null };
-  const table = h('table', { class: `data-table ${dense ? 'data-table--dense' : ''}` });
+export function dataTable({ columns, rows, sort, onRowClick, rowKey, selected, maxHeight, dense = false, caption, bare = false, mobileColumns, stack = true, stickyFirst = false }) {
+  let state = { rows: rows || [], sort: sort || null, selected };
+  const prio = Array.isArray(mobileColumns) && mobileColumns.length ? mobileColumns.filter((k) => columns.some((c) => c.key === k)) : null;
+  const hiddenSm = (c) => (prio && !prio.includes(c.key) ? 'is-mobile-hidden' : '');
+  const table = h('table', { class: `data-table ${dense ? 'data-table--dense' : ''} ${stickyFirst ? 'data-table--sticky' : ''}`.replace(/\s+/g, ' ').trim() });
   if (caption) table.append(h('caption', { class: 'sr-only' }, caption));
   const thead = h('thead');
   const tbody = h('tbody');
   table.append(thead, tbody);
-  const wrap = h('div', { class: `table-wrap ${bare ? 'table-wrap--bare' : ''}`, style: maxHeight ? { maxHeight: `${maxHeight}px` } : undefined, tabindex: '0', role: 'region', 'aria-label': caption || 'Data table' }, table);
+  const useStack = !!(prio && stack !== false);
+  const stackEl = useStack ? h('div', { class: 'data-table-stack' }) : null;
+  const wrap = h('div', { class: `table-wrap ${bare ? 'table-wrap--bare' : ''} ${useStack ? 'has-stack' : ''}`.replace(/\s+/g, ' ').trim(), style: maxHeight ? { maxHeight: `${maxHeight}px` } : undefined, tabindex: '0', role: 'region', 'aria-label': caption || 'Data table' }, table, stackEl);
+  const mq = useStack ? matchMedia('(max-width: 480px)') : null;
+  const cell = (c, r) => (c.render ? c.render(r) : c.format ? c.format(r[c.key], r) : r[c.key]);
 
   function renderHead() {
     thead.replaceChildren(
@@ -211,7 +232,7 @@ export function dataTable({ columns, rows, sort, onRowClick, rowKey, selected, m
         {},
         columns.map((c) => {
           const sorted = state.sort?.key === c.key;
-          const th = h('th', { scope: 'col', class: c.num ? 'is-num' : '', 'aria-sort': sorted ? (state.sort.dir === 'asc' ? 'ascending' : 'descending') : null });
+          const th = h('th', { scope: 'col', class: `${c.num ? 'is-num' : ''} ${hiddenSm(c)}`.trim(), 'aria-sort': sorted ? (state.sort.dir === 'asc' ? 'ascending' : 'descending') : null });
           if (c.sortable === false) th.append(c.label);
           else th.append(h('button', { class: 'th-sort', type: 'button', onclick: () => toggleSort(c.key) }, c.label, icon('sort')));
           return th;
@@ -219,41 +240,68 @@ export function dataTable({ columns, rows, sort, onRowClick, rowKey, selected, m
       )
     );
   }
-  function toggleSort(key) {
-    const dir = state.sort?.key === key && state.sort.dir === 'desc' ? 'asc' : 'desc';
-    state.sort = { key, dir };
+  function toggleSort(key, dir) {
+    const d = dir || (state.sort?.key === key && state.sort.dir === 'desc' ? 'asc' : 'desc');
+    state.sort = { key, dir: d };
     renderHead();
     renderBody();
   }
-  function renderBody() {
-    let data = state.rows.slice();
+  function sorted() {
+    const data = state.rows.slice();
     if (state.sort) {
       const { key, dir } = state.sort;
       const m = dir === 'asc' ? 1 : -1;
       data.sort((a, b) => (a[key] > b[key] ? m : a[key] < b[key] ? -m : 0));
     }
+    return data;
+  }
+  function rowAttrs(r) {
+    return {
+      'aria-selected': rowKey && state.selected != null ? String(r[rowKey] === state.selected) : null,
+      tabindex: onRowClick ? '0' : null,
+      style: onRowClick ? { cursor: 'pointer' } : undefined,
+      onclick: onRowClick ? () => onRowClick(r) : null,
+      onkeydown: onRowClick ? (e) => { if (e.key === 'Enter') onRowClick(r); } : null,
+    };
+  }
+  function renderStack(data) {
+    if (!stackEl || !mq.matches) { stackEl?.replaceChildren(); return; }
+    const byKey = Object.fromEntries(columns.map((c) => [c.key, c]));
+    const [k1, k2, ...rest] = prio;
+    const c1 = byKey[k1], c2 = k2 ? byKey[k2] : null;
+    const sortable = columns.filter((c) => c.sortable !== false);
+    const sel = h('select', { 'aria-label': 'Sort rows by', onchange: (e) => toggleSort(e.target.value, state.sort?.dir || 'desc') },
+      sortable.map((c) => h('option', { value: c.key, selected: state.sort?.key === c.key ? true : null }, c.short || c.label)));
+    const dirBtn = h('button', { class: 'btn btn--sm btn--icon', type: 'button', 'aria-label': state.sort?.dir === 'asc' ? 'Sort ascending (switch to descending)' : 'Sort descending (switch to ascending)', onclick: () => toggleSort(state.sort?.key || sortable[0]?.key, state.sort?.dir === 'asc' ? 'desc' : 'asc') }, icon(state.sort?.dir === 'asc' ? 'arrow-up' : 'arrow-down'));
+    const list = h('ul', { class: 'dts-list', 'aria-label': caption || 'Rows' }, data.map((r) => {
+      const a = rowAttrs(r);
+      return h('li', { class: 'dts-row', role: onRowClick ? 'button' : null, tabindex: a.tabindex, 'aria-selected': a['aria-selected'], onclick: a.onclick, onkeydown: a.onkeydown },
+        h('div', { class: `dts-primary ${c1.mono ? '' : 'is-text'}`.trim() }, cell(c1, r) ?? '—'),
+        c2 ? h('div', { class: 'dts-metric' }, h('span', { class: 'dts-metric-label' }, c2.short || c2.label), cell(c2, r) ?? '—') : h('span'),
+        rest.length ? h('div', { class: 'dts-secondary' }, rest.map((k) => byKey[k]).map((c) => h('span', {}, `${c.short || c.label} `, h('b', {}, cell(c, r) ?? '—')))) : null);
+    }));
+    stackEl.replaceChildren(sortable.length ? h('div', { class: 'dts-sort' }, h('label', {}, 'Sort'), sel, dirBtn) : null, list);
+  }
+  function renderBody() {
+    const data = sorted();
     tbody.replaceChildren(
       ...data.map((r) =>
-        h(
-          'tr',
-          {
-            'aria-selected': rowKey && selected != null ? String(r[rowKey] === selected) : null,
-            tabindex: onRowClick ? '0' : null,
-            style: onRowClick ? { cursor: 'pointer' } : undefined,
-            onclick: onRowClick ? () => onRowClick(r) : null,
-            onkeydown: onRowClick ? (e) => { if (e.key === 'Enter') onRowClick(r); } : null,
-          },
-          columns.map((c) => {
-            const content = c.render ? c.render(r) : c.format ? c.format(r[c.key], r) : r[c.key];
-            return h('td', { class: `${c.num ? 'is-num' : ''} ${c.mono ? 'mono' : ''}`.trim() }, content ?? '—');
-          })
+        h('tr', rowAttrs(r),
+          columns.map((c) => h('td', { class: `${c.num ? 'is-num' : ''} ${c.mono ? 'mono' : ''} ${hiddenSm(c)}`.replace(/\s+/g, ' ').trim() }, cell(c, r) ?? '—'))
         )
       )
     );
+    renderStack(data);
   }
   renderHead();
   renderBody();
+  if (mq) {
+    const onMq = () => { if (!wrap.isConnected && wrap.dataset.mounted) { mq.removeEventListener('change', onMq); return; } renderStack(sorted()); };
+    mq.addEventListener('change', onMq);
+    requestAnimationFrame(() => { if (wrap.isConnected) wrap.dataset.mounted = '1'; });
+  }
   wrap.update = (rows2) => { state.rows = rows2; renderBody(); };
+  wrap.setSelected = (key) => { state.selected = key; renderBody(); };
   return wrap;
 }
 
@@ -296,7 +344,48 @@ export function slider({ label, min, max, step = 1, value, format = String, onIn
 }
 
 // --------------------------------------------------------------------------- overlays
-let lastFocus = null;
+/*
+ * Overlay registry. Every drawer / modal registers itself while open so the router can close them all
+ * (releasing focus traps and scroll locks) before it renders another view: closeAllOverlays().
+ * Story mode is NOT registered: it drives navigation itself and must survive route changes.
+ */
+const openOverlays = new Set();
+let scrollLocks = 0;
+function lockScroll() { if (scrollLocks++ === 0) document.documentElement.classList.add('has-overlay'); }
+function unlockScroll() { scrollLocks = Math.max(0, scrollLocks - 1); if (!scrollLocks) document.documentElement.classList.remove('has-overlay'); }
+
+/**
+ * Register any custom overlay so the router closes it on navigation.
+ *   const off = registerOverlay({ close: (opts) => …, persistOnParams: false });  // call off() when it closes itself
+ * close(opts) receives {reason: 'route' | 'params' | 'user', immediate: true}.
+ */
+export function registerOverlay(entry) { openOverlays.add(entry); return () => openOverlays.delete(entry); }
+
+/**
+ * Close every registered overlay (drawers, modals, custom), hide the tooltip and release scroll locks.
+ * opts.reason: 'route' (default; everything closes) | 'params' (overlays with persistOnParams stay open).
+ * Returns the number of overlays closed.
+ */
+export function closeAllOverlays({ reason = 'route' } = {}) {
+  let n = 0;
+  [...openOverlays].forEach((o) => {
+    if (reason === 'params' && o.persistOnParams) return;
+    openOverlays.delete(o);
+    try { o.close({ reason, immediate: true }); } catch (e) { console.warn('overlay close failed', e); }
+    n++;
+  });
+  tooltip.hide();
+  // belt and braces: nothing may leave a dimmed, click-blocking layer behind
+  document.querySelectorAll('body > .scrim, body > .drawer, body > .modal').forEach((el) => {
+    if ([...openOverlays].some((o) => o.el === el || o.scrim === el)) return;
+    el.remove();
+  });
+  if (!openOverlays.size) { scrollLocks = 0; document.documentElement.classList.remove('has-overlay'); }
+  return n;
+}
+/** Number of overlays currently open (tests / debugging). */
+export const openOverlayCount = () => openOverlays.size;
+
 function trapFocus(container, e) {
   if (e.key !== 'Tab') return;
   const f = container.querySelectorAll('a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])');
@@ -307,10 +396,12 @@ function trapFocus(container, e) {
 }
 
 /**
- * Right-hand drawer. drawer({title, kicker, body, foot}) → {open(), close(), el, body}
- * Closes on Esc, scrim click and the close button; returns focus to the opener.
+ * Right-hand drawer. drawer({title, kicker, body, foot, onClose, persistOnParams}) → {open(), close(), el, body, isOpen}
+ * Closes on Esc, scrim click and the close button; returns focus to the opener; locks page scroll while open.
+ * The router closes it on every route change (onClose receives {reason: 'route'}); set persistOnParams: true to keep
+ * it open across same-route param updates that the view handles itself (see `onParams` in app.js).
  */
-export function drawer({ title, kicker, body, foot, onClose } = {}) {
+export function drawer({ title, kicker, body, foot, onClose, persistOnParams = false } = {}) {
   const scrim = h('div', { class: 'scrim' });
   const bodyEl = h('div', { class: 'drawer-body' }, body);
   const el = h(
@@ -320,38 +411,64 @@ export function drawer({ title, kicker, body, foot, onClose } = {}) {
     bodyEl,
     foot ? h('div', { class: 'drawer-foot' }, foot) : null
   );
+  let lastFocus = null;
   const onKey = (e) => { if (e.key === 'Escape') api.close(); trapFocus(el, e); };
+  const entry = { el, scrim, persistOnParams, close: (o) => api.close(o) };
   const api = {
-    el, body: bodyEl,
+    el, body: bodyEl, isOpen: false,
     open() {
+      if (api.isOpen) return api;
+      api.isOpen = true;
       lastFocus = document.activeElement;
       document.body.append(scrim, el);
-      requestAnimationFrame(() => { scrim.classList.add('is-open'); el.classList.add('is-open'); el.querySelector('button')?.focus(); });
+      requestAnimationFrame(() => { if (!api.isOpen) return; scrim.classList.add('is-open'); el.classList.add('is-open'); el.querySelector('button')?.focus(); });
       scrim.onclick = () => api.close();
       document.addEventListener('keydown', onKey);
+      openOverlays.add(entry);
+      lockScroll();
       return api;
     },
-    close() {
+    /** close({reason, immediate}) — idempotent. immediate removes the nodes synchronously (router path). */
+    close({ reason = 'user', immediate = false } = {}) {
+      if (!api.isOpen) return;
+      api.isOpen = false;
+      openOverlays.delete(entry);
+      unlockScroll();
       scrim.classList.remove('is-open'); el.classList.remove('is-open');
       document.removeEventListener('keydown', onKey);
-      setTimeout(() => { scrim.remove(); el.remove(); }, 320);
-      lastFocus?.focus?.();
-      onClose?.();
+      if (immediate) { scrim.remove(); el.remove(); } else setTimeout(() => { scrim.remove(); el.remove(); }, 320);
+      if (reason === 'user' && lastFocus?.isConnected) lastFocus.focus?.({ preventScroll: true });
+      onClose?.({ reason });
     },
   };
   return api;
 }
 
-/** Centred modal dialog. modal({title, body}) → {open(), close()} */
-export function modal({ title, body } = {}) {
+/** Centred modal dialog. modal({title, body}) → {open(), close(), isOpen}. Registered like drawer(). */
+export function modal({ title, body, persistOnParams = false } = {}) {
   const scrim = h('div', { class: 'scrim' });
   const cardEl = h('div', { class: 'modal-card', role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, h('div', { class: 'row-between mb-3' }, h('h2', { class: 't-20' }, title), h('button', { class: 'btn btn--ghost btn--icon', type: 'button', 'aria-label': 'Close', onclick: () => api.close() }, icon('close'))), body);
   const wrap = h('div', { class: 'modal' }, cardEl);
+  let lastFocus = null;
   const onKey = (e) => { if (e.key === 'Escape') api.close(); trapFocus(cardEl, e); };
+  const entry = { el: wrap, scrim, persistOnParams, close: (o) => api.close(o) };
   const api = {
     isOpen: false,
-    open() { lastFocus = document.activeElement; document.body.append(scrim, wrap); requestAnimationFrame(() => scrim.classList.add('is-open')); wrap.onclick = (e) => { if (e.target === wrap) api.close(); }; document.addEventListener('keydown', onKey); cardEl.querySelector('button').focus(); api.isOpen = true; return api; },
-    close() { scrim.remove(); wrap.remove(); document.removeEventListener('keydown', onKey); lastFocus?.focus?.(); api.isOpen = false; },
+    open() {
+      if (api.isOpen) return api;
+      lastFocus = document.activeElement; document.body.append(scrim, wrap);
+      requestAnimationFrame(() => scrim.classList.add('is-open'));
+      wrap.onclick = (e) => { if (e.target === wrap) api.close(); };
+      document.addEventListener('keydown', onKey); cardEl.querySelector('button').focus();
+      api.isOpen = true; openOverlays.add(entry); lockScroll();
+      return api;
+    },
+    close({ reason = 'user' } = {}) {
+      if (!api.isOpen) return;
+      api.isOpen = false; openOverlays.delete(entry); unlockScroll();
+      scrim.remove(); wrap.remove(); document.removeEventListener('keydown', onKey);
+      if (reason === 'user' && lastFocus?.isConnected) lastFocus.focus?.({ preventScroll: true });
+    },
   };
   return api;
 }
@@ -458,6 +575,35 @@ export function fillLifecycle(svg, { counts = {}, flows = [] } = {}) {
  * navigate(route) must return a Promise that resolves once the view has rendered.
  */
 let activeStory = null;
+/**
+ * Where to put a floating card of size cw × ch next to target rect r inside a vw × vh viewport.
+ * Tries right, left, below and above (then the four corners), each clamped to a 16 px margin, and returns the
+ * candidate with the least overlap with the target (inflated by 16 px clearance); ties keep that order.
+ * Exported for tests and for any other anchored popover. → {left, top, side, overlap}
+ */
+export function storyCardPosition(r, { cw, ch, vw, vh, gap = 24, margin = 16, clearance = 16 }) {
+  const clampX = (x) => Math.max(margin, Math.min(x, vw - cw - margin));
+  const clampY = (y) => Math.max(margin, Math.min(y, vh - ch - margin));
+  const cands = [
+    { side: 'right', left: r.right + gap, top: clampY(r.top) },
+    { side: 'left', left: r.left - gap - cw, top: clampY(r.top) },
+    { side: 'below', left: clampX(r.left), top: r.bottom + gap },
+    { side: 'above', left: clampX(r.left), top: r.top - gap - ch },
+    { side: 'bottom-right', left: vw - cw - margin, top: vh - ch - margin },
+    { side: 'top-right', left: vw - cw - margin, top: margin },
+    { side: 'bottom-left', left: margin, top: vh - ch - margin },
+    { side: 'top-left', left: margin, top: margin },
+  ].map((c) => ({ ...c, left: clampX(c.left), top: clampY(c.top) }));
+  const t = { l: r.left - clearance, t: r.top - clearance, r: r.right + clearance, b: r.bottom + clearance };
+  let best = null;
+  cands.forEach((c, i) => {
+    const ox = Math.max(0, Math.min(c.left + cw, t.r) - Math.max(c.left, t.l));
+    const oy = Math.max(0, Math.min(c.top + ch, t.b) - Math.max(c.top, t.t));
+    const overlap = ox * oy;
+    if (!best || overlap < best.overlap - 1 || (Math.abs(overlap - best.overlap) <= 1 && i < best.i)) best = { ...c, overlap, i };
+  });
+  return best;
+}
 export function storyMode({ steps, navigate, onExit }) {
   let i = 0;
   let seq = 0; // guards against overlapping go() calls (fast ←/→)
@@ -491,25 +637,22 @@ export function storyMode({ steps, navigate, onExit }) {
     }
     return null;
   }
+  const SHEET_MAX = 480; // px viewport width at or below which the card becomes a bottom sheet
+  const isSheet = () => innerWidth <= SHEET_MAX;
   function place() {
+    cardEl.classList.toggle('is-sheet', isSheet());
     if (!target || !target.isConnected) {
       Object.assign(spot.style, { left: '50%', top: '50%', width: '0px', height: '0px' });
-      Object.assign(cardEl.style, { left: `${(innerWidth - Math.min(380, innerWidth - 32)) / 2}px`, top: `${innerHeight / 3}px` });
+      if (!isSheet()) Object.assign(cardEl.style, { left: `${(innerWidth - Math.min(380, innerWidth - 32)) / 2}px`, top: `${innerHeight / 3}px` });
       return;
     }
     const r = target.getBoundingClientRect();
     const pad = 8;
     const top0 = Math.max(r.top - pad, 4), bot0 = Math.min(r.bottom + pad, innerHeight - 4);
     Object.assign(spot.style, { left: `${r.left - pad}px`, top: `${top0}px`, width: `${r.width + pad * 2}px`, height: `${Math.max(0, bot0 - top0)}px` });
-    const cw = Math.min(380, innerWidth - 32), ch = cardEl.offsetHeight || 240, gap = 24;
-    let left, top;
-    if (r.right + gap + cw <= innerWidth - 16) { left = r.right + gap; top = r.top; }
-    else if (r.left - gap - cw >= 16) { left = r.left - gap - cw; top = r.top; }
-    else if (r.bottom + gap + ch <= innerHeight - 16) { left = Math.max(16, Math.min(r.left, innerWidth - cw - 16)); top = r.bottom + gap; }
-    else if (r.top - gap - ch >= 16) { left = Math.max(16, Math.min(r.left, innerWidth - cw - 16)); top = r.top - gap - ch; }
-    else { left = Math.max(16, innerWidth - cw - 16); top = innerHeight - ch - 16; }
-    top = Math.min(Math.max(16, top), innerHeight - ch - 16);
-    Object.assign(cardEl.style, { left: `${left}px`, top: `${Math.max(16, top)}px` });
+    if (isSheet()) { cardEl.style.left = ''; cardEl.style.top = ''; return; } // CSS pins it to the bottom (≤ 40vh)
+    const pos = storyCardPosition(r, { cw: Math.min(380, innerWidth - 32), ch: cardEl.offsetHeight || 240, vw: innerWidth, vh: innerHeight });
+    Object.assign(cardEl.style, { left: `${pos.left}px`, top: `${pos.top}px` });
   }
   let raf = 0;
   const onViewport = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(place); };
@@ -534,7 +677,13 @@ export function storyMode({ steps, navigate, onExit }) {
     target = await waitFor(s.selector);
     if (my !== seq) return;
     if (target) {
-      target.scrollIntoView({ block: 'center', behavior: reduce() ? 'auto' : 'smooth' });
+      if (isSheet()) {
+        // bottom sheet: bring the target's top just under the top bar so it sits in the upper half
+        const prev = target.style.scrollMarginTop;
+        target.style.scrollMarginTop = '72px';
+        target.scrollIntoView({ block: 'start', behavior: reduce() ? 'auto' : 'smooth' });
+        target.style.scrollMarginTop = prev;
+      } else target.scrollIntoView({ block: 'center', behavior: reduce() ? 'auto' : 'smooth' });
       await new Promise((r) => setTimeout(r, reduce() ? 50 : 350));
       if (my !== seq) return;
     }

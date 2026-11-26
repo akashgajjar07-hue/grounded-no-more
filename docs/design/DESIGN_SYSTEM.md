@@ -52,18 +52,20 @@ Every helper returns a real DOM element. Compose them and don't restyle them per
 | Icon | `icon(name, {label?})` | `<use href="#i-name">` from the inlined sprite (`ensureSprite()` runs at boot). Names: aircraft, part, rotable, warehouse, route, clock, alert, check, info, capital, wrench, filter, download, play, map-pin, chart, flask, inbox, shield, book, arrow-up/down, chevron-right, close, menu, sort, keyboard, minus, layers, target. |
 | Page header | `pageHead({num, eyebrow, title, lede, meta})` | Eyebrow "02 · PARTS INTELLIGENCE", H1 40 px, lede ≤ 72ch, meta chips right. |
 | Card | `card({title, kicker, prov, actions, body, foot, cls, story, bp, flush})` | `bp: true` adds the blueprint corner registration marks. Use it on at most one hero card per screen. |
-| KPI instrument | `kpiTile(kpi, {format, deltaFormat, sparkline, scale})` | Big numeral + unit, delta with arrow icon and text ("improvement"/"worse" for screen readers), sparkline slot, provenance chip, CI + baseline footer, optional ruler with value marker and amber target notch. |
+| KPI instrument | `kpiTile(kpi, {format, deltaFormat, sparkline, scale, capital, deltaTone})` | Big numeral + unit, delta with arrow icon and text ("improvement"/"worse" for screen readers), sparkline slot, provenance chip, CI + baseline footer, optional ruler with value marker and amber target notch. **Capital deltas are neutral** (titanium, arrow, "more/less capital"), never red/green: automatic when the KPI id/label mentions "capital" (`isCapitalKpi`), or force with `capital: true` / `deltaTone: 'neutral'`. |
 | Provenance chip | `provChip('REAL'|'DERIVED'|'ASSUMED'|'SIMULATED')` | Plex Mono small caps. Shape plus colour: ● REAL, ◆ DERIVED, ○ ASSUMED, ▲ SIMULATED. |
 | Status pill | `pill('ok'|'review'|'urgent'|'unknown'|'info', text?)` | Always an icon plus text, never colour alone. |
 | Fixture chip | `fixtureChip()` | Amber hatched "FIXTURE DATA". The shell shows it automatically when any loaded file has `meta.fixture`. |
-| Data table | `dataTable({columns, rows, sort, onRowClick, rowKey, selected, maxHeight, dense, caption, bare})` | Sticky header, sortable buttons with `aria-sort`, `mono: true` for PNs/serials, `num: true` right-aligns tabular numbers, `render(row)` for cells holding nodes. `.update(rows)` re-renders. |
+| Data table | `dataTable({columns, rows, sort, onRowClick, rowKey, selected, maxHeight, dense, caption, bare, mobileColumns, stack, stickyFirst})` | Sticky header, sortable buttons with `aria-sort`, `mono: true` for PNs/serials, `num: true` right-aligns tabular numbers, `render(row)` for cells holding nodes. `.update(rows)` re-renders, `.setSelected(key)`. **Mobile:** `mobileColumns: ['pn','risk_score','stock']` is a priority list: < 768 px shows only those columns; ≤ 480 px renders two-line stacked rows (key 1 on line 1, key 2 in a right-aligned metric pill, the rest as faint "Label value" pairs on line 2) with a compact sort control (`stack: false` opts out; `short` gives a column a short label). `stickyFirst: true` pins the first column with a hairline shadow. Every table whose decision column would scroll off at 390 px must set `mobileColumns`. |
 | Tabs | `tabs({tabs:[{id,label,count}], value, onChange})` | ARIA tablist with arrow-key support. |
 | Segmented | `segmented({options:[{value,label}], value, onChange, label})` | Radio group. |
 | Slider | `slider({label, min, max, step, value, format, onInput})` | Labelled range with live `<output>` and min/max scale. |
-| Drawer | `drawer({title, kicker, body, foot, onClose}).open()` | Right panel. Esc, the scrim and the close button all close it; focus is trapped and then restored. |
-| Modal | `modal({title, body}).open()` | Used by the shortcuts help. |
+| Drawer | `drawer({title, kicker, body, foot, onClose, persistOnParams}).open()` | Right panel. Esc, the scrim and the close button all close it; focus is trapped and then restored; page scroll is locked while open. Registered with the overlay registry: **the router closes it on every route change** (`onClose({reason:'route'})`). `close()` is idempotent. |
+| Modal | `modal({title, body}).open()` | Used by the shortcuts help. Registered like the drawer. |
+| Overlay registry | `closeAllOverlays({reason})`, `registerOverlay({close, el, persistOnParams})`, `openOverlayCount()` | The router calls `closeAllOverlays()` before rendering any view (links, `ctx.navigate`, `location.hash`, Back/Forward, query changes that re-render). Register any custom overlay so it is closed too. Story mode is exempt. |
 | Tooltip | `tooltip.show(evt, {title, rows:[[k,v]], note})`, `.move`, `.hide` | Card-style singleton, also used by charts. |
-| Story mode | `storyMode({steps, navigate}).start()` | Spotlight plus step card. Steps come from `story.json` (`{route, selector, title, body}`); mark targets with `data-story="…"`. |
+| Story mode | `storyMode({steps, navigate}).start()` | Spotlight plus step card. Steps come from `story.json` (`{route, selector, title, body}`); mark targets with `data-story="…"`. The card goes right / left / below / above the target (then the corners), choosing the least overlap (`storyCardPosition(rect, {cw, ch, vw, vh})`). At ≤ 480 px it is a bottom sheet (≤ 40vh) and the target is scrolled to just under the top bar. Spotlight targets should be whole cards, not slices. |
+| Native select | `<select>` (any class) | Styled globally: no OS chrome, 8 px radius, hairline border, DS chevron. Views may change size/font; the chevron always wins. |
 | Footer | `disclaimer({meta})` | Holds the **exact** required disclaimer text (`DISCLAIMER` constant). Do not edit it. |
 | States | `stateBlock('loading'|'empty'|'error', msg)`, `stubNote(text)` | |
 | Illustrations | `inlineSVG(name)`, `blueprintAircraft(host, {active, onSelect, compactBelow})`, `fillExploded(svg, [{slot,pn,desc}])`, `fillLifecycle(svg, {counts, flows})` | See §4. |
@@ -73,25 +75,50 @@ Every helper returns a real DOM element. Compose them and don't restyle them per
 ## 3. Charts (`docs/js/charts/theme.js`)
 
 ### Rules (every chart)
-1. Wrap it in `chartFrame()`, which gives a **takeaway headline** (a sentence that states the finding, not
-   "AOG hours by policy"), a **subtitle** with units · grain · window/as-of, a **provenance chip**, a **source**
-   line and a `<details>` **View data** table (the accessible fallback).
-2. Use **direct labels** over legends (`directLabel`, end-of-line labels; `dodge()` resolves collisions).
+1. Wrap it in `chartFrame()`, which gives a **takeaway headline** (one finding, **≤ 90 characters**, a sentence that
+   states the finding, not "AOG hours by policy"; dev builds `console.warn` above 90), a **subtitle** with units · grain
+   · window/as-of (Inter 12, **clamped to 2 lines**, full text in `title` + a "More" toggle), a **provenance chip**, a
+   **source** line and a `<details>` **View data** table (the accessible fallback). Qualifications go in the subtitle or
+   the footnote, not the headline.
+2. Use **direct labels** over legends (`directLabel`, end-of-line labels). Every label must clear other labels **and
+   marks**: run them through `dodge(labels, {gap, obstacles, bounds})` with `markerRect()` / `elementRect()` obstacles,
+   or place single labels with `labelAround(point, {r, centroid, obstacles, placed})` (offset r + 6 px, away from the
+   data centroid). All chart labels have a surface-colour **halo** by default (`.gnm-label`, paint-order stroke).
+   Values on arcs, flows and lifecycle edges use `chipLabel()` (a filled pill), placed at the arc apex.
 3. Add **one annotation** for the key point (`annotate`).
 4. **Show uncertainty** whenever an interval exists: `band()` for series, `dotWhisker()` for estimates.
-5. Use **at most 2 accents**: teal (`theme.color.accent`) for the primary or recommended series, copper
-   (`accent2`) for capital, baseline or comparison, and neutrals (titanium/slate) for context.
+5. **Colour semantics are fixed** (table below). Use **at most 2 accents** per chart; everything else is neutral.
+   Pick colours from `theme.series.*`, never raw hex.
 6. Keep axes as hairlines with mono tabular ticks and no heavy gridlines (`gridY` draws faint dashed guides).
    **No pies, no 3-D, no rainbow scales, no default library styling.**
 7. Make it responsive: draw inside `responsive(el, draw)`. At < 480 px charts drop end labels to a compact
    key, shorten row labels (`truncate`) and reduce ticks. Every chart must work at 390 px.
+8. Weeks are always `fmtWeek(n)` → `W103` (simulated calendar; ranges `fmtWeekRange(104, 155)` → `W104–W155`).
+   Never show real dates or "Week 103".
+
+### Accent → meaning (rule 5, enforced via `theme.series`)
+
+| Accent | Token | Means | Never use it for |
+|---|---|---|---|
+| Teal `#22C7B8` | `theme.series.recommended` (`theme.color.accent`) | The recommended plan; the primary data series; OK / REAL | Baselines, reference lines, decoration |
+| Copper `#C47F52` | `theme.series.baseline` (`theme.color.accent2`) | Capital, and the P0 baseline only; SIMULATED chip | Return flows, vendors, emergencies, AOG-penalty bars, calibration targets, seeds, any second series |
+| Red `#E76B64` | `theme.series.urgent` | Urgent status / AOG risk (pills, at-risk marks, emergency AOG replays) | Capital increases, cost deltas, a "worse" series that is not an AOG risk |
+| Amber `#F5B942` | `theme.series.review` | Review status; ASSUMED chip; KPI target notch | Reference lines, thresholds, targets in charts |
+| Faded titanium (50%) | `theme.series.reference` + `refLine()` | Reference lines and thresholds (4 4 dash, label in `--c-text-faint`) | Data series |
+| Titanium / slate | `theme.series.neutral`, `neutralSoft`, `context` | Every other comparison or context series (P1, P2, other methods, return flows at 40% opacity) | Status |
+
+- **Capital deltas are neutral text** (titanium, arrow and "more capital"/"less capital", `fmtCapitalDelta()`), never red or
+  green: spending more capital is a choice, not an alarm. `kpiTile` does this automatically for capital KPIs.
+- Calibration target bands: hatch or outline in titanium, not a copper fill.
+- `lintAccents(el)` lists the accents painted in a chart; `chartFrame` warns in dev builds when there are more than 2.
 
 ### API
 ```js
 import { chartFrame, lineChart, dotWhiskerChart, barList, plot, responsive, svgIn,
          axisBottom, axisLeft, gridY, line, band, dotWhisker, directLabel, annotate, dodge,
+         labelAround, labelBox, markerRect, elementRect, chipLabel, refLine, lintAccents,
          withTooltip, sparkline, theme, fmtAED, fmtPct, fmtPts, fmtHours, fmtDays, fmtInt,
-         fmtNum, fmtWeek, fmtByUnit } from '../charts/theme.js';
+         fmtNum, fmtWeek, fmtWeekRange, fmtCapitalDelta, fmtByUnit } from '../charts/theme.js';
 
 const f = chartFrame(card, {
   headline: 'P2 cuts AOG hours by 45% versus legacy rules',
@@ -105,7 +132,19 @@ lineChart(f.body, { series: [{ id: 'mean', label: '8-wk mean', values, primary: 
 ```
 Formatters: `fmtAED(4.8e6)` → `AED 4.8M`, `fmtAED(820000)` → `AED 820k`, `fmtPct(0.987)` → `98.7%`
 (fractions in), `fmtPts(0.034)` → `3.4 pts`, `fmtHours(124)` → `124 h`, `fmtInt(12345)` → `12,345`,
-`fmtWeek(104)` → `W104` (simulated calendar).
+`fmtWeek(104)` → `W104` (simulated calendar; also accepts `'W104'`, rounds, `null` → `—`), `fmtWeekRange(104, 155)` →
+`W104–W155`, `fmtCapitalDelta(5.04e6)` → `+AED 5M more capital`.
+
+Label collision, chips and reference lines (see `docs/agent_notes/design-fix-shared.md` for full examples):
+```js
+const obstacles = dots.map((d) => markerRect(x(d.x), y(d.y), 5));          // marker boxes
+dodge(labels, { gap: 14, obstacles, bounds: { x: 0, y: 0, width: iw, height: ih } }).forEach((l) => directLabel(g, l));
+const p = labelAround({ x: cx, y: cy }, { r: 5, text: 'Reliability-exposure', centroid, obstacles });
+directLabel(g, { ...p, text: 'Reliability-exposure' });
+chipLabel(g, { x: apex.x, y: apex.y, text: fmtInt(39) });                    // value on an arc / flow
+refLine(g, { x1: x(1), x2: x(1), y1: 0, y2: ih, label: 'naive = 1.0' });     // faded titanium dashes
+line(g, p0, { x, y, color: theme.series.baseline });                         // P0 baseline in copper
+```
 
 For bespoke D3 charts, start from `svgIn(el, w, h)`, then use `axisBottom`/`axisLeft`/`gridY`/`line`/`band`/
 `dotWhisker`/`annotate` and `withTooltip(selection, d => ({title, rows}))`. `capital-optimiser.js` is the
@@ -122,7 +161,10 @@ map.select('LHR'); map.destroy();
 It draws Natural Earth land in low-contrast steel with a faint graticule, geodesic arcs from the hub with a
 teal gradient (stroke width follows `transfers`), ring nodes with Plex Mono IATA labels, and an AUH radar pulse
 (none under reduced motion). It uses a conic projection over Europe, the Middle East and Asia, plus a
-world locator inset (≥ 520 px). Coordinates come from the data (`network.json` → `config/assumptions.yaml`, REAL).
+world locator inset (only when the map is ≥ 900 px wide; `insetMinWidth`). Station labels (IATA + `labelSub` as one
+block directly under/beside the node) are placed automatically clear of every node ring, arc chip and other label
+(`labelOffsets[station]` is tried first; `autoLabels: false` restores fixed offsets). `arcLabel: (arc) => string` draws a
+`chipLabel()` value at each arc midpoint. Emergency replays are red (`theme.series.urgent`), not copper. Coordinates come from the data (`network.json` → `config/assumptions.yaml`, REAL).
 
 ---
 
@@ -168,6 +210,10 @@ export async function render(el, ctx) {
 - Test at 1440 × 900 and 390 × 844 with `scripts/screenshot.py --only <route>`.
 - Keyboard: 1–8 switch workspaces, 0 opens Data & Method, ? shows help, S starts the story, Esc closes
   overlays. The shell ignores keys while focus is in an input.
+- Overlays: never leave one behind. The router closes all drawers/modals/tooltips before any view renders, and a stale
+  view's `ctx.setParams` is ignored. To keep a drawer open across same-route query changes, export
+  `onParams(params, ctx)` from the view (return `false` to fall back to a full re-render) and open the drawer with
+  `persistOnParams: true`.
 
 ## 6. Do / don't
 
@@ -175,6 +221,9 @@ export async function render(el, ctx) {
 |---|---|
 | Write headlines that state the finding ("P2 halves AOG hours") | Write headlines that name the chart ("AOG hours by policy") |
 | Use teal for the recommendation, copper for capital or baseline, neutrals for everything else | Use more than 2 accent colours, rainbow scales, pies or 3-D |
+| Draw reference lines with `refLine()` (faded titanium dashes) | Draw reference lines in amber or copper |
+| Show capital changes in neutral text ("+AED 5M more capital") | Colour a capital increase red |
+| Keep headlines ≤ 90 characters and subtitles ≤ 2 lines | Pack three clauses and six numbers into a headline |
 | Pair status with icon and text (`pill`) | Encode status by colour alone |
 | Show CIs and bands, and say "simulated" | Show point estimates as certainties |
 | Put PNs, serials and codes in Plex Mono, numbers in tabular figures | Use proportional digits in tables |

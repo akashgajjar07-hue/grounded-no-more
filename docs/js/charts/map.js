@@ -12,8 +12,15 @@
  * - Detailed Europe–Middle East–Asia conic projection + world locator inset.
  * Station coordinates come from the data (network.json stations[]), which come from
  * config/assumptions.yaml network.stations (REAL, OurAirports).
+ *
+ * Labels: the IATA code and its optional sub-label (labelSub) are placed as ONE block directly under/beside the
+ * node, avoiding every node ring, arc value chip and previously placed label (preferred offset first:
+ * labelOffsets[station] → LABEL default → 8 fallback positions). All labels carry a halo.
+ * Arc values: arcLabel(arc) → string draws a chipLabel() (filled pill) at the arc midpoint.
+ * The world locator inset only renders when the map is ≥ 900 px wide (it collided with SIN on narrower cards).
+ * Emergency replays use theme.series.urgent (red = urgent / AOG risk); copper is reserved for capital/baseline.
  */
-import { responsive, reducedMotion, tooltip, theme, fmtInt, fmtAED } from './theme.js';
+import { responsive, reducedMotion, tooltip, theme, fmtInt, fmtAED, chipLabel, markerRect } from './theme.js';
 import { assetURL } from '../data.js';
 
 const d3 = () => window.d3;
@@ -36,6 +43,33 @@ const LABEL = { AUH: [12, 18, 'start'], LHR: [-12, -4, 'end'], FRA: [12, 4, 'sta
 // detail extent (lon/lat) — Europe, Middle East, South & South-East Asia
 const EXTENT = { lon: [-14, 114], lat: [-8, 60] };
 
+/** Label block (IATA 12 px mono + optional 11 px sub line) bbox for a text anchored at (x, y) = baseline. */
+function blockBox(x, y, anchor, code, sub) {
+  const w = Math.max(code.length * 8, sub ? sub.length * 6.9 : 0);
+  const hgt = sub ? 30 : 15;
+  const x0 = anchor === 'end' ? x - w : anchor === 'middle' ? x - w / 2 : x;
+  return { x: x0 - 2, y: y - 11, width: w + 4, height: hgt };
+}
+const ov = (a, b) => Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+/** Pick [dx, dy, anchor] for a station label: preferred offset first, then 8 positions around the node; least overlap wins. */
+function placeStationLabel(x, y, r, pref, code, sub, obstacles, placed, w, hgt) {
+  const d = r + 6;
+  const subH = sub ? 14 : 0;
+  const cands = [pref,
+    [0, d + 11, 'middle'], [d, 4, 'start'], [-d, 4, 'end'], [0, -d - 4 - subH, 'middle'],
+    [d * 0.8, d + 8, 'start'], [-d * 0.8, d + 8, 'end'], [d * 0.8, -d - subH, 'start'], [-d * 0.8, -d - subH, 'end']];
+  const self = markerRect(x, y, r + 1, 2);
+  let best = null;
+  cands.forEach((c, i) => {
+    const box = blockBox(x + c[0], y + c[1], c[2], code, sub);
+    const out = Math.max(0, -box.x) + Math.max(0, box.x + box.width - w) + Math.max(0, -box.y) + Math.max(0, box.y + box.height - hgt);
+    const cost = obstacles.filter((o) => o !== self && !(Math.abs(o.x - self.x) < 0.5 && Math.abs(o.y - self.y) < 0.5)).reduce((t, o) => t + ov(box, o), 0) + placed.reduce((t, o) => t + ov(box, o) * 2, 0) + out * 30 + i * 0.5;
+    if (!best || cost < best.cost) best = { cost, c, box };
+  });
+  placed.push(best.box);
+  return best.c;
+}
+
 function boxPolygon({ lon, lat }, n = 24) {
   const pts = [];
   for (let i = 0; i <= n; i++) pts.push([lon[0] + ((lon[1] - lon[0]) * i) / n, lat[0]]);
@@ -51,7 +85,7 @@ function boxPolygon({ lon, lat }, n = 24) {
  *          inset?: boolean, aspect?: number, labelSub?: (s)=>string, label?: string}} opts
  */
 export async function renderNetworkMap(host, opts = {}) {
-  const { stations = [], arcs = [], onSelect, inset = true, aspect = 0.56, labelSub, label = 'Network map', nodeRadius, nodeColor, tooltipRows, onDraw, nodeAria, labelOffsets = {} } = opts;
+  const { stations = [], arcs = [], onSelect, inset = true, insetMinWidth = 900, aspect = 0.56, labelSub, label = 'Network map', nodeRadius, nodeColor, tooltipRows, onDraw, nodeAria, labelOffsets = {}, arcLabel, autoLabels = true } = opts;
   let selected = opts.selected || null;
   const atlas = await loadAtlas();
   host.classList.add('map-host');
@@ -74,6 +108,8 @@ export async function renderNetworkMap(host, opts = {}) {
 
     // arcs
     const arcLayer = svg.append('g').attr('class', 'map-arcs');
+    const arcChipLayer = svg.append('g').attr('class', 'map-arc-chips');
+    const obstacles = []; // px rects (node rings, arc chips) that station labels must avoid
     const maxT = d3().max(arcs, (a) => a.transfers || 1) || 1;
     arcs.forEach((a, i) => {
       const A = byId[a.from], B = byId[a.to];
@@ -87,7 +123,19 @@ export async function renderNetworkMap(host, opts = {}) {
       arcLayer.append('path').datum(a).attr('class', 'map-arc').attr('d', path(geo)).attr('stroke', `url(#${gid})`).attr('stroke-width', 1 + 2.2 * ((a.transfers || 1) / maxT))
         .on('pointerenter', (e) => tooltip.show(e, { title: `${a.from} → ${a.to}`, rows: [['AOG transport', `${a.aog_transport_h ?? '—'} h`], ['Transfers', fmtInt(a.transfers)], ['Emergency', fmtInt(a.emergency)]] }))
         .on('pointermove', (e) => tooltip.move(e)).on('pointerleave', () => tooltip.hide());
+      // sample the arc into small boxes so station labels avoid sitting on top of it
+      try { const pn = arcLayer.select('path:last-child').node(); const L = pn.getTotalLength(); for (let t = 10; t < L - 10; t += 8) { const q = pn.getPointAtLength(t); obstacles.push({ x: q.x - 2, y: q.y - 2, width: 4, height: 4, arc: true }); } } catch { /* ignore */ }
+      const txt = arcLabel ? arcLabel(a) : null;
+      if (txt != null && txt !== '') {
+        const node = arcLayer.select('path:last-child').node();
+        let mid = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2];
+        try { const L = node.getTotalLength(); const pt = node.getPointAtLength(L / 2); mid = [pt.x, pt.y]; } catch { /* keep chord midpoint */ }
+        const chip = chipLabel(arcChipLayer, { x: mid[0], y: mid[1], text: String(txt), color: theme.color.text });
+        obstacles.push(chip.datum().box);
+      }
     });
+    stations.forEach((s) => { const [x, y] = projection([s.lon, s.lat]); const r = nodeRadius ? nodeRadius(s) : s.role === 'hub' ? 8 : 5.5; obstacles.push(markerRect(x, y, r + 1, 2)); });
+    const placedLabels = [];
 
     // nodes
     const nodeLayer = svg.append('g').attr('class', 'map-nodes');
@@ -104,10 +152,13 @@ export async function renderNetworkMap(host, opts = {}) {
       if (nc) node.style('stroke', nc);
       g.append('circle').attr('class', 'map-node-inner').attr('r', isHub ? 3 : 2).attr('fill', nc || (isHub ? theme.color.text : theme.color.accent));
       g.append('circle').attr('class', 'map-sel').attr('r', nr + 5).attr('fill', 'none').attr('stroke', theme.color.accentHi).attr('stroke-width', 1.25).attr('stroke-dasharray', '2 3').style('display', s.station === selected ? null : 'none');
-      const [dx, dy, anchor] = labelOffsets[s.station] || LABEL[s.station] || [10, 4, 'start']; // labelOffsets: optional (additive) per-view override
-      g.append('text').attr('class', 'map-label').attr('x', dx).attr('y', dy).attr('text-anchor', anchor).text(s.station);
       const sub = labelSub ? labelSub(s) : null;
-      if (sub && w >= 520) g.append('text').attr('class', 'map-label-sub').attr('x', dx).attr('y', dy + 14).attr('text-anchor', anchor).text(sub);
+      const showSub = !!(sub && w >= 520);
+      // labelOffsets: optional per-view override. With a sub-label the block defaults to centred under the node.
+      const pref = labelOffsets[s.station] || (showSub && autoLabels ? [0, nr + 17, 'middle'] : LABEL[s.station] || [10, 4, 'start']);
+      const [dx, dy, anchor] = autoLabels ? placeStationLabel(x, y, nr, pref, s.station, showSub ? sub : null, obstacles, placedLabels, w, hgt) : pref;
+      g.append('text').attr('class', 'map-label').attr('x', dx).attr('y', dy).attr('text-anchor', anchor).text(s.station);
+      if (showSub) g.append('text').attr('class', 'map-label-sub').attr('x', dx).attr('y', dy + 14).attr('text-anchor', anchor).text(sub);
       const tip = (e) => tooltip.show(e, { title: `${s.station} · ${s.name || ''}`, rows: tooltipRows ? tooltipRows(s) : [['Role', s.role], ['Serviceable units', fmtInt(s.serviceable_units)], ['Stock value', fmtAED(s.stock_value)], ['Requests', fmtInt(s.requests)]] });
       g.on('pointerenter', tip).on('pointermove', (e) => tooltip.move(e)).on('pointerleave', () => tooltip.hide());
       const fire = () => { api.select(s.station); onSelect?.(s.station); };
@@ -119,7 +170,7 @@ export async function renderNetworkMap(host, opts = {}) {
     onDraw?.(ctx); // optional (additive): lets a view decorate after each responsive redraw
 
     // world locator inset
-    if (inset && w >= 520) {
+    if (inset && w >= insetMinWidth) {
       const iw = Math.max(120, Math.min(220, Math.round(w * 0.24))), ih = Math.round(iw * 0.52);
       const box = d3().select(host).append('div').attr('class', 'map-inset').attr('aria-hidden', 'true');
       const isvg = box.append('svg').attr('viewBox', `0 0 ${iw} ${ih}`).attr('width', iw).attr('height', ih);
@@ -144,7 +195,7 @@ export async function renderNetworkMap(host, opts = {}) {
       if (!ctx) return Promise.resolve();
       const A = byId[from], B = byId[to];
       if (!A || !B) return Promise.resolve();
-      const color = kind === 'emergency' ? theme.color.accent2 : theme.color.accentHi;
+      const color = kind === 'emergency' ? theme.series.urgent : theme.color.accentHi;
       const p = ctx.tokenLayer.append('path').attr('d', ctx.path({ type: 'LineString', coordinates: [[A.lon, A.lat], [B.lon, B.lat]] })).attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2).attr('stroke-linecap', 'round');
       const len = p.node().getTotalLength();
       if (reducedMotion()) {

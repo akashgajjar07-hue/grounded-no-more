@@ -21,18 +21,43 @@ export const theme = {
     bg: '#09131F', panel: '#132638', surface: '#0F1E2E',
     text: '#F2F6FA', muted: '#B9C8D6', faint: '#8A9BAD',
     line: 'rgba(185,200,214,0.14)', lineStrong: 'rgba(185,200,214,0.26)',
-    accent: '#22C7B8',        // accent 1 — primary series / recommended
-    accent2: '#C47F52',       // accent 2 — capital, comparison or baseline
+    accent: '#22C7B8',        // accent 1 — recommended / primary data series (teal)
+    accent2: '#C47F52',       // accent 2 — capital or baseline (P0) ONLY (copper)
     accentHi: '#7FF3E6',
     neutral: '#6B7C8F',       // context series (non-text)
     neutralSoft: 'rgba(185,200,214,0.35)',
     ok: '#22C7B8', review: '#F5B942', urgent: '#E76B64', unknown: '#6B7C8F',
     prov: { REAL: '#22C7B8', DERIVED: '#B9C8D6', ASSUMED: '#F5B942', SIMULATED: '#C47F52' },
   },
+  /**
+   * Semantic series colours — the ONLY colours a screen should pick for marks (DESIGN_SYSTEM §3, accent table).
+   *   recommended: teal  · the recommended plan / primary data series
+   *   baseline:    copper · capital or the P0 baseline (never "returns", vendors, emergencies, targets)
+   *   reference:   faded titanium · reference lines, thresholds, targets (draw with refLine())
+   *   neutral:     titanium/slate · every other comparison or context series
+   *   urgent:      red · urgent / AOG-risk STATUS only (never a capital delta)
+   *   review:      amber · review STATUS only (never reference lines)
+   * Pair at most TWO of {recommended, baseline, urgent, review} in one chart.
+   */
+  series: {
+    recommended: '#22C7B8',
+    baseline: '#C47F52',
+    reference: 'rgba(185,200,214,0.5)',
+    neutral: '#B9C8D6',
+    neutralSoft: 'rgba(185,200,214,0.35)',
+    context: '#6B7C8F',
+    urgent: '#E76B64',
+    review: '#F5B942',
+  },
   font: { display: "'Space Grotesk', system-ui, sans-serif", ui: "'Inter', system-ui, sans-serif", mono: "'IBM Plex Mono', ui-monospace, monospace" },
   margin: { top: 16, right: 64, bottom: 32, left: 52 },
   motion: { ms: 300, ease: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+  /** Reference line (threshold, target, "naive = 1.0", "on quote"): faded titanium 4 4 dashes + faint label. */
+  refLine: (g, opts) => refLine(g, opts),
 };
+/** Accent colours counted by lintAccents() (≤ 2 per chart). */
+const ACCENTS = { teal: ['#22c7b8', '34,199,184', '#7ff3e6', '127,243,230'], copper: ['#c47f52', '196,127,82'], red: ['#e76b64', '231,107,100'], amber: ['#f5b942', '245,185,66'] };
+const isDev = () => !!window.__gnmDev;
 export const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // --------------------------------------------------------------------------- formatters
@@ -59,24 +84,48 @@ export const fmtDays = (v) => (v == null ? '—' : `${Math.round(v)} d`);
 export const fmtInt = (v) => (v == null || Number.isNaN(+v) ? '—' : Math.round(v).toLocaleString('en-GB'));
 /** Number with fixed decimals. */
 export const fmtNum = (v, d = 2) => (v == null || Number.isNaN(+v) ? '—' : (+v).toFixed(d));
-/** Simulated week label: fmtWeek(104) = "W104". Simulated calendar, not real dates. */
-export const fmtWeek = (w) => `W${w}`;
+/**
+ * Simulated week label — THE one week format on the site: fmtWeek(103) = "W103", fmtWeek('W103') = "W103",
+ * fmtWeek(103.6) = "W104", fmtWeek(null) = "—". Simulated calendar, never real dates.
+ */
+export const fmtWeek = (w) => {
+  if (w == null || w === '') return '—';
+  const n = typeof w === 'string' ? +w.replace(/^W/i, '') : +w;
+  return Number.isFinite(n) ? `W${Math.round(n)}` : '—';
+};
+/** Week range: fmtWeekRange(104, 155) = "W104–W155". */
+export const fmtWeekRange = (a, b) => `${fmtWeek(a)}–${fmtWeek(b)}`;
+/**
+ * Capital delta in NEUTRAL wording (capital changes are never red/green):
+ * fmtCapitalDelta(5.04e6) = "+AED 5M more capital"; fmtCapitalDelta(-3.6e6) = "AED 3.6M less capital".
+ */
+export const fmtCapitalDelta = (v) => (v == null || Number.isNaN(+v) ? '—' : v === 0 ? 'no capital change' : `${v > 0 ? '+' : ''}${fmtAED(Math.abs(v))} ${v > 0 ? 'more' : 'less'} capital`);
 /** Pick a formatter from a KPI unit string. */
 export const fmtByUnit = (unit) => (unit === 'AED' ? fmtAED : unit === '%' ? fmtPct : unit === 'h' ? fmtHours : unit === 'd' ? fmtDays : fmtInt);
 
 // --------------------------------------------------------------------------- frame
 /**
- * chartFrame(host, {headline, subtitle, provenance, source, table: {columns, rows}, story})
+ * chartFrame(host, {headline, subtitle, provenance, source, table: {columns, rows}, story, minHeight})
  * Renders headline + subtitle + provenance chip + chart body + source + "View data" table.
+ * - headline: one finding, ≤ 90 characters (dev builds console.warn above that).
+ * - subtitle: units · grain · window. Clamped to 2 lines (Inter 12); the full text is always in the `title`
+ *   attribute and a "More" toggle appears when it is clamped.
+ * - In dev builds the body is linted ~1.5 s after creation: > 2 accent colours → console.warn (lintAccents).
  * Returns {root, body, setTable(columns, rows)}. Draw your chart into `body`.
  */
+export const HEADLINE_MAX = 90;
 export function chartFrame(host, { headline, subtitle, provenance, source, table, story, minHeight } = {}) {
   const body = h('div', { class: 'chart-body', style: minHeight ? { minHeight: `${minHeight}px` } : undefined });
   const details = h('details', { class: 'chart-data' }, h('summary', {}, 'View data'));
+  const sub = subtitle ? h('div', { class: 'chart-subtitle', title: String(subtitle) }, subtitle) : null;
+  const more = sub ? h('button', { class: 'chart-subtitle-more', type: 'button', hidden: true, 'aria-expanded': 'false', onclick: () => {
+    const on = !sub.classList.contains('is-expanded');
+    sub.classList.toggle('is-expanded', on); more.setAttribute('aria-expanded', String(on)); more.textContent = on ? 'Less' : 'More';
+  } }, 'More') : null;
   const root = h(
     'figure',
     { class: 'chart-frame', dataset: story ? { story } : undefined },
-    h('div', { class: 'chart-head' }, h('div', {}, h('figcaption', { class: 'chart-headline' }, headline || ''), subtitle ? h('div', { class: 'chart-subtitle' }, subtitle) : null), provenance ? provChip(provenance) : null),
+    h('div', { class: 'chart-head' }, h('div', {}, h('figcaption', { class: 'chart-headline' }, headline || ''), sub, more), provenance ? provChip(provenance) : null),
     body,
     h('div', { class: 'chart-foot' }, source ? h('span', { class: 'chart-source' }, `Source: ${source}`) : h('span'), details)
   );
@@ -86,7 +135,34 @@ export function chartFrame(host, { headline, subtitle, provenance, source, table
   };
   if (table) setTable(table.columns, table.rows);
   host.append(root);
+  if (sub) {
+    const check = () => { if (!sub.isConnected || sub.classList.contains('is-expanded')) return; more.hidden = !(sub.scrollHeight > sub.clientHeight + 2); };
+    requestAnimationFrame(check);
+    const ro = new ResizeObserver(() => check());
+    ro.observe(sub);
+  }
+  if (isDev()) {
+    const len = String(headline || '').length;
+    if (len > HEADLINE_MAX) console.warn(`[chartFrame] headline is ${len} chars (max ${HEADLINE_MAX}): "${headline}"`);
+    setTimeout(() => { if (root.isConnected) { const n = lintAccents(body); if (n.length > 2) console.warn(`[chartFrame] ${n.length} accent colours (${n.join(', ')}) in "${headline}" (max 2)`); } }, 1500);
+  }
   return { root, body, setTable };
+}
+
+/**
+ * Which semantic accents (teal, copper, red, amber) are painted inside `root`'s SVG marks.
+ * Returns e.g. ['teal', 'copper']. Provenance chips and HTML text are not counted.
+ */
+export function lintAccents(root) {
+  const found = new Set();
+  const els = [...root.querySelectorAll('svg *')].slice(0, 2500);
+  els.forEach((el) => {
+    if (el.closest('.chip')) return;
+    const cs = getComputedStyle(el);
+    const vals = [el.getAttribute('fill'), el.getAttribute('stroke'), el.getAttribute('stop-color'), cs.fill, cs.stroke].filter(Boolean).map((v) => v.toLowerCase().replace(/\s/g, ''));
+    for (const [name, keys] of Object.entries(ACCENTS)) if (vals.some((v) => keys.some((k) => v.includes(k.replace(/\s/g, ''))))) found.add(name);
+  });
+  return [...found];
 }
 
 /** Re-run draw(width) whenever the element's width changes (debounced to animation frames). */
@@ -157,17 +233,138 @@ export function dotWhisker(g, rows, { x, y, color = theme.color.accent, r = 4.5,
   return sel;
 }
 
-/** Direct label at (x, y) in px. Use instead of legends. */
-export function directLabel(g, { x, y, text, color = theme.color.muted, anchor = 'start', strong = false, dy = '0.32em' }) {
-  return g.append('text').attr('x', x).attr('y', y).attr('dy', dy).attr('text-anchor', anchor).attr('class', strong ? 'gnm-label gnm-label--strong' : 'gnm-label').style('fill', color || null).text(text);
+/**
+ * Direct label at (x, y) in px. Use instead of legends. Every label gets a halo (paint-order stroke in the
+ * surface colour, CSS .gnm-label) so it stays legible over lines, bars and arcs; pass halo: false to drop it.
+ */
+export function directLabel(g, { x, y, text, color = theme.color.muted, anchor = 'start', strong = false, dy = '0.32em', halo = true, mono = false }) {
+  const t = g.append('text').attr('x', x).attr('y', y).attr('dy', dy).attr('text-anchor', anchor)
+    .attr('class', `gnm-label${strong ? ' gnm-label--strong' : ''}${halo ? '' : ' gnm-label--nohalo'}${mono ? ' gnm-label--mono' : ''}`).style('fill', color || null).text(text);
+  return t;
 }
 
-/** Spread direct labels vertically so they never overlap (min gap in px). Mutates and returns. */
-export function dodge(labels, gap = 14) {
+// ----- label geometry (all in px, chart-local coordinates)
+const CHAR_W = 6.6, CHAR_W_MONO = 6.9, LABEL_H = 14;
+/** Estimated bbox of a label {x, y, text, anchor, width?, height?, mono?} (y = baseline-centre as drawn with dy .32em). */
+export function labelBox(l) {
+  const w = l.width ?? String(l.text ?? '').length * (l.mono ? CHAR_W_MONO : CHAR_W);
+  const hgt = l.height ?? LABEL_H;
+  const x0 = l.anchor === 'end' ? l.x - w : l.anchor === 'middle' ? l.x - w / 2 : l.x;
+  return { x: x0, y: l.y - hgt / 2, width: w, height: hgt };
+}
+/** Rect for a circular marker (dot, ring, node): markerRect(cx, cy, r, pad=2). Use as a dodge() obstacle. */
+export const markerRect = (cx, cy, r = 4, pad = 2) => ({ x: cx - r - pad, y: cy - r - pad, width: 2 * (r + pad), height: 2 * (r + pad) });
+/** Rect for an SVG element already in the DOM (bars, groups): elementRect(node) in its parent's user space. */
+export function elementRect(node) { try { const b = node.getBBox(); return { x: b.x, y: b.y, width: b.width, height: b.height }; } catch { return null; } }
+const overlap = (a, b) => Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+const outside = (r, bd) => (bd ? Math.max(0, bd.x - r.x) + Math.max(0, r.x + r.width - (bd.x + bd.width)) + Math.max(0, bd.y - r.y) + Math.max(0, r.y + r.height - (bd.y + bd.height)) : 0);
+
+/**
+ * Resolve label collisions against other labels AND obstacles (marker boxes, bars, annotations).
+ *   dodge(labels, 14)                                       // legacy: spread vertically, min gap 14 px
+ *   dodge(labels, {gap: 14, obstacles: [markerRect(cx, cy, r), …], bounds: {x:0, y:0, width: iw, height: ih}})
+ * labels: [{x, y, text, anchor?, width?, height?, mono?}] — y is mutated (and x/anchor when `flip` helps).
+ * Each label tries vertical offsets ±step…±maxShift (and, with flip: true, the opposite side of its anchor
+ * point) and keeps the position with the least overlap; labels are placed in y order. Mutates and returns.
+ */
+export function dodge(labels, opts = 14) {
+  const o = typeof opts === 'number' ? { gap: opts } : opts || {};
+  const gap = o.gap ?? 14, obstacles = (o.obstacles || []).filter(Boolean), bounds = o.bounds, step = o.step ?? 3, maxShift = o.maxShift ?? 60;
+  if (!obstacles.length && !bounds && !o.flip) {
+    labels.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < gap) labels[i].y = labels[i - 1].y + gap;
+    return labels;
+  }
   labels.sort((a, b) => a.y - b.y);
-  for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < gap) labels[i].y = labels[i - 1].y + gap;
+  const placed = [];
+  for (const l of labels) {
+    const base = { x: l.x, y: l.y, anchor: l.anchor || 'start' };
+    const sides = [base];
+    if (o.flip && l.flipX != null) sides.push({ x: l.flipX, y: l.y, anchor: base.anchor === 'start' ? 'end' : 'start' });
+    let best = null;
+    for (const sd of sides) {
+      for (let k = 0; k <= maxShift / step; k++) {
+        for (const sgn of k ? [1, -1] : [1]) {
+          const cand = { ...l, ...sd, y: sd.y + sgn * k * step };
+          const box = labelBox({ ...cand, height: Math.max(cand.height ?? LABEL_H, gap) });
+          const cost = placed.reduce((s, p) => s + overlap(box, p), 0) * 2 + obstacles.reduce((s, r) => s + overlap(box, r), 0) + outside(box, bounds) * 40 + k * 0.01 + (sd === base ? 0 : 0.5);
+          if (!best || cost < best.cost) best = { cost, cand, box };
+          if (cost < 0.5) break;
+        }
+        if (best && best.cost < 0.5) break;
+      }
+      if (best && best.cost < 0.5) break;
+    }
+    Object.assign(l, { x: best.cand.x, y: best.cand.y, anchor: best.cand.anchor });
+    placed.push(best.box);
+  }
   return labels;
 }
+
+/**
+ * Position for a label next to a marker, on the side AWAY from the data centroid, offset r + 6 px, avoiding
+ * obstacles and already placed labels. Returns {x, y, anchor} (pass straight to directLabel / chipLabel).
+ *   const p = labelAround({x: cx, y: cy}, {r: 5, text: 'Reliability-exposure', centroid: {x: mx, y: my},
+ *                                           obstacles: dots.map((d) => markerRect(d.x, d.y, 5)), placed, bounds});
+ *   placed.push(labelBox({...p, text}));
+ */
+export function labelAround(pt, { r = 4, text = '', centroid, obstacles = [], placed = [], bounds, mono = false, offset = 6 } = {}) {
+  const d = r + offset;
+  const away = centroid ? { x: Math.sign(pt.x - centroid.x) || 1, y: Math.sign(pt.y - centroid.y) || -1 } : { x: 1, y: -1 };
+  const opts = [
+    { x: pt.x + d * away.x, y: pt.y, anchor: away.x > 0 ? 'start' : 'end' },
+    { x: pt.x + d * 0.7 * away.x, y: pt.y + d * away.y, anchor: away.x > 0 ? 'start' : 'end' },
+    { x: pt.x, y: pt.y + (d + 4) * away.y, anchor: 'middle' },
+    { x: pt.x - d * away.x, y: pt.y, anchor: away.x > 0 ? 'end' : 'start' },
+    { x: pt.x, y: pt.y - (d + 4) * away.y, anchor: 'middle' },
+    { x: pt.x - d * 0.7 * away.x, y: pt.y - d * away.y, anchor: away.x > 0 ? 'end' : 'start' },
+    { x: pt.x + d * 0.7 * away.x, y: pt.y - d * away.y, anchor: away.x > 0 ? 'start' : 'end' },
+    { x: pt.x - d * 0.7 * away.x, y: pt.y + d * away.y, anchor: away.x > 0 ? 'end' : 'start' },
+  ];
+  let best = null;
+  opts.forEach((c, i) => {
+    const box = labelBox({ ...c, text, mono });
+    const cost = [...obstacles, ...placed].reduce((s, o) => s + overlap(box, o), 0) + outside(box, bounds) * 40 + i * 0.1;
+    if (!best || cost < best.cost) best = { cost, c };
+  });
+  return best.c;
+}
+
+/**
+ * Value chip: text on a filled pill (surface colour + hairline) so it reads over arcs, flows and bars.
+ * Use for map arc values and lifecycle / flow counts (place at the arc apex).
+ *   chipLabel(g, {x, y, text: '39', color: theme.series.neutral, anchor: 'middle'})
+ * Returns the <g class="gnm-chip">; its bbox is in .datum().box (for dodge obstacles).
+ */
+export function chipLabel(g, { x, y, text, color, anchor = 'middle', padX = 6, padY = 2, mono = true, fill = theme.color.surface, stroke = theme.color.lineStrong, cls = '' }) {
+  const gg = g.append('g').attr('class', `gnm-chip ${cls}`.trim());
+  const rect = gg.append('rect').attr('rx', 8).attr('ry', 8).attr('fill', fill).attr('stroke', stroke).attr('stroke-width', 1);
+  const t = gg.append('text').attr('x', x).attr('y', y).attr('dy', '0.34em').attr('text-anchor', anchor)
+    .attr('class', `gnm-chip-text${mono ? ' gnm-label--mono' : ''}`).style('fill', color || null).text(text);
+  let bb = null;
+  try { bb = t.node().getBBox(); } catch { /* not in DOM */ }
+  if (!bb || !bb.width) { const w = String(text).length * (mono ? CHAR_W_MONO : CHAR_W); bb = { x: anchor === 'end' ? x - w : anchor === 'middle' ? x - w / 2 : x, y: y - 7, width: w, height: 14 }; }
+  const box = { x: bb.x - padX, y: bb.y - padY, width: bb.width + padX * 2, height: bb.height + padY * 2 };
+  rect.attr('x', box.x).attr('y', box.y).attr('width', box.width).attr('height', box.height).attr('rx', Math.min(8, box.height / 2));
+  gg.datum({ box });
+  return gg;
+}
+
+/**
+ * Reference line: faded titanium, 4 4 dashes, label in --c-text-faint (never amber: amber = review status).
+ *   refLine(g, {x1, y1, x2, y2, label: 'naive = 1.0', labelAt: 'end' | 'start', dx: 4, dy: -4})
+ * Also available as theme.refLine(g, opts). Returns the <g class="gnm-ref">.
+ */
+export function refLine(g, { x1, y1, x2, y2, label, labelAt = 'end', dx = 4, dy = -4, anchor } = {}) {
+  const gg = g.append('g').attr('class', 'gnm-ref');
+  gg.append('line').attr('class', 'gnm-ref-line').attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2);
+  if (label) {
+    const [lx, ly] = labelAt === 'start' ? [x1, y1] : [x2, y2];
+    gg.append('text').attr('class', 'gnm-ref-label').attr('x', lx + dx).attr('y', ly + dy).attr('text-anchor', anchor || (x1 === x2 ? 'start' : labelAt === 'start' ? 'start' : 'end')).text(label);
+  }
+  return gg;
+}
+
 /** Truncate a label to roughly maxPx at ~6.6 px per character (11–12 px UI font). */
 export const truncate = (s, maxPx, cw = 6.6) => (String(s).length * cw <= maxPx ? String(s) : `${String(s).slice(0, Math.max(1, Math.floor(maxPx / cw) - 1))}…`);
 
@@ -243,17 +440,18 @@ export function lineChart(body, { series = [], band: bandData, bandColor, x: xo 
     axisBottom(g.append('g'), x, { ticks: w < 480 ? 4 : xo.ticks || 6, format: xo.format, height: ih });
     if (bandData) band(g, bandData, { x, y, color: bandColor || series[0]?.color || theme.color.accent });
     const labels = [];
+    const colorOf = (s, i) => s.color || (s.role && theme.series[s.role]) || (i === 0 ? theme.series.recommended : i === 1 ? theme.series.neutral : theme.series.neutralSoft);
     series.forEach((s, i) => {
-      const color = s.color || (i === 0 ? theme.color.accent : i === 1 ? theme.color.accent2 : theme.color.neutralSoft);
+      const color = colorOf(s, i);
       const primary = s.primary ?? i === 0;
       line(g, s.values, { x, y, color, width: s.width || (primary ? 2 : 1.5), dash: s.dash, curve: s.curve });
       const last = s.values.at(-1);
       if (s.label) labels.push({ x: x(last.x) + 8, y: y(last.y), text: s.label, color: primary ? color : theme.color.muted, strong: primary });
     });
-    if (w >= 480) dodge(labels, 14).forEach((l) => directLabel(g, l));
+    if (w >= 480) dodge(labels, { gap: 14, bounds: { x: 0, y: -m.top, width: w - m.left, height: ih + m.top } }).forEach((l) => directLabel(g, l));
     if (w < 480 && series.some((s) => s.label)) {
       // narrow: labels move to a compact key above the plot
-      series.forEach((s, i) => directLabel(g, { x: i * 120, y: -6, text: `— ${s.label}`, color: s.color || (i === 0 ? theme.color.accent : theme.color.accent2) }));
+      series.forEach((s, i) => directLabel(g, { x: i * 120, y: -6, text: `— ${s.label}`, color: colorOf(s, i) }));
     }
     if (annotation) annotate(g, { x: x(annotation.x), y: y(annotation.y), dx: x(annotation.x) > iw * 0.6 ? -28 : 28, dy: -28, title: annotation.title, sub: annotation.sub });
     // hover readout
@@ -285,10 +483,7 @@ export function dotWhiskerChart(body, { rows = [], format = String, height, doma
     const x = d3().scaleLinear().domain(domain || [d3().min(rows, (d) => d.lo), d3().max(rows, (d) => d.hi)]).nice().range([0, iw]);
     const y = d3().scaleBand().domain(rows.map((d) => d.key)).range([0, ih]).padding(0.3);
     axisBottom(g.append('g'), x, { ticks: w < 480 ? 3 : 5, format, height: ih });
-    if (refValue != null) {
-      g.append('line').attr('x1', x(refValue)).attr('x2', x(refValue)).attr('y1', -4).attr('y2', ih).attr('stroke', theme.color.review).attr('stroke-dasharray', '3 3');
-      if (refLabel) directLabel(g, { x: x(refValue) + 4, y: -2, text: refLabel, color: theme.color.review, dy: '0' });
-    }
+    if (refValue != null) refLine(g, { x1: x(refValue), x2: x(refValue), y1: -4, y2: ih, label: refLabel, labelAt: 'start', dx: 4, dy: 2 });
     const colored = rows.map((r) => ({ ...r, color: r.highlight ? theme.color.accent : theme.color.muted }));
     const sel = dotWhisker(g, colored, { x, y });
     withTooltip(sel, (d) => ({ title: d.label, rows: [['Mean', format(d.value)], ['95% CI', `${format(d.lo)} – ${format(d.hi)}`]] }));

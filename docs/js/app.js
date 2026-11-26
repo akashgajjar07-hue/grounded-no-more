@@ -8,11 +8,20 @@
  *   export const data = ['parts', 'demand_history'];       // loaded before render()
  *   export async function render(el, ctx) { ... }           // may return a cleanup function
  *
- * ctx = {route, params, data, navigate(hash), setParams(obj), load(name)}
+ * ctx = {route, params, data, navigate(hash), setParams(obj), load(name), buildHash(id, params)}
+ *
+ * Overlays: before any view renders (link click, ctx.navigate, location.hash, Back/Forward, a query change that
+ * re-renders) the router calls closeAllOverlays() from ui.js, so no drawer, modal, tooltip, scrim, focus trap or
+ * scroll lock survives into the next view. Story mode is exempt (it drives navigation itself).
+ * Optional same-route hook: a view may `export function onParams(params, ctx)`. When only the query of the
+ * current route changes and the hook returns anything but `false`, the router does NOT re-render; overlays opened
+ * with `persistOnParams: true` stay open, all others close. Without the hook the view re-renders.
+ * ctx.setParams of a view that is no longer current is ignored (a stale drawer onClose can't rewrite the URL of the
+ * next view). ctx.navigate always works (story mode is driven by a view's ctx.navigate).
  * Keyboard: 1–8 jump between workspaces, 0 = Data & Method, ? = shortcuts, S = story mode,
  * Esc closes overlays. A skip link jumps to the main content.
  */
-import { h, icon, ensureSprite, fixtureChip, disclaimer, modal, kbd, storyMode, stateBlock } from './ui.js';
+import { h, icon, ensureSprite, fixtureChip, disclaimer, modal, kbd, storyMode, stateBlock, closeAllOverlays } from './ui.js';
 import { loadMany, load, onFixture } from './data.js';
 
 export const ROUTES = [
@@ -32,6 +41,7 @@ const SITE = 'GROUNDED NO MORE';
 const $ = (s) => document.querySelector(s);
 let cleanup = null;
 let renderSeq = 0;
+let current = null; // {id, mod, ctx, seq} of the rendered view
 let helpModal = null;
 let renderedResolve = null;
 
@@ -115,24 +125,40 @@ async function startStory() {
 
 // --------------------------------------------------------------------------- render
 async function render() {
-  const seq = ++renderSeq;
   const { id, params } = parseHash();
+  // same-route query change that the view handles itself: no re-render
+  if (current && current.id === id && typeof current.mod?.onParams === 'function' && current.seq === renderSeq) {
+    closeAllOverlays({ reason: 'params' });
+    let handled;
+    try { handled = current.mod.onParams(params, { ...current.ctx, params }); } catch (e) { console.error(e); handled = false; }
+    if (handled !== false) { current.ctx.params = params; renderedResolve?.(); renderedResolve = null; return; }
+  }
+  const seq = ++renderSeq;
   const route = ROUTES.find((r) => r.id === id);
+  // 1) close every drawer / modal / tooltip and release focus traps + scroll locks BEFORE the outgoing cleanup
+  closeAllOverlays({ reason: 'route' });
   markActive(id);
   setRail(false);
   const view = $('#view');
   if (typeof cleanup === 'function') { try { cleanup(); } catch { /* ignore */ } }
   cleanup = null;
+  current = null;
   view.classList.remove('view-enter');
   view.replaceChildren(stateBlock('loading'));
   try {
     const mod = await import(route.module);
     const data = await loadMany(mod.data || []);
     if (seq !== renderSeq) return;
+    closeAllOverlays({ reason: 'route' }); // anything a stale view opened while we were loading
     view.replaceChildren();
     void view.offsetWidth; // restart entry animation
     view.classList.add('view-enter');
-    const ctx = { route, params, data, navigate, setParams, load, buildHash };
+    const live = () => seq === renderSeq;
+    const ctx = {
+      route, params, data, load, buildHash, navigate,
+      setParams: (p, o) => { if (live() && parseHash().id === id) setParams(p, o); },
+    };
+    current = { id, mod, ctx, seq };
     cleanup = (await mod.render(view, ctx)) || null;
   } catch (err) {
     console.error(err);
@@ -158,7 +184,13 @@ function onKey(e) {
   else if (e.key === 'Escape') setRail(false);
 }
 
+/** Dev-mode flag (localhost / ?dev): enables console lint warnings in chartFrame() etc. */
+function devFlag() {
+  try { window.__gnmDev = window.__gnmDev ?? (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || /[?&]dev\b/.test(location.search)); } catch { /* ignore */ }
+}
+
 function boot() {
+  devFlag();
   ensureSprite();
   buildNav();
   const foot = $('#footer');
