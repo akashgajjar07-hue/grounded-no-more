@@ -1854,6 +1854,17 @@ def build_method() -> dict:
 # story
 
 
+_STORY_NAMES = {"P0": "the Simple Rulebook", "P1": "Each Airport for Itself", "P2": "the Network Plan", "I125": "Network Plan + Extra Spares"}
+
+
+def displayname(code: str) -> str:
+    """A3 display name for story text (mirrors docs/js/lib/names.js); frontier budget points → 'Frontier point B150'."""
+    if code in _STORY_NAMES:
+        n = _STORY_NAMES[code]
+        return n[0].upper() + n[1:] if n.startswith("the ") else n
+    return f"Frontier point {code}" if re.fullmatch(r"[BI]\d{2,3}", str(code)) else str(code)
+
+
 def build_story(data: dict) -> dict:
     """Story-mode steps. The narrated part is the planted PS1 part (incidents.json ps1_incident_id) and its station is that
     part's first replayed AOG incident; every number is read from the exported files or the history.
@@ -1908,11 +1919,11 @@ def build_story(data: dict) -> dict:
         t2 = f"{pn}: never in stock at {st}"
     # wave 5: cite the numbers the part drawer shows (52-week AOG hours, all stations and the worst station)
     if part.get("aog_h_52w_max_station_id") == st:
-        body2 = (f"{lead} With {int(st_units.P0)} units at {st} under P0, it caused {fmt_int(part['aog_h_52w'])} AOG h in the last "
-                 f"52 weeks (W52–W103), {fmt_int(part['aog_h_52w_max_station'])} h of them at {st}.")
+        body2 = (f"{lead} With {int(st_units.P0)} units at {st} under the Simple Rulebook, it caused {fmt_int(part['aog_h_52w'])} AOG h in "
+                 f"the last 52 weeks (W52–W103) of this simulation, {fmt_int(part['aog_h_52w_max_station'])} h of them at {st}.")
     else:
-        body2 = (f"{lead} With {int(st_units.P0)} units at {st} under P0, it caused {fmt_int(part['aog_h_52w'])} AOG h across all "
-                 "stations in the last 52 weeks (W52–W103).")
+        body2 = (f"{lead} With {int(st_units.P0)} units at {st} under the Simple Rulebook, it caused {fmt_int(part['aog_h_52w'])} AOG h "
+                 "across all stations in the last 52 weeks (W52–W103) of this simulation.")
 
     body3 = (f"Its weekly demand is {part['demand_class']} (ADI {part['adi']:.2f} weeks, CV² {part['cv2']:.2f} on training "
              "weeks W0–W77).")
@@ -1927,18 +1938,21 @@ def build_story(data: dict) -> dict:
     if rs_d is not None:
         a_p2_st = float_calc(float(st_ff.removal_rate_day) * 30.0, rs_d, p2_st, 0.0)["availability"]
         st_txt = "over 99.9%" if a_p2_st > 0.9995 else fmt_pct(a_p2_st, 1)
-        body4 = (f"Pooled over the {fl['pipeline_days']:.0f}-day repair loop, P2's {p2_s} spares cover {pool_txt} of removals. "
-                 f"At {st} the question is resupply: P2 holds {p2_st} unit{'s' if p2_st != 1 else ''} there "
-                 f"(P0: {p0_st}), refilled from AUH in about {rs_d:.1f} days, so {st_txt} of D0 needs find a unit on the shelf.")
+        body4 = (f"Pooled over the {fl['pipeline_days']:.0f}-day repair loop, the Network Plan's {p2_s} spares cover {pool_txt} of removals. "
+                 f"At {st} the question is resupply: the Network Plan holds {p2_st} unit{'s' if p2_st != 1 else ''} there "
+                 f"(Simple Rulebook: {p0_st}), refilled from AUH in about {rs_d:.1f} days, so {st_txt} of D0 needs find a unit on the shelf.")
     else:
-        body4 = f"Pooled over the repair loop, P2's {p2_s} spares cover {pool_txt} of removals."
+        body4 = f"Pooled over the repair loop, the Network Plan's {p2_s} spares cover {pool_txt} of removals."
     # wave C: narrated around P2 (the core recommendation); I125 is the frontier option.
     st_row = next(x for x in data["network"]["stations"] if x["station"] == st)
     u_rec, u_p2 = st_row["by_policy"][rid]["rotable_units"], st_row["by_policy"]["P2"]["rotable_units"]
     d_u = u_rec - u_p2
-    body5 = (f"At {st}, holdout material AOG falls from {fmt_int(net[('P0', st)]['aog_hours'])} h/yr under P0 to "
-             f"{fmt_int(net[('P2', st)]['aog_hours'])} under P2, the recommended core plan ({u_p2} rotable units here). "
-             f"The frontier option {rid} "
+    # v2.1: display names (no bare codes) and the scope wherever downtime totals appear
+    n_pn = len(parts_)
+    scope_txt = f"In this simulation, across {n_pn} modelled part numbers"
+    body5 = (f"{scope_txt}: at {st}, holdout material AOG falls from {fmt_int(net[('P0', st)]['aog_hours'])} h/yr under the Simple "
+             f"Rulebook to {fmt_int(net[('P2', st)]['aog_hours'])} under the Network Plan ({u_p2} rotables here). "
+             f"{displayname(rid)} "
              + (f"adds {d_u} more here" if d_u > 0 else "adds none here")
              + f" and takes network AOG to {fmt_int(pts[rid]['aog_hours'])} h/yr."
              + (f" Each emergency hop from AUH takes {fmt_int(arc['aog_transport_h'])} h." if arc else ""))
@@ -1969,12 +1983,18 @@ def build_story(data: dict) -> dict:
             else f"It was on the ground {fmt_int(inc['aog_hours'])} h. ")
     body_problem = (f"{inc['tail']} (fictional) is on the ground at {st}: a {part['deadline']} {noun} failed and none was held there. "
                     + _dur + f"Ranked on what the desk knew then, the best route was: {inc['decision']['recommended_label']}.")
-    body_value = (f"Positioning ({core['outstation_rotables']['P2']} outstation rotables, not {core['outstation_rotables']['P0']}) cuts material AOG by "
-                  f"{fmt_int(core['aog_reduction']['mean'])} h a year [{fmt_int(core['aog_reduction']['ci'][0])}–{fmt_int(core['aog_reduction']['ci'][1])}] "
-                  f"for {fmt_aed(core['capital_aed']['mean'])} more capital. " + body6)
-    if len(body_value) > 300:
-        body_value = (f"Positioning cuts material AOG by {fmt_int(core['aog_reduction']['mean'])} h a year for "
-                      f"{fmt_aed(core['capital_aed']['mean'])} more capital. " + body6)
+    # A4: never the net capital alone — gross buys and removals first, then the net (same rounding as the site table)
+    rm6 = core.get("remix") or {}
+    aedm = lambda v: f"AED {abs(float(v)) / 1e6:.1f}M"   # noqa: E731
+    netc = float(core["capital_aed"]["mean"])
+    cap_txt = (f"It buys {rm6['buy_units']} rotables (≈{aedm(rm6['buy_aed'])}) and removes {rm6['shed_units']} (≈{aedm(rm6['shed_aed'])}); "
+               f"average simulated inventory {'+' if netc >= 0 else '−'}{aedm(netc)}. ") if rm6.get("buy_units") is not None else ""
+    fo_txt = (f"{displayname(rid)} adds {fmt_aed(fo['extra_capital_aed']['mean'])} for {fmt_int(fo['aog_reduction']['mean'])} h/yr less "
+              f"[{fmt_int(fo['aog_reduction']['ci'][0])}–{fmt_int(fo['aog_reduction']['ci'][1])}].")
+    body_value = (f"{scope_txt}, the Network Plan cuts material AOG by {fmt_int(core['aog_reduction']['mean'])} h a year "
+                  f"vs the Simple Rulebook. " + cap_txt + fo_txt)
+    if len(body_value) > 300:   # keep the gross + net capital lines; drop the frontier sentence first
+        body_value = body_value[: -len(fo_txt)].rstrip()
     steps = [
         # (route, story_id, selector, title, body)
         # wave C: the timeline's chart body (the AOG bar and the 9 h / 14 h nodes), so the card fits beside it at 1440x900
@@ -1996,6 +2016,37 @@ def build_story(data: dict) -> dict:
         "aog-incident-ps1": tl,
         "action-inbox": (f'[data-story="action-inbox"] [data-id="{act["exception_id"]}"]' if act else None),
     }
+    # v2.1: Simple-mode (plain English) titles and bodies; every number is read from the same data as the expert text
+    def city(code: str) -> str:
+        nm = next((x["name"] for x in data["network"]["stations"] if x["station"] == code), code)
+        nm = nm.split(",")[-1].strip()
+        return re.sub(r"\s+(International|Heathrow|Changi|am Main)$", "", nm)
+    c_st, c_hub = city(st), city("AUH")
+    gap_txt = (f"The part arrived after {fmt_int(_at)} hours, and the plane flew again after {fmt_int(_rel)} hours."
+               if _at is not None and _rel is not None and _rel > _at else f"It stayed on the ground for {fmt_int(inc['aog_hours'])} hours.")
+    s_problem = (f"A plane is stuck at {c_st}. A part it needs before its next flight broke, and no spare was kept there. " + gap_txt)
+    s_diag = (f"The {sys_['name'].lower()} group is the biggest risk, and one part leads it. "
+              f"With {'no spare' if p0_st == 0 else f'{p0_st} spares'} at {c_st}, it kept planes grounded for "
+              f"{fmt_int(part['aog_h_52w'])} hours across all airports in the last year.")
+    s_pipe = (f"Broken parts go away for repair for about {fl['pipeline_days']:.0f} days. To always have one ready, the airline needs "
+              f"enough spares to cover the ones away in repair. The Network Plan keeps {p2_s} in total, so a spare is almost always on the shelf."
+              + (f" At {c_st} it keeps {p2_st}, refilled from {c_hub} in about {rs_d:.0f} days." if rs_d is not None else ""))
+    s_trade = (f"In this simulation, at {c_st}, the Simple Rulebook left planes grounded {fmt_int(net[('P0', st)]['aog_hours'])} hours a year. "
+               f"The Network Plan cuts that to {fmt_int(net[('P2', st)]['aog_hours'])} hours. "
+               f"Across all {n_pn} modelled part numbers, the Network Plan + Extra Spares brings the network total down to {fmt_int(pts[rid]['aog_hours'])} hours a year.")
+    s_act = f"The planner's list has {len(acts)} alerts this week, {nurg} of them urgent."
+    if act and act["type"] == "OUTSTATION_DEPLETION":
+        e = act["evidence"]
+        need = int(e["target"]) - int(e["on_hand"])
+        s_act += (f" {c_st} has {e['on_hand']} of the {e['target']} spares it should hold for this part. "
+                  f"The advice is to send {need} there.")
+    rm = core.get("remix") or {}
+    s_value = (f"{scope_txt}, the Network Plan cuts grounded time by {fmt_int(core['aog_reduction']['mean'])} hours a year. "
+               + (f"It buys {rm['buy_units']} repairable spares (about {aedm(rm['buy_aed'])}) and removes {rm['shed_units']} (about {aedm(rm['shed_aed'])}). "
+                  f"Average stock value rises by about {aedm(netc)}. " if rm.get("buy_units") is not None else "")
+               + f"Spending {fmt_aed(fo['extra_capital_aed']['mean'])} more saves about {fmt_int(fo['aog_reduction']['mean'])} hours more.")
+    simple = [("1 · The problem", s_problem), ("2 · Find the cause", s_diag), ("3 · Repairs take time", s_pipe),
+              ("4 · Compare the plans", s_trade), ("5 · What to do", s_act), ("6 · Is it worth it?", s_value)]
     ids = [sid for _, sid, _, _, _ in steps]
     return {
         "meta": meta("DERIVED", ["docs/data/kpis.json", "docs/data/parts.json", "docs/data/forecast.json",
@@ -2005,11 +2056,11 @@ def build_story(data: dict) -> dict:
                      "Story-mode steps; bodies are templated at export time from the exported numbers. Each selector starts "
                      "with the data-story attribute the screen renders (story_id), optionally narrowed to a child element so "
                      "the step card does not cover its subject: " + ", ".join(ids) + ". mobile_selector (or null) is the narrower "
-                     "target used at <= 480 px (bottom-sheet layout); it also starts with the story_id hook."),
+                     "target used at <= 480 px (bottom-sheet layout); it also starts with the story_id hook. title_simple / body_simple are the Simple-mode (plain English) text, computed from the same numbers; title / body are the Expert text."),
         "selector_ids": ids,
         "steps": [{"route": r, "selector": sel, "mobile_selector": mobile.get(sid), "story_id": sid, "title": t, "body": b,
-                   "provenance": "DERIVED"}
-                  for r, sid, sel, t, b in steps],
+                   "title_simple": ts, "body_simple": bs, "provenance": "DERIVED"}
+                  for (r, sid, sel, t, b), (ts, bs) in zip(steps, simple)],
     }
 
 

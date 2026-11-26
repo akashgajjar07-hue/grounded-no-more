@@ -22,6 +22,7 @@
  */
 import { responsive, reducedMotion, tooltip, theme, fmtInt, fmtAED, chipLabel, markerRect } from './theme.js';
 import { assetURL } from '../data.js';
+import { MOTION, EASE } from '../lib/motion.js';
 
 const d3 = () => window.d3;
 let atlasPromise = null;
@@ -212,7 +213,7 @@ export async function renderNetworkMap(host, opts = {}) {
       host.querySelectorAll('.map-sel').forEach((c) => { c.style.display = c.parentNode.dataset.station === id ? '' : 'none'; });
     },
     /** Animate one transfer along a geodesic arc. Resolves when done. kind: 'routine' | 'emergency' */
-    animateTransfer(from, to, { duration = 1400, kind = 'routine' } = {}) {
+    animateTransfer(from, to, { duration = MOTION.hero, kind = 'routine' } = {}) {
       if (!ctx) return Promise.resolve();
       const A = byId[from], B = byId[to];
       if (!A || !B) return Promise.resolve();
@@ -220,14 +221,14 @@ export async function renderNetworkMap(host, opts = {}) {
       const p = ctx.tokenLayer.append('path').attr('d', ctx.path({ type: 'LineString', coordinates: [[A.lon, A.lat], [B.lon, B.lat]] })).attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2).attr('stroke-linecap', 'round');
       const len = p.node().getTotalLength();
       if (reducedMotion()) {
-        return new Promise((res) => setTimeout(() => { p.transition().duration(0).delay(600).remove(); res(); }, 600));
+        return new Promise((res) => setTimeout(() => { p.remove(); res(); }, MOTION.slow));
       }
       const dot = ctx.tokenLayer.append('circle').attr('r', 3.5).attr('class', 'map-token').attr('fill', color);
       p.attr('stroke-dasharray', `${len} ${len}`).attr('stroke-dashoffset', len);
       return new Promise((res) => {
-        p.transition().duration(duration).ease(d3().easeCubicOut).attr('stroke-dashoffset', 0)
-          .tween('dot', () => (t) => { const pt = p.node().getPointAtLength(d3().easeCubicOut(t) * len); dot.attr('cx', pt.x).attr('cy', pt.y); })
-          .on('end', () => { dot.transition().duration(300).attr('r', 9).style('opacity', 0).remove(); p.transition().duration(600).style('opacity', 0).remove(); res(); });
+        p.transition().duration(duration).ease(EASE.standard).attr('stroke-dashoffset', 0)
+          .tween('dot', () => (t) => { const pt = p.node().getPointAtLength(t * len); dot.attr('cx', pt.x).attr('cy', pt.y); })
+          .on('end', () => { dot.transition().duration(MOTION.base).ease(EASE.exit).attr('r', 9).style('opacity', 0).remove(); p.transition().duration(MOTION.slow).ease(EASE.exit).style('opacity', 0).remove(); res(); });
       });
     },
     get projection() { return ctx?.projection; },

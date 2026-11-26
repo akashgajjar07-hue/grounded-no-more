@@ -1,0 +1,706 @@
+{
+ "generated": "2026-11-26T18:28:17",
+ "effect_timeout_ms": 1000,
+ "routes": [
+  {
+   "route": "about",
+   "browser": "chromium",
+   "viewport": "1440x900",
+   "mode": "simple",
+   "reduced_motion": false,
+   "url": "http://127.0.0.1:61181/index.html#/about",
+   "started": "2026-11-26T18:27:45",
+   "seconds": 32.0,
+   "elements": [
+    {
+     "id": "e000",
+     "kind": "link",
+     "label": "Skip to main content",
+     "selector": "body:nth-of-type(1) > a:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": false,
+     "ms": null,
+     "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+     "errors": []
+    },
+    {
+     "id": "e001",
+     "kind": "link",
+     "label": "GROUNDED NO MORE — Mission Control",
+     "selector": "#app > nav:nth-of-type(1) > a:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 4.8,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e002",
+     "kind": "link",
+     "label": "Mission Control1",
+     "selector": "#nav > div:nth-of-type(1) > a:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 0.9,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e003",
+     "kind": "link",
+     "label": "Planner Action Centre8",
+     "selector": "#nav > div:nth-of-type(1) > a:nth-of-type(2)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 1.3,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e004",
+     "kind": "link",
+     "label": "AOG Response Lab7",
+     "selector": "#nav > div:nth-of-type(1) > a:nth-of-type(3)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 1.2,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e005",
+     "kind": "link",
+     "label": "Parts Intelligence2",
+     "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 0.8,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e006",
+     "kind": "link",
+     "label": "Forecast Lab3",
+     "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(2)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 1.4,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e007",
+     "kind": "link",
+     "label": "Rotable & Repair4",
+     "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(3)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 0.8,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e008",
+     "kind": "link",
+     "label": "Network Positioning5",
+     "selector": "#nav > div:nth-of-type(3) > a:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 2.1,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e009",
+     "kind": "link",
+     "label": "Capital Optimiser6",
+     "selector": "#nav > div:nth-of-type(3) > a:nth-of-type(2)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 1.1,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e010",
+     "kind": "button",
+     "label": "60-second tourS",
+     "selector": "#nav > div:nth-of-type(4) > button:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "story",
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 51.2,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e011",
+     "kind": "link",
+     "label": "Data & Method0",
+     "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 0.6,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e012",
+     "kind": "link",
+     "label": "About",
+     "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(2)",
+     "action": "click",
+     "effects": [],
+     "ok": true,
+     "ms": 1044.0,
+     "note": "link to the current route (no-op)",
+     "errors": []
+    },
+    {
+     "id": "e013",
+     "kind": "link",
+     "label": "Glossary",
+     "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(3)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 1.0,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e014",
+     "kind": "link",
+     "label": "The Planner Behind the Project",
+     "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(4)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 4.6,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e015",
+     "kind": "toggle",
+     "label": "Simple",
+     "selector": "#mode-slot > div:nth-of-type(1) > button:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "focus-change"
+     ],
+     "ok": true,
+     "ms": 1003.2,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e016",
+     "kind": "toggle",
+     "label": "Expert",
+     "selector": "#mode-slot > div:nth-of-type(1) > button:nth-of-type(2)",
+     "action": "click",
+     "effects": [
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 0.5,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e017",
+     "kind": "focusable",
+     "label": "Simulation W104–W155",
+     "selector": "#sim-indicator",
+     "action": "focus+Enter",
+     "effects": [
+      "focus-change"
+     ],
+     "ok": true,
+     "ms": 1028.5,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e018",
+     "kind": "button",
+     "label": "Story",
+     "selector": "#story-btn",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "story",
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 0.7,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e019",
+     "kind": "button",
+     "label": "Keyboard shortcuts",
+     "selector": "#help-btn",
+     "action": "click",
+     "effects": [
+      "modal",
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 0.8,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e020",
+     "kind": "link",
+     "label": "GitHub",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > a:nth-of-type(1)",
+     "action": "",
+     "effects": [
+      "external-href"
+     ],
+     "ok": true,
+     "ms": null,
+     "note": "external link (not followed; href checked)",
+     "errors": []
+    },
+    {
+     "id": "e021",
+     "kind": "download",
+     "label": "Excel planner workbook",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > a:nth-of-type(2)",
+     "action": "click(download)",
+     "effects": [
+      "download"
+     ],
+     "ok": true,
+     "ms": 0.8,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e022",
+     "kind": "download",
+     "label": "Case-study deck (PDF)",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > a:nth-of-type(3)",
+     "action": "click(download)",
+     "effects": [
+      "download"
+     ],
+     "ok": true,
+     "ms": 0.7,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e023",
+     "kind": "link",
+     "label": "The Planner Behind the Project",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > p:nth-of-type(2) > a:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 0.6,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e024",
+     "kind": "link",
+     "label": "Results",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > p:nth-of-type(2) > a:nth-of-type(2)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 0.5,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e025",
+     "kind": "link",
+     "label": "Glossary",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > p:nth-of-type(2) > a:nth-of-type(3)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 1.2,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e026",
+     "kind": "link",
+     "label": "How this transfers to an MRO",
+     "selector": "#view > nav:nth-of-type(1) > a:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 0.5,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e027",
+     "kind": "link",
+     "label": "What real data would make this useful",
+     "selector": "#view > nav:nth-of-type(1) > a:nth-of-type(2)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 1.6,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e028",
+     "kind": "link",
+     "label": "Next experiments",
+     "selector": "#view > nav:nth-of-type(1) > a:nth-of-type(3)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 0.9,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e029",
+     "kind": "link",
+     "label": "What real data would make this useful",
+     "selector": "#ab-mro > div:nth-of-type(2) > p:nth-of-type(7) > a:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 0.5,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e030",
+     "kind": "link",
+     "label": "Next experiments",
+     "selector": "#ab-mro > div:nth-of-type(2) > p:nth-of-type(7) > a:nth-of-type(2)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 0.5,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e031",
+     "kind": "link",
+     "label": "Next experiments",
+     "selector": "#ab-real-data > div:nth-of-type(2) > p:nth-of-type(2) > a:nth-of-type(1)",
+     "action": "click",
+     "effects": [],
+     "ok": true,
+     "ms": 1031.0,
+     "note": "link to the current route (no-op)",
+     "errors": []
+    },
+    {
+     "id": "e032",
+     "kind": "link",
+     "label": "How this transfers to an MRO",
+     "selector": "#ab-next-experiments > div:nth-of-type(2) > p:nth-of-type(6) > a:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 0.6,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e033",
+     "kind": "link",
+     "label": "What real data would make this useful",
+     "selector": "#ab-next-experiments > div:nth-of-type(2) > p:nth-of-type(7) > a:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 0.8,
+     "note": "",
+     "errors": []
+    }
+   ],
+   "shortcuts": [
+    {
+     "id": "k-?",
+     "kind": "shortcut",
+     "label": "key ?",
+     "selector": "body",
+     "action": "key:?",
+     "effects": [
+      "modal",
+      "dom-mutation",
+      "esc-closes"
+     ],
+     "ok": true,
+     "ms": 0.5,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "k-s",
+     "kind": "shortcut",
+     "label": "key s",
+     "selector": "body",
+     "action": "key:s",
+     "effects": [
+      "navigation",
+      "story",
+      "dom-mutation",
+      "esc-closes"
+     ],
+     "ok": true,
+     "ms": 9.1,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "k-1",
+     "kind": "shortcut",
+     "label": "key 1",
+     "selector": "body",
+     "action": "key:1",
+     "effects": [
+      "navigation",
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 0.9,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "k-2",
+     "kind": "shortcut",
+     "label": "key 2",
+     "selector": "body",
+     "action": "key:2",
+     "effects": [
+      "navigation",
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 0.5,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "k-3",
+     "kind": "shortcut",
+     "label": "key 3",
+     "selector": "body",
+     "action": "key:3",
+     "effects": [
+      "navigation"
+     ],
+     "ok": true,
+     "ms": 0.7,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "k-4",
+     "kind": "shortcut",
+     "label": "key 4",
+     "selector": "body",
+     "action": "key:4",
+     "effects": [
+      "navigation",
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 2.2,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "k-5",
+     "kind": "shortcut",
+     "label": "key 5",
+     "selector": "body",
+     "action": "key:5",
+     "effects": [
+      "navigation",
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 1.4,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "k-6",
+     "kind": "shortcut",
+     "label": "key 6",
+     "selector": "body",
+     "action": "key:6",
+     "effects": [
+      "navigation",
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 1.2,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "k-7",
+     "kind": "shortcut",
+     "label": "key 7",
+     "selector": "body",
+     "action": "key:7",
+     "effects": [
+      "navigation",
+      "dom-mutation"
+     ],
+     "ok": false,
+     "ms": 1.2,
+     "note": "",
+     "errors": [
+      "console.error: SyntaxError: Identifier 'S' has already been declared"
+     ]
+    },
+    {
+     "id": "k-8",
+     "kind": "shortcut",
+     "label": "key 8",
+     "selector": "body",
+     "action": "key:8",
+     "effects": [
+      "navigation",
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 0.7,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "k-0",
+     "kind": "shortcut",
+     "label": "key 0",
+     "selector": "body",
+     "action": "key:0",
+     "effects": [
+      "navigation",
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 0.9,
+     "note": "",
+     "errors": []
+    }
+   ],
+   "load_errors": [],
+   "summary": {
+    "total": 45,
+    "ok": 43,
+    "failed": 2,
+    "skipped": 0,
+    "load_errors": 0,
+    "by_kind": {
+     "button": {
+      "ok": 3,
+      "failed": 0
+     },
+     "download": {
+      "ok": 2,
+      "failed": 0
+     },
+     "focusable": {
+      "ok": 1,
+      "failed": 0
+     },
+     "link": {
+      "ok": 25,
+      "failed": 1
+     },
+     "shortcut": {
+      "ok": 10,
+      "failed": 1
+     },
+     "toggle": {
+      "ok": 2,
+      "failed": 0
+     }
+    }
+   }
+  }
+ ],
+ "totals": {
+  "total": 45,
+  "ok": 43,
+  "failed": 2,
+  "skipped": 0,
+  "load_errors": 0
+ }
+}

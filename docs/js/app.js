@@ -26,7 +26,8 @@
  * term() shows its grey "(expert term)" bracket on its first use in each view. 1–8 / 0 / S also work while a drawer or modal is open (overlays close first, then the
  * shell navigates). A skip link jumps to the main content.
  */
-import { h, icon, ensureSprite, fixtureChip, disclaimer, modal, kbd, storyMode, stateBlock, closeAllOverlays, openOverlayCount } from './ui.js';
+import { h, icon, ensureSprite, fixtureChip, disclaimer, modal, kbd, storyMode, stateBlock, closeAllOverlays, openOverlayCount, slidingThumb } from './ui.js';
+import { staggerIn } from './lib/motion.js';
 import { loadMany, load, onFixture } from './data.js';
 import { initMode, modeToggle, MODE_EVENT } from './lib/mode.js';
 import { resetTermUses, hideTermTip } from './lib/glossary.js';
@@ -130,13 +131,21 @@ function openHelp() {
   helpModal = modal({ title: 'Keyboard shortcuts', body: h('div', { class: 'shortcut-list' }, rows.flatMap(([k, d]) => [h('div', {}, k), h('div', {}, d)])) }).open();
 }
 
+let storyStarting = null;
+/** Start the guided tour (top-bar Story button, rail "60-second tour", S key). Visible at once; idempotent. */
 async function startStory() {
-  try {
-    const story = await load('story');
-    storyMode({ steps: story.steps || [], navigate }).start();
-  } catch (e) {
-    console.warn('story unavailable', e);
-  }
+  if (window.__gnmStory) return window.__gnmStory;
+  if (storyStarting) return storyStarting;
+  storyStarting = (async () => {
+    try {
+      const story = await load('story');
+      return storyMode({ steps: story.steps || [], navigate }).start();
+    } catch (e) {
+      console.warn('story unavailable', e);
+      return null;
+    } finally { storyStarting = null; }
+  })();
+  return storyStarting;
 }
 
 // --------------------------------------------------------------------------- render
@@ -179,6 +188,7 @@ async function render({ force = false, keepScroll = false } = {}) {
     current = { id, mod, ctx, seq };
     resetTermUses();
     cleanup = (await mod.render(view, ctx)) || null;
+    if (!keepScroll && seq === renderSeq) staggerIn(view); // v2.1 motion: first 6 cards rise in, 40 ms apart
   } catch (err) {
     console.error(err);
     if (seq === renderSeq) view.replaceChildren(stateBlock('error', `This workspace could not load (${err.message}).`));
@@ -237,7 +247,7 @@ function boot() {
   $('#menu-btn').addEventListener('click', () => setRail(!$('#app').classList.contains('rail-open')));
   $('#rail-scrim').addEventListener('click', () => setRail(false));
   $('#help-btn').addEventListener('click', openHelp);
-  $('#mode-slot')?.replaceChildren(modeToggle());
+  $('#mode-slot')?.replaceChildren(slidingThumb(modeToggle()));
   document.addEventListener(MODE_EVENT, onModeChange);
   $('#story-btn').addEventListener('click', startStory);
   $('#rail-story')?.addEventListener('click', startStory);

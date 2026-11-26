@@ -315,8 +315,10 @@ export function glossaryEntries({ sort = 'simple' } = {}) {
 /** One entry by key (or alias, case-insensitive), or null. */
 export function glossaryEntry(key) {
   if (BY_KEY.has(key)) return BY_KEY.get(key);
-  const k = String(key ?? '').toLowerCase();
-  return [...BY_KEY.values()].find((e) => e.expert.toLowerCase() === k || e.aliases.some((a) => a.toLowerCase() === k)) || null;
+  const k = String(key ?? '').trim().toLowerCase();
+  const all = [...BY_KEY.values()];
+  // precedence: exact key → key (any case) → expert term → alias (so "Croston" is the croston entry, not the group)
+  return BY_KEY.get(k) || all.find((e) => e.expert.toLowerCase() === k) || all.find((e) => e.aliases.some((a) => a.toLowerCase() === k)) || null;
 }
 
 const cap1 = (s) => s.charAt(0).toUpperCase() + s.slice(1);

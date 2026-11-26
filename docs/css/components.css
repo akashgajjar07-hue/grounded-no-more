@@ -612,7 +612,8 @@ select option { background: var(--panel); color: var(--text); }
 
 .term { border-bottom: 1px dotted var(--text-faint); cursor: help; border-radius: 2px; }
 .term:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.term-expert { font-size: 0.85em; color: var(--text-faint); font-weight: 400; white-space: nowrap; }
+/* the bracket stays on one line where it fits (inline-block), and wraps inside itself when it does not (390 px) */
+.term-expert { display: inline-block; max-width: 100%; font-size: 0.85em; color: var(--text-faint); font-weight: 400; white-space: normal; overflow-wrap: anywhere; text-indent: 0; }
 .term-pop {
   position: fixed; z-index: 130; max-width: min(320px, calc(100vw - 16px)); padding: 10px 12px; border-radius: var(--r-control);
   background: var(--panel); border: 1px solid var(--line-strong); box-shadow: var(--shadow-pop);

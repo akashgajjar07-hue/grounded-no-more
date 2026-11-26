@@ -4,6 +4,8 @@
  * they should not invent new visual styles. See docs/design/DESIGN_SYSTEM.md for the API.
  */
 import { assetURL } from './data.js';
+import { isSimple } from './lib/mode.js';
+import { MOTION, reducedMotion as motionReduced, tooltipFade, flip } from './lib/motion.js';
 
 // --------------------------------------------------------------------------- basics
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -368,8 +370,33 @@ export function tabs({ tabs: items, value, onChange, label = 'Sections' }) {
 /** Segmented control (radio group). options: [{value, label}] */
 export function segmented({ options, value, onChange, label = 'Options' }) {
   const g = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': label });
-  const set = (v) => { value = v; [...g.children].forEach((b) => b.setAttribute('aria-checked', String(b.dataset.value === String(v)))); onChange?.(v); };
+  const set = (v) => { value = v; g.querySelectorAll('[role="radio"]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.value === String(v)))); onChange?.(v); };
   options.forEach((o) => g.append(h('button', { type: 'button', role: 'radio', dataset: { value: o.value }, 'aria-checked': String(o.value === value), onclick: () => set(o.value) }, o.label)));
+  slidingThumb(g);
+  return g;
+}
+
+/**
+ * v2.1 motion: give a segmented control (.seg with [aria-checked] / [aria-pressed] buttons) a thumb that slides to the
+ * selected option (transform only, 250 ms standard). Idempotent; follows attribute changes and resizes.
+ */
+export function slidingThumb(g) {
+  if (!g || g.querySelector(':scope > .seg-thumb')) return g;
+  const thumb = h('span', { class: 'seg-thumb no-anim', 'aria-hidden': 'true' });
+  g.prepend(thumb);
+  g.classList.add('has-thumb');
+  const sync = () => {
+    const on = g.querySelector(':scope > button[aria-checked="true"], :scope > button[aria-pressed="true"]');
+    if (!on || !g.isConnected) { thumb.style.opacity = on ? '' : '0'; return; }
+    thumb.style.opacity = '';
+    thumb.style.width = `${on.offsetWidth}px`;
+    thumb.style.transform = `translateX(${on.offsetLeft}px)`;
+  };
+  new MutationObserver(() => requestAnimationFrame(sync)).observe(g, { subtree: true, attributes: true, attributeFilter: ['aria-checked', 'aria-pressed'] });
+  if (typeof ResizeObserver === 'function') new ResizeObserver(() => { thumb.classList.add('no-anim'); sync(); requestAnimationFrame(() => thumb.classList.remove('no-anim')); }).observe(g);
+  let tries = 0;
+  const first = () => { if (g.isConnected) { sync(); requestAnimationFrame(() => thumb.classList.remove('no-anim')); } else if (tries++ < 120) requestAnimationFrame(first); };
+  requestAnimationFrame(first);
   return g;
 }
 
@@ -509,7 +536,7 @@ export function drawer({ title, kicker, body, foot, onClose, persistOnParams = f
       unlockScroll();
       scrim.classList.remove('is-open'); el.classList.remove('is-open');
       document.removeEventListener('keydown', onKey);
-      if (immediate) { scrim.remove(); el.remove(); } else setTimeout(() => { scrim.remove(); el.remove(); }, 320);
+      if (immediate) { scrim.remove(); el.remove(); } else setTimeout(() => { scrim.remove(); el.remove(); }, (motionReduced() ? 0 : MOTION.base) + 70);
       if (reason === 'user') {
         // returnFocus(): where focus goes when there was no opener (a deep-linked drawer opened on load)
         const back = lastFocus?.isConnected && lastFocus !== document.body ? lastFocus : (typeof returnFocus === 'function' ? returnFocus() : returnFocus);
@@ -564,18 +591,15 @@ export const tooltip = {
     if (!tipEl) { tipEl = h('div', { class: 'tooltip', role: 'tooltip' }); document.body.append(tipEl); }
     if (typeof content === 'string') tipEl.innerHTML = content;
     else tipEl.replaceChildren(content.title ? h('div', { class: 'tooltip-title' }, content.title) : '', ...(content.rows || []).map(([k, v]) => h('div', { class: 'tooltip-row' }, h('span', {}, k), h('b', {}, v))), content.note ? h('div', { class: 'mt-1 faint' }, content.note) : '');
-    tipEl.classList.add('is-on');
+    tooltipFade.show(tipEl);
     this.move(evt);
   },
+  /** v2.1: cursor tracking via motion.js tooltipFade.follow (one transform write per frame, size measured once). */
   move(evt) {
     if (!tipEl) return;
-    const pad = 14, r = tipEl.getBoundingClientRect();
-    let x = (evt.clientX ?? 0) + pad, y = (evt.clientY ?? 0) + pad;
-    if (x + r.width > innerWidth - 8) x = (evt.clientX ?? 0) - r.width - pad;
-    if (y + r.height > innerHeight - 8) y = (evt.clientY ?? 0) - r.height - pad;
-    tipEl.style.left = `${Math.max(8, x)}px`; tipEl.style.top = `${Math.max(8, y)}px`;
+    tooltipFade.follow(tipEl, evt || {});
   },
-  hide() { tipEl?.classList.remove('is-on'); },
+  hide() { tooltipFade.hide(tipEl); },
 };
 
 // --------------------------------------------------------------------------- inline SVG illustrations
@@ -690,34 +714,75 @@ export function storyCardPosition(r, { cw, ch, vw, vh, gap = 24, margin = 16, cl
   });
   return best;
 }
-export function storyMode({ steps, navigate, onExit }) {
+/**
+ * v2.1 tour engine.
+ *  - Text: Simple mode shows step.title_simple / step.body_simple (plain English), Expert mode step.title / step.body;
+ *    a mode change while the tour is open swaps the text and re-finds the target.
+ *  - Play auto-advances every MOTION.tourStep (7 s; opts.stepMs or window.__gnmTourStepMs override for tests). One rAF
+ *    loop drives the timer AND the current segment's progress fill (transform: scaleX). The clock only runs once the
+ *    step's target is framed. Pause freezes both. Next/Back work while playing (the clock restarts on the new step).
+ *    At the last step the bar fills, playback stops and the button resets to Play (Play again restarts at step 1).
+ *    Repeated play() never creates a second loop. Esc / Skip / exit() cancel the loop and every pending timer.
+ *  - The spotlight moves with a 450 ms transform-only FLIP and the target is scrolled into view; reduced motion →
+ *    instant moves (the tour still auto-advances; the bar steps once per second).
+ *  - While open, window.__gnmStory = api (tests): api.play(), api.pause(), api.state() →
+ *    {index, playing, elapsed, stepMs, loops, timers}.
+ */
+export function storyMode({ steps, navigate, onExit, stepMs }) {
+  const STEP_MS = () => +(stepMs || window.__gnmTourStepMs || MOTION.tourStep);
   let i = 0;
   let seq = 0; // guards against overlapping go() calls (fast ←/→)
   let target = null;
+  const pending = new Set(); // every setTimeout the tour owns (cleared on exit)
+  const sleep = (ms) => new Promise((r) => { const id = setTimeout(() => { pending.delete(id); r(); }, ms); pending.add(id); });
   const root = h('div', { class: 'story', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Guided tour' });
   const spot = h('div', { class: 'story-spot' });
   const stepEl = h('div', { class: 'story-step', 'aria-live': 'polite' });
   const titleEl = h('h3', {});
   const bodyEl = h('p', {});
-  const prog = h('div', { class: 'story-progress', 'aria-hidden': 'true' }, steps.map(() => h('span')));
+  const fills = steps.map(() => h('i', { class: 'story-fill' }));
+  const prog = h('div', { class: 'story-progress', 'aria-hidden': 'true' }, fills.map((f) => h('span', {}, f)));
   const back = h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => go(i - 1) }, 'Back');
   const next = h('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => (i < steps.length - 1 ? go(i + 1) : exit()) }, 'Next');
   let peekUser = null; // null = automatic, true/false = the reader toggled the sheet on this step
   const grab = h('button', { class: 'story-grab', type: 'button', 'aria-expanded': 'true', 'aria-label': 'Collapse the tour card', onclick: () => { setPeek(!cardEl.classList.contains('is-peek')); peekUser = cardEl.classList.contains('is-peek'); } }, h('span', { 'aria-hidden': 'true' }));
-  // wave B: manual next/back, play/pause (auto-advance), skip, and keyboard control (← → Space Esc)
-  const AUTO_MS = 9000;
-  let playing = false, timer = 0;
+
+  // ---------------------------------------------------------------- playback clock (one rAF loop)
+  let playing = false, elapsed = 0, lastT = 0, loop = 0, ready = false;
   const playBtn = h('button', { class: 'btn btn--ghost btn--sm story-play', type: 'button', 'aria-pressed': 'false', 'aria-label': 'Play the tour automatically', onclick: () => setPlaying(!playing) }, icon('play'), h('span', {}, 'Play'));
+  function paintFill() {
+    const ms = STEP_MS();
+    let p = Math.max(0, Math.min(1, elapsed / ms));
+    if (motionReduced() && p < 1) p = Math.floor(elapsed / 1000) * 1000 / ms;
+    prog.querySelectorAll('span').forEach((sp, j) => { sp.classList.toggle('is-done', j < i); sp.classList.toggle('is-current', j === i); });
+    fills.forEach((f, j) => { f.style.transform = `scaleX(${j < i ? 1 : j === i ? p : 0})`; });
+  }
+  function frameLoop(t) {
+    loop = 0;
+    if (!playing) return;
+    if (ready) { if (lastT) elapsed += Math.min(t - lastT, 250); lastT = t; } else lastT = 0;
+    paintFill();
+    if (ready && elapsed >= STEP_MS()) {
+      if (i < steps.length - 1) go(i + 1);
+      else { elapsed = STEP_MS(); setPlaying(false); return; }
+    }
+    loop = requestAnimationFrame(frameLoop);
+  }
   function setPlaying(on) {
-    playing = !!on;
-    clearTimeout(timer);
+    on = !!on;
+    if (on && i === steps.length - 1 && elapsed >= STEP_MS()) { playing = true; go(0); } // finished: Play restarts the tour
+    playing = on;
+    root.classList.toggle('is-playing', playing);
     playBtn.setAttribute('aria-pressed', String(playing));
     playBtn.setAttribute('aria-label', playing ? 'Pause the tour' : 'Play the tour automatically');
     playBtn.querySelector('span').textContent = playing ? 'Pause' : 'Play';
     playBtn.querySelector('use')?.setAttribute('href', playing ? '#i-minus' : '#i-play');
-    if (playing) schedule();
+    lastT = 0;
+    if (playing) { if (!loop) loop = requestAnimationFrame(frameLoop); }
+    else if (loop) { cancelAnimationFrame(loop); loop = 0; }
+    paintFill();
   }
-  function schedule() { clearTimeout(timer); if (playing && i < steps.length - 1) timer = setTimeout(() => { if (playing) go(i + 1); }, AUTO_MS); else if (playing) setPlaying(false); }
+
   const cardEl = h('div', { class: 'story-card' }, grab, stepEl, titleEl, bodyEl, prog, h('div', { class: 'story-actions' }, h('div', { class: 'row' }, h('button', { class: 'btn btn--ghost btn--sm story-skip', type: 'button', onclick: () => exit() }, 'Skip tour'), playBtn), h('div', { class: 'row' }, back, next)));
   root.append(spot, cardEl);
   let opener = null;
@@ -727,21 +792,20 @@ export function storyMode({ steps, navigate, onExit }) {
   const onKey = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); exit(); return; }
     if (e.target.closest?.('input, textarea, select')) return;
-    // wave C (F3): Space is Play/Pause anywhere in the tour, including when Next/Back has focus; only the Play button
-    // itself and Skip keep their native Space activation (so Play is not toggled twice)
+    // Space is Play/Pause anywhere in the tour, including when Next/Back has focus; only the Play button itself, the grab
+    // handle and Skip keep their native Space activation (so Play is not toggled twice)
     if (e.key === ' ' && (!e.target.closest?.('button') || (e.target.closest('.story-card') && e.target !== playBtn && e.target !== grab && !e.target.classList.contains('story-skip')))) { e.preventDefault(); spaceEat = true; setPlaying(!playing); return; }
     if (e.key === 'ArrowRight') { e.preventDefault(); next.click(); }
     if (e.key === 'ArrowLeft' && i > 0) { e.preventDefault(); back.click(); }
     trapFocus(cardEl, e);
   };
-  const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   /** Wait (up to `ms`) for the step's target to exist and have a size: views render charts asynchronously. */
-  async function waitFor(selector, ms = 10000) {
+  async function waitFor(selector, ms = 10000, my = seq) {
     const t0 = performance.now();
-    while (performance.now() - t0 < ms) {
+    while (performance.now() - t0 < ms && my === seq) {
       const el = selector ? document.querySelector(selector) : null;
       if (el && el.getBoundingClientRect().height > 0) return el;
-      await new Promise((r) => setTimeout(r, 100));
+      await sleep(100);
     }
     return null;
   }
@@ -750,6 +814,7 @@ export function storyMode({ steps, navigate, onExit }) {
   /** Bottom of the sticky top bar (0 if absent): story targets and the card stay below it. */
   const barBottom = () => { const b = document.querySelector('.topbar'); return b ? Math.max(0, Math.round(b.getBoundingClientRect().bottom)) : 0; };
   const BAR_GAP = 16;
+  let animateNext = false; // the next placement with a live target is a step change: FLIP the spot (and slide the card)
   function setPeek(on) {
     cardEl.classList.toggle('is-peek', !!on);
     grab.setAttribute('aria-expanded', String(!on));
@@ -766,11 +831,16 @@ export function storyMode({ steps, navigate, onExit }) {
       if (!sheet) Object.assign(cardEl.style, { left: `${(innerWidth - Math.min(380, innerWidth - 32)) / 2}px`, top: `${Math.max(bar + BAR_GAP, innerHeight / 3)}px` });
       return;
     }
+    const anim = animateNext && !motionReduced();
+    animateNext = false;
+    const spotFrom = anim ? spot.getBoundingClientRect() : null;
+    const cardFrom = anim && !sheet ? cardEl.getBoundingClientRect() : null;
     const r = target.getBoundingClientRect();
     const pad = 8;
     // the spotlight never covers the sticky top bar
     const top0 = Math.max(r.top - pad, bar + 4), bot0 = Math.min(r.bottom + pad, innerHeight - 4);
     Object.assign(spot.style, { left: `${r.left - pad}px`, top: `${top0}px`, width: `${r.width + pad * 2}px`, height: `${Math.max(0, bot0 - top0)}px` });
+    if (spotFrom) flip(spot, spotFrom.width ? spotFrom : { left: r.left + r.width / 2, top: top0 + (bot0 - top0) / 2, width: 1, height: 1 });
     if (sheet) {
       cardEl.style.left = ''; cardEl.style.top = '';
       // automatic peek: collapse to ~25% of the viewport when the expanded sheet would cover the target
@@ -795,14 +865,14 @@ export function storyMode({ steps, navigate, onExit }) {
     const yOver = spotBot - pos.top;
     if (xHit && yOver > 0 && yOver <= 12 && pos.top + yOver + ch <= innerHeight - 2) pos.top = Math.ceil(spotBot) + 1;
     Object.assign(cardEl.style, { left: `${pos.left}px`, top: `${pos.top}px` });
+    if (cardFrom && cardFrom.width) flip(cardEl, cardFrom, { scale: false });
   }
   let raf = 0;
   const onViewport = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(place); };
 
   /**
    * Scroll so the target's top sits just under the sticky top bar (bar + 16 px on desktop, bar + 8 px on phones).
-   * A target shorter than the free space is not pushed further than needed: if it already sits fully inside the free
-   * band below the bar it stays put.
+   * A target already fully inside the free band below the bar stays put.
    */
   function frame(el) {
     const bar = barBottom();
@@ -811,7 +881,35 @@ export function storyMode({ steps, navigate, onExit }) {
     const freeTop = bar + gapTop, freeBot = innerHeight - (isSheet() ? Math.round(innerHeight * 0.25) : BAR_GAP);
     if (r.top >= freeTop && r.bottom <= freeBot) return false;
     const y = Math.max(0, Math.round(scrollY + r.top - freeTop));
-    window.scrollTo({ top: y, behavior: reduce() ? 'auto' : 'smooth' });
+    window.scrollTo({ top: y, behavior: motionReduced() ? 'auto' : 'smooth' });
+    return true;
+  }
+
+  const text = (s, k) => (isSimple() && s[`${k}_simple`]) || s[k] || '';
+  function paintText() {
+    const s = steps[i];
+    stepEl.textContent = `STEP ${String(i + 1).padStart(2, '0')} / ${String(steps.length).padStart(2, '0')}`;
+    titleEl.textContent = text(s, 'title');
+    bodyEl.textContent = text(s, 'body');
+  }
+
+  async function locate(s, my) {
+    target = null;
+    if (isSheet() && s.mobile_selector) target = await waitFor(s.mobile_selector, 2500, my);
+    if (my !== seq) return false;
+    if (!target) target = await waitFor(s.selector, 10000, my);
+    if (my !== seq) return false;
+    if (target) {
+      cardEl.classList.toggle('is-sheet', isSheet());
+      // views render charts asynchronously: content above the target can still grow after the first scroll, so
+      // re-frame until the target stops moving (max 4 passes)
+      for (let pass = 0; pass < 4; pass++) {
+        const moved = frame(target);
+        await sleep(moved && !motionReduced() ? MOTION.slow : 120);
+        if (my !== seq) return false;
+        if (!moved && pass > 0) break;
+      }
+    }
     return true;
   }
 
@@ -820,10 +918,10 @@ export function storyMode({ steps, navigate, onExit }) {
     i = Math.max(0, Math.min(steps.length - 1, n));
     const s = steps[i];
     peekUser = null;
-    stepEl.textContent = `STEP ${String(i + 1).padStart(2, '0')} / ${String(steps.length).padStart(2, '0')}`;
-    titleEl.textContent = s.title;
-    bodyEl.textContent = s.body;
-    [...prog.children].forEach((b, j) => b.classList.toggle('is-done', j <= i));
+    elapsed = 0; ready = false; lastT = 0;
+    animateNext = true;
+    paintText();
+    paintFill();
     back.disabled = i === 0;
     next.textContent = i === steps.length - 1 ? 'Finish' : 'Next';
     root.setAttribute('aria-busy', 'true');
@@ -833,36 +931,35 @@ export function storyMode({ steps, navigate, onExit }) {
       if (differs) await navigate(want);
     }
     if (my !== seq) return;
-    // phones: a step may name a narrower child (mobile_selector) so the sheet does not cover what the step describes
-    target = null;
-    if (isSheet() && s.mobile_selector) target = await waitFor(s.mobile_selector, 2500);
-    if (my !== seq) return;
-    if (!target) target = await waitFor(s.selector);
-    if (my !== seq) return;
-    if (target) {
-      cardEl.classList.toggle('is-sheet', isSheet());
-      // views render charts asynchronously: content above the target can still grow after the first scroll, so
-      // re-frame until the target stops moving (max 4 passes)
-      for (let pass = 0; pass < 4; pass++) {
-        const moved = frame(target);
-        await new Promise((r) => setTimeout(r, moved && !reduce() ? 450 : 120));
-        if (my !== seq) return;
-        if (!moved && pass > 0) break;
-      }
-    }
+    if (!(await locate(s, my))) return;
     place();
     root.removeAttribute('aria-busy');
-    next.focus({ preventScroll: true });
-    if (playing) schedule();
+    if (document.activeElement !== playBtn) next.focus({ preventScroll: true });
+    ready = true; lastT = 0; // the clock starts once the step is framed
   }
+  // a reading-mode switch re-renders the view: swap the text and re-find the (new) target element
+  const onMode = async () => {
+    paintText();
+    const my = seq;
+    await sleep(60);
+    if (my !== seq || !root.isConnected) return;
+    ready = false;
+    if (await locate(steps[i], my)) { place(); ready = true; lastT = 0; }
+  };
   function exit() {
     seq++;
-    playing = false; clearTimeout(timer);
+    playing = false; ready = false;
+    if (loop) cancelAnimationFrame(loop);
+    loop = 0;
+    cancelAnimationFrame(raf);
+    pending.forEach((id) => clearTimeout(id)); pending.clear();
     document.removeEventListener('keydown', onKey, true); document.removeEventListener('keyup', onKeyUp, true);
+    document.removeEventListener('gnm:mode', onMode);
     removeEventListener('resize', onViewport);
     removeEventListener('scroll', onViewport, true);
     root.remove();
     if (activeStory === api) activeStory = null;
+    if (window.__gnmStory === api) delete window.__gnmStory;
     opener?.focus?.({ preventScroll: true });
     onExit?.();
   }
@@ -871,9 +968,11 @@ export function storyMode({ steps, navigate, onExit }) {
       if (activeStory) return activeStory;
       if (!steps?.length) return api;
       activeStory = api;
+      window.__gnmStory = api;
       opener = document.activeElement;
       document.body.append(root);
       document.addEventListener('keydown', onKey, true); document.addEventListener('keyup', onKeyUp, true);
+      document.addEventListener('gnm:mode', onMode);
       addEventListener('resize', onViewport);
       addEventListener('scroll', onViewport, true);
       go(0);
@@ -881,6 +980,9 @@ export function storyMode({ steps, navigate, onExit }) {
     },
     exit,
     go,
+    play: () => setPlaying(true),
+    pause: () => setPlaying(false),
+    state: () => ({ index: i, playing, elapsed, stepMs: STEP_MS(), ready, loops: loop ? 1 : 0, timers: pending.size }),
     get index() { return i; },
   };
   return api;

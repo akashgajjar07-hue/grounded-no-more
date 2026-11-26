@@ -1,0 +1,85 @@
+/* =====================================================================
+   motion.css — THE motion tokens + shared micro-interactions (mirror: docs/js/lib/motion.js)
+   Animate only transform / opacity. prefers-reduced-motion: no movement, instant state changes.
+   ===================================================================== */
+:root {
+  --motion-fast: 150ms;
+  --motion-base: 250ms;
+  --motion-slow: 450ms;
+  --motion-hero: 1200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.3, 0, 1, 1);
+  --motion-stagger: 40ms;
+  --motion-rise: 8px;
+  /* legacy aliases (existing CSS uses these names): they now resolve to the tokens above */
+  --dur-fast: var(--motion-fast);
+  --dur-base: var(--motion-base);
+  --dur-slow: var(--motion-slow);
+  --ease: var(--ease-standard);
+}
+
+/* ---- workspace change: content fades + rises 8 px (base); the first 6 cards stagger 40 ms ---- */
+@keyframes motion-rise { from { opacity: 0; transform: translateY(var(--motion-rise)); } to { opacity: 1; transform: none; } }
+@keyframes motion-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes motion-pop { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+.view-enter { animation: motion-rise var(--motion-base) var(--ease-enter) both; }
+.motion-stagger { animation: motion-rise var(--motion-base) var(--ease-enter) both; animation-delay: calc(var(--stagger-i, 0) * var(--motion-stagger)); }
+
+/* ---- modal: scale 0.96 → 1 + fade ---- */
+.modal-card { animation: motion-pop var(--motion-base) var(--ease-enter) both; }
+
+/* ---- hover glow (an opacity-animated halo, never an animated box-shadow) ---- */
+.btn, .nav-item, .card-link, .chip-action { position: relative; }
+.btn::after, .nav-item::after {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 1px var(--c-teal-a24), 0 0 14px var(--c-teal-a14);
+  opacity: 0; transition: opacity var(--motion-fast) var(--ease-standard);
+}
+.btn:hover::after, .nav-item:hover::after { opacity: 1; }
+.btn:disabled::after, .btn[aria-disabled='true']::after { display: none; }
+
+/* ---- press: scale 0.98 ---- */
+.btn, .seg button, .tab, .nav-item, .dts-row[role='button'], .term {
+  transition-property: background-color, border-color, color, transform, opacity;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--ease-standard);
+}
+.btn:active:not(:disabled), .seg button:active, .tab:active, .nav-item:active, .dts-row[role='button']:active { transform: scale(0.98); }
+
+/* ---- focus ring: #22C7B8, 2 px (also in base.css :focus-visible) ---- */
+:focus-visible { outline: 2px solid #22C7B8; outline-offset: 2px; }
+
+/* ---- sliding toggles: segmented controls get a thumb that slides (transform only) ---- */
+.seg.has-thumb { position: relative; }
+.seg.has-thumb > button { position: relative; z-index: 1; }
+.seg.has-thumb > button[aria-checked='true'], .seg.has-thumb > button[aria-pressed='true'] { background: transparent; border-color: transparent; box-shadow: none; }
+.seg-thumb {
+  position: absolute; top: 3px; bottom: 3px; left: 0; width: 0; z-index: 0; pointer-events: none;
+  border-radius: 7px; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+  transition: transform var(--motion-base) var(--ease-standard);
+}
+.seg-thumb.no-anim { transition: none; }
+
+/* ---- tooltips: 150 ms fade, cursor tracking by transform (motion.js tooltipFade) ---- */
+.tooltip { transition: opacity var(--motion-fast) var(--ease-standard); transform: none; will-change: auto; }
+.tooltip.is-on { will-change: transform, opacity; }
+.term-pop { display: block; opacity: 0; visibility: hidden; transition: opacity var(--motion-fast) var(--ease-standard), visibility 0s linear var(--motion-fast); }
+.term-pop.is-on { opacity: 1; visibility: visible; transition: opacity var(--motion-fast) var(--ease-standard), visibility 0s; }
+
+/* ---- guided tour ---- */
+.story-spot { transition: none; }
+.story-card { transition: opacity var(--motion-base) var(--ease-standard); }
+.story-progress span { position: relative; overflow: hidden; }
+.story-progress span.is-done, .story-progress span.is-current { background: var(--line-strong); }
+.story-fill { position: absolute; inset: 0; background: var(--primary); transform-origin: 0 50%; transform: scaleX(0); }
+.story-progress span.is-done .story-fill { transform: scaleX(1); }
+.story.is-playing .story-progress span.is-current .story-fill { will-change: transform; }
+
+/* ---- reduced motion: no movement, instant state changes ---- */
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-fast: 0ms; --motion-base: 0ms; --motion-slow: 0ms; --motion-hero: 0ms; --motion-stagger: 0ms; --motion-rise: 0px; }
+  .view-enter, .motion-stagger, .modal-card { animation: none !important; }
+  .btn:active:not(:disabled), .seg button:active, .tab:active, .nav-item:active, .dts-row[role='button']:active { transform: none; }
+  .seg-thumb, .tooltip, .term-pop, .story-card { transition: none !important; }
+}

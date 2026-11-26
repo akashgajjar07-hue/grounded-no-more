@@ -12,6 +12,9 @@
  * D3 v7 and Observable Plot are loaded as globals (window.d3, window.Plot) by index.html.
  */
 import { h, provChip, tooltip, dataTable } from '../ui.js';
+import { MOTION, reducedMotion as motionReduced, chartTransition, throttleRAF } from '../lib/motion.js';
+/** v2.1: motion helpers re-exported for chart code (tokens live in lib/motion.js + css/motion.css). */
+export { MOTION, chartTransition, throttleRAF };
 
 const d3 = () => window.d3;
 
@@ -51,14 +54,14 @@ export const theme = {
   },
   font: { display: "'Space Grotesk', system-ui, sans-serif", ui: "'Inter', system-ui, sans-serif", mono: "'IBM Plex Mono', ui-monospace, monospace" },
   margin: { top: 16, right: 64, bottom: 32, left: 52 },
-  motion: { ms: 300, ease: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+  motion: { ms: MOTION.base, ease: MOTION.ease.standard, fast: MOTION.fast, slow: MOTION.slow },
   /** Reference line (threshold, target, "naive = 1.0", "on quote"): faded titanium 4 4 dashes + faint label. */
   refLine: (g, opts) => refLine(g, opts),
 };
 /** Accent colours counted by lintAccents() (≤ 2 per chart). */
 const ACCENTS = { teal: ['#22c7b8', '34,199,184', '#7ff3e6', '127,243,230'], copper: ['#c47f52', '196,127,82'], red: ['#e76b64', '231,107,100'], amber: ['#f5b942', '245,185,66'] };
 const isDev = () => !!window.__gnmDev;
-export const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+export const reducedMotion = motionReduced;
 
 // --------------------------------------------------------------------------- formatters
 const trim = (s) => s.replace(/\.0(?=[^\d]|$)/, '');
