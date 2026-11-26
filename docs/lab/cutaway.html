@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Systems cutaway · GROUNDED NO MORE</title>
+  <meta name="description" content="An original, schematic cutaway of a generic narrowbody airliner. Hover or tap a numbered part to see how often it comes off, how long repair takes and where the Network Plan keeps spares. Independent educational simulation.">
+  <meta name="theme-color" content="#09131F">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="../vendor/fonts/space-grotesk/space-grotesk-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../vendor/fonts/inter/inter-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../vendor/fonts/ibm-plex-mono/ibm-plex-mono-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="cutaway.css">
+  <script defer src="../vendor/d3/d3.min.js"></script>
+</head>
+<body class="blueprint-bg">
+  <main class="cw-page" id="main">
+    <header class="cw-head">
+      <div>
+        <p class="eyebrow">Lab · Systems cutaway <span class="cw-chip">post-plan, exploratory</span></p>
+        <h1>Where the modelled parts sit on a narrowbody</h1>
+        <p class="lede">A schematic cutaway of a generic twin-engine narrowbody. Each glowing part is one of the 120 modelled part numbers. Hover, tap or tab to a number to see its facts; click to open its part page.</p>
+      </div>
+      <ul class="cw-three" aria-label="Summary">
+        <li><b>What this shows:</b> 26 narrowbody parts placed in a cut-open aircraft.</li>
+        <li><b>Why it matters:</b> a missing part keeps a plane on the ground, wherever it sits.</li>
+        <li><b>What a planner would do:</b> check repair time and where spares are held.</li>
+      </ul>
+    </header>
+    <div id="cutaway" aria-busy="true"></div>
+    <p class="cw-note">Original drawing generated from a simple 3-D model. Not to scale, not engineering data, no real aircraft type. Part positions are indicative. Facts come from the simulated data (fictional airline).</p>
+    <footer class="cw-foot-page">
+      <span>Built by Akash Gajjar with AI-assisted development (Claude Code). Fictional airline, simulated data.</span>
+      <a href="../index.html">Back to the workspace</a>
+    </footer>
+  </main>
+  <script type="module">
+    import { mountCutaway } from './cutaway.js';
+    const host = document.getElementById('cutaway');
+    try {
+      const [parts, rot] = await Promise.all([
+        fetch('../data/parts.json').then((r) => r.json()),
+        fetch('../data/rotables.json').then((r) => r.json()),
+      ]);
+      await mountCutaway(host, { parts: parts.parts, repair: rot.tat });
+    } catch (err) {
+      host.textContent = 'The cutaway could not load. Please reload the page.';
+      console.error(err);
+    } finally {
+      host.removeAttribute('aria-busy');
+      document.documentElement.dataset.ready = 'true';
+    }
+  </script>
+</body>
+</html>
