@@ -44,15 +44,15 @@ What this project does not do, and where its numbers would mislead if read too l
 
 **17. Carrying cost is a single rate.** 20% per year (range 15–25%) covers capital cost, storage, insurance and obsolescence together. Real rates vary by part class and company.
 
-**18. The optimiser is a greedy heuristic.** Marginal analysis is optimal only for separable, convex objectives, and then only at the budgets where greedy steps land. Hub-station coupling and per-aircraft AOG merging make the real objective non-separable. A small exact comparison is reported where available: `{{RESULT:optim.greedy_gap_small_case_pct}}`.
+**18. The optimiser is a greedy heuristic.** Marginal analysis is optimal only for separable, convex objectives, and then only at the budgets where greedy steps land. Hub-station coupling and per-aircraft AOG merging make the real objective non-separable. A small exact comparison: on a small separable, convex toy case the greedy allocation equals the brute-force optimum at every greedy breakpoint (unit test `tests/test_optim_greedy.py::test_greedy_equals_brute_force_at_breakpoints`, passing); no exact comparison exists for the full, non-separable network problem.
 
 **19. The optimiser works on an analytic proxy.** The frontier is built from deadline-weighted EBO, then each candidate is checked in the event engine. Where the proxy and the simulation disagree, the simulation is reported.
 
-**20. Pool exchange (P3) is stylised.** Fixed response time, fee, capacity and core-return terms (all ASSUMED). Real pool agreements have tiered service levels, exclusions and modification-status conditions.
+**20. Pool exchange (P3) is not implemented.** The engine has no pool mechanics (the hook raises `NotImplementedError`); the AOG Response Lab shows a pool option only as a greyed, indicative estimate with ASSUMED terms. Instead, every policy relies on an AOG-desk emergency purchase (rotables within 5 days at a 15% premium), which in practice means access to an exchange or loan market. Switching it off shows how much: with it switched off (selection seeds) material AOG rises from 428 h to 14,400 h a year under P2, from 118 h to 11,230 h under I125, and from 2,938 h to 268,500 h under P0. All results are conditional on that market existing for every part.
 
 ## Evaluation
 
-**21. Paired seeds narrow intervals within this world only.** Confidence intervals reflect simulation noise across 20 seeds, not uncertainty in the assumed parameters. Parameter uncertainty is explored only through the sensitivity (tornado) analysis.
+**21. Paired seeds narrow intervals within this world only.** Confidence intervals reflect simulation noise across 20 seeds, not uncertainty in the assumed parameters. Parameter uncertainty is explored only through the sensitivity (tornado) analysis. Even within this world, selection-seed results did not fully carry over to the holdout: the recommended point scored 118 h on selection seeds and 223 h [174–272] on the holdout, and the frozen MASE champion for intermittent rotables (naive) ranked 9 of 9 on the holdout forecasting test.
 
 **22. One fleet, one network.** Results are for a 40-aircraft, seven-station network. They are not evidence about other fleet sizes or network shapes.
 

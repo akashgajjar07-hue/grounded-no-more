@@ -1,0 +1,88 @@
+# Validation report
+
+What was checked, how, and what came out. Rendered by `scripts/render_docs.py` from `reports/junit.xml`, `outputs/`, `docs/data/` and `git log`; template `docs/templates/VALIDATION_REPORT.md.tmpl`. Everything here concerns a **simulated** airline (Falcon Hub Airways, fictional). The section "Phase 5 reviewer findings and fixes" at the end is written by hand and is preserved when the report is re-rendered.
+
+---
+
+## 1. Tests
+
+{{RESULT:val.tests_suite}} (`reports/junit.xml`; summary in `reports/test_results.txt`).
+
+{{RESULT:val.tests_table}}
+
+Doc rendering is checked by `tests/test_docs_rendered.py`: no result placeholder survives in the rendered docs, and the headline KPI numbers in the README match `docs/data/kpis.json`.
+
+## 2. Calibration (P0 only, locked before any P1/P2 run)
+
+The generator was calibrated against ASSUMED bands using the legacy policy P0 only, then locked (`outputs/freeze/calibration_lock.json`, enforced by `tests/test_calibration_lock.py`) before any data-driven policy was built.
+
+{{RESULT:val.calibration_table}}
+
+## 3. Freeze and holdout chain
+
+Frozen at {{RESULT:val.frozen_at}}: {{RESULT:freeze.n_artefacts}} artefacts (forecast champions, P0/P1/P2 parameter tables for all variants, frontier candidates, configs), {{RESULT:val.freeze_verified}}. Manifest SHA-256 `{{RESULT:freeze.manifest_sha256}}`.
+
+Commit chain (`git log --oneline`, oldest first; the freeze commit precedes the holdout-results commit):
+
+{{RESULT:val.git_chain}}
+
+Holdout runs logged in `outputs/freeze/holdout_log.json`, all after the freeze:
+
+{{RESULT:val.holdout_log_table}}
+
+### Holdout incident (D010)
+
+{{RESULT:freeze.holdout_incident}}
+
+### Reporting note (D011)
+
+{{RESULT:val.reporting_note}}
+
+## 4. Selection versus holdout
+
+Selection seeds 100–119 were used for every choice; holdout seeds 1000–1019 were run once. Central variant, KPIs over weeks 104–155, annualised.
+
+{{RESULT:val.consistency_table}}
+
+Reading: the legacy baseline replicated closely. The recommended plan I125 was optimistic on selection: {{RESULT:frontier.recommended.selection_aog_hours}} on selection against {{RESULT:frontier.recommended.aog_hours}} {{RESULT:frontier.recommended.aog_hours_ci}} on holdout ({{RESULT:frontier.recommended.selection_shift_pct}}), while P2 moved {{RESULT:policies.P2.selection_shift_pct}}. The paired improvement of I125 over P2 replicated: {{RESULT:frontier.recommended_vs_P2.selection_delta}} on selection, {{RESULT:frontier.recommended_vs_P2.delta_aog_hours}} {{RESULT:frontier.recommended_vs_P2.delta_aog_hours_ci}} on holdout.
+
+Forecasting: frozen champions re-scored on the holdout (12 origins, weeks 104–148):
+
+{{RESULT:val.champion_check_table}}
+
+The intermittent-rotable champion (naive) ranked last. The policies size rotables on the reliability-exposure rate, not on the MASE champion, so policy results do not depend on it. Reliability vs best Croston-family method on removal-driven parts (holdout): {{RESULT:forecast.reliability_vs_croston.delta_mase}} {{RESULT:forecast.reliability_vs_croston.delta_mase_ci}}; {{RESULT:forecast.reliability_vs_croston.verdict}}.
+
+## 5. Truth recovery (evaluation only)
+
+`gnm.eval.truth_recovery` is the only code that reads the hidden truth. Metric: median absolute log error |ln(estimate / truth)|.
+
+{{RESULT:val.truth_table}}
+
+{{RESULT:val.truth_ps4}}.
+
+## 6. Analytic models versus the simulator
+
+Palm vs simulation for rotable floats (P1, central, selection seeds; `outputs/policies/palm_vs_sim.csv`):
+
+{{RESULT:val.palm_table}}
+
+Optimiser proxy vs simulation: {{RESULT:policy.calibration.predicted_vs_simulated}}.
+
+Greedy optimality: {{RESULT:optim.greedy_gap_small_case_pct}}.
+
+AOG reconstruction: {{RESULT:val.aog_reconcile}}.
+
+## 7. Known limitations that bear on validity
+
+- The world, the methods and the evaluation were designed by the same author; the reliability model has a structural home advantage (removals are generated from exposure ÷ MTBUR).
+- Every policy depends on the AOG-desk emergency purchase: {{RESULT:frontier.aog_desk.summary}}.
+- In the low-stress variant {{RESULT:frontier.low_stress.summary}}
+- Confidence intervals reflect seed-to-seed noise in one simulated world, not parameter uncertainty.
+- The rolling-origin forecast scoring gives the reliability model the realised flying programme of the forecast weeks.
+- Full list: [LIMITATIONS.md](../LIMITATIONS.md).
+
+---
+
+## Phase 5 reviewer findings and fixes
+
+*To be completed by the lead.*

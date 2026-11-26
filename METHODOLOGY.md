@@ -2,7 +2,7 @@
 
 How GROUNDED NO MORE turns a simulated airline into planning decisions, and how those decisions are tested. The contract every module builds against is in [`docs/data_contract.md`](docs/data_contract.md); every parameter is in [`config/assumptions.yaml`](config/assumptions.yaml) and the [assumption register](docs/assumption_register.md).
 
-Parameter values quoted below come from the config and are **ASSUMED** unless marked otherwise. Result values are shown as `{{RESULT:…}}` placeholders until the pipeline fills them.
+Parameter values quoted below come from the config and are **ASSUMED** unless marked otherwise. Result values are computed from `outputs/` and `docs/data/` by `scripts/render_docs.py`, which renders this file from `docs/templates/METHODOLOGY.md.tmpl`. Headline results are from the holdout (seeds 1000–1019, central variant) unless labelled "selection".
 
 **Contents**
 
@@ -25,7 +25,7 @@ Parameter values quoted below come from the config and are **ASSUMED** unless ma
 
 | Principle | How it is enforced |
 |---|---|
-| Planning models never see the truth | True rates live in `data/ground_truth/`. `tests/test_leakage.py` scans the source of `gnm.forecasting`, `gnm.policy`, `gnm.optim`, `gnm.aog` and `gnm.export` for any import of the truth or the generator internals. |
+| Planning models never see the truth | True rates live in `data/ground_truth/`. `tests/test_leakage.py` statically scans the source of `gnm.forecasting`, `gnm.policy`, `gnm.optim`, `gnm.aog` and `gnm.export` for imports of the truth or the generator internals, and runtime tests make reads of the hidden-truth folder raise while the planning pipeline runs. These are checks, not a proof. |
 | One set of mechanics for every policy | A policy is a parameter table (`PolicySpec`). One event engine runs them all ([D002](docs/DECISIONS.md)). |
 | Same world for every policy | Exogenous demand and the random draws for repair time, condemnation and lead time are pre-sampled into a `Scenario` (common random numbers, [D003](docs/DECISIONS.md)). |
 | Test once, on data nobody tuned against | Parameters are hashed before the holdout runs ([section 11](#11-holdout-freeze-discipline)). |
@@ -37,7 +37,7 @@ Parameter values quoted below come from the config and are **ASSUMED** unless ma
 
 `gnm.sim.generator` builds the world from `world_seed = 2023`.
 
-**Fleet.** 24 narrowbody (A320-family archetype) and 16 widebody (787-family archetype) aircraft with fictional registrations (`A6-FH?`, `A6-FW?`). Daily utilisation is drawn per aircraft: narrowbody about 10.5 FH and 4.2 FC per day, widebody about 14.0 FH and 1.6 FC per day (ASSUMED). Weekly, monthly and holiday seasonality factors scale utilisation.
+**Fleet.** 24 narrowbody (A320-family archetype) and 16 widebody (787-family archetype) aircraft with fictional registrations (`A6-FH?`, `A6-FW?`). Daily utilisation is drawn per aircraft: narrowbody about 10.5 FH and 4.2 FC per day, widebody about 14.0 FH and 2.4 FC per day (ASSUMED). Weekly, monthly and holiday seasonality factors scale utilisation.
 
 **Network.** Hub AUH and six outstations (LHR, FRA, CAI, JED, BOM, SIN). Station coordinates are REAL (OurAirports). Narrowbodies fly to CAI, JED and BOM; widebodies to LHR, FRA, BOM and SIN, in the shares given by `network.route_mix` (ASSUMED). BOM is the only outstation both fleets serve.
 
@@ -50,7 +50,7 @@ Parameter values quoted below come from the config and are **ASSUMED** unless ma
 | Demand driver | Line usage per 1,000 FC, plus kits | Removals (FH or FC) | Removals (FH or FC) |
 | Repair | No | No | Shop TAT 15–90 days, cost 8–25% of unit cost, condemnation 1–8% |
 
-**Reliability.** Removal-driven parts have a true MTBUR (3,000–40,000 FH, or 2,000–25,000 FC for the 35% that are cycle-driven). The part master publishes a **vendor-quoted** MTBUR, which is the truth times lognormal noise (σ_log = 0.35) and 25% optimistic on average ([D005](docs/DECISIONS.md)). About 30% of parts have overdispersed, clustered demand (negative binomial, shape k in 0.6–3.0). All of this is ASSUMED and SIMULATED. None of it is measured reliability.
+**Reliability.** Removal-driven parts have a true MTBUR (4,000–40,000 FH, or 2,500–25,000 FC for the 35% that are cycle-driven). The part master publishes a **vendor-quoted** MTBUR, which is the truth times lognormal noise (σ_log = 0.35) and 25% optimistic on average ([D005](docs/DECISIONS.md)). About 30% of parts have overdispersed, clustered demand (negative binomial, shape k in 0.6–3.0). All of this is ASSUMED and SIMULATED. None of it is measured reliability.
 
 **Planted situations.** Four documented demo situations (PS1–PS4) are built in so the planner screens have something real to find: an understocked D0 rotable at BOM, an overdue repair order at the EU vendor, a declining consumable creating excess, and a lead-time jump on one expendable around week 70.
 
@@ -154,28 +154,48 @@ Series with too few non-zero periods to estimate CV² are labelled `insufficient
 
 | Method | Idea | Best suited to |
 |---|---|---|
-| Naive / moving average | Benchmarks | Scaling (MASE) and sanity |
-| Simple exponential smoothing | Smoothed level | Smooth demand |
+| Zero | Forecast 0 every week. Benchmark only, never eligible as champion | Shows how MAE-type metrics flatter a zero forecast on sparse series |
+| Naive | Last week's demand | Benchmark; also the MASE scale |
+| Moving average | Mean of the last *k* weeks, *k* ∈ {2, 3, 4, 6, 8, 13, 26} chosen by in-sample one-step MSE | Benchmark, smooth demand |
+| **ADIDA** | Aggregate the series into buckets of about one mean inter-demand interval, smooth the bucket totals, spread back per week | Intermittent |
+| **IMAPA** | Average of ADIDA-style forecasts over several aggregation levels | Intermittent |
 | **Croston** | Smooth demand size and interval separately; forecast = size ÷ interval | Intermittent |
 | **SBA** (Syntetos–Boylan approximation) | Croston × (1 − α/2) to remove Croston's known upward bias | Intermittent, lumpy |
 | **TSB** (Teunter–Syntetos–Babai) | Smooth the probability of demand each period instead of the interval, so the forecast decays when demand stops | Obsolescence risk, declining parts |
 | **Bootstrap** (Willemain-style) | Resample observed history, with a Markov model for zero/non-zero runs and jittered sizes, to build a full lead-time demand distribution | Lumpy demand, quantiles for stock setting |
-| **Reliability-exposure model** | Removal rate = installed quantity × projected exposure ÷ estimated MTBUR. MTBUR is estimated from observed removals and cumulative exposure, starting from the vendor-quoted figure and moving towards the evidence as removals accumulate | Removal-driven rotables and expendables |
+| **Reliability-exposure model** | Removal rate per unit of exposure from a gamma–Poisson posterior: a Gamma prior worth 2 pseudo-removals at the vendor-quoted MTBUR, updated with observed removals and cumulative exposure (installed quantity × FH or FC). Forecast = rate × planned exposure (mean of the last 52 weeks); lead-time demand is negative binomial (the posterior predictive) | Removal-driven rotables and expendables |
 
-Croston-family methods use the `statsforecast` implementations where available. The reliability model is the project's hypothesis: because it uses the exposure that drives removals, it should beat time-series methods that only see the demand history, especially when utilisation changes. The selection window tests that hypothesis rather than assuming it.
+Croston, SBA, TSB, ADIDA and IMAPA are implemented in numpy and cross-checked against `statsforecast` (Croston, SBA and TSB match to 1e-10 with fixed parameters; ADIDA and IMAPA to 1e-4 relative). Smoothing constants are chosen from a grid by in-sample one-step MSE. The reliability model is the project's hypothesis: because it uses the exposure that drives removals, it should beat time-series methods that only see the demand history, especially when utilisation changes. The selection window tests that hypothesis rather than assuming it.
 
 ### 6.4 Metrics
 
 - **MASE** (mean absolute scaled error): forecast MAE ÷ in-sample MAE of the one-step naive forecast on the training window. Scale-free, so it can be averaged across parts. Below 1 means better than naive.
 - **Bias**: mean forecast error. Persistent positive bias means overstocking.
 - **PIS** (periods in stock): the cumulative forecast error summed over the horizon. It measures how many unit-periods of stock (positive) or shortage (negative) a forecast would have produced. It catches bias that MAE-type measures miss, which matters for intermittent demand where a zero forecast can score a deceptively good MAE.
-- **Coverage**: share of actuals that fall inside the forecast's prediction interval, for methods that produce a distribution.
+- **Coverage and pinball loss**: each method's lead-time demand distribution gives quantiles q50, q90 and q95 (an empirical distribution for the bootstrap, negative binomial for the reliability model, Poisson around the point forecast for the others). Coverage is the share of actual lead-time demand at or below the quantile (q90 should cover about 90%). Pinball loss at q90 scores the quantile directly and is the metric closest to setting a reorder point.
 - **Stock-based evaluation**: the forecast's lead-time demand distribution is turned into a reorder point, and the resulting fill rate and stock are compared. A forecast is only as good as the stock decision it supports.
 - **Truth recovery** (evaluation only): how close each method's implied rate gets to the hidden true rate. Only `gnm.eval.truth_recovery` reads the truth.
 
 ### 6.5 Selection
 
-A champion is picked per demand class and part class by mean MASE across rolling origins in the selection window, with bias and PIS as tie-breakers. Confidence intervals on MASE differences are bootstrapped over parts. Results: `{{RESULT:forecast.leaderboard_table}}`.
+A champion is picked per demand class × part class by mean MASE over the six rolling origins in the selection window (78, 82, …, 98; 4-week horizon). Each part is averaged over its origins first, then parts are averaged; parts with an undefined MASE (constant pre-origin history) are excluded and counted. Methods within 0.001 of the best mean MASE are tied and broken by the smallest absolute mean bias, then by a fixed method order. A cell with fewer than 5 parts falls back to the pooled demand class, then to the global ranking. The zero forecast is never eligible. Leaderboard CIs are percentile bootstraps over parts (1,000 resamples). The champions were then frozen, and the holdout re-scored every method on 12 further origins (weeks 104–148) of the history continuation.
+
+Holdout leaderboard, all demand classes pooled within each part class (mean MASE [95% bootstrap CI over parts], and q90 pinball loss; best eligible MASE and best pinball in bold):
+
+| Method | Consumables MASE [CI] | Consumables q90 pinball | Expendables MASE [CI] | Expendables q90 pinball | Rotables MASE [CI] | Rotables q90 pinball |
+|---|---|---|---|---|---|---|
+| Zero (benchmark, not eligible) | 1.782 [1.546–2.041] | 27.790 | 0.770 [0.677–0.869] | 2.231 | 0.721 [0.642–0.808] | 1.515 |
+| naive | 0.977 [0.928–1.022] | 4.386 | 0.999 [0.881–1.130] | 1.218 | 1.065 [0.932–1.205] | 1.050 |
+| moving average | 0.764 [0.718–0.823] | 1.685 | 0.881 [0.806–0.959] | 0.315 | 0.938 [0.854–1.030] | 0.295 |
+| Croston | 0.759 [0.718–0.810] | 1.619 | 0.916 [0.856–0.976] | 0.289 | 0.971 [0.907–1.047] | 0.260 |
+| SBA | **0.750 [0.711–0.798]** | 1.687 | 0.888 [0.832–0.940] | 0.282 | 0.939 [0.867–1.016] | 0.268 |
+| TSB | 0.758 [0.715–0.805] | 1.641 | **0.871 [0.809–0.932]** | 0.297 | **0.927 [0.850–1.015]** | 0.281 |
+| ADIDA | 0.761 [0.722–0.808] | 1.699 | 0.885 [0.825–0.944] | 0.286 | 0.939 [0.867–1.023] | 0.272 |
+| IMAPA | 0.763 [0.721–0.811] | 1.699 | 0.875 [0.816–0.932] | 0.287 | 0.932 [0.854–1.014] | 0.275 |
+| bootstrap | 0.783 [0.720–0.868] | 1.551 | 0.968 [0.905–1.032] | 0.338 | 1.043 [0.979–1.115] | 0.304 |
+| reliability-exposure | 0.767 [0.708–0.850] | **1.541** | 0.891 [0.838–0.940] | **0.272** | 0.934 [0.876–0.998] | **0.246** |
+
+Full tables: `outputs/holdout/forecast_leaderboard.csv` (by demand class × part class) and `outputs/forecasting/leaderboard.csv` (selection window).
 
 ---
 
@@ -214,20 +234,23 @@ Two facts drive the optimiser:
 
 A worked numeric example (λ = 2 per 30 days, TAT 30 days) is in the [study guide](STUDY_GUIDE.md#poisson-float-and-ebo-worked-example).
 
-When demand is overdispersed (negative binomial), the Poisson pipeline understates variance. The policy then uses a negative binomial with the estimated dispersion for the pipeline distribution. This is a pragmatic extension, not part of Palm's theorem.
+When demand is overdispersed, the Poisson pipeline understates variance. In this implementation **rotable floats always use the Poisson pipeline** (`gnm.policy.policies.palm_base_stock`); overdispersion is handled only for consumables and expendables, whose lead-time demand switches to a negative binomial when variance/mean ≥ 1.05 ([section 7.3](#73-consumables-and-expendables-s-s)). For clustered rotable removals the Poisson float is therefore optimistic, and the event engine (which does simulate the clustering) is the referee.
 
 ### 7.3 Consumables and expendables: (s, S)
 
-For counted stock, lead-time demand (LTD) is built from the champion forecast over the purchase lead time (or the transfer time for outstations). The reorder point *s* is the LTD quantile that meets the service target for the part's deadline class: 0.97 for D0, 0.92 for D3, 0.85 for D10 (ASSUMED). The order-up-to level *S* = *s* + an order quantity sized from average demand. Lead-time uncertainty enters through the quoted lead-time CV.
+For counted stock, lead-time demand (LTD) is built from the champion forecast over the purchase lead time at AUH (on network demand, because AUH replenishes the outstations) or over the observed routine transit for outstations. LTD variance = VMR × mean + rate² × σ_L², with negative binomial when variance/mean ≥ 1.05, otherwise Poisson; when the champion is the bootstrap the hub uses its empirical LTD. The reorder point *s* is the LTD quantile that meets the cycle-service target for the part's deadline class: 0.97 for D0, 0.92 for D3, 0.85 for D10 (ASSUMED). *S* = *s* + EOQ, with EOQ = √(2DK/hc) (K = AED 350 per PO at the hub, AED 150 per routine line at outstations, h = 20%), capped at 52 weeks of cover and half the shelf life. The purchase lead time is the planner's estimate from history receipts (recency-weighted, with a supplier-change rule), not the quoted figure; this is what catches PS4.
 
 ### 7.4 Policies compared
 
 | Policy | Description |
 |---|---|
-| **P0 Legacy** | Static rules. Consumables: min = 6 weeks of average demand, max = 2 × min. Rotables: float = ceil(5% of installed fleet quantity), all at AUH; an outstation holds 1 unit only for D0 parts with fleet quantity ≥ 40. |
-| **P1 Data-driven, hub float** | Forecast-based (s, S) and Palm-based floats, with the float held at AUH. |
-| **P2 Data-driven, positioned** | As P1, but rotable float allocated across hub and outstations by the network model and the frontier. |
-| **P3 Pool exchange** *(stretch)* | P2 plus a pool contract: 24 h response, fee 8% of unit cost per exchange, 10-day core return, AED 250,000 annual access fee, capacity 6 exchanges a month (all ASSUMED). |
+| **P0 Legacy** | Static rules on vendor-quoted figures only. Consumables and expendables: min = 6 weeks of quoted average demand, max = 2 × min, at every station that sees quoted demand. Rotables: network float = ceil(quoted annual removals × quoted shop TAT ÷ 365), no safety stock; all at AUH, except 1 unit (taken from the float) at an outstation when the part is D0 and quoted removals there are at least 4 a year. |
+| **P1 Local optimised** | Each stocking point sized on its own forecast demand (single-echelon). C/E: (s, S) as in 7.3. Rotables: every station holds its own Palm float, the smallest S with P(X < S) ≥ target, X ~ Poisson(local removal rate × local pipeline time). Emergency source AUH only; no laterals, no rebalancing. A deliberate "every station for itself" comparator. |
+| **P2 Network** | Hub float sized on the **network** pipeline at the target; outstation *j* gets its *k*-th rotable unit only while annual requests × [F(k) − F(k−1)] × (P(D0) × AOG transport hours × AED/h penalty + logistics per miss) ÷ unit cost ≥ 0.20 (the carrying rate), where F is fill with resupply from AUH (routine transit + hub wait EBO/λ). C/E outstations that qualify run (k−1, k−1+EOQ). Lateral transfers and rebalancing on. |
+| **I125** (recommended) | P2's count-part parameters and network rules, plus greedy rotable additions up to 1.25 × P2's allocation capital ([section 9](#9-greedy-marginal-allocation-and-the-readiness-frontier)). |
+| P3 Pool exchange | **Not implemented.** The engine has a hook but raises `NotImplementedError`; pool terms in the config (24 h response, 8% fee, AED 250,000 a year, all ASSUMED) are used only for the greyed, indicative option in the AOG Response Lab. |
+
+All policies keep the AOG-desk emergency purchase on (an expedited unit within 2 / 3 / 5 days for C / E / R at a 15% premium) and pay no TAT acceleration. Rotable base stock handed to the engine is serviceable stock: the engine also seeds each repair loop with round(quoted rate × quoted pipeline days) units (123 in total), so P1 and P2 subtract these from Palm's total S at the hub.
 
 ---
 
@@ -237,7 +260,7 @@ The positioning model is **METRIC-inspired, not full METRIC**. It borrows Sherbr
 
 - **Station pipeline.** An outstation that issues a unit is resupplied from AUH. Its pipeline is the resupply time: routine transport (about 4 days) plus the expected delay if AUH is itself out of stock.
 - **Hub delay.** The AUH delay is approximated from the hub's own EBO: expected delay ≈ EBO_hub ÷ network demand rate (Little's law).
-- **Station demand.** Each station's removal rate comes from the flying its routes generate: route mix × fleet exposure × installed quantity ÷ estimated MTBUR.
+- **Station demand.** The network removal rate (reliability posterior × planned exposure) is split across stations by shares estimated from observed station counts, shrunk (4 pseudo-requests) towards an exposure-based empirical-Bayes prior. This learns from data that most deferred D3/D10 removals end up rectified at AUH.
 - **Emergency cover.** A station without stock is covered by an emergency transfer with a known AOG transport time. For D0 parts the cost of a station stockout is roughly that transport time in AOG hours; for D3/D10 parts it is often zero, because the transfer arrives inside the window.
 
 Simplifications versus full METRIC: no variance correction for the station pipeline (VARI-METRIC), no explicit lateral pooling in the analytic model (laterals appear only in the simulation where a policy allows them), and repairs happen only at the hub's shops. The event engine runs the real mechanics, so any error in the approximation shows up in the evaluation rather than being hidden by it.
@@ -248,15 +271,19 @@ Simplifications versus full METRIC: no variance correction for the station pipel
 
 **Objective.** Minimise expected AOG risk, weighted by archetype penalty and deadline class, for a given spares capital.
 
-**Algorithm.** Start from the minimum allocation (zero, or a floor). Repeatedly add the single unit — one (PN, station) pair — with the largest reduction in expected AOG risk per AED of capital. Record the (capital, risk) point after each step. The sequence of points is the frontier.
+**Algorithm.** The analytic model (`gnm.optim.model.ItemModel`) gives expected material AOG hours a year for each part from a hub + outstation (METRIC-lite) model: EBO-based hub wait capped at the expedite time, D0 demand counting the whole wait and D3/D10 only the excess beyond 72/240 h, outstation units saving the AUH→station transport hours for D0 demand, and the engine's seeded repair loop. Starting from a planner floor (P(pipeline < total spares) ≥ 0.10) with P2's count-part parameters as the minimum, the greedy repeatedly adds the single unit — one (PN, station) pair — with the largest reduction in penalty-weighted AOG hours per AED of capital, recording (capital, modelled AOG) after each step.
 
 **When greedy is optimal, and when it is not.** If the objective is a sum of separate terms, one per (PN, station), and each term is decreasing and convex in its stock level (as EBO is), marginal analysis yields allocations on the lower convex hull of the exact frontier. At those budgets it is optimal; between them, an integer knapsack could do slightly better. Two things in this project break separability: hub and station stock interact (the hub delay term), and AOG intervals merge per aircraft. So **greedy is a heuristic here**, chosen for speed, transparency and because each step has a clear "why this unit next" explanation a planner can check.
 
-**Picking candidates and the recommendation.** A set of frontier points is chosen on the selection seeds (100–119) and frozen. Each candidate is then run through the event engine on the holdout seeds (1000–1019) to get simulated AOG hours with confidence intervals. The recommended point is `{{RESULT:frontier.recommendation_rule}}` (the rule is fixed before the holdout, for example the knee of the frontier or the cheapest point whose AOG hours beat a target).
+**Picking candidates and the recommendation.** 23 candidates were frozen: P0, P1 and P2 as references; 16 re-optimised budget points at 0.15–2.5 × P2's allocation capital; two "P2 + greedy additions only" points (I110, I125); a TAT-cut lever and a budget+TAT combination. Each was run through the event engine on the selection seeds (100–119), and the recommendation rule was applied there, before the holdout:
 
-Recommended: capital `{{RESULT:frontier.recommended.capital_aed}}` AED, AOG hours `{{RESULT:frontier.recommended.aog_hours}}` per year (95% CI `{{RESULT:frontier.recommended.aog_hours_ci}}`).
+> Stated before computing. Among the capital-only candidates (baseline/reference policies, budget points, base+additions, reposition), take the non-dominated set on the selection-seed means (minimise simulated capital and material AOG h/yr) and its lower convex hull, sorted by capital. Walking up the hull, each segment's marginal value is the AOG-hour reduction per extra AED 1M of capital. The break-even value implied by the AOG penalty is h* = carrying % x AED 1M / (baseline AED per AOG hour), i.e. the AOG hours whose penalty equals the extra annual holding cost of AED 1M. The recommended 'balanced' point is the last hull vertex before the first segment whose marginal value falls below h* (equivalently the hull point that minimises carrying % x capital + AED/h x AOG hours). If no segment falls below h*, the highest-capital vertex is recommended and flagged 'frontier not saturated'.
 
-**Levers beyond buying stock.** The frontier also prices alternatives: paying the vendor to cut TAT (AED 400 per unit per day, ASSUMED), repositioning existing units, and pool access. A sensitivity (tornado) view varies the starred config parameters: AOG penalty (×0.5, ×1, ×2), carrying cost (15–25%), repair TAT and unit cost.
+With P2's realised AED 21,238 per AOG hour, h* = 9.4 AOG hours per AED 1M. The rule picked **I125** on selection seeds, and the pick is unchanged at AOG penalty ×0.5 and ×2 and carrying cost 15% and 25%. All frozen candidates were then run once on the holdout seeds (1000–1019).
+
+Recommended (holdout): capital AED 41.9M, material AOG 223 h per year (95% CI [174–272]), versus 118 h on the selection seeds. Paired against P2 on the holdout: −310 h [−408 to −212] for +AED 4.8M of capital. Analytic model versus simulation across the frontier points: for P2 the model predicts 321 h a year against 533 h simulated on the holdout; for I125 26 h against 223 h; for P0 3,017 h against 2,871 h. The proxy is a ranking heuristic, not a forecast of AOG hours, and it ranks well: correlation r = 0.95 across the 23 frontier points (r = 0.96 on selection seeds).
+
+**Levers beyond buying stock.** The frontier also prices alternatives per part (`outputs/frontier/levers.csv`): buying 1 or 2 more units, paying the vendor to cut TAT by 10 days (AED 400 per unit per day, ASSUMED), and repositioning an existing unit. Pool access is not priced (P3 is not implemented). A tornado (selection seeds, I125 paired against P2 and P0) varies the AOG penalty (×0.5, ×2) and carrying cost (15%, 25%) by re-costing the simulated KPIs, and repair TAT (×0.75, ×1.25) and purchase lead time (×0.75, ×1.25) by re-simulating; a separate run switches the AOG-desk emergency purchase off: with it switched off (selection seeds) material AOG rises from 428 h to 14,400 h a year under P2, from 118 h to 11,230 h under I125, and from 2,938 h to 268,500 h under P0.
 
 ---
 
@@ -270,8 +297,8 @@ $$
 
 Because both policies faced identical removals, repair times and lead times, the seed-to-seed noise in the world cancels, and the interval on the mean of *d_s* is much narrower than comparing two independent averages.
 
-- 20 holdout seeds (1000–1019), 52-week window (weeks 104–155) after an 8-week warm-up from week 96.
-- 95% interval: mean(d) ± t₀.₉₇₅,₁₉ × sd(d) ÷ √20, with t₀.₉₇₅,₁₉ ≈ 2.093. A percentile bootstrap is reported alongside when the differences are skewed.
+- 20 selection seeds (100–119) for every choice, then 20 holdout seeds (1000–1019). Each run covers weeks 78–155: a 26-week warm-up from a steady-state start, then KPIs over the 52 weeks 104–155.
+- 95% interval: mean(d) ± t₀.₉₇₅,₁₉ × sd(d) ÷ √20, with t₀.₉₇₅,₁₉ ≈ 2.093 (`gnm.policy.evaluate_policies.paired_ci`). A percentile bootstrap over seeds was computed alongside as a check on the selection results and agreed with the t-intervals.
 - KPIs are annualised to 52 weeks.
 
 ---
@@ -279,12 +306,14 @@ Because both policies faced identical removals, repair times and lead times, the
 ## 11. Holdout freeze discipline
 
 1. Forecast champions, every PolicySpec parameter table, the frontier candidate set and the config are fixed using only training, selection and selection seeds.
-2. `scripts/freeze.py` writes `outputs/freeze/manifest.json` with SHA-256 hashes of all of them.
+2. `scripts/freeze_all.py` writes `outputs/freeze/manifest.json` with SHA-256 hashes of all of them.
 3. The holdout runner refuses to start if any hash differs. `tests/test_freeze.py` checks this.
 4. Git history shows the freeze commit before the holdout-results commit.
-5. The holdout is run once. If a bug is found afterwards, the fix, the re-freeze and the re-run are all logged in [DECISIONS.md](docs/DECISIONS.md).
+5. The holdout is run once. Every holdout run is appended to `outputs/freeze/holdout_log.json`. If a bug is found afterwards, the fix, the re-freeze and the re-run are all logged in [DECISIONS.md](docs/DECISIONS.md).
 
-Freeze commit: `{{RESULT:freeze.commit_sha}}`. Manifest hash: `{{RESULT:freeze.manifest_sha256}}`.
+Freeze commit: 95dfce5; holdout-results commit: ccf6f2b. Manifest hash (SHA-256 of `outputs/freeze/manifest.json`): `fdd5bc8d5057c1307511ebb46367f7875790b0a21ca8b99304bfb045087fc77d`, covering 19 artefacts.
+
+**Holdout incident (disclosed, D010).** The first `policy_holdout` attempt crashed *before producing any output*. Parallel workers generated the same uncached holdout scenario at the same moment and one read a truncated pickle cache file; the dry run hadn't hit this because the selection scenarios were already cached. Fix: `run_holdout.py` now warms the scenario cache sequentially before multiprocessing. That block was re-run once with `force=True`, which is logged in `outputs/freeze/holdout_log.json`. No holdout results existed or were seen before the rerun, and no frozen artefact changed (`gnm.freeze.verify()` passed).
 
 ---
 

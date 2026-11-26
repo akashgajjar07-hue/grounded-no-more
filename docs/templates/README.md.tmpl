@@ -1,0 +1,198 @@
+# GROUNDED NO MORE
+
+**A single missing part can ground an aircraft. Know which ones, where, and what to do about it.**
+
+[![CI](https://github.com/akashgajjar07-hue/grounded-no-more/actions/workflows/ci.yml/badge.svg)](https://github.com/akashgajjar07-hue/grounded-no-more/actions/workflows/ci.yml)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-22C7B8)
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-B9C8D6)](LICENSE)
+
+**Live app:** <https://akashgajjar07-hue.github.io/grounded-no-more/>
+
+![GROUNDED NO MORE: Mission Control view](docs/assets/readme/hero.png)
+
+An aviation spare-parts intelligence project for a fictional airline, **Falcon Hub Airways (fictional)**. It forecasts sparse, removal-driven demand, sizes rotable floats against repair turnaround, decides what to hold at the hub and what to push to outstations, and shows how much grounding risk each extra dirham of spares capital buys. Everything runs from one seeded pipeline and ends in a static web app a materials planner could use on a Monday morning.
+
+> **All airline data in this project is simulated.** Station coordinates are real (OurAirports). Every parameter is in [`config/assumptions.yaml`](config/assumptions.yaml) with a provenance tag. Nothing here is measured aviation reliability or any operator's data.
+
+---
+
+## The story
+
+It is {{RESULT:story.local_time}} at Mumbai. A narrowbody (fictional tail {{RESULT:story.tail}}) about to fly back to Abu Dhabi has a carbon brake assembly removed on the walk-round. The engineer raises a demand: one unit of **GN-32-R014**, needed before the next departure (deadline class D0).
+
+BOM holds no serviceable spare. Under the legacy rule, the whole float for this part sits at AUH. The AOG desk books the next suitable flight out, and the aircraft waits for the AUH-to-BOM AOG transport time (9 hours, an ASSUMED planning value covering next flight out, handling and customs) before the unit lands and is fitted. In the simulated history this exact incident is {{RESULT:story.incident_id}}: {{RESULT:story.aog_hours}} on the ground. Meanwhile the removed unit starts its own journey: back to AUH as an unserviceable core, on to the vendor shop in Europe, into a repair queue.
+
+Nothing went "wrong" here. The removal rate, the repair turnaround and the positioning rule together made this grounding likely. That is the question this project answers at fleet scale: which parts, at which stations, carry the AOG risk, and what is the cheapest way to take that risk off the table.
+
+The full worked example for GN-32-R014 at BOM is in the [study guide](STUDY_GUIDE.md#end-to-end-worked-example-gn-32-r014-at-bom).
+
+---
+
+## Six questions this answers
+
+Headline numbers are from the **holdout**: 20 paired seeds (1000–1019), 52 weeks, run once after the freeze, central calibration variant. Selection-seed numbers appear only where labelled.
+
+**1. Which parts drive AOG risk?**
+Of 120 part numbers, {{RESULT:parts.top_risk.count}} are flagged urgent (at least 25 risk-hours a year: legacy-history AOG hours plus modelled residual AOG under the recommended plan). Together they account for {{RESULT:parts.top_risk.share_of_aog_hours_pct}} of the legacy (P0) history's AOG hours. The riskiest part is {{RESULT:parts.top_risk.rank1.pn}}, at {{RESULT:parts.top_risk.rank1.risk_hours}} risk-hours a year, with most of its grounding hours at {{RESULT:parts.top_risk.rank1.station}}.
+
+**2. Which forecasting method wins, by demand class? Does the reliability model beat the Croston family?**
+Frozen champions by Syntetos–Boylan class (chosen on the selection window): smooth: {{RESULT:forecast.champion.smooth.method}}; erratic: {{RESULT:forecast.champion.erratic.method}}; intermittent: {{RESULT:forecast.champion.intermittent.method}}; lumpy: {{RESULT:forecast.champion.lumpy.method}}. On the holdout, the frozen intermittent-rotable champion ranked {{RESULT:forecast.champion.intermittent_R.holdout_rank}}, which is reported as-is; the policies size rotables on the reliability rate instead, so they do not depend on it.
+For removal-driven parts (expendables and rotables, holdout) the exposure-based reliability model scores mean MASE {{RESULT:forecast.reliability.mase}} against {{RESULT:forecast.best_croston_family.mase}} for the best Croston-family method ({{RESULT:forecast.best_croston_family.method}}), a paired difference of {{RESULT:forecast.reliability_vs_croston.delta_mase}} (95% CI {{RESULT:forecast.reliability_vs_croston.delta_mase_ci}}). Verdict: {{RESULT:forecast.reliability_vs_croston.verdict}}. Where it does win is the upper quantile that stocking depends on: {{RESULT:forecast.reliability.pinball_summary}}.
+
+**3. What float and reorder points do we recommend, versus the baseline?**
+The recommended plan ({{RESULT:frontier.recommended.id}}) holds {{RESULT:policy.I125.rotable_float_units}} serviceable rotable units, against {{RESULT:policy.P2.rotable_float_units}} under P2 and {{RESULT:policy.P0.rotable_float_units}} under legacy rules (serviceable base stock; the {{RESULT:policy.loop_units}} units seeded in the repair loop are common to all three). Consumable and expendable reorder points change on {{RESULT:policy.P2.rop_changed_lines}} PN-station lines versus P0.
+
+**4. Hub or outstation?**
+Mostly hub. P1 sizes every station's float on its own demand and puts {{RESULT:network.P1.units_forward_positioned}} rotable units at outstations. P2 pools the float at AUH and positions only {{RESULT:network.P2.units_forward_positioned}} units forward, where a D0 miss is expensive enough to pay for the unit (P0 has {{RESULT:network.P0.units_forward_positioned}}). P2 cuts AOG hours by {{RESULT:network.P2_vs_P1.aog_hours_reduction_pct}} versus P1 (paired {{RESULT:network.P2_vs_P1.delta_aog_hours}} {{RESULT:network.P2_vs_P1.delta_aog_hours_ci}}) while holding {{RESULT:network.P2_vs_P1.delta_capital_aed}}. At the six outstations alone, {{RESULT:network.outstation_aog_summary}}.
+
+**5. What does the Readiness Frontier recommend?**
+The pre-stated rule picks {{RESULT:frontier.recommended.id}} (P2 plus greedy rotable additions). At a spares capital of {{RESULT:frontier.recommended.capital_aed}}, material AOG falls to {{RESULT:frontier.recommended.aog_hours}} a year (95% CI {{RESULT:frontier.recommended.aog_hours_ci}}), against {{RESULT:frontier.baseline.aog_hours}} for the legacy baseline at {{RESULT:frontier.baseline.capital_aed}}. Against P2 it is {{RESULT:frontier.recommended_vs_P2.delta_aog_hours}} {{RESULT:frontier.recommended_vs_P2.delta_aog_hours_ci}} for {{RESULT:frontier.recommended_vs_P2.delta_capital_aed}} of capital, saving {{RESULT:frontier.recommended_vs_P2.net_saving_aed}} a year net of holding cost. Two honest caveats: on the selection seeds the same point scored {{RESULT:frontier.recommended.selection_aog_hours}} (outside the holdout CI), and in the low-stress world {{RESULT:frontier.low_stress.summary}}
+
+**6. What should the planner do this week?**
+At week {{RESULT:actions.week.as_of}} the Planner Action Centre raises {{RESULT:actions.week.count_total}} actions, {{RESULT:actions.week.count_urgent}} urgent. The first three in the inbox: {{RESULT:actions.top1.summary}}; {{RESULT:actions.top2.summary}}; {{RESULT:actions.top3.summary}}.
+
+---
+
+## Signature features
+
+| Feature | What it does |
+|---|---|
+| **Readiness Frontier** | Capital vs expected AOG hours for every budget. Each point is an allocation you can open line by line, with paired-seed confidence intervals. |
+| **AOG Response Lab** | Replays the simulated history's groundings. For each one, compares local stock, emergency transfer, lateral, accelerated repair, expedite purchase and (indicative only) pool exchange on wait time, cost and whether the deadline holds. |
+| **Planner Action Centre** | A weekly inbox of exceptions (shortfall at an outstation, overdue repair order, excess stock, lead-time jump) with evidence and a recommended action. |
+| **Forecast Lab** | Demand classification (ADI, CV²), method leaderboard by class, and a check of how well each method recovers the hidden true rates. |
+| **Rotable & Repair** | Serial lifecycle flows, the live repair queue, TAT and float sizing from Palm's theorem. |
+| **Network Positioning** | Hub and six outstations, stock and risk by station, transfer replay and policy comparison. |
+
+---
+
+## How it works
+
+![Pipeline: assumptions to generator to history to models to paired evaluation to web app](docs/assets/readme/pipeline.svg)
+
+1. **Simulate a world.** A seeded generator builds a fictional 40-aircraft fleet, its flights, and the removals, kit demands and line usage those flights cause. True failure rates stay hidden in `data/ground_truth/`.
+2. **Record a history.** One event engine runs the airline for 104 weeks under legacy rules (P0). Its output looks like what a materials planner would pull from an MRO system: requests, repair orders, POs, transfers and AOG events.
+3. **Plan from the history only.** Forecasting, float sizing, positioning and the frontier optimiser see only the history and the part master, never the truth. A static scan of the source and a runtime audit test check this.
+4. **Evaluate fairly.** Every policy runs through the same engine on the same paired seeds. Parameters are frozen and hashed before the 52-week holdout runs once.
+5. **Ship.** Results export to JSON and a static app on GitHub Pages. Every number on screen is read from the exported JSON, and `tests/test_reconciliation.py` recomputes the headline KPIs, policy tables, frontier flags and station means from `outputs/`.
+
+Method details: [METHODOLOGY.md](METHODOLOGY.md). Model scope: [MODEL_CARD.md](MODEL_CARD.md). Validation: [reports/VALIDATION_REPORT.md](reports/VALIDATION_REPORT.md).
+
+**Checked against real data too.** The forecasting code was also run on a REAL public benchmark. {{RESULT:monash.summary}}
+
+**Tests:** {{RESULT:tests.summary}}.
+
+---
+
+## Data provenance
+
+| Tag | Meaning | Examples here |
+|---|---|---|
+| **REAL** | From a public, cited dataset | Station names and coordinates (OurAirports) |
+| **DERIVED** | Computed in this repo from other data | Demand classes, forecasts, float levels, planner exceptions |
+| **ASSUMED** | A planning assumption chosen by the author, with rationale | Utilisation, MTBUR ranges, repair TAT ranges, AOG penalty per hour, carrying cost 20%/yr |
+| **SIMULATED** | Produced by the synthetic generator | Fleet, flights, removals, requests, repair orders, AOG events |
+
+Every table and every exported JSON object carries its tag. The full list of parameters is in the [assumption register](docs/assumption_register.md); every column is in the [data dictionary](data/data_dictionary.md).
+
+---
+
+## Results
+
+Holdout: 52 weeks (weeks 104–155), 20 paired seeds (1000–1019), central variant, run once after the freeze. Means with 95% confidence intervals (t-interval over seeds). Capital is shown separately and is never added to annual cost. I125 is the recommended frontier point.
+
+| KPI | P0 Legacy rules | P1 Local optimised | P2 Network | I125 Recommended (P2 + greedy additions) |
+|---|---|---|---|---|
+| Immediate fill rate | {{RESULT:policies.P0.immediate_fill_rate}} {{RESULT:policies.P0.immediate_fill_rate_ci}} | {{RESULT:policies.P1.immediate_fill_rate}} {{RESULT:policies.P1.immediate_fill_rate_ci}} | {{RESULT:policies.P2.immediate_fill_rate}} {{RESULT:policies.P2.immediate_fill_rate_ci}} | {{RESULT:policies.I125.immediate_fill_rate}} {{RESULT:policies.I125.immediate_fill_rate_ci}} |
+| Material AOG hours / yr | {{RESULT:policies.P0.aog_hours}} {{RESULT:policies.P0.aog_hours_ci}} | {{RESULT:policies.P1.aog_hours}} {{RESULT:policies.P1.aog_hours_ci}} | {{RESULT:policies.P2.aog_hours}} {{RESULT:policies.P2.aog_hours_ci}} | {{RESULT:policies.I125.aog_hours}} {{RESULT:policies.I125.aog_hours_ci}} |
+| AOG events / yr | {{RESULT:policies.P0.aog_events}} {{RESULT:policies.P0.aog_events_ci}} | {{RESULT:policies.P1.aog_events}} {{RESULT:policies.P1.aog_events_ci}} | {{RESULT:policies.P2.aog_events}} {{RESULT:policies.P2.aog_events_ci}} | {{RESULT:policies.I125.aog_events}} {{RESULT:policies.I125.aog_events_ci}} |
+| Spares capital | {{RESULT:policies.P0.spare_capital_aed}} {{RESULT:policies.P0.spare_capital_aed_ci}} | {{RESULT:policies.P1.spare_capital_aed}} {{RESULT:policies.P1.spare_capital_aed_ci}} | {{RESULT:policies.P2.spare_capital_aed}} {{RESULT:policies.P2.spare_capital_aed_ci}} | {{RESULT:policies.I125.spare_capital_aed}} {{RESULT:policies.I125.spare_capital_aed_ci}} |
+| Annual operating cost excl. AOG penalty | {{RESULT:policies.P0.opex_ex_penalty_aed}} | {{RESULT:policies.P1.opex_ex_penalty_aed}} | {{RESULT:policies.P2.opex_ex_penalty_aed}} | {{RESULT:policies.I125.opex_ex_penalty_aed}} |
+| Annual AOG penalty, scenario | {{RESULT:policies.P0.aog_penalty_aed}} | {{RESULT:policies.P1.aog_penalty_aed}} | {{RESULT:policies.P2.aog_penalty_aed}} | {{RESULT:policies.I125.aog_penalty_aed}} |
+| Total annual cost (opex + penalty) | {{RESULT:policies.P0.total_annual_cost_aed}} {{RESULT:policies.P0.total_annual_cost_aed_ci}} | {{RESULT:policies.P1.total_annual_cost_aed}} {{RESULT:policies.P1.total_annual_cost_aed_ci}} | {{RESULT:policies.P2.total_annual_cost_aed}} {{RESULT:policies.P2.total_annual_cost_aed_ci}} | {{RESULT:policies.I125.total_annual_cost_aed}} {{RESULT:policies.I125.total_annual_cost_aed_ci}} |
+| Paired difference in AOG hours vs P0 | — | {{RESULT:policies.P1_vs_P0.delta_aog_hours}} {{RESULT:policies.P1_vs_P0.delta_aog_hours_ci}} | {{RESULT:policies.P2_vs_P0.delta_aog_hours}} {{RESULT:policies.P2_vs_P0.delta_aog_hours_ci}} | n/a ¹ |
+| Paired difference in AOG hours vs P2 | {{RESULT:policies.P0_vs_P2.delta_aog_hours}} {{RESULT:policies.P0_vs_P2.delta_aog_hours_ci}} | {{RESULT:policies.P1_vs_P2.delta_aog_hours}} {{RESULT:policies.P1_vs_P2.delta_aog_hours_ci}} | — | {{RESULT:frontier.recommended_vs_P2.delta_aog_hours}} {{RESULT:frontier.recommended_vs_P2.delta_aog_hours_ci}} |
+
+¹ The frontier holdout run recorded paired differences against the base policy P2 only, so no paired I125 − P0 interval exists. Money is AED; CIs on money are in AED millions.
+
+**Selection versus holdout.** The recommended point was chosen on selection seeds 100–119, where it scored {{RESULT:frontier.recommended.selection_aog_hours}} of material AOG a year {{RESULT:frontier.recommended.selection_aog_hours_ci}}. On the holdout it scored {{RESULT:frontier.recommended.aog_hours}} ({{RESULT:frontier.recommended.selection_shift_pct}}), and the selection value lies outside the holdout CI. P2 moved the same way but less ({{RESULT:policies.P2.selection_aog_hours}} on selection, {{RESULT:policies.P2.aog_hours}} on holdout, {{RESULT:policies.P2.selection_shift_pct}}): the plan picked on selection seeds lost the most, a winner's-curse effect. The paired gap to P2 held ({{RESULT:frontier.recommended_vs_P2.selection_delta}} on selection, {{RESULT:frontier.recommended_vs_P2.delta_aog_hours}} {{RESULT:frontier.recommended_vs_P2.delta_aog_hours_ci}} on holdout), and the ranking P0 > P1 > P2 > I125 on AOG hours held.
+
+**Where the methods do not win.** {{RESULT:readme.not_win_summary}}
+
+These are results on simulated data from assumed parameters. They show that the method works and how large the effects can be under those assumptions. They are not a forecast of any real airline's performance.
+
+---
+
+## Limitations
+
+The short version: the data is synthetic, the deadline classes are hypothetical (not MEL), grounded aircraft keep accruing flying exposure, the repair shop model is simple, the network is close to single-echelon, the AOG penalty is a scenario value, the optimiser is a greedy heuristic, and every policy (legacy included) leans on an AOG-desk emergency buy that delivers a rotable within 5 days: {{RESULT:frontier.aog_desk.summary}}. The full, specific list is in [LIMITATIONS.md](LIMITATIONS.md).
+
+---
+
+## Reproduce
+
+Requires Python 3.11 or later.
+
+```bash
+git clone https://github.com/akashgajjar07-hue/grounded-no-more.git
+cd grounded-no-more
+python -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+pip install -e .
+python scripts/run_all.py          # history -> forecasting -> policies -> frontier -> AOG lab -> export -> docs
+python scripts/run_all.py --check  # same, then verify every frozen artefact re-derives byte-identically
+pytest -m "not slow and not browser"
+```
+
+`run_all.py` reproduces the selection stage and re-exports from the committed holdout outputs. The holdout itself ran once, after `python scripts/freeze_all.py` hashed every frozen artefact into `outputs/freeze/manifest.json`; `python scripts/run_holdout.py` refuses to run if a hash differs and logs every run. `python scripts/render_docs.py` fills the numbers in these docs from `outputs/`. Seeds are fixed in `config/assumptions.yaml`, so a clean run reproduces every number.
+
+---
+
+## Project structure
+
+```
+config/assumptions.yaml     every parameter, with provenance and rationale
+src/gnm/
+  schemas.py, contracts.py  data contract (tables, enums, in-memory objects)
+  sim/                      generator (owns hidden truth) + policy-agnostic event engine
+  forecasting/              demand classification, Croston family, bootstrap, reliability model
+  policy/                   P1/P2 parameter tables (float, ROP, positioning), Palm/EBO maths, paired evaluation
+  optim/                    greedy marginal allocation and the Readiness Frontier
+  aog/                      AOG Response Lab option evaluation
+  eval/                     truth recovery (the only reader of ground truth)
+  export/                   JSON exports for the web app
+scripts/                    build_history, run_forecasting, evaluate_policies, run_frontier, run_aog_lab,
+                            freeze_all, run_holdout, export_site, render_docs, ...
+data/                       processed/ (Parquet + DuckDB), ground_truth/ (hidden), holdout/
+outputs/                    pipeline outputs, freeze manifest
+docs/                       static web app (GitHub Pages), method docs, templates/ for these docs
+tests/                      contracts, leakage, conservation, freeze, reconciliation, site, rendered docs
+reports/                    test results, VALIDATION_REPORT.md
+```
+
+---
+
+## Why this matters
+
+Spares are one of the largest capital lines in an airline's engineering budget, and most of the money sits in a small number of expensive rotables with sparse, lumpy demand. Too little stock in the wrong place grounds aircraft; too much ties up capital for years. Getting the trade-off right is a planning problem, not a purchasing one.
+
+Relevant to Abu Dhabi hub carriers and MRO organisations; independent project, not affiliated with any airline.
+
+---
+
+## Author
+
+**Akash Gajjar**
+MSc Supply Chain Management, University of Liverpool (2025). Retail operations and inventory experience at Primark and Uniqlo. Interested in materials planning, inventory analysis and supply chain planning in aviation and MRO.
+
+- GitHub: [akashgajjar07-hue](https://github.com/akashgajjar07-hue)
+- LinkedIn: *add link*
+
+---
+
+## Licence
+
+Code is released under the [MIT licence](LICENSE). Third-party components and their licences are listed in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+
+This is an independent educational project. It is not an approved maintenance, airworthiness or dispatch tool.
