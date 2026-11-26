@@ -549,3 +549,6 @@ select option { background: var(--panel); color: var(--text); }
 .space-bar { height: 12px; background: var(--c-teal-a24); border-left: 2px solid var(--primary); }
 .map-arc-chips { pointer-events: none; }
 .map-arc-chips .gnm-chip-text { font-size: 11px; }
+/* stacked rows: never let a long metric pill squeeze the primary column (wave-3 V1 finding) */
+.dts-metric { max-width: 100%; min-width: 0; white-space: normal; height: auto; min-height: 24px; padding-block: 2px; overflow-wrap: anywhere; }
+.dts-row { grid-template-columns: minmax(45%, 1fr) minmax(0, auto); }

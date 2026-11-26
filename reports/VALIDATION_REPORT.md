@@ -6,7 +6,7 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 
 ## 1. Tests
 
-345 tests, 0 failures, 0 errors, 0 skipped, 177 s, run at 2026-11-26T08:29:09.885455+05:30 (`reports/junit.xml`; summary in `reports/test_results.txt`).
+467 tests, 0 failures, 0 errors, 0 skipped, 305 s, run at 2026-11-26T10:26:05.316039+05:30 (`reports/junit.xml`; summary in `reports/test_results.txt`).
 
 | Area | Test modules | Tests | Failed |
 |---|---|---|---|
@@ -16,9 +16,10 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 | Optimiser / Readiness Frontier | `test_optim_frontier`, `test_optim_greedy`, `test_optim_levers` | 28 | 0 |
 | AOG Response Lab and Planner Action Centre | `test_aog_actions`, `test_aog_incidents`, `test_aog_options` | 31 | 0 |
 | Freeze and holdout discipline | `test_freeze` | 3 | 0 |
-| Site data export and reconciliation | `test_reconciliation`, `test_site_data` | 17 | 0 |
-| Web app screens (browser) | `test_site_actions`, `test_site_aog`, `test_site_forecast`, `test_site_method`, `test_site_mission`, `test_site_network`, `test_site_optimiser`, `test_site_parts`, `test_site_rotables` | 102 | 0 |
-| **Total** | 35 modules | **345** | **0** |
+| Site data export and reconciliation | `test_reconciliation`, `test_site_data` | 18 | 0 |
+| Web app screens (browser) | `test_site_actions`, `test_site_aog`, `test_site_forecast`, `test_site_method`, `test_site_mission`, `test_site_network`, `test_site_optimiser`, `test_site_overlays`, `test_site_parts`, `test_site_rotables`, `test_site_shared_apis`, `test_site_wave3_shared` | 161 | 0 |
+| Other | test_docs_rendered, test_leakage_runtime, test_notebooks, test_sql, test_workbook | 62 | 0 |
+| **Total** | 43 modules | **467** | **0** |
 
 Doc rendering is checked by `tests/test_docs_rendered.py`: no result placeholder survives in the rendered docs, and the headline KPI numbers in the README match `docs/data/kpis.json`.
 
