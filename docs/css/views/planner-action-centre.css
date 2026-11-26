@@ -92,8 +92,9 @@
 .pac-more { width: 100%; justify-content: center; }
 
 /* wave 3: the action column shows the whole first sentence (3-line safety clamp); the rest is in the drawer */
-.pac-c-action { -webkit-line-clamp: 3; }
+.pac-c-action { -webkit-line-clamp: 2; line-clamp: 2; }
 .pac-more-hint { color: var(--text-faint); }
 .pac-nw { white-space: nowrap; }
-@media (max-width: 767px) { .pac-c-action { -webkit-line-clamp: 3; } }
+@media (max-width: 767px) { .pac-c-action { -webkit-line-clamp: 2; line-clamp: 2; } }
 @media (max-width: 767px) { .pac-filters > :last-child { grid-column: 1 / -1; } }
+@media (max-width: 480px) { .pac-shown { white-space: nowrap; } .pac-shownrow { flex-wrap: wrap; gap: 4px var(--s-1); } }

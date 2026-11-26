@@ -81,3 +81,7 @@
 /* wave 4: left column = map + hub finding; the findings list runs in two columns beside the bars when wide */
 .np-left { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
 @media (min-width: 1200px) { .np-left .np-findings { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); } }
+/* wave 5: the recommended plan's row in the station table (teal = recommended; values it does have, basis stated) */
+.np-pol tr.is-rec td { background: color-mix(in srgb, var(--primary) 7%, transparent); }
+.np-pol tr.is-rec td:first-child { color: var(--c-teal-hi); font-weight: 600; box-shadow: inset 2px 0 0 var(--primary); }
+.np-pol .np-rec-note { text-align: left !important; font-family: var(--font-ui); font-size: 11px; line-height: 1.45; color: var(--text-muted); white-space: normal; }

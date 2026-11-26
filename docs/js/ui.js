@@ -228,7 +228,8 @@ export function dataTable({ columns, rows, sort, onRowClick, rowKey, selected, m
   const stackEl = useStack ? h('div', { class: 'data-table-stack' }) : null;
   const wrap = h('div', { class: `table-wrap ${bare ? 'table-wrap--bare' : ''} ${useStack ? 'has-stack' : ''}`.replace(/\s+/g, ' ').trim(), style: maxHeight ? { maxHeight: `${maxHeight}px` } : undefined, tabindex: '0', role: 'region', 'aria-label': caption || 'Data table' }, table, stackEl);
   const mq = useStack ? matchMedia('(max-width: 480px)') : null;
-  const cell = (c, r) => (c.render ? c.render(r) : c.format ? c.format(r[c.key], r) : r[c.key]);
+  // an empty string prints as "—" (never a bare label with no value, e.g. a licence row without a version)
+  const cell = (c, r) => { const v = c.render ? c.render(r) : c.format ? c.format(r[c.key], r) : r[c.key]; return v === '' ? '—' : v; };
 
   function renderHead() {
     thead.replaceChildren(
@@ -353,8 +354,16 @@ export function segmented({ options, value, onChange, label = 'Options' }) {
  * than "41850000" (F5). Sets it now and on every input/change event; returns update() for programmatic changes.
  *   const update = bindValueText(rangeInput, (v) => fmtAED(v)); input.value = 3; update();
  */
+/** Set a range input's --pct (the filled part of the track) from its value, min and max. */
+export function fillPct(input) {
+  const min = +input.min || 0, max = input.max === '' ? 100 : +input.max, v = +input.value;
+  input.style.setProperty('--pct', `${max > min ? Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100)) : 0}%`);
+}
 export function bindValueText(input, fmt = String) {
-  const update = () => { try { input.setAttribute('aria-valuetext', String(fmt(+input.value))); } catch { input.removeAttribute('aria-valuetext'); } };
+  const update = () => {
+    try { input.setAttribute('aria-valuetext', String(fmt(+input.value))); } catch { input.removeAttribute('aria-valuetext'); }
+    fillPct(input); // wave 5 (F1): the teal track fill always follows the thumb
+  };
   update();
   input.addEventListener('input', update);
   input.addEventListener('change', update);

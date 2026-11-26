@@ -156,6 +156,8 @@ export async function render(el, ctx) {
       table: { columns: [{ key: 'method', label: 'Method', format: mName }, { key: 'mase', label: 'MASE', num: true, format: (v) => fmtNum(v, 3) }, { key: 'lo', label: 'CI low', num: true, format: (v) => fmtNum(v, 3) }, { key: 'hi', label: 'CI high', num: true, format: (v) => fmtNum(v, 3) }, { key: 'bias', label: 'Bias', num: true, format: (v) => fmtNum(v, 3) }, { key: 'coverage', label: 'Coverage', num: true, format: (v) => fmtPct(v, 0) }], rows: rows.map((r) => ({ ...r, lo: ciOf(r)[0], hi: ciOf(r)[1] })) },
     });
     if (!rows.length) { f.body.append(stateBlock('empty', 'not run')); drawChamp(champ, null, null, null); return; }
+    // wave 5: a one-line key, so the starred champion and the teal policy rate never compete for "the answer"
+    f.body.before(h('p', { class: 'fl-key t-12 faint' }, h('span', { class: 'fl-key-i' }, '★'), ' frozen champion (best MASE on selection weeks)', pc === 'R' ? [h('span', { class: 'fl-key-sw' }), ' teal = the rate the rotable policies use'] : null));
     const ordered = eligible.concat(zero ? [zero] : []);
     // teal = the method the stocking policies actually use for this part class (rotables: the reliability-exposure
     // rate, per forecast.json meta); the frozen champion is marked with ★ + neutral strong, not the recommendation colour
@@ -353,10 +355,12 @@ export async function render(el, ctx) {
       const cheap = rows.slice().sort((a, b) => a.capital - b.capital)[0];
       const rel = rows.find((r) => mKey(r.method) === 'reliability');
       const champSet = new Set(champs.filter((c) => !spc || c.part_class === spc).map((c) => mKey(champOf(c))));
+      let named = null; // the method the headline names: it gets a direct label (wave 5)
       let headline = fitN(HALF, `${mName(hi.method)} buys the top fill rate (${fmtPct(hi.fill_rate)}) for ${fmtPct(hi.capital / cheap.capital - 1, 0)} more capital`, `${mNameS(hi.method, true)} buys the top fill rate for ${fmtPct(hi.capital / cheap.capital - 1, 0)} more capital`);
       if (rel && rel !== hi) {
         const peers = rows.filter((r) => r !== rel && r !== hi);
         const near = peers.sort((a, b) => Math.abs(a.capital - rel.capital) - Math.abs(b.capital - rel.capital))[0];
+        if (near && rel.fill_rate > near.fill_rate) named = near;
         if (near && rel.fill_rate > near.fill_rate) headline = fitN(HALF, `Reliability-exposure adds ${fmtPts(rel.fill_rate - near.fill_rate)} of fill over ${mName(near.method)} for ${fmtPct(rel.capital / near.capital - 1, 0)} more capital`, `Reliability adds ${fmtPts(rel.fill_rate - near.fill_rate)} of fill over ${mName(near.method)} for ${fmtPct(rel.capital / near.capital - 1, 0)} more capital`, `Reliability adds ${fmtPts(rel.fill_rate - near.fill_rate)} of fill over ${mNameS(near.method, true)}`);
       }
       const f = chartFrame(frameHost, {
@@ -367,30 +371,38 @@ export async function render(el, ctx) {
       });
       stop = responsive(f.body, (w) => {
         const small = w < 480;
-        const hgt = 280, m = { top: 16, right: small ? 20 : 96, bottom: 36, left: 52 };
+        const hgt = small ? 300 : 320, m = { top: 16, right: small ? 20 : 96, bottom: 36, left: 52 };
         const iw = w - m.left - m.right, ih = hgt - m.top - m.bottom;
         const svg = svgIn(f.body, w, hgt, 'Fill rate versus capital');
         const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
         // teal only for the rate the rotable policies use; other key methods are labelled in neutral
         const polM = spc === 'R' && /reliability rate/i.test(F.meta?.notes || '') ? 'reliability' : null;
-        const xe = d3().extent(rows, (r) => r.capital), ye = d3().extent(rows, (r) => r.fill_rate);
+        // wave 5: fit x to the cluster; a far outlier (e.g. bootstrap at ~1.5× the next capital) is pinned to the right edge
+        // with its true value in the label, instead of squeezing every other method into 15% of the plot
+        const caps = rows.map((r) => r.capital).sort((a, b) => a - b);
+        const cut = caps.length > 3 && caps.at(-1) > caps.at(-2) * 1.3 ? caps.at(-2) : Infinity;
+        const inRows = rows.filter((r) => r.capital <= cut);
+        const xe = d3().extent(inRows, (r) => r.capital), ye = d3().extent(rows, (r) => r.fill_rate);
         const xp = (xe[1] - xe[0]) * 0.12 || xe[0] * 0.1, yp = (ye[1] - ye[0]) * 0.15 || 0.01;
-        const x = d3().scaleLinear().domain([xe[0] - xp, xe[1] + xp]).nice().range([0, iw]);
+        const x0 = d3().scaleLinear().domain([xe[0] - xp, xe[1] + xp]).range([0, cut === Infinity ? iw : iw - 28]);
+        const x = Object.assign((v) => (v > cut ? iw - 6 : x0(v)), { ticks: (n) => x0.ticks(n), domain: () => x0.domain(), range: () => [0, iw], copy: () => x0.copy(), tickFormat: (...a) => x0.tickFormat(...a), bandwidth: undefined });
         const y = d3().scaleLinear().domain([Math.max(0, ye[0] - yp), Math.min(1, ye[1] + yp)]).nice().range([ih, 0]);
         gridY(g.append('g'), y, iw, 4);
         axisLeft(g.append('g'), y, { ticks: 4, format: (v) => fmtPct(v, 0) });
-        axisBottom(g.append('g'), x, { height: ih, ticks: small ? 3 : 5, format: (v) => fmtAED(v) });
+        axisBottom(g.append('g'), x0, { height: ih, ticks: small ? 3 : 5, format: (v) => fmtAED(v) });
+        if (cut !== Infinity) g.append('text').attr('class', 'pi-axis-t').attr('x', iw).attr('y', ih + 18).attr('text-anchor', 'end').text('⋯ off-scale');
         g.append('text').attr('class', 'pi-axis-t').attr('x', iw).attr('y', ih + 32).attr('text-anchor', 'end').text('capital (mean stock value) →');
         g.append('text').attr('class', 'pi-axis-t').attr('x', 0).attr('y', -4).text('fill rate ↑');
         const pts = g.selectAll('g.p').data(rows).join('g').attr('class', (r) => `fl-pt ${mKey(r.method) === polM ? 'is-key' : r === hi || mKey(r.method) === 'reliability' ? 'is-ref' : ''} ${champSet.has(mKey(r.method)) ? 'is-champ' : ''}`).attr('transform', (r) => `translate(${x(r.capital)},${y(r.fill_rate)})`);
         pts.append('circle').attr('r', (r) => (mKey(r.method) === 'reliability' ? 6 : 4.5));
         withTooltip(pts, (r) => ({ title: mName(r.method), rows: [['Fill rate', fmtPct(r.fill_rate)], ['Capital', fmtAED(r.capital)], ['Backorder units', fmtInt(r.backorder_units)]], note: champSet.has(mKey(r.method)) ? 'MASE champion in at least one cell of this class' : '' }));
         // direct labels for the key methods: dodged against every dot and each other, flipping sides when needed
-        const keyM = small ? [...new Set([rel, hi].filter(Boolean))] : [...new Set([rel, hi, cheap].filter(Boolean))];
+        const keyM = small ? [...new Set([rel, named, hi].filter(Boolean))] : [...new Set([rel, named, hi, cheap].filter(Boolean))];
         const obstacles = rows.map((r) => markerRect(x(r.capital), y(r.fill_rate), mKey(r.method) === 'reliability' ? 6 : 4.5, 3));
         const labels = keyM.map((r) => {
           const cx = x(r.capital), cy = y(r.fill_rate);
-          const text = small ? `${mNameS(r.method, true)}${r === hi && r !== rel ? ' · top fill' : ''}` : r === hi && r !== rel ? `${mName(r.method)} · highest fill` : r === cheap && r !== rel && r !== hi ? `${mName(r.method)} · least capital` : `${mName(r.method)}${mKey(r.method) === polM ? ' · policy rate' : ''}`;
+          const off = r.capital > cut ? ` · ${fmtAED(r.capital)} (off-scale)` : '';
+          const text = small ? `${mNameS(r.method, true)}${r === hi && r !== rel ? ' · top fill' : ''}${r.capital > cut ? ' ▸' : ''}` : r === hi && r !== rel ? `${mName(r.method)} · highest fill${off}` : r === named ? `${mName(r.method)} · ${fmtPct(r.fill_rate, 0)}` : r === cheap && r !== rel && r !== hi ? `${mName(r.method)} · least capital` : `${mName(r.method)}${mKey(r.method) === polM ? ' · policy rate' : ''}`;
           const right = cx < iw * 0.6;
           return { r, text, x: cx + (right ? 10 : -10), flipX: cx + (right ? -10 : 10), y: cy, anchor: right ? 'start' : 'end' };
         });

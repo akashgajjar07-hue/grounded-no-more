@@ -85,7 +85,7 @@ export async function render(el, ctx) {
 
   // ------------------------------------------------------------------ explorer: aircraft + list
   const worst = ATAS.map((a) => sysStat[a]).sort((a, b) => (LEVEL[b.level].rank - LEVEL[a.level].rank) || ((b.share ?? 0) - (a.share ?? 0)) || b.urgent - a.urgent || (b.max || 0) - (a.max || 0))[0];
-  const airHost = h('div', { class: 'pi-aircraft', 'data-story': 'aircraft' });
+  const airHost = h('div', { class: 'pi-aircraft' });
   // phones: the selected system's top-part callout is an HTML line under the drawing (no room between badges)
   const airNote = h('div', { class: 'pi-air-note', hidden: true });
   const legend = h('div', { class: 'pi-legend', 'aria-hidden': 'true' }, ...['urgent', 'review', 'ok'].map((l) => h('span', { class: `pi-legend-item is-${l}` }, h('b', {}, LEVEL[l].glyph), l === 'review' ? 'Review / watch' : LEVEL[l].text)), h('span', { class: 'pi-legend-item is-pip' }, h('b', { class: 'pi-legend-pip' }, 'n'), 'urgent PNs in system'), h('span', { class: 'faint' }, 'Badge = system share of fleet risk-hours · WATCH = OK system holding an urgent part'));
@@ -93,7 +93,8 @@ export async function render(el, ctx) {
     cls: 'span-7 md-span-12 pi-explorer', bp: true, prov,
     kicker: 'Aircraft system explorer · plan view · generic twin, fictional',
     title: explorerTitle(),
-    body: [airHost, airNote, legend],
+    // the story hook wraps the drawing AND the phone's top-part line, so story step 2 frames the part on phones too (wave 5)
+    body: [h('div', { class: 'pi-air-wrap', 'data-story': 'aircraft' }, airHost, airNote), legend],
   });
   /** F8 (wave 4): the headline follows the selected ATA; with "All" (or nothing selected) it names the riskiest system. */
   function explorerTitle() {
@@ -154,7 +155,8 @@ export async function render(el, ctx) {
    * urgent/review exception (PS4 GN-30-E025: lead-time drift) shows that exception beside its score.
    */
   function excChip(r) {
-    const e = (r.exceptions || []).find((x) => x.severity === 'urgent' || x.severity === 'review');
+    // urgent actions only (wave 5): review-level housekeeping (quarantine, excess) stays in the drawer, not as row noise
+    const e = (r.exceptions || []).find((x) => x.severity === 'urgent');
     if (!e || r.risk_level === e.severity) return null;
     return h('span', { class: `chip pi-exc pi-exc--${e.severity}`, title: `${e.type_label} · ${e.severity} planner action (${e.exception_id} at ${e.station}). Risk scores grounding exposure; this action is about planning data.` }, icon(e.severity === 'urgent' ? 'alert' : 'clock'), `${e.type_label} · ${e.severity}`);
   }
@@ -372,7 +374,7 @@ export async function render(el, ctx) {
       const p = byPn.get(l.pn);
       return h('li', {}, h('button', { type: 'button', class: 'pi-slotkey-btn', disabled: !p, onclick: () => p && openPart(p.pn) },
         h('span', { class: 'pi-slotnum mono' }, String(l.slot)), h('span', { class: 'mono' }, l.pn || '—'), h('span', { class: 'pi-slotdesc' }, p ? p.desc : l.role),
-        p ? pill(p.risk_level, riskPct(p.risk_score)) : null));
+        p ? riskPill(p) : null));
     }));
   }
 
@@ -509,7 +511,9 @@ export async function render(el, ctx) {
         ag.append('text').attr('class', 'gnm-annot-sub').attr('x', tx).attr('y', b.y + 26).attr('text-anchor', anchor).text(sub);
       }
     });
-    keyEl.replaceChildren(h('span', { class: 'pi-key-dot is-sel' }), ata === 'all' ? 'All systems shown in neutral' : `ATA ${ata} parts`, h('span', { class: 'pi-key-dot' }), 'other PNs', h('span', { class: 'pi-key-sw' }), `intermittent / lumpy zone (ADI ≥ ${ADI_CUT})`);
+    // each swatch + label is one nowrap item, so a swatch is never orphaned at a line end (wave 5)
+    const item = (sw, t) => h('span', { class: 'pi-key-item' }, sw, t);
+    keyEl.replaceChildren(item(h('span', { class: 'pi-key-dot is-sel' }), ata === 'all' ? 'All systems shown in neutral' : `ATA ${ata} parts`), item(h('span', { class: 'pi-key-dot' }), 'other PNs'), item(h('span', { class: 'pi-key-sw' }), `intermittent / lumpy zone (ADI ≥ ${ADI_CUT})`));
     return stop;
   }
 
@@ -577,7 +581,7 @@ export async function render(el, ctx) {
       h('ul', { class: 'list-reset pi-planted-list' }, ...pl.map((p) => h('li', {}, h('button', { type: 'button', class: 'pi-planted-row', onclick: () => openPart(p.pn) },
         h('span', { class: 'chip chip-mono pi-planted' }, p.planted),
         h('span', { class: 'pi-planted-main' }, h('span', { class: 'mono' }, p.pn), h('span', { class: 'faint' }, p.desc)),
-        pill(p.risk_level, riskPct(p.risk_score)), icon('chevron-right'))))),
+        riskPill(p), icon('chevron-right'))))),
       h('div', { class: 'card-foot' }, h('span', {}, 'Planted in the simulator so the planning logic can be tested against a known answer. The planner sees only the demand and repair history.')));
   }
 

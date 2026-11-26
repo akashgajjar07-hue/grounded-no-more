@@ -211,3 +211,12 @@
 @media (max-width: 480px) { .pi-drawer .meta-list { grid-template-columns: minmax(0, 1fr); } .pi-drawer .meta-list dd { margin-bottom: 6px; } }
 .dts-metric:has(.pi-exc) { white-space: normal; border-radius: 12px; padding-block: 4px; }
 .dts-metric > .pi-risk-cell { overflow: visible; white-space: normal; }
+/* F3 (wave 5): below 1500 px the part table drops Deadline, ABC and Unit cost (all in the drawer), so the decision
+   column (Risk) never scrolls out of the card at 1440 */
+@media (max-width: 1499px) {
+  [data-story="parts-table"] .data-table th:nth-child(4), [data-story="parts-table"] .data-table td:nth-child(4),
+  [data-story="parts-table"] .data-table th:nth-child(6), [data-story="parts-table"] .data-table td:nth-child(6),
+  [data-story="parts-table"] .data-table th:nth-child(8), [data-story="parts-table"] .data-table td:nth-child(8) { display: none; }
+}
+/* scatter key: each swatch stays on the line of its label */
+.pi-key-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }

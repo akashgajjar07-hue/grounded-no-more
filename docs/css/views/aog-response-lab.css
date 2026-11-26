@@ -111,3 +111,6 @@
 .aog-optgroup--na > summary::-webkit-details-marker { display: none; }
 .aog-optgroup--na > summary h4::before { content: '▸ '; }
 .aog-optgroup--na[open] > summary h4::before { content: '▾ '; }
+.aog-cf-route { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px var(--s-2); margin: 0; font-size: var(--fs-14); }
+.aog-cf-route dt { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); padding-top: 2px; }
+.aog-cf-route dd { margin: 0; color: var(--text); line-height: 1.5; }

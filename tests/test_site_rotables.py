@@ -59,6 +59,9 @@ def test_float_calculator_matches_floatcalc_js(site, inp):
     try:
         for k, v in inp.items():
             page.fill(f'[data-input="{k}"]', str(v))
+        # wave 5: the lever tool defaults to the station view; compare against the calculator inputs here
+        if page.locator('[data-basis="inputs"]').count():
+            page.locator('[data-basis="inputs"]').click()
         page.wait_for_timeout(200)
         shown = page.evaluate(
             # wave 4: displays are rounded for reading ("< 0.01", "> 99.9%"); the exact value is in data-value

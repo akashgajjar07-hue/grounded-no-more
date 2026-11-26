@@ -9,7 +9,7 @@
  * sensitivity tornado, the lever panel, the stress-variant table and the method limitations.
  */
 import { h, pageHead, card, provChip, slider, dataTable, segmented, kpiTile, icon } from '../ui.js';
-import { chartFrame, responsive, svgIn, axisBottom, withTooltip, theme, fmtAED, fmtHours, fmtInt, fmtNum, reducedMotion, truncate, HEADLINE_MAX, markerRect, labelAround, fmtMult } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, axisBottom, withTooltip, theme, fmtAED, fmtHours, fmtInt, fmtNum, reducedMotion, truncate, HEADLINE_MAX, markerRect, labelAround, fmtMult, refLine } from '../charts/theme.js';
 
 export const data = ['frontier', 'policies'];
 
@@ -174,7 +174,7 @@ export async function render(el, ctx) {
 
   function drawFrontier(body, w) {
     const narrow = w < 560;
-    const hgt = narrow ? 340 : w >= 640 ? 560 : 440;
+    const hgt = narrow ? 340 : w >= 640 ? 680 : 440; // tall enough to match the controls + rule column (no dead space)
     const m = { top: 28, right: narrow ? 30 : 36, bottom: 44, left: narrow ? 44 : 56 };
     const iw = Math.max(60, w - m.left - m.right), ih = hgt - m.top - m.bottom;
     const svg = svgIn(body, w, hgt, 'Readiness frontier: spare capital versus material AOG hours');
@@ -308,18 +308,22 @@ export async function render(el, ctx) {
   });
   const slInput = sl.input || sl.querySelector('input');
   slInput.dataset.role = 'budget-slider';
-  const modeSeg = segmented({ label: 'Seed set', value: mode, options: [{ value: 'holdout', label: 'Holdout' }, { value: 'selection', label: 'Selection' }, { value: 'overlay', label: 'Overlay' }], onChange: (v) => { mode = v; ctx.setParams({ view: v === 'holdout' ? '' : v }); chart?.update(true); } });
+  const modeSeg = segmented({ label: 'Seed set', value: mode, options: [{ value: 'holdout', label: 'Holdout' }, { value: 'selection', label: 'Selection' }, { value: 'overlay', label: 'Overlay' }], onChange: (v) => { mode = v; ctx.setParams({ view: v === 'holdout' ? '' : v }); chart?.update(true); showSel(); } });
   if (!hasSel) modeSeg.querySelectorAll('button').forEach((b) => { if (b.dataset.value !== 'holdout') { b.disabled = true; b.title = 'Selection-seed values not exported'; } });
+  // F7 (wave 5): the readout follows the seed-set toggle (selection values when Selection is chosen; holdout otherwise)
   function showSel() {
     const p = sel;
+    const selMode = mode === 'selection' && p.sel?.aog != null;
     const rows = [
       ['Plan', h('span', {}, h('b', { class: 'mono' }, p.id), ' ', h('span', { class: 'faint' }, KIND_LABEL[p.kind] || p.kind))],
+      ['Seeds', selMode ? 'selection 100–119' : 'holdout 1000–1019'],
       ['Capital', `${fmtAED(p.cap)}${p.capCI[0] != null ? ciTxt(p.capCI[0], p.capCI[1], (v) => fmtAED(v).replace('AED ', '')) : ''}`],
-      ['AOG / yr', `${fmtHours(p.aog)}${ciTxt(p.ci[0], p.ci[1], fmtInt)}`],
-      P2 && p !== P2 ? [`vs ${baseId}`, p.dBaseAog ? `${signH(p.dBaseAog[0])}${ciTxt(p.dBaseAog[1], p.dBaseAog[2], (v) => fmtInt(v))} · ${signAED(p.cap - P2.cap)}` : `${signH(p.aog - P2.aog)} · ${signAED(p.cap - P2.cap)}`] : null,
-      P0 && p !== P0 ? ['vs P0', `${signH(p.aog - P0.aog)} · ${signAED(p.cap - P0.cap)}`] : null,
-      p.total != null ? ['Annual cost', fmtAED(p.total)] : null,
-      p.sel?.aog != null ? ['Selection', `${fmtHours(p.sel.aog)}${ciTxt(p.sel.ci?.[0], p.sel.ci?.[1], fmtInt)}`] : null,
+      selMode ? ['AOG / yr', `${fmtHours(p.sel.aog)}${ciTxt(p.sel.ci?.[0], p.sel.ci?.[1], fmtInt)}`] : ['AOG / yr', `${fmtHours(p.aog)}${ciTxt(p.ci[0], p.ci[1], fmtInt)}`],
+      selMode && P2?.sel?.aog != null && p !== P2 ? [`vs ${baseId}`, `${signH(p.sel.aog - P2.sel.aog)} · ${signAED(p.cap - P2.cap)}`] : null,
+      !selMode && P2 && p !== P2 ? [`vs ${baseId}`, p.dBaseAog ? `${signH(p.dBaseAog[0])}${ciTxt(p.dBaseAog[1], p.dBaseAog[2], (v) => fmtInt(v))} · ${signAED(p.cap - P2.cap)}` : `${signH(p.aog - P2.aog)} · ${signAED(p.cap - P2.cap)}`] : null,
+      !selMode && P0 && p !== P0 ? ['vs P0', `${signH(p.aog - P0.aog)} · ${signAED(p.cap - P0.cap)}`] : null,
+      p.total != null ? ['Annual cost', `${fmtAED(p.total)}${selMode ? ' (holdout)' : ''}`] : null,
+      selMode ? ['Holdout AOG', `${fmtHours(p.aog)}${ciTxt(p.ci[0], p.ci[1], fmtInt)}`] : p.sel?.aog != null ? ['Selection', `${fmtHours(p.sel.aog)}${ciTxt(p.sel.ci?.[0], p.sel.ci?.[1], fmtInt)}`] : null,
     ].filter(Boolean);
     readout.replaceChildren(...rows.flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)]));
   }
@@ -493,9 +497,9 @@ export async function render(el, ctx) {
     const minLo = d3.min(all, (s) => num(s.ci?.[0]) ?? s.v), vMin = d3.min(all, (s) => s.v), vMax = d3.max(all, (s) => s.v);
     const fr = chartFrame(host, {
       headline: minLo > 0
-        ? fitHeadline(`${rec.id} beats ${baseId} at every tested setting: net benefit stays between ${fmtAED(vMin)} and ${fmtAED(vMax)} a year`, `${rec.id} beats ${baseId} at every tested setting: ${fmtAED(vMin)} to ${fmtAED(vMax)} a year net`)
+        ? fitHeadline(`${rec.id} beats ${baseId} at every one-at-a-time setting: ${fmtAED(vMin)} to ${fmtAED(vMax)} a year net`, `${rec.id} beats ${baseId} at every one-at-a-time setting`)
         : fitHeadline(`${rec.id}'s advantage over ${baseId} is not robust everywhere: the lowest bound reaches ${fmtAED(minLo)} a year`, `${rec.id}'s edge over ${baseId} is not robust: the lowest bound reaches ${fmtAED(minLo)} a year`),
-      subtitle: `Net annual benefit of ${rec.id} vs ${baseId} (AED/yr) · paired · selection seeds 100–119 · base case ${fmtAED(base)} · 95% CI whiskers`,
+      subtitle: `Net annual benefit of ${rec.id} vs ${baseId} (AED/yr) · one factor varied at a time (whole alternative worlds: see Robustness) · paired · selection seeds 100–119 · base case ${fmtAED(base)} · 95% CI whiskers`,
       provenance: prov, source: 'frontier.json',
       table: { columns: [{ key: 'label', label: 'Factor' }, { key: 'setting', label: 'Setting', format: settingTxt }, { key: 'v', label: 'Net benefit', num: true, format: (v) => fmtAED(v) }, { key: 'lo', label: 'CI lo', num: true, format: (v) => fmtAED(v) }, { key: 'hi', label: 'CI hi', num: true, format: (v) => fmtAED(v) }, { key: 'saved', label: 'AOG h saved', num: true, format: fmtHours }],
         rows: rows.flatMap((r) => r.settings.map((s) => ({ label: r.label, setting: s.setting, v: s.v, lo: num(s.ci?.[0]), hi: num(s.ci?.[1]), saved: s.saved }))) },
@@ -509,9 +513,8 @@ export async function render(el, ctx) {
       const x = d3.scaleLinear().domain(d3.extent(vals)).nice().range([lw + (narrow ? 34 : 0), w - (narrow ? 36 : 44)]);
       axisBottom(svg.append('g'), x, { height: Hh - 22, ticks: narrow ? 3 : 5, format: (v) => fmtAED(v, { digits: 0 }) });
       svg.append('line').attr('x1', x(0)).attr('x2', x(0)).attr('y1', 14).attr('y2', Hh - 22).attr('stroke', theme.color.lineStrong);
-      // the base case is the recommendation's own result: the one teal mark on this chart
-      svg.append('line').attr('x1', x(base)).attr('x2', x(base)).attr('y1', 14).attr('y2', Hh - 22).attr('stroke', SER.recommended).attr('stroke-width', 1.5);
-      svg.append('text').attr('class', 'gnm-label gnm-label--strong').attr('x', x(base)).attr('y', 9).attr('text-anchor', 'middle').style('fill', SER.recommended).text(`base ${fmtAED(base)}`);
+      // the base case is a reference line (DS rule 5: faded titanium, 4 4 dash, faint label), not a teal mark (wave 5)
+      refLine(svg, { x1: x(base), x2: x(base), y1: 14, y2: Hh - 22, label: `base ${fmtAED(base)}`, labelAt: 'start', anchor: 'middle', dx: 0, dy: -4 });
       rows.forEach((r, i) => {
         const yc = (narrow ? 46 : 34) + i * rowH;
         svg.append('text').attr('class', 'gnm-label gnm-label--strong').attr('x', 0).attr('y', narrow ? yc - 16 : yc + 4).text(r.label);

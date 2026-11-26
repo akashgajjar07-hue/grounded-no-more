@@ -373,7 +373,8 @@ export async function render(el, ctx) {
         h('span', { class: 'pac-c-stock is-num mono', dataset: { k: 'On hand' } }, m.stock ? h('span', { class: m.stock.have < m.stock.target ? 'pac-short' : '' }, `${fmtInt(m.stock.have)} / ${fmtInt(m.stock.target)}`) : num(null)),
         h('span', { class: 'pac-c-aog is-num mono', dataset: { k: 'AOG h' } }, num(m.aogH)),
         h('span', { class: 'pac-c-d0 is-num mono', dataset: { k: 'D0' } }, num(m.d0)),
-        (() => { const fs = firstSentence(a.recommended_action || ''); return h('span', { class: 'pac-c-action', title: tidyEnums(a.recommended_action || '') }, a.recommended_action ? `${fs.head}${fs.more ? '\u00a0…' : ''}` : 'No action recorded'); })(),
+        // wave 5: the whole action, clamped to two lines by CSS (the browser's own ellipsis), full text in the title
+        h('span', { class: 'pac-c-action', title: tidyEnums(a.recommended_action || '') }, a.recommended_action ? tidyEnums(a.recommended_action) : 'No action recorded'),
         h('span', { class: 'pac-c-due is-num mono' }, a.due_week != null ? fmtWeek(a.due_week) : '—', icon('chevron-right'))));
   }
   /** Same-PN exceptions collapse under one header ("GN-… · 6 stations · 63 AOG h max"); singletons stay plain rows. */

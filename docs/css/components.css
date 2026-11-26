@@ -121,6 +121,7 @@
 .card-head > div:first-child { flex: 1 1 240px; min-width: 0; }
 .card-title { font-family: var(--font-display); font-size: var(--fs-16); font-weight: 500; line-height: 1.35; }
 .card-kicker { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 4px; }
+.card-foot .card-link { flex: none; white-space: nowrap; } /* the footer link never wraps to one word per line (wave 5) */
 .card-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); margin-top: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--line); font-size: var(--fs-12); color: var(--text-faint); }
 .card-link { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-14); text-decoration: none; }
 .card-link .icon { width: 16px; height: 16px; transition: transform var(--dur-fast) var(--ease); }
@@ -396,8 +397,8 @@ select option { background: var(--panel); color: var(--text); }
 .story-grab span { display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--line-strong); }
 .story-grab:hover span, .story-grab:focus-visible span { background: var(--text-muted); }
 /* peek: ~25% of the viewport; the body clamps to 2 lines, progress hides, the actions stay reachable */
-.story-card.is-sheet.is-peek { max-height: max(25vh, 184px); overflow: hidden; }
-.story-card.is-sheet.is-peek p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
+.story-card.is-sheet.is-peek { max-height: max(25vh, 208px); overflow: hidden; }
+.story-card.is-sheet.is-peek p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 0; }
 .story-card.is-sheet.is-peek .story-progress { display: none; }
 .story-card.is-sheet.is-peek .story-actions { margin-top: 8px; }
 .story-card.is-sheet.is-peek h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

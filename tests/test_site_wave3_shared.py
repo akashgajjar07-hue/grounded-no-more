@@ -217,14 +217,15 @@ def test_story_mobile_selector_and_peek(site, browser):  # noqa: F811
             assert f["sheet"] and f["grab"], f
             assert f["spotTop"] >= f["bar"] + 1, f
             if f["peek"]:
-                assert f["cardH"] <= max(0.25 * f["vh"], 184) + 2, f
+                assert f["cardH"] <= max(0.25 * f["vh"], 208) + 2, f   # wave 5: 3-line peek (was 184 px)
             # the sheet covers at most 24 px of a target that fits above a peek sheet
-            if f["spotH"] <= f["vh"] - f["bar"] - max(0.25 * f["vh"], 184) - 16:
+            if f["spotH"] <= f["vh"] - f["bar"] - max(0.25 * f["vh"], 208) - 16:
                 assert f["spotBottom"] - f["cardTop"] <= 32, (i + 1, f)
             if s.get("mobile_selector"):
                 h = page.evaluate("(s) => { const e = document.querySelector(s); return e ? e.getBoundingClientRect().height : null; }", s["mobile_selector"])
                 if i == 7 and h is not None:
-                    assert abs(f["spotH"] - (h + 16)) < 3, (s["mobile_selector"], f, h)
+                    # the row is the spotlight (+8 px pad each side); its 2-line clamp can settle a few px after placement
+                    assert abs(f["spotH"] - (h + 16)) < 8, (s["mobile_selector"], f, h)
         # the grab handle toggles the sheet
         before = page.evaluate("document.querySelector('.story-card').classList.contains('is-peek')")
         page.click(".story-grab")

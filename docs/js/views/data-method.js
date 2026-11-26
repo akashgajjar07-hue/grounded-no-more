@@ -45,7 +45,8 @@ export async function render(el, ctx) {
   const M = ctx.data.method || {};
   const cleanups = [];
   const sources = M.source_manifest || [];
-  const assumptions = M.assumptions || [];
+  // wave 5: rows with a real rationale first (stable within each group); site metadata without one (meta.*) sinks to the end
+  const assumptions = (M.assumptions || []).map((a, i) => ({ a, i })).sort((x, y) => (!x.a.rationale - !y.a.rationale) || x.i - y.i).map(({ a }) => a);
   const countBy = (list) => Object.fromEntries(PROV.map((p) => [p, list.filter((x) => up(x.provenance) === p).length]));
   const srcN = countBy(sources), asmN = countBy(assumptions);
 
@@ -104,7 +105,7 @@ export async function render(el, ctx) {
       { key: 'key', label: 'Key', mono: true },
       { key: 'value', label: 'Value', mono: true, format: (v, r) => `${v == null ? '—' : String(v).replace(/^"(.*)"$/, '$1')}${r.unit ? ` ${r.unit}` : ''}` },
       { key: 'provenance', label: 'Tag', render: (r) => provChip(r.provenance) },
-      { key: 'rationale', label: 'Rationale', render: (r) => (r._same ? h('span', { class: 'dm-same', title: r.rationale }, '↑ same rationale as above') : (r.rationale ?? '—')) },
+      { key: 'rationale', label: 'Rationale', render: (r) => (r._same ? h('span', { class: 'dm-same', title: r.rationale }, '↑ same rationale as above') : (r.rationale ?? (String(r.key).startsWith('meta.') ? h('span', { class: 'faint' }, 'Site metadata (labels, not a modelling choice)') : '—'))) },
     ],
   });
   const apply = () => {

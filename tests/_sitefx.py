@@ -115,7 +115,11 @@ class _Quiet(http.server.SimpleHTTPRequestHandler):
 @pytest.fixture(scope="module")
 def site():
     handler = functools.partial(_Quiet, directory=str(DOCS))
-    httpd = socketserver.ThreadingTCPServer(("127.0.0.1", 0), handler)
+    # a deep accept backlog: the default (5) dropped favicon requests under load (ERR_CONNECTION_RESET flakes, wave 5)
+    class _Server(socketserver.ThreadingTCPServer):
+        request_queue_size = 128
+        allow_reuse_address = True
+    httpd = _Server(("127.0.0.1", 0), handler)
     httpd.daemon_threads = True
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{httpd.server_address[1]}/index.html"

@@ -317,7 +317,8 @@ function optionCard(o, rec, inc, codes, optLabel, slack, note, noneMeets = false
   const late = o.wait_h != null ? o.wait_h - (slack || 0) : null;
   const met = o.human_decision ? h('span', { class: 'faint' }, 'n/a') : o.wait_h == null ? h('span', { class: 'faint' }, '—') : o.deadline_met ? pill('ok', 'Met')
     : noneMeets ? h('span', { class: 'aog-late mono', title: 'Every option misses this deadline (see the note above)' }, `+${fmtHours(Math.max(0, late))} late`) : pill('urgent', 'Missed');
-  const rc = (o.reason_codes || []).map((c) => h('li', { title: c, dataset: { code: c } }, h('span', { class: 'aog-code' }, reasonLabel(c)), codes[c] ? h('span', { class: 'aog-code-txt' }, tidyProse(codes[c])) : null));
+  // wave 5: when every option misses, "wait exceeds the deadline slack" is said once (banner + the top card), not per card
+  const rc = (o.reason_codes || []).filter((c) => !(noneMeets && c === 'EXCEEDS_DEADLINE' && o !== rec && o.feasible)).map((c) => h('li', { title: c, dataset: { code: c } }, h('span', { class: 'aog-code' }, reasonLabel(c)), codes[c] ? h('span', { class: 'aog-code-txt' }, tidyProse(codes[c])) : null));
   return h('article', { class: `aog-opt aog-opt--${st.cls}`, dataset: { key: o.key, state: st.cls }, 'aria-label': `Option ${o.key}: ${optLabel(o)}` },
     h('div', { class: 'aog-opt-head' }, h('span', { class: 'aog-key mono' }, o.key), h('h4', { class: 'aog-opt-title' }, optLabel(o)), st.pill),
     o.human_decision ? h('p', { class: 'aog-human-note m-0' }, icon('alert'), 'Requires engineering/quality approval — human decision') : null,
@@ -336,9 +337,12 @@ function counterfactualCard(inc, cf, prov, optLabel) {
   if (!cf || cf.actual_aog_h == null) return card({ kicker: 'This incident · counterfactual', title: 'History versus best option', prov, body: h('p', { class: 'muted m-0' }, 'Counterfactual not run for this incident.') });
   const better = (cf.aog_h_saving ?? 0) > 0;
   const worse = (cf.aog_h_saving ?? 0) < 0;
+  // wave 5: the route is prose, so it gets a full-width left-aligned line above the numeric rows
+  const histRoute = cf.actual_route_label || cf.actual_route || '—';
+  const bestRoute = `${cf.best_option ? `${cf.best_option} · ` : ''}${cf.best_option_label || '—'}`;
+  const sameRoute = String(cf.best_option_label || '').toLowerCase() && String(histRoute).toLowerCase().includes(String(cf.best_option_label || '').toLowerCase().replace(/ stock$/, ''));
   const rows = [
     ['', 'History', 'Best option'],
-    ['Route', cf.actual_route_label || cf.actual_route || '—', `${cf.best_option || ''} · ${cf.best_option_label || '—'}`],
     ['AOG hours', fmtHours(cf.actual_aog_h), fmtHours(cf.best_realised_aog_h ?? cf.best_aog_h)],
     ['Direct cost', fmtMoneyFine(cf.actual_direct_cost_aed), fmtMoneyFine(cf.best_realised_direct_cost_aed ?? cf.best_direct_cost_aed)],
     ['Exposure', fmtMoneyFine(cf.actual_exposure_aed), fmtMoneyFine(cf.best_realised_exposure_aed ?? cf.best_exposure_aed)],
@@ -349,6 +353,7 @@ function counterfactualCard(inc, cf, prov, optLabel) {
   return card({
     kicker: 'This incident · counterfactual', title: better ? 'A better route existed' : worse ? 'History beat the estimate' : 'History matched the best option', prov,
     body: h('div', { class: 'stack-3' },
+      h('dl', { class: 'aog-cf-route' }, h('dt', {}, 'Route'), h('dd', {}, sameRoute ? [bestRoute, h('span', { class: 'faint' }, ' · same route in history')] : [h('span', {}, `History: ${histRoute}`), h('br'), h('span', {}, `Best option: ${bestRoute}`)])),
       h('table', { class: 'data-table data-table--dense aog-cf' }, h('caption', { class: 'sr-only' }, 'History versus best option'),
         h('thead', {}, h('tr', {}, rows[0].map((c, i) => h('th', { scope: 'col', class: i ? 'is-num' : '' }, c)))),
         h('tbody', {}, rows.slice(1).map((r) => h('tr', {}, h('th', { scope: 'row' }, r[0]), h('td', { class: 'is-num' }, r[1]), h('td', { class: 'is-num' }, r[2]))))),
@@ -515,6 +520,6 @@ function drawExposure(body, w, opts, rec, optLabel) {
       .attr('stroke', o.feasible || isRec ? null : theme.color.neutral).attr('stroke-dasharray', o.feasible ? null : '3 2');
     withTooltip(bar, () => ({ title: optLabel(o), rows: [['Wait', o.wait_h == null ? '—' : fmtHours(o.wait_h)], ['Direct cost', fmtAEDfull(o.direct_cost)], ['Exposure', fmtAEDfull(o.exposure_aed)]], note: o.feasible ? (isRec ? 'Recommended (rank 1)' : `Rank ${o.rank ?? '—'}`) : grey ? 'Not contracted (indicative)' : 'Infeasible: estimate shown with its reason' }));
     svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', lw + Math.max(2, x(o.exposure_aed)) + 8).attr('y', y + 13)
-      .text(`${fmtMoneyFine(o.exposure_aed)} · ${o.wait_h == null ? '—' : fmtHours(o.wait_h)}${o.feasible ? '' : narrow ? ' · n/a' : grey ? ' · not contracted' : ' · infeasible'}`);
+      .text(`${fmtMoneyFine(o.exposure_aed)} · ${o.wait_h == null ? '—' : fmtHours(o.wait_h)}${o.feasible ? '' : grey ? ' · not contracted' : ' · infeasible'}`); // same words at every width (wave 5)
   });
 }

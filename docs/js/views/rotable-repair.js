@@ -12,7 +12,7 @@
  *  6. Palm vs simulation
  * Every number comes from the JSON or from floatcalc.js applied to user inputs.
  */
-import { h, icon, pageHead, card, provChip, pill, dataTable, bindValueText } from '../ui.js';
+import { h, icon, pageHead, card, provChip, pill, dataTable, bindValueText, fillPct } from '../ui.js';
 import { chartFrame, responsive, svgIn, axisBottom, axisLeft, gridY, directLabel, annotate, withTooltip, truncate, theme, chipLabel, refLine, fmtAED, fmtPct, fmtDays, fmtInt, fmtNum, fmtWeek, fmtEnum, fmtCount, plural } from '../charts/theme.js';
 import { floatCalc, compareLevers, pmfSeries } from '../lib/floatcalc.js';
 
@@ -192,7 +192,7 @@ const stateName = (s) => STATE_META[s]?.short || shopLabel(s);
  * State ladder. Boxes sit left → right in lifecycle order. Under them, every transition gets its OWN row:
  * a straight connector from the source column to the target column, with its count in a chip at the row's
  * midpoint. One connector per row means no two strokes cross and no chip can sit on another flow.
- * Forward flows (teal, the primary series) come first, then returns (titanium), then condemnation
+ * Forward flows (solid titanium) come first, then returns (40% titanium), then condemnation
  * (dashed titanium: BER is a cost, not an AOG risk). Phones get the same ladder as a list.
  */
 function drawFlow(el, states, counts, flows, w) {
@@ -206,8 +206,9 @@ function drawFlow(el, states, counts, flows, w) {
     .slice().sort((a, b) => RANK[kindOf(a)] - RANK[kindOf(b)] || idx(a.from) - idx(b.from) || idx(a.to) - idx(b.to));
   const maxC = d3().max(fl, (f) => f.count) || 1;
   const KIND = {
-    fwd: { color: SR.recommended, op: 0.55, label: 'FORWARD · fit → removal → shop → transit' },
-    back: { color: SR.neutral, op: 0.5, label: 'RETURNS · back to stock or onto aircraft' },
+    // wave 5: no teal category here (teal = the recommended plan only); forward solid titanium, returns 40% titanium
+    fwd: { color: SR.neutral, op: 0.75, label: 'FORWARD · fit → removal → shop → transit' },
+    back: { color: SR.neutral, op: 0.35, label: 'RETURNS · back to stock or onto aircraft' },
     bad: { color: SR.context, op: 0.9, dash: '5 4', label: 'CONDEMNED · beyond economic repair' },
   };
   const tip = (f) => ({ title: `${STATE_META[f.from]?.label || f.from} → ${STATE_META[f.to]?.label || f.to}`, rows: [['Transitions', fmtInt(f.count)], ['Share of largest flow', fmtPct(f.count / maxC, 0)]] });
@@ -326,7 +327,7 @@ function renderGantt(host, ros, now, r, ctx) {
   const chart = h('div', { class: 'rr-gantt' });
   scroll.append(chart);
   f.body.append(scroll, h('div', { class: 'rr-key', 'aria-hidden': 'true' },
-    h('span', {}, h('i', { style: { background: 'rgba(34,199,184,0.45)' } }), 'Open, inside quote'),
+    h('span', {}, h('i', { style: { background: 'rgba(185,200,214,0.55)' } }), 'Open, inside quote'),
     h('span', {}, h('i', { style: { background: 'rgba(185,200,214,0.22)' } }), 'Returned'),
     h('span', {}, h('i', { class: 'rr-key-late' }), 'Past quoted due'),
     h('span', {}, h('i', { style: { background: C.urgent } }), `Critical: > ${fmtInt(CRITICAL_LATE_D)} d past due`),
@@ -402,7 +403,7 @@ function drawGantt(el, rows, now, w) {
   axisBottom(g.append('g'), x, { ticks: narrow ? 3 : 6, format: (v) => fmtWeek(Math.floor(v / HPW)), height: ih });
   if (now != null) {
     g.append('line').attr('class', 'rr-now').attr('x1', x(now)).attr('x2', x(now)).attr('y1', 0).attr('y2', ih);
-    dl(g, { x: x(now) - 4, y: 10, text: 'NOW', anchor: 'end', color: C.accentHi });
+    dl(g, { x: x(now) - 4, y: 10, text: 'NOW', anchor: 'end', color: C.text });
   }
   const rowG = g.append('g').selectAll('g').data(rows).join('g').attr('class', 'rr-row').attr('transform', (o) => `translate(0,${pos.get(o)})`)
     .attr('tabindex', 0).attr('role', 'listitem')
@@ -571,7 +572,7 @@ function renderFloatCalc(host, r, method, ctx) {
     h('div', {}, h('div', { class: 'card-kicker' }, 'Float calculator · METRIC-inspired (Palm’s theorem), not full METRIC'), h('h3', { class: 'card-title' }, 'How many spares does a rotable need to cover its repair pipeline?')),
     h('div', { class: 'row' }, ...[...new Set(['DERIVED', cur.provenance || 'SIMULATED'])].map((x) => provChip(x)))));
 
-  const VT = { rate: (v) => `${fmtNum(v, 2)} removals per 30 days`, tat: (v) => `${fmtNum(v, 1)} days`, spares: (v) => `${fmtInt(v)} spares`, cost: (v) => fmtAED(v), extra: (v) => `${fmtInt(v)} more spares`, cut: (v) => `${fmtInt(v)} days shorter TAT` };
+  const VT = { rate: (v) => `${fmtNum(v, 2)} removals per 30 days`, tat: (v) => `${fmtNum(v, 1)} days`, spares: (v) => `${fmtInt(v)} spares`, cost: (v) => fmtAED(v), extra: (v) => `${fmtInt(v)} more spare${v === 1 ? '' : 's'}`, cut: (v) => `${fmtInt(v)} day${v === 1 ? '' : 's'} shorter TAT` };
   const mkNum = (key, label, { min = 0, step = 1, hint, grouped = false } = {}) => {
     const id = `fc-${key}`;
     // grouped inputs show thousands separators ("47,977"), so they are text inputs parsed by num(stripCommas)
@@ -587,7 +588,7 @@ function renderFloatCalc(host, r, method, ctx) {
   const fRate = mkNum('rate', 'Removals per 30 d', { step: 0.01, hint: 'Unscheduled removals (U/S) at this stocking point' });
   const fTat = mkNum('tat', 'Pipeline TAT, days', { step: 0.1, hint: 'Removal → serviceable again (transport + shop + return)' });
   const fSp = mkNum('spares', 'Spares (S)', { step: 1, hint: 'Total spares: shelf + pipeline' });
-  const fCost = mkNum('cost', 'Unit cost, AED', { step: 1000, hint: 'Exchange / purchase price per serial', grouped: true });
+  const fCost = mkNum('cost', 'Unit cost, AED', { step: 1, hint: 'Exchange / purchase price per serial', grouped: true }); // step 1: the slider holds the field's exact value (47,977)
   const fields = [fRate, fTat, fSp, fCost];
   const reason = h('div', { class: 'fc-hint fc-wide' });
   const presetBox = h('div', { class: 'fc-presets fc-wide', role: 'group', 'aria-label': 'Set spares to a policy level' });
@@ -620,7 +621,11 @@ function renderFloatCalc(host, r, method, ctx) {
   inputs.classList.add('fc-area-in'); results.classList.add('fc-area-out'); chartHost.classList.add('fc-area-chart');
   host.append(h('div', { class: 'fc-grid' }, inputs, results, chartHost));
   host.append(h('div', { class: 'section-title mt-3' }, h('h2', { class: 't-16' }, 'Lever comparison: buy spares vs cut TAT'), h('span', { class: 'rule' })));
-  host.append(h('div', { class: 'fc-lever-controls' }, lN.el, lD.el), leverBox, verdict, assume);
+  // wave 5: the lever tool compares at a stocking point where the levers bite. Default: the station view (e.g. BOM, 2 units);
+  // the reader can switch to the calculator inputs above.
+  let leverBasis = 'station';
+  const basisSeg = h('div', { class: 'seg fc-basis', role: 'radiogroup', 'aria-label': 'Compare the levers at' });
+  host.append(h('div', { class: 'fc-basis-row' }, h('span', { class: 'fc-label' }, 'Compare at'), basisSeg), h('div', { class: 'fc-lever-controls' }, lN.el, lD.el), leverBox, verdict, assume);
   host.append(h('p', { class: 'rr-method-note mt-2' }, 'Palm’s theorem: with Poisson removals at rate λ and any repair-time distribution of mean T, the number of units in the pipeline is Poisson(λT). Availability = P(X < S); EBO = E[max(X − S, 0)]; expected wait = EBO / λ. Single site, infinite repair capacity, no condemnation — hence “METRIC-inspired”, not a full multi-echelon METRIC.'));
 
   const frame = chartFrame(chartHost, { headline: 'Float calculator', subtitle: 'Units in the repair pipeline', provenance: 'DERIVED', source: 'lib/floatcalc.js (mirrors src/gnm/policy/analytic.py)' });
@@ -632,6 +637,7 @@ function renderFloatCalc(host, r, method, ctx) {
     fRate.range.max = rmax; fTat.range.max = Math.max(30, Math.ceil((state.tat ?? 30) * 2));
     fSp.range.max = Math.max(10, (state.spares ?? 5) * 2 + 4); fCost.range.max = Math.max(100000, Math.ceil(((state.cost ?? 50000) * 3) / 1000) * 1000);
     lN.range.max = 10; lD.range.max = Math.max(10, Math.floor(state.tat ?? 10));
+    [fRate, fTat, fSp, fCost, lN, lD].forEach((f) => fillPct(f.range)); // a new max moves the fill too
   };
   const sync = (key) => {
     const all = { rate: fRate, tat: fTat, spares: fSp, cost: fCost, extra: lN, cut: lD };
@@ -678,6 +684,7 @@ function renderFloatCalc(host, r, method, ctx) {
   }
   let stopChart = null;
   function compute() {
+    [fRate, fTat, fSp, fCost, lN, lD].forEach((f) => fillPct(f.range));
     const { rate, tat, spares, cost, extra, cut } = state;
     const ok = [rate, tat, spares, cost].every((v) => v != null && v >= 0);
     if (!ok) {
@@ -704,9 +711,14 @@ function renderFloatCalc(host, r, method, ctx) {
     frame.root.querySelector('.chart-subtitle').textContent = `P(k units in the repair pipeline), X ~ Poisson(λT = ${fmtNum(rate, 1)}/30 d × ${fmtInt(tat)} d)${cur.pn ? ` for ${cur.pn}` : ''} · bars at k ≥ S are shortages`;
     stopChart?.();
     stopChart = drawPmf(frame, res.pipeline_mean, S, res);
-    // levers
-    const N = Math.max(0, Math.round(extra ?? 0)), D = Math.max(0, cut ?? 0);
-    const cl = compareLevers(rate, tat, S, cost, D, N, accel ? accel.value : 0);
+    // levers: at the station view (own units, own loop) or at the calculator inputs
+    const sv = cur.stationView;
+    const useSt = leverBasis === 'station' && sv && sv.units?.recommended != null;
+    basisSeg.replaceChildren(...[sv ? ['station', `${sv.station} · ${fmtInt(sv.units.recommended)} unit${sv.units.recommended === 1 ? '' : 's'}, own loop`] : null, ['inputs', `Calculator inputs · S = ${fmtInt(S)}`]].filter(Boolean)
+      .map(([k, label]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String((useSt ? 'station' : 'inputs') === k), dataset: { basis: k }, onclick: () => { leverBasis = k; compute(); } }, label)));
+    const L = useSt ? { rate: sv.rate_per_30d, tat: sv.loop_days, S: sv.units.recommended } : { rate, tat, S };
+    const N = Math.max(0, Math.round(extra ?? 0)), D = Math.min(Math.max(0, cut ?? 0), L.tat);
+    const cl = compareLevers(L.rate, L.tat, L.S, cost, D, N, accel ? accel.value : 0);
     const gainA = cl.extra_spares.availability - cl.base.availability;
     const gainB = cl.tat_cut.availability - cl.base.availability;
     // C6 (wave 4): highlight the CHEAPER lever per availability point (annual AED / pt), as the Capital lever panel does;
@@ -737,13 +749,14 @@ function renderFloatCalc(host, r, method, ctx) {
     const ann = carryingValue(cl.extra_spares.incremental_capital_aed, method);
     const saturated = Math.max(gainA, gainB) < 0.0005;
     const p0S = (cur.presets || []).find(([k]) => k === 'P0')?.[1];
-    const cheaper = betterA ? `Buying ${fmtInt(N)} spare${N === 1 ? '' : 's'} is the cheaper lever per availability point` : betterB ? `Cutting TAT by ${fmtInt(D)} d is the cheaper lever per availability point` : null;
+    const where = useSt ? `At ${sv.station} (${fmtInt(L.S)} units, ${fmtInt(L.tat)}-day loop), b` : 'B';
+    const cheaper = betterA ? `${where}uying ${fmtInt(N)} spare${N === 1 ? '' : 's'} is the cheaper lever per availability point` : betterB ? `${useSt ? `At ${sv.station}, c` : 'C'}utting TAT by ${fmtInt(D)} d is the cheaper lever per availability point` : null;
     const more = gainA > gainB + 1e-9 ? `the spares add more availability` : gainB > gainA + 1e-9 ? `the TAT cut adds more availability` : 'both add the same availability';
-    const annualTxt = accel && ann != null ? `On an annual basis the spares cost ${fmtAED(ann)}/yr to carry versus ${fmtAED(cl.tat_cut.incremental_annual_aed)}/yr in acceleration fees for ${fmtNum((rate * 365) / 30, 1)} removals a year.` : 'Annual cost comparison needs the carrying rate and acceleration fee from the assumption register.';
+    const annualTxt = accel && ann != null ? `On an annual basis the spares cost ${fmtAED(ann)}/yr to carry versus ${fmtAED(cl.tat_cut.incremental_annual_aed)}/yr in acceleration fees for ${fmtNum((L.rate * 365) / 30, 1)} removals a year${useSt ? ` at ${sv.station}` : ''}.` : 'Annual cost comparison needs the carrying rate and acceleration fee from the assumption register.';
     if (saturated) {
       // the pooled float is already saturated (e.g. the Recommended S): say so, and offer the level where the levers bite
-      verdict.replaceChildren(h('strong', {}, `At S = ${fmtInt(S)} the pooled float is saturated: neither lever moves availability. `),
-        p0S != null && p0S !== S ? h('button', { type: 'button', class: 'btn btn--sm btn--ghost fc-try-p0', onclick: () => { state.spares = p0S; sync(null); compute(); } }, `Compare the levers at P0 (S = ${fmtInt(p0S)})`) : null, ' ', annualTxt);
+      verdict.replaceChildren(h('strong', {}, `At S = ${fmtInt(L.S)} the float is saturated: neither lever moves availability. `),
+        !useSt && sv ? h('button', { type: 'button', class: 'btn btn--sm btn--ghost fc-try-p0', onclick: () => { leverBasis = 'station'; compute(); } }, `Compare at ${sv.station} instead`) : !useSt && p0S != null && p0S !== S ? h('button', { type: 'button', class: 'btn btn--sm btn--ghost fc-try-p0', onclick: () => { state.spares = p0S; sync(null); compute(); } }, `Compare the levers at P0 (S = ${fmtInt(p0S)})`) : null, ' ', annualTxt);
       return;
     }
     verdict.replaceChildren(

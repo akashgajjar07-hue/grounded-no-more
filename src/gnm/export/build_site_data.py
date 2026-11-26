@@ -1209,7 +1209,9 @@ def build_actions() -> dict:
             return txt
         txt = re.sub(r"(\d+(?:\.\d+)?) (\w+)\(s\)", lambda m: f"{m.group(1)} {m.group(2)}{'' if m.group(1) == '1' else 's'}", txt)
         # '1 D0 requests' -> '1 D0 request' (counts printed by the rule engine without plural())
-        return re.sub(r"\b1 ((?:D\d+ |AOG )?)(request|event|unit|exception|week)s\b", r"1 \1\2", txt)
+        txt = re.sub(r"\b1 ((?:D\d+ |AOG )?)(request|event|unit|exception|week)s\b", r"1 \1\2", txt)
+        # '(2.0x)' -> '(×2.0)': the design system's multiplication sign, leading (wave 5, F6)
+        return re.sub(r"\b(\d+(?:\.\d+)?)x\b", "\u00d7\\1", txt)
     acts = [dict(x, provenance=x.get("provenance", "SIMULATED" if x["type"] == "QUARANTINE_DOCS" else "DERIVED"),
                  summary=plural_fix(x.get("summary")), recommended_action=plural_fix(x.get("recommended_action")),
                  type_label=ACTION_TYPE_LABEL.get(x["type"], x["type"].replace("_", " ").capitalize()),
@@ -1398,8 +1400,13 @@ def build_story(data: dict) -> dict:
     else:
         lead = f"ATA {ata} rates {sys_['risk_level'].upper()}, led by {pn}, a {part['deadline']} {noun} with risk {risk}/100."
         t2 = f"{pn}: never in stock at {st}"
-    body2 = (f"{lead} With {int(st_units.P0)} units at {st} under P0, {st_d0} D0 requests in two years of history (W0–W103) became "
-             f"{len(ae_st)} AOG events ({fmt_int(ae_st.hours.sum())} h).")
+    # wave 5: cite the numbers the part drawer shows (52-week AOG hours, all stations and the worst station)
+    if part.get("aog_h_52w_max_station_id") == st:
+        body2 = (f"{lead} With {int(st_units.P0)} units at {st} under P0, it caused {fmt_int(part['aog_h_52w'])} AOG h in the last "
+                 f"52 weeks (W52–W103), {fmt_int(part['aog_h_52w_max_station'])} h of them at {st}.")
+    else:
+        body2 = (f"{lead} With {int(st_units.P0)} units at {st} under P0, it caused {fmt_int(part['aog_h_52w'])} AOG h across all "
+                 "stations in the last 52 weeks (W52–W103).")
 
     body3 = (f"Its weekly demand is {part['demand_class']} (ADI {part['adi']:.2f} weeks, CV² {part['cv2']:.2f} on training "
              "weeks W0–W77).")
@@ -1415,8 +1422,15 @@ def build_story(data: dict) -> dict:
              f"{fl['loop_units']} in repair) cover {pool_txt} of removals. An aircraft at {st} can only use the "
              f"{rec_st} unit{'s' if rec_st != 1 else ''} there: on its {float(st_ff.t_eff_out_d):.0f}-day loop, Palm's theorem gives "
              f"{fmt_pct(a_rec_st, 0)}. Station figures, not pooled ones, decide AOG hours.")
+    # wave 5: narrated around the recommended plan. I125 has network-level holdout results only, so the per-station figure
+    # is P2's (the network plan I125 is built on), and that is said.
+    st_row = next(x for x in data["network"]["stations"] if x["station"] == st)
+    u_rec, u_p2 = st_row["by_policy"][rid]["rotable_units"], st_row["by_policy"]["P2"]["rotable_units"]
+    d_u = u_rec - u_p2
     body5 = (f"At {st}, holdout material AOG falls from {fmt_int(net[('P0', st)]['aog_hours'])} h/yr under P0 to "
-             f"{fmt_int(net[('P2', st)]['aog_hours'])} under P2, which stocks outstations where the D0 penalty pays for the unit."
+             f"{fmt_int(net[('P2', st)]['aog_hours'])} under P2, the network plan {rid} builds on. {rid} "
+             + (f"adds {d_u} unit{'s' if d_u != 1 else ''} here ({u_rec} vs {u_p2})" if d_u > 0 else f"keeps P2's {u_rec} units here")
+             + f" and holds network AOG to {fmt_int(pts[rid]['aog_hours'])} h/yr."
              + (f" Each emergency hop from AUH takes {fmt_int(arc['aog_transport_h'])} h." if arc else ""))
     body6 = (f"The pre-stated rule walks the capital-vs-AOG hull until an extra AED 1M saves fewer than "
              f"{rec['h_star_per_aed_1m']:.1f} AOG h/yr, and stops at {rid}: {fmt_aed_m(pts[rid]['capital_aed'])} and "

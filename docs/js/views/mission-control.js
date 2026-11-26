@@ -201,7 +201,7 @@ export async function render(el, ctx) {
         // C10 (wave 4): the exception type, so a low-risk PN ranked urgent for planning data is not puzzling
         h('span', { class: 'mc-pr-type', title: `${a.type_label || a.type}: a planning exception, not a grounding-risk score` }, a.type_label || a.type)),
       h('span', { class: 'mc-pr-sig', title: sig.k }, h('span', { class: 'mc-pr-v' }, sig.v), h('span', { class: 'mc-pr-step' }, TYPE_STEP[a.type] || 'Review')),
-      h('span', { class: 'mc-pr-aog num', title: aogLabel }, h('span', { class: 'mc-pr-ml' }, 'Worst stn '), g.aog ? [fmtHours(g.aog), g.aogSt ? h('span', { class: 'mc-pr-st' }, ` · ${g.aogSt}`) : null] : '—'),
+      h('span', { class: 'mc-pr-aog num', title: aogLabel }, h('span', { class: 'mc-pr-ml' }, 'Worst stn '), g.aog ? [fmtHours(g.aog), g.aogSt ? h('span', { class: 'mc-pr-st', title: g.stations.includes(g.aogSt) ? null : `No open exception at ${g.aogSt}; its 52-week AOG hours are still the worst for this PN` }, ` · ${g.aogSt}`, g.stations.includes(g.aogSt) ? null : h('span', { class: 'mc-pr-noex' }, 'no exception there')) : null] : '—'),
       h('span', { class: 'mc-pr-due num' }, h('span', { class: 'mc-pr-ml' }, 'Due '), num(g.due) ? fmtWeek(g.due) : '—'),
       h('span', { class: 'mc-pr-do', 'aria-hidden': 'true' }, icon('chevron-right')));
   });
@@ -250,7 +250,7 @@ export async function render(el, ctx) {
     const nWatch = sysRows.filter((a) => (a.system_level || a.risk_level) !== 'urgent' && (a.has_urgent_part ?? a.n_urgent > 0)).length;
     right.append(card({
       story: 'mission-systems', kicker: 'Aircraft systems', prov: 'DERIVED',
-      title: `${fmtInt(nUrgSys)} system${nUrgSys === 1 ? '' : 's'} rate urgent; ${fmtInt(nWatch)} more hold an urgent part`,
+      title: (() => { const shownWatch = sysRows.slice(0, nShow).filter((a) => (a.system_level || a.risk_level) !== 'urgent' && (a.has_urgent_part ?? a.n_urgent > 0)).length; return `${fmtInt(nUrgSys)} system${nUrgSys === 1 ? '' : 's'} rate urgent; ${fmtInt(nWatch)} more hold an urgent part${nWatch ? ` (${fmtInt(shownWatch)} shown)` : ''}`; })(),
       body: h('ul', { class: 'mc-sys list-reset' }, sysRows.slice(0, nShow).map((a) => {
         const lv = a.system_level || a.risk_level || 'unknown';
         const nU = a.n_urgent ?? 0;

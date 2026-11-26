@@ -92,3 +92,6 @@
 }
 .fl-reconcile { display: flex; gap: 8px; align-items: flex-start; margin: var(--s-1) 0 0; line-height: 1.5; }
 .fl-reconcile .icon { flex: none; width: 14px; height: 14px; margin-top: 2px; color: var(--text-faint); }
+.fl-key { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 0 0 var(--s-1); }
+.fl-key-i { color: var(--text); }
+.fl-key-sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); margin-left: 10px; }

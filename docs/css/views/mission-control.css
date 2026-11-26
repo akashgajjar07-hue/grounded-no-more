@@ -76,6 +76,8 @@ a.mc-pr:hover { background: var(--c-teal-a08); }
 .mc-pr-aog, .mc-pr-due { font-family: var(--font-mono); font-size: var(--fs-14); color: var(--text); }
 .mc-pr-ml { display: none; }
 .mc-pr-st { color: var(--text-faint); font-size: var(--fs-12); }
+.mc-pr-noex { display: block; font-family: var(--font-ui); font-size: 11px; color: var(--text-faint); white-space: nowrap; }
+@media (max-width: 767px) { .mc-pr .mc-pr-aog { white-space: normal; } }
 .mc-pr-aog { white-space: nowrap; }
 .mc-pr-type { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mc-pr-do { display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: var(--fs-12); color: var(--text-muted); text-align: right; min-width: 0; }
@@ -118,7 +120,9 @@ a.mc-pr:hover { background: var(--c-teal-a08); }
   .mc-col { gap: var(--s-2); }
   /* priorities: two-line stacked rows — PN + severity, then signal · AOG h · due */
   .mc-pr--head { display: none; }
-  .mc-pr { grid-template-columns: auto auto minmax(0, 1fr); grid-template-areas: "part part sev" "sig sig sig" "aog due do"; gap: 6px var(--s-2); padding: 12px 8px; }
+  /* F2 (wave 5): the part column is minmax(0, 1fr) so the type label can never run under the severity pill */
+  .mc-pr { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "part part sev" "sig sig sig" "aog due do"; gap: 6px var(--s-2); padding: 12px 8px; }
+  .mc-pr-type { flex-basis: 100%; }
   .mc-pr-sev { grid-area: sev; justify-self: end; }
   .mc-pr-part { grid-area: part; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
   .mc-pr-sig { grid-area: sig; flex-direction: row; align-items: baseline; gap: 8px; }

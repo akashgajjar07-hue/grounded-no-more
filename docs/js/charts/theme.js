@@ -67,10 +67,11 @@ export function fmtAED(v, { digits = 1, sign = false } = {}) {
   if (v == null || Number.isNaN(+v)) return '—';
   const a = Math.abs(v);
   const s = v < 0 ? '−' : sign && v > 0 ? '+' : '';
-  if (a >= 1e9) return `AED ${s}${trim((a / 1e9).toFixed(digits))}B`;
-  if (a >= 1e6) return `AED ${s}${trim((a / 1e6).toFixed(digits))}M`;
-  if (a >= 1e3) return `AED ${s}${Math.round(a / 1e3)}k`;
-  return `AED ${s}${Math.round(a)}`;
+  // one sign style site-wide (wave 5): the sign leads the currency, "+AED 4.8M" / "−AED 951k"
+  if (a >= 1e9) return `${s}AED ${trim((a / 1e9).toFixed(digits))}B`;
+  if (a >= 1e6) return `${s}AED ${trim((a / 1e6).toFixed(digits))}M`;
+  if (a >= 1e3) return `${s}AED ${Math.round(a / 1e3)}k`;
+  return `${s}AED ${Math.round(a)}`;
 }
 /** Fraction → percent: fmtPct(0.987) = "98.7%". */
 export const fmtPct = (v, digits = 1) => (v == null || Number.isNaN(+v) ? '—' : `${(v * 100).toFixed(digits)}%`);
