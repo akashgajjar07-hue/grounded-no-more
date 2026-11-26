@@ -69,6 +69,28 @@ def flatten(d: dict, prefix: str = "") -> dict:
     return out
 
 
+def _walk(node: dict, prefix: str, prov: str, rationale, rows: list) -> None:
+    """Flatten with inherited provenance. A nested `provenance` key overrides its parent;
+    sibling keys named `<x>_provenance` / `<x>_rationale` annotate key `<x>`."""
+    prov = node.get("provenance", prov)
+    rationale = node.get("rationale", rationale)
+    annot = {k[: -len("_provenance")]: v for k, v in node.items() if k.endswith("_provenance")}
+    annot_r = {k[: -len("_rationale")]: v for k, v in node.items() if k.endswith("_rationale")}
+
+    def _own(k):
+        return annot.get(k, prov), annot_r.get(k, rationale)
+
+    for k, v in node.items():
+        if k in ("provenance", "rationale") or k.endswith("_provenance") or k.endswith("_rationale"):
+            continue
+        key = f"{prefix}.{k}"
+        p, r = _own(k)
+        if isinstance(v, dict):
+            _walk(v, key, p, r, rows)
+        else:
+            rows.append({"key": key, "value": json.dumps(v), "provenance": p, "rationale": r})
+
+
 def assumption_register():
     """Flatten the YAML into the assumption_register table (key, value, provenance, rationale)."""
     import pandas as pd
@@ -78,15 +100,7 @@ def assumption_register():
     for section, body in cfg.items():
         if not isinstance(body, dict) or section == "planted_situations":
             continue
-        prov = body.get("provenance", "ASSUMED")
-        rationale = body.get("rationale")
-        for k, v in flatten(body, section).items():
-            if k.endswith(".provenance") or k.endswith(".rationale"):
-                continue
-            sub_prov = prov
-            if section == "network" and ".stations." in k:
-                sub_prov = "REAL"
-            rows.append({"key": k, "value": json.dumps(v), "provenance": sub_prov, "rationale": rationale})
+        _walk(body, section, body.get("provenance", "ASSUMED"), body.get("rationale"), rows)
     if isinstance(cfg.get("planted_situations"), dict):
         for ps in cfg["planted_situations"]["items"]:
             rows.append({"key": f"planted_situations.{ps['id']}", "value": json.dumps(ps["description"]),

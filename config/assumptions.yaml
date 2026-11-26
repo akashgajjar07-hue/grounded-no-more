@@ -74,7 +74,7 @@ network:
     JED: {name: "King Abdulaziz International, Jeddah", lat: 21.6796, lon: 39.1565, role: outstation}
     BOM: {name: "Chhatrapati Shivaji Maharaj International, Mumbai", lat: 19.0887, lon: 72.8679, role: outstation}
     SIN: {name: "Singapore Changi", lat: 1.3644, lon: 103.9915, role: outstation}
-  coordinates_provenance: REAL
+  stations_provenance: REAL
   route_mix:                         # share of each archetype's rotations to each outstation
     narrowbody: {CAI: 0.30, JED: 0.35, BOM: 0.35}
     widebody: {LHR: 0.30, FRA: 0.25, BOM: 0.15, SIN: 0.30}
@@ -90,9 +90,9 @@ network:
     provenance: ASSUMED
     rationale: "Station-to-station AOG times include waiting for the next suitable flight, handling and customs; outstation-to-outstation usually routes via the hub."
   routine_transport_days: {mean: 4.0, sd: 1.0}   # hub -> outstation scheduled replenishment
-  routine_transport_provenance: ASSUMED
+  routine_transport_days_provenance: ASSUMED
   removed_unit_return_days: {mean: 5.0, sd: 1.5} # outstation -> AUH for unserviceable cores
-  removed_unit_return_provenance: ASSUMED
+  removed_unit_return_days_provenance: ASSUMED
 
 parts:
   counts: {consumable: 45, expendable: 35, rotable: 40}
@@ -214,3 +214,37 @@ planted_situations:                  # documented demo situations (generator imp
       description: "Declining-demand consumable creating excess stock"
     - id: PS4
       description: "Lead-time jump on one expendable (supplier change) during history week ~70"
+
+# ---- added by sim-engine (compatible extension; see docs/agent_notes/sim-engine.md) ----
+generator:                           # parameters of the synthetic generator not covered above
+  airborne_speed_kmh: {narrowbody: 830, widebody: 870}   # great-circle distance / speed = flight hours (FH)
+  route_distance_factor: 1.05        # airway routing vs great circle
+  taxi_hours_per_leg: 0.4            # block time = FH + taxi
+  min_ground_hours: 1.0              # minimum turnaround
+  ground_time_jitter: 0.20           # +/- uniform share on turnaround time
+  a_check_downtime_h: 12             # A-check performed overnight at AUH
+  kit_line_qty: [1, 4]               # quantity per kit line (consumables)
+  applicability_mix: {both: 0.50, narrowbody: 0.30, widebody: 0.20}
+  fc_driven_atas: ["32", "49"]       # landing gear & APU components always cycle-driven
+  quoted_tat_noise_sd_log: 0.15      # vendor-quoted shop TAT vs true mean
+  quoted_tat_optimism: 0.90          # quotes are ~10% shorter than reality on average
+  quoted_condemn_noise_sd_log: 0.30
+  quoted_usage_noise_sd_log: 0.30    # consumables: quoted FC-per-unit vs true
+  lead_time_true_noise_sd_log: 0.10  # true lead-time mean vs quoted
+  deadline_class_alt_prob: 0.10      # per-event chance the requirement deadline differs from the PN default
+  planted:
+    PS1: {mtbur_fh: 3000, quoted_multiple: 2.5, deadline_class: D0}
+    PS2: {tat_days: 88, quoted_tat_days: 45, repair_days_multiplier: 2.5, weeks: [84, 92], seed: history}
+    PS3: {trend_per_year: 0.45, quoted_usage_multiple: 1.10}
+    PS4: {change_week: 70, lead_time_factor: 2.6}
+  provenance: ASSUMED
+  rationale: "Schedule geometry (speeds, taxi, turnaround), quote-vs-truth noise and planted-situation magnitudes are illustrative generator settings chosen so that utilisation lands near the fleet means and the planted situations are visible in two years of history."
+
+engine:                              # event-engine settings (policy-agnostic)
+  shop_bench_time_share: 0.06        # share of shop work time a unit occupies a capacity slot (bench/test stand)
+  condemn_inspection_days: 3         # BER decided after teardown/inspection; slot released then
+  expedite_lead_time_factor: 0.5     # an expedited PO arrives in 50% of the drawn lead time (premium charged)
+  routine_transport_min_days: 1.0    # floor on sampled routine/core-return transit
+  earmark_routine_if_slack_sd: 2.0   # a backordered D10 need ships routine if deadline >= mean + 2 sd routine transit, else emergency
+  provenance: ASSUMED
+  rationale: "Shop capacity slots are interpreted as bench/test-stand positions: a unit holds a slot only for its touch/test time (share of work time); awaiting-parts and paperwork time runs outside the slot. Without this, 14 slots could not process ~1,500 rotable removals a year at 15–90 day TATs."

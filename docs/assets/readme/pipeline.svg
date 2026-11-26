@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" width="960" height="420" role="img" aria-labelledby="t d">
+  <title id="t">GROUNDED NO MORE pipeline</title>
+  <desc id="d">Assumptions and real station coordinates feed a synthetic generator. The generator produces hidden ground truth and an observable airline history. Forecasting, rotable and stock policy, network positioning and the readiness frontier optimiser run on the history only. One event engine evaluates every policy on paired seeds. Results are frozen, exported to JSON and shown in a static web app.</desc>
+  <defs>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" fill="none" stroke="#22C7B8" stroke-opacity="0.07" stroke-width="1"/>
+    </pattern>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#22C7B8"/>
+    </marker>
+    <style>
+      .bx{fill:#0F1E2E;stroke:#22C7B8;stroke-width:1.2}
+      .hid{fill:#0F1E2E;stroke:#6B7C8F;stroke-width:1.2;stroke-dasharray:4 4}
+      .ln{fill:none;stroke:#22C7B8;stroke-width:1.4;marker-end:url(#arr)}
+      .dl{fill:none;stroke:#6B7C8F;stroke-width:1.2;stroke-dasharray:4 4;marker-end:url(#arr)}
+      .h{font-family:'Space Grotesk',Inter,system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;font-weight:600;fill:#F2F6FA}
+      .s{font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;font-size:11.5px;fill:#B9C8D6}
+      .k{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:1.2px;fill:#22C7B8}
+      .m{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-size:10px;fill:#6B7C8F}
+    </style>
+  </defs>
+  <rect width="960" height="420" fill="#09131F"/>
+  <rect width="960" height="420" fill="url(#grid)"/>
+
+  <text x="24" y="32" class="k">GROUNDED NO MORE / PIPELINE</text>
+  <text x="936" y="32" class="m" text-anchor="end">ALL AIRLINE DATA SIMULATED</text>
+
+  <!-- column 1: inputs -->
+  <text x="24" y="70" class="k">01 INPUTS</text>
+  <rect x="24" y="82" width="176" height="62" rx="8" class="bx"/>
+  <text x="38" y="106" class="h">Assumptions</text>
+  <text x="38" y="126" class="s">config/assumptions.yaml</text>
+  <rect x="24" y="160" width="176" height="62" rx="8" class="bx"/>
+  <text x="38" y="184" class="h">Station coordinates</text>
+  <text x="38" y="204" class="s">OurAirports (REAL)</text>
+
+  <!-- column 2: generator -->
+  <text x="236" y="70" class="k">02 SIMULATE</text>
+  <rect x="236" y="82" width="186" height="140" rx="8" class="bx"/>
+  <text x="250" y="106" class="h">Synthetic generator</text>
+  <text x="250" y="128" class="s">Fleet, flights, exposure</text>
+  <text x="250" y="146" class="s">Removals (FH / FC driven)</text>
+  <text x="250" y="164" class="s">Kits, line usage</text>
+  <text x="250" y="182" class="s">Repair TAT, condemnation,</text>
+  <text x="250" y="198" class="s">lead-time draws (CRN)</text>
+  <path d="M200 113H232" class="ln"/>
+  <path d="M200 191H232" class="ln"/>
+
+  <rect x="236" y="250" width="186" height="56" rx="8" class="hid"/>
+  <text x="250" y="273" class="h">Hidden ground truth</text>
+  <text x="250" y="292" class="s">True MTBUR, TAT, scrap rates</text>
+  <path d="M329 222V246" class="dl"/>
+
+  <!-- column 3: history -->
+  <text x="458" y="70" class="k">03 OBSERVE</text>
+  <rect x="458" y="82" width="176" height="140" rx="8" class="bx"/>
+  <text x="472" y="106" class="h">Airline history</text>
+  <text x="472" y="128" class="s">104 weeks under legacy</text>
+  <text x="472" y="146" class="s">rules (P0): requests,</text>
+  <text x="472" y="164" class="s">ROs, POs, transfers,</text>
+  <text x="472" y="182" class="s">AOG events</text>
+  <text x="472" y="204" class="m">PARQUET + DUCKDB</text>
+  <path d="M422 152H454" class="ln"/>
+
+  <!-- column 4: models -->
+  <text x="670" y="70" class="k">04 PLAN</text>
+  <rect x="670" y="82" width="266" height="34" rx="8" class="bx"/>
+  <text x="684" y="104" class="h">Intermittent-demand forecasting</text>
+  <rect x="670" y="124" width="266" height="34" rx="8" class="bx"/>
+  <text x="684" y="146" class="h">Rotable float + stock policy</text>
+  <rect x="670" y="166" width="266" height="34" rx="8" class="bx"/>
+  <text x="684" y="188" class="h">Network positioning</text>
+  <rect x="670" y="208" width="266" height="34" rx="8" class="bx"/>
+  <text x="684" y="230" class="h">Readiness Frontier optimiser</text>
+  <path d="M634 140H650V99H666" class="ln"/>
+  <path d="M650 140H666" class="ln"/>
+  <path d="M650 140V183H666" class="ln"/>
+  <path d="M650 183V225H666" class="ln"/>
+
+  <!-- truth recovery -->
+  <path d="M422 278H514" class="dl"/>
+  <text x="520" y="274" class="s">Truth recovery check</text>
+  <text x="520" y="290" class="m">EVAL ONLY</text>
+
+  <!-- row 2: evaluate / ship -->
+  <text x="670" y="276" class="k">05 EVALUATE</text>
+  <rect x="670" y="288" width="266" height="50" rx="8" class="bx"/>
+  <text x="684" y="310" class="h">One event engine, paired seeds</text>
+  <text x="684" y="328" class="s">Freeze hash, then holdout once</text>
+  <path d="M803 242V284" class="ln"/>
+
+  <text x="24" y="276" class="k">06 SHIP</text>
+  <rect x="24" y="288" width="176" height="50" rx="8" class="bx"/>
+  <text x="38" y="310" class="h">Static web app</text>
+  <text x="38" y="328" class="s">GitHub Pages</text>
+  <rect x="458" y="320" width="176" height="50" rx="8" class="bx"/>
+  <text x="472" y="342" class="h">JSON exports</text>
+  <text x="472" y="360" class="s">docs/data, reconciled</text>
+  <path d="M670 330H638" class="ln"/>
+  <path d="M458 345H330V325H204" class="ln"/>
+
+  <text x="24" y="396" class="m">SOLID = OBSERVABLE DATA FLOW</text><text x="260" y="396" class="m">DASHED = HIDDEN TRUTH, NEVER READ BY PLANNING MODELS</text>
+</svg>

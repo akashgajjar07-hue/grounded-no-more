@@ -1,0 +1,63 @@
+# Limitations
+
+What this project does not do, and where its numbers would mislead if read too literally. Each item says what was simplified, why, and which way it is likely to bias the results.
+
+---
+
+## Data
+
+**1. The data is synthetic.** The airline, fleet, part numbers, removals, repair orders and AOG events are generated. Only station coordinates are REAL. Every parameter is ASSUMED, chosen to be order-of-magnitude plausible, and listed in the [assumption register](docs/assumption_register.md). Results show how the methods behave under those assumptions; they are not a measurement of any airline.
+
+**2. Simulated rates are not reliability data.** MTBUR, condemnation rates and repair TATs are drawn from configured ranges. They must never be quoted as measured component reliability.
+
+**3. The models are tested on a world the author designed.** The generator draws removals from exposure ÷ MTBUR, which is exactly the structure the reliability-exposure forecast assumes. That gives it a home advantage. Real removals include no-fault-found, maintenance-induced and fleet-campaign effects that this generator does not produce.
+
+**4. Vendor-quoted MTBUR noise is assumed.** The quoted figure is truth × lognormal noise (σ_log 0.35) and 25% optimistic on average. The real gap between quoted and achieved MTBUR differs by component, operator and environment, and can be much larger.
+
+**5. Demand is unconstrained and uncensored.** Every requirement is recorded whether or not stock existed. Real consumable issue histories are often censored by stockouts, which biases forecasts low.
+
+**6. Two years of history.** Parts with very few removals cannot be forecast from their own history; they rely on the quoted MTBUR.
+
+## Operations
+
+**7. No exposure feedback from groundings.** A grounded aircraft keeps accruing its scheduled flying (protection by spare aircraft or sub-charter is assumed). In reality a grounded aircraft does not fly, so removals on that tail pause. This keeps demand identical across policies for a fair paired comparison, and the lost flying is costed through the AOG penalty instead.
+
+**8. Deadline classes are hypothetical, not MEL.** D0, D3 and D10 are simple requirement windows (0, 72, 240 h). Real MEL/CDL relief depends on the operator's approved MEL, aircraft type and configuration, the specific item, operational restrictions and repair intervals. A real deferral can also carry operational penalties (for example a payload or route restriction) that this model does not cost.
+
+**9. No cannibalisation (robbery) modelled.** A real operator facing an AOG may remove a serviceable part from another aircraft in heavy maintenance. This model does not, so it likely overstates AOG hours for all policies, and somewhat more for leaner ones.
+
+**10. Simplified repair shop.** Two shops with fixed parallel slots, first-come first-served queues, no priority for AOG cores, no beyond-economic-repair quote cycle, no warranty claims, no partial repairs or part-out, and no shop-capacity shocks. Pre-sampled repair durations are independent across units.
+
+**11. Close to single-echelon.** Repairs happen only through the hub. Outstations are resupplied only from AUH (laterals only where a policy allows them). There is no regional warehouse, no consignment stock at outstations, and no supplier-held stock. The analytic positioning model is METRIC-inspired, not full METRIC or VARI-METRIC.
+
+**12. Transport times are fixed planning values.** AOG transport hours per station pair are ASSUMED constants. Real next-flight-out times vary with schedule, time of day, customs, dangerous-goods rules and weight limits.
+
+**13. Simplified scheduled maintenance.** Only A-checks at AUH generate kits, with fixed notice. No C-checks, no heavy-maintenance demand, no modification programmes, no airworthiness directives creating sudden fleet-wide demand.
+
+**14. Parts are independent.** No interchangeability, no alternate part numbers, no next-higher-assembly logic, no kits containing rotables, no common-cause failures across parts.
+
+**15. Single currency, static prices.** All AED, no exchange-rate movement, no price escalation, no minimum order quantities or price breaks.
+
+## Economics and decisions
+
+**16. The AOG penalty is a scenario.** AED 15,000/h (narrowbody) and 30,000/h (widebody) are planning values. Real AOG cost depends on the route, time of day, passenger load, crew legality and recovery options. Recommendations move with this number, which is why it is sensitivity-tested at ×0.5, ×1 and ×2.
+
+**17. Carrying cost is a single rate.** 20% per year (range 15–25%) covers capital cost, storage, insurance and obsolescence together. Real rates vary by part class and company.
+
+**18. The optimiser is a greedy heuristic.** Marginal analysis is optimal only for separable, convex objectives, and then only at the budgets where greedy steps land. Hub-station coupling and per-aircraft AOG merging make the real objective non-separable. A small exact comparison is reported where available: `{{RESULT:optim.greedy_gap_small_case_pct}}`.
+
+**19. The optimiser works on an analytic proxy.** The frontier is built from deadline-weighted EBO, then each candidate is checked in the event engine. Where the proxy and the simulation disagree, the simulation is reported.
+
+**20. Pool exchange (P3) is stylised.** Fixed response time, fee, capacity and core-return terms (all ASSUMED). Real pool agreements have tiered service levels, exclusions and modification-status conditions.
+
+## Evaluation
+
+**21. Paired seeds narrow intervals within this world only.** Confidence intervals reflect simulation noise across 20 seeds, not uncertainty in the assumed parameters. Parameter uncertainty is explored only through the sensitivity (tornado) analysis.
+
+**22. One fleet, one network.** Results are for a 40-aircraft, seven-station network. They are not evidence about other fleet sizes or network shapes.
+
+## Scope
+
+**23. Not an approved maintenance, airworthiness or dispatch tool.** It does not replace an approved MEL, an MRO/ERP system, an AOG desk, or certification paperwork (such as an authorised release certificate).
+
+**24. Independent project.** Not affiliated with any airline, OEM, vendor or MRO organisation, and uses none of their data or systems.
