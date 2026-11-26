@@ -40,5 +40,11 @@
     "at": "2026-11-26T08:44:47.139701+00:00",
     "manifest_frozen_at": "2026-11-26T08:43:36.020269+00:00",
     "forced": false
+  },
+  {
+    "run": "v2_postplan_i125_stress_holdout",
+    "at": "2026-11-26T09:36:15.562986+00:00",
+    "manifest_frozen_at": "2026-11-26T08:43:36.020269+00:00",
+    "forced": false
   }
 ]
