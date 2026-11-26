@@ -1,0 +1,295 @@
+{
+ "view": "aog-response-lab",
+ "generated": "2026-11-26T19:44:44",
+ "harness": "tests/e2e/audit_lib.py (lead-updated, opens the 390 rail)",
+ "routes": [
+  "aog",
+  "aog?incident=AOG-0022"
+ ],
+ "browsers_run": [
+  "chromium",
+  "webkit"
+ ],
+ "browsers_unavailable": {
+  "firefox": "BrowserType.launch failed in this environment: \"Could not find profile folder\" (headless Nightly exits 1); not run"
+ },
+ "totals": {
+  "tested": 968,
+  "passed": 959,
+  "failed": 9,
+  "skipped": 32,
+  "fixed": 1,
+  "disabled": 0,
+  "failures_in_this_view": 0
+ },
+ "fixed": [
+  "timeline step nodes: focus shows the step tooltip (9 keyboard-focusable steps per incident previously had no visible effect)"
+ ],
+ "disabled": [],
+ "note": "Every remaining failure is a pageerror \"transition N not found\" raised while a shortcut / nav link navigates AWAY to another view (Forecast, Rotables, Network, AOG, Capital). It also occurs from the AOG route, which uses no D3 transitions, and does not reproduce in isolation. Cause: views that inherit from the document-level transition created by motion.js chartTransition() (d3.transition() on the root) after a newer root transition has cancelled it. This view no longer uses chartTransition() (transitions are created on the selection with the same tokens). Fix belongs in motion.js / the destination views.",
+ "cells": [
+  {
+   "browser": "chromium",
+   "route": "aog",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "tested": 59,
+   "passed": 59,
+   "failed": 0,
+   "skipped": 3,
+   "failures": []
+  },
+  {
+   "browser": "chromium",
+   "route": "aog",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "tested": 59,
+   "passed": 59,
+   "failed": 0,
+   "skipped": 1,
+   "failures": []
+  },
+  {
+   "browser": "chromium",
+   "route": "aog?incident=AOG-0022",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "tested": 59,
+   "passed": 59,
+   "failed": 0,
+   "skipped": 3,
+   "failures": []
+  },
+  {
+   "browser": "chromium",
+   "route": "aog?incident=AOG-0022",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "tested": 59,
+   "passed": 59,
+   "failed": 0,
+   "skipped": 1,
+   "failures": []
+  },
+  {
+   "browser": "webkit",
+   "route": "aog",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "tested": 59,
+   "passed": 58,
+   "failed": 1,
+   "skipped": 3,
+   "failures": [
+    {
+     "kind": "shortcut",
+     "label": "key 3",
+     "errors": [
+      "pageerror: transition 1 not found",
+      "pageerror: transition 2 not found"
+     ],
+     "note": ""
+    }
+   ]
+  },
+  {
+   "browser": "webkit",
+   "route": "aog",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "tested": 59,
+   "passed": 57,
+   "failed": 2,
+   "skipped": 1,
+   "failures": [
+    {
+     "kind": "link",
+     "label": "Network Positioning5",
+     "errors": [
+      "pageerror: transition 100 not found",
+      "pageerror: transition 101 not found"
+     ],
+     "note": ""
+    },
+    {
+     "kind": "shortcut",
+     "label": "key 5",
+     "errors": [
+      "pageerror: transition 74 not found",
+      "pageerror: transition 75 not found"
+     ],
+     "note": ""
+    }
+   ]
+  },
+  {
+   "browser": "webkit",
+   "route": "aog?incident=AOG-0022",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "tested": 59,
+   "passed": 58,
+   "failed": 1,
+   "skipped": 3,
+   "failures": [
+    {
+     "kind": "link",
+     "label": "Network Positioning5",
+     "errors": [
+      "pageerror: transition 100 not found",
+      "pageerror: transition 101 not found"
+     ],
+     "note": ""
+    }
+   ]
+  },
+  {
+   "browser": "webkit",
+   "route": "aog?incident=AOG-0022",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "tested": 59,
+   "passed": 56,
+   "failed": 3,
+   "skipped": 1,
+   "failures": [
+    {
+     "kind": "link",
+     "label": "Forecast Lab3",
+     "errors": [
+      "pageerror: transition 25 not found",
+      "pageerror: transition 26 not found"
+     ],
+     "note": ""
+    },
+    {
+     "kind": "link",
+     "label": "Network Positioning5",
+     "errors": [
+      "pageerror: transition 100 not found",
+      "pageerror: transition 101 not found"
+     ],
+     "note": ""
+    },
+    {
+     "kind": "shortcut",
+     "label": "key 5",
+     "errors": [
+      "pageerror: transition 3 not found",
+      "pageerror: transition 4 not found"
+     ],
+     "note": ""
+    }
+   ]
+  },
+  {
+   "browser": "chromium",
+   "route": "aog",
+   "mode": "simple",
+   "viewport": "390x844",
+   "tested": 62,
+   "passed": 61,
+   "failed": 1,
+   "skipped": 3,
+   "failures": [
+    {
+     "kind": "link",
+     "label": "Network Positioning5",
+     "errors": [
+      "pageerror: transition 100 not found",
+      "pageerror: transition 101 not found"
+     ],
+     "note": ""
+    }
+   ]
+  },
+  {
+   "browser": "chromium",
+   "route": "aog",
+   "mode": "expert",
+   "viewport": "390x844",
+   "tested": 62,
+   "passed": 62,
+   "failed": 0,
+   "skipped": 1,
+   "failures": []
+  },
+  {
+   "browser": "chromium",
+   "route": "aog?incident=AOG-0022",
+   "mode": "simple",
+   "viewport": "390x844",
+   "tested": 62,
+   "passed": 62,
+   "failed": 0,
+   "skipped": 3,
+   "failures": []
+  },
+  {
+   "browser": "chromium",
+   "route": "aog?incident=AOG-0022",
+   "mode": "expert",
+   "viewport": "390x844",
+   "tested": 62,
+   "passed": 62,
+   "failed": 0,
+   "skipped": 1,
+   "failures": []
+  },
+  {
+   "browser": "webkit",
+   "route": "aog",
+   "mode": "simple",
+   "viewport": "390x844",
+   "tested": 62,
+   "passed": 62,
+   "failed": 0,
+   "skipped": 3,
+   "failures": []
+  },
+  {
+   "browser": "webkit",
+   "route": "aog",
+   "mode": "expert",
+   "viewport": "390x844",
+   "tested": 62,
+   "passed": 61,
+   "failed": 1,
+   "skipped": 1,
+   "failures": [
+    {
+     "kind": "link",
+     "label": "Network Positioning5",
+     "errors": [
+      "pageerror: transition 108 not found",
+      "pageerror: transition 109 not found"
+     ],
+     "note": ""
+    }
+   ]
+  },
+  {
+   "browser": "webkit",
+   "route": "aog?incident=AOG-0022",
+   "mode": "simple",
+   "viewport": "390x844",
+   "tested": 62,
+   "passed": 62,
+   "failed": 0,
+   "skipped": 3,
+   "failures": []
+  },
+  {
+   "browser": "webkit",
+   "route": "aog?incident=AOG-0022",
+   "mode": "expert",
+   "viewport": "390x844",
+   "tested": 62,
+   "passed": 62,
+   "failed": 0,
+   "skipped": 1,
+   "failures": []
+  }
+ ]
+}

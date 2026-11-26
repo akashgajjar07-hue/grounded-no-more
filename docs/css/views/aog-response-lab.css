@@ -127,3 +127,7 @@
 .aog-m dd .aog-late { white-space: normal; }
 .aog-human-note > span { min-width: 0; }
 .aog-human { align-self: start; }
+/* v2.1 addendum motion: incident switch / first draw — opacity + 8 px rise only, token timing */
+@keyframes aog-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.aog-enter { animation: aog-enter var(--aog-enter-ms, var(--motion-base, 250ms)) var(--ease-enter, ease-out) both; will-change: opacity, transform; }
+@media (prefers-reduced-motion: reduce) { .aog-enter { animation: none; } }

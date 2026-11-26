@@ -8,8 +8,15 @@
  * drives the allocation table, the annual cost breakdown (capital shown separately, never summed), the
  * sensitivity tornado, the lever panel, the stress-variant table and the method limitations.
  */
-import { h, pageHead, card, provChip, slider, dataTable, segmented, kpiTile, icon, intro3, scopeLine, capitalTable } from '../ui.js';
+import { h, pageHead, card, provChip, slider, dataTable, segmented, kpiTile, icon, intro3, scopeLine, capitalTable, tooltip } from '../ui.js';
 import { isSimple } from '../lib/mode.js';
+import { throttleRAF, countUpOnce, dur, EASE } from '../lib/motion.js';
+/**
+ * A transition created ON the selection itself with the motion tokens (same timing as chartTransition()). It never
+ * inherits from a document-level transition, so a newer transition elsewhere on the site can never cancel its parent
+ * and throw "transition N not found" (seen when a shortcut navigates away mid-animation).
+ */
+const tx = (sel, { duration = 'base', ease = 'standard', name } = {}) => sel.transition(name).duration(dur(duration)).ease(EASE[ease] || EASE.standard);
 import { term, termText, FRONTIER_SUBTITLE } from '../lib/glossary.js';
 import { displayName, nameTag, relabelArchetype } from '../lib/names.js';
 const relabelArchetypeSafe = (t) => (typeof relabelArchetype === 'function' ? relabelArchetype(String(t)) : String(t));
@@ -50,6 +57,14 @@ export const fitHeadline = (...cands) => { const c = cands.filter(Boolean); retu
 const SER = theme.series;
 /** "AED 4.8M more capital" (no sign: reads well after "for"). Capital deltas are neutral copy, never red. */
 const capWords = (v) => (v == null ? '—' : v === 0 ? 'no extra capital' : `${fmtAED(Math.abs(v))} ${v > 0 ? 'more' : 'less'} capital`);
+
+/** Charts draw in once (slow token) on first render; later redraws (resize) and reduced motion are instant. */
+function drawIn(svgSel, host) {
+  if (!svgSel || host.__drawn) return;
+  host.__drawn = true;
+  if (!dur('slow')) return;
+  tx(svgSel.style('opacity', 0), { duration: 'slow', ease: 'enter' }).style('opacity', 1);
+}
 
 function ensureCSS() {
   if (document.querySelector('link[data-view-css="capital-optimiser"]')) return;
@@ -102,6 +117,7 @@ export async function render(el, ctx) {
   const { frontier: F, policies: POL } = ctx.data;
   const prov = F.meta?.provenance || F.provenance || 'SIMULATED';
   const stops = [];
+  let dead = false;
   const selById = new Map((F.selection_points || []).map((q) => [q.id, q]));
   const pts = (F.points || []).map((p) => normPoint(p, selById.get(p.id))).filter((p) => p.cap != null && p.aog != null);
   const byId = new Map(pts.map((p) => [p.id, p]));
@@ -167,6 +183,15 @@ export async function render(el, ctx) {
       const w = t.querySelector('.kpi-delta-word'); if (S && w) w.textContent = w.textContent.replace('capital', 'in spares');
     });
     tiles.forEach((t) => t.classList.add(tiles.length === 3 ? 'span-4' : 'span-6'));
+    // KPI numbers count up ONCE per session (stable keys); re-renders and mode toggles print the final value
+    [[capTile, rec.cap, (v) => fmtAED(v).replace(/^AED\s/, '')], [aogTile, rec.aog, (v) => fmtHours(v).replace(/\s?h$/, '')], [costTile, rec.total, (v) => fmtAED(v).replace(/^AED\s/, '')]].forEach(([t, v, f], i) => {
+      const val = t?.querySelector('.kpi-value');
+      const tn = val && [...val.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!tn || v == null || tn.textContent.trim() !== f(v)) return;
+      const span = h('span', { class: 'kpi-num' }, tn.textContent);
+      tn.replaceWith(span);
+      countUpOnce(span, v, f, { key: `capital-kpi-${i}-${rec.id}` });
+    });
     el.append(h('div', { class: `grid-12 co-kpis co-kpis--${tiles.length}`, dataset: { story: 'capital-kpis' } }, tiles));
   }
 
@@ -232,8 +257,9 @@ export async function render(el, ctx) {
     if (!narrow) g.append('text').attr('class', 'gnm-label').attr('x', iw).attr('y', ih + 36).attr('text-anchor', 'end').style('fill', theme.color.faint).text(S ? 'Money in spares →' : 'Spare capital →');
 
     const gBand = g.append('g'), gWhisk = g.append('g'), gLine = g.append('g'), gLinks = g.append('g'), gGhost = g.append('g'), gPts = g.append('g'), gLab = g.append('g'), gAnn = g.append('g'), gSel = g.append('g');
-    const dur = reducedMotion() ? 0 : theme.motion.ms + 150;
-    const ease = d3.easeCubicOut;
+    // overlays never take the pointer, so every clickable frontier dot stays reachable
+    [gBand, gWhisk, gLine, gLinks, gGhost, gLab, gAnn, gSel].forEach((q) => q.style('pointer-events', 'none'));
+    const firstDraw = !body.__drawn;
 
     const posOf = (p, md) => (md === 'selection' ? SEL(p) || H(p) : H(p));
     const lineGen = d3.line().x((d) => x(d.cap)).y((d) => y(d.aog)).curve(d3.curveMonotoneX);
@@ -242,7 +268,8 @@ export async function render(el, ctx) {
     function update(animate = true) {
       const md = mode === 'selection' ? 'selection' : 'holdout';
       const fr = md === 'selection' ? frontSel : front;
-      const T = (s) => (animate && dur ? s.transition().duration(dur).ease(ease) : s);
+      // one transition per selection (a shared transition throws "transition N not found" once it has ended)
+      const T = (s) => (animate && !dead ? tx(s) : s);
       const frPos = fr.map((p) => posOf(p, md));
       T(gBand.selectAll('path').data([frPos]).join('path').attr('fill', theme.color.accent).attr('fill-opacity', 0.09)).attr('d', areaGen);
       T(gLine.selectAll('path').data([frPos]).join('path').attr('fill', 'none').attr('stroke', theme.color.accent).attr('stroke-width', 2)).attr('d', lineGen);
@@ -252,6 +279,14 @@ export async function render(el, ctx) {
         .attr('y1', (p) => y(Math.max(yMin, posOf(p, md).ci?.[0] ?? posOf(p, md).aog))).attr('y2', (p) => y(posOf(p, md).ci?.[1] ?? posOf(p, md).aog))
         .attr('stroke', (p) => (p === P0 ? SER.baseline : isPolicy(p) ? SER.neutral : fr.includes(p) ? theme.color.accent : theme.color.neutral)).attr('stroke-opacity', (p) => (fr.includes(p) || isPolicy(p) ? 0.55 : 0.3)).attr('stroke-width', 1.25);
       // points
+      const sizeOf = (p) => (p === rec ? 150 : isPolicy(p) ? 90 : fr.includes(p) ? 52 : 30);
+      const px = (p) => [x(posOf(p, md).cap), y(posOf(p, md).aog)];
+      // draw order among frontier dots: data order, the frontier option last. A dot whose centre lies under a dot drawn
+      // after it cannot be clicked, so it leaves the tab order / pointer path (the budget slider still reaches it)
+      const ord = (p) => (p === rec ? Infinity : pts.indexOf(p));
+      const rad = (q) => Math.sqrt(sizeOf(q) / Math.PI) + 1.5;
+      const covered = new Set(front.filter((p) => p !== rec && front.some((q) => q !== p && ord(q) > ord(p) && Math.hypot(px(q)[0] - px(p)[0], px(q)[1] - px(p)[1]) < rad(q))));
+      const live = (p) => front.includes(p) && !covered.has(p);
       const shape = (p) => (isPolicy(p) ? d3.symbolSquare : p.kind === 'lever' || p.kind === 'combo' ? d3.symbolDiamond : d3.symbolCircle);
       const size = (p) => (p === rec ? 150 : isPolicy(p) ? 90 : fr.includes(p) ? 52 : 30);
       const pp = gPts.selectAll('path.co-pt').data(pts, (p) => p.id).join((en) => en.append('path').attr('class', 'co-pt').attr('transform', (p) => `translate(${x(posOf(p, md).cap)},${y(posOf(p, md).aog)})`));
@@ -261,17 +296,24 @@ export async function render(el, ctx) {
         .attr('fill-opacity', (p) => (fr.includes(p) || isPolicy(p) || p === rec ? 1 : 0.55))
         .attr('stroke', (p) => (p === P0 ? SER.baseline : p === P2 ? theme.color.accent : p === rec ? SER.neutral : isPolicy(p) ? SER.neutral : fr.includes(p) ? theme.color.accent : p.kind === 'lever' || p.kind === 'combo' ? theme.color.muted : 'none'))
         .attr('stroke-width', (p) => (isPolicy(p) ? 2 : 1.5)).style('cursor', 'pointer')
-        .attr('tabindex', (p) => (front.includes(p) ? 0 : null)).attr('role', (p) => (front.includes(p) ? 'button' : null))
+        .attr('tabindex', (p) => (live(p) ? 0 : null)).attr('role', (p) => (live(p) ? 'button' : null))
+        .style('pointer-events', (p) => (front.includes(p) && !live(p) ? 'none' : null))
         .attr('aria-label', (p) => `${displayName(p.id, { mode: 'code' })}: ${fmtAED(p.cap)}, ${fmtHours(p.aog)} per year`);
       T(pp).attr('transform', (p) => `translate(${x(posOf(p, md).cap)},${y(posOf(p, md).aog)})`);
-      withTooltip(pp, (p) => ({
+      const tipOf = (p) => ({
         title: `${S ? sn(p.id) : displayName(p.id, { mode: 'code' })} · ${KIND_LABEL[p.kind] || p.kind}`,
         rows: S ? [['Money in spares', fmtAED(p.cap)], ['Grounded h/yr (test runs)', `${fmtHours(p.aog)}${ciTxt(p.ci[0], p.ci[1], fmtInt)}`], p.sel?.aog != null ? ['Grounded h/yr (tuning runs)', fmtHours(p.sel.aog)] : null, p.dBaseAog ? [`Change vs ${baseN}`, `${signH(p.dBaseAog[0])}${ciTxt(p.dBaseAog[1], p.dBaseAog[2], (v) => fmtInt(v))}`] : null].filter(Boolean)
           : [['Capital', fmtAED(p.cap)], ['AOG h/yr (holdout)', `${fmtHours(p.aog)}${ciTxt(p.ci[0], p.ci[1], fmtInt)}`], p.sel?.aog != null ? ['AOG h/yr (selection)', fmtHours(p.sel.aog)] : null, p.dBaseAog ? [`Δ vs ${baseN} (paired)`, `${signH(p.dBaseAog[0])}${ciTxt(p.dBaseAog[1], p.dBaseAog[2], (v) => fmtInt(v))}`] : null].filter(Boolean),
         note: front.includes(p) ? (S ? 'On the curve · click to see where its spares go' : 'On the frontier · click to inspect its allocation') : p.kind === 'lever' || p.kind === 'combo' ? (S ? 'Adds yearly spend, not spares' : 'Adds annual spend, not capital: reported beside the rule') : p.dominated ? (S ? 'Another plan is cheaper and no worse' : 'Dominated: another plan is cheaper and no worse') : '',
-      }));
-      pp.on('click', (e, p) => { if (front.includes(p)) choose(p, true); })
-        .on('keydown', (e, p) => { if ((e.key === 'Enter' || e.key === ' ') && front.includes(p)) { e.preventDefault(); choose(p, true); } });
+      });
+      withTooltip(pp, tipOf);
+      // keyboard: focusing a dot shows the same tooltip (a visible effect), blur hides it
+      pp.on('focus', function (e, p) { const r = this.getBoundingClientRect(); tooltip.show({ clientX: r.right, clientY: r.bottom }, tipOf(p)); }).on('blur', () => tooltip.hide());
+      // frontier dots sit above the rest; a frontier dot hidden under a bigger one (same spot) is reached by the slider
+      pp.filter((p) => front.includes(p)).sort((a, b) => ord(a) - ord(b)).raise();
+      pp.filter((p) => p === rec).raise();
+      pp.on('click', (e, p) => { if (live(p)) choose(p, true); })
+        .on('keydown', (e, p) => { if ((e.key === 'Enter' || e.key === ' ') && live(p)) { e.preventDefault(); choose(p, true); } });
       // overlay ghosts + links
       const ov = mode === 'overlay' ? pts.filter((p) => SEL(p)) : [];
       gLinks.selectAll('line').data(ov, (p) => p.id).join('line').attr('stroke', theme.color.muted).attr('stroke-opacity', 0.35).attr('stroke-dasharray', '2 3')
@@ -320,10 +362,16 @@ export async function render(el, ctx) {
       }
       // selected ring
       const sp = posOf(sel, md);
-      const ring = gSel.selectAll('circle').data([sel]).join('circle').attr('r', 11).attr('fill', 'none').attr('stroke', theme.color.text).attr('stroke-width', 1.5).attr('stroke-dasharray', '3 2');
-      T(ring).attr('cx', x(sp.cap)).attr('cy', y(sp.aog));
-      const rl = gSel.selectAll('text').data([sel]).join('text').attr('class', 'gnm-label gnm-label--strong').attr('font-family', theme.font.mono).attr('text-anchor', 'middle');
-      T(rl).attr('x', x(sp.cap)).attr('y', y(sp.aog) + 26).text(sel === rec || isPolicy(sel) ? '' : sn(sel.id).replace(/^Frontier point /, ''));
+      // the selected-plan marker is ONE keyed group that glides along the frontier (transform only) as the budget changes
+      const mk = gSel.selectAll('g.co-sel').data(['selected'], (k) => k).join((en) => {
+        const g0 = en.append('g').attr('class', 'co-sel').attr('transform', `translate(${x(sp.cap)},${y(sp.aog)})`);
+        g0.append('circle').attr('r', 11).attr('fill', 'none').attr('stroke', theme.color.text).attr('stroke-width', 1.5).attr('stroke-dasharray', '3 2');
+        g0.append('text').attr('class', 'gnm-label gnm-label--strong').attr('font-family', theme.font.mono).attr('text-anchor', 'middle').attr('y', 26);
+        return g0;
+      });
+      mk.attr('data-point', sel.id);
+      mk.select('text').text(sel === rec || isPolicy(sel) ? '' : sn(sel.id).replace(/^Frontier point /, ''));
+      (animate && !dead ? tx(mk.interrupt('sel'), { name: 'sel' }) : mk).attr('transform', `translate(${x(sp.cap)},${y(sp.aog)})`);
       // unstable plans: a CI that crosses zero on a log axis draws a full-height whisker. Say why, from the data.
       gAnn.selectAll('.co-unstable').remove();
       if (md !== 'selection') {
@@ -340,6 +388,7 @@ export async function render(el, ctx) {
       }
     }
     update(false);
+    if (firstDraw) drawIn(g, body); else body.__drawn = true;
     return { update };
   }
 
@@ -347,12 +396,14 @@ export async function render(el, ctx) {
   const readout = h('dl', { class: 'meta-list co-readout' });
   const minB = front[0]?.cap ?? 0, maxB = front.at(-1)?.cap ?? 1;
   const step = Math.max(50000, Math.round((maxB - minB) / 200 / 50000) * 50000);
+  const onBudget = throttleRAF((v) => { if (dead) return; const p = planFor(v); if (p !== sel) choose(p, false); });
   const planFor = (v) => front.filter((q) => q.cap <= v + 1).at(-1) || front[0]; // never a plan above the budget
   const sl = slider({
+    id: 'co-budget', // stable id: the control keeps its identity across re-renders (mode switch, deep links)
     label: S ? 'Budget for spares' : 'Capital budget', min: Math.ceil(minB / step) * step, /* wave C (F4): the minimum always maps to a plan that fits */ max: Math.ceil(maxB / step) * step, step, value: Math.ceil(sel.cap / step) * step, format: (v) => fmtAED(v),
     // screen readers hear the budget and the plan it selects, not "41850000" (F5)
     valueText: (v) => { const p = planFor(v); return `Budget ${fmtAED(v)}: plan ${displayName(p.id, { mode: 'code' })}, ${fmtAED(p.cap)} ${S ? 'in spares' : 'capital'}, ${fmtHours(p.aog)} ${S ? 'grounded' : 'AOG'} a year`; },
-    onInput: (v) => { const p = planFor(v); if (p !== sel) choose(p, false); },
+    onInput: onBudget,
   });
   const slInput = sl.input || sl.querySelector('input');
   slInput.dataset.role = 'budget-slider';
@@ -425,7 +476,8 @@ export async function render(el, ctx) {
   }
 
   // ---- wave B: marginal value of the last investment increment + paired differences vs P2 (holdout) — Expert depth only
-  if (!S) {
+  // (rendered in both modes but hidden in Simple, so the page keeps one DOM structure across a mode switch)
+  {
     const R2 = F.recommendation || {};
     const segs = R2.segments || [];
     const into = segs.find((x) => x.to === rec?.id), after = segs.find((x) => x.from === rec?.id);
@@ -438,7 +490,7 @@ export async function render(el, ctx) {
     const sigTxt = (ci) => (ci[0] != null && ci[1] != null ? (ci[1] < 0 ? 'lower' : ci[0] > 0 ? 'higher' : 'not significant') : '—');
     const pr = (v, ci, f) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${f(Math.abs(v))} [${f(ci[0])} to ${f(ci[1])}]`;
     const mvCard = card({
-      cls: 'mt-3 co-marginal', kicker: 'Marginal value and paired differences', prov, story: 'capital-paired',
+      cls: `mt-3 co-marginal${S ? ' expert-only' : ''}`, kicker: 'Marginal value and paired differences', prov, story: 'capital-paired',
       title: into && hstar != null ? `The last increment into ${recN} buys ${fmtNum(into.h_per_aed_1m, 1)} h per AED 1M; the next one only ${after ? fmtNum(after.h_per_aed_1m, 1) : '—'}, under the ${fmtNum(hstar, 1)} h break-even` : 'Marginal value of extra capital',
       body: h('div', { class: 'stack' },
         h('p', { class: 'chart-implication' }, h('span', { class: 'chart-implication-k' }, 'So what'), h('span', { class: 'chart-implication-t' }, `Each extra AED 1M buys less downtime; stop where the next step is worth less than its holding cost. Differences vs ${baseN} below are paired (same seeds); a CI crossing 0 is not significant.`)),
@@ -462,7 +514,7 @@ export async function render(el, ctx) {
   allocCard.append(allocHead, allocBody);
   const allocRows = (id) => (F.allocations?.[id] || []).map((r) => {
     const cur = num(r.current), prop = num(r.proposed);
-    return { pn: r.pn, station: r.station, cls: r.part_class || (String(r.pn).match(/-([CER])\d/)?.[1] ?? ''), current: cur, proposed: prop, change: num(r.delta_units) ?? (cur != null && prop != null ? prop - cur : null), dcap: num(r.delta_capital ?? r.incremental_capital_aed), risk: num(r.risk_reduction ?? r.modelled_aog_hour_reduction), alt: r.alt_action ?? r.best_alternative_action ?? '', invalid: !!r.invalid_recommendation, flag: r.flag_text || F.invalid_allocation_text || '' };
+    return { key: `${r.pn}@${r.station}`, pn: r.pn, station: r.station, cls: r.part_class || (String(r.pn).match(/-([CER])\d/)?.[1] ?? ''), current: cur, proposed: prop, change: num(r.delta_units) ?? (cur != null && prop != null ? prop - cur : null), dcap: num(r.delta_capital ?? r.incremental_capital_aed), risk: num(r.risk_reduction ?? r.modelled_aog_hour_reduction), alt: r.alt_action ?? r.best_alternative_action ?? '', invalid: !!r.invalid_recommendation, flag: r.flag_text || F.invalid_allocation_text || '' };
   });
   // A9: outstation brake allocations are flagged, never deleted (frozen results unchanged)
   const INVALID_TXT = F.invalid_allocation_text || ctx.data.parts?.invalid_allocation_text || 'invalid recommendation — brakes are not changed outside the hub in this model';
@@ -470,7 +522,7 @@ export async function render(el, ctx) {
   const flagBadge = (txt) => h('span', { class: 'co-flag', title: txt, dataset: { role: 'invalid-flag' } }, icon('alert'), h('span', {}, 'invalid'));
   const altTxt = (a) => LEVER_LABEL[a] || (a === 'hold' ? 'Hold (no better lever)' : a ? String(a).replace(/_/g, ' ') : '—');
   const allocTable = dataTable({
-    caption: 'Allocation changes', dense: true, sort: { key: 'risk', dir: 'desc' }, rowKey: 'pn', stickyFirst: true,
+    caption: 'Allocation changes', dense: true, sort: { key: 'risk', dir: 'desc' }, rowKey: 'key', stickyFirst: true,
     // ≤ 767 px keeps the decision columns; ≤ 480 px stacks rows: PN · AOG-avoided pill · change, Δ capital, station
     mobileColumns: ['pn', 'risk', 'change', 'dcap', 'station'],
     columns: [
@@ -500,7 +552,13 @@ export async function render(el, ctx) {
         ? (S ? `${sn(sel.id)} changes ${fmtInt(nAll)} part-and-airport levels vs the ${baseN}: ${units >= 0 ? '+' : '−'}${fmtInt(Math.abs(units))} units, ${fmtAED(Math.abs(sumCap))} ${sumCap >= 0 ? 'more' : 'less'} in spares` : `${sn(sel.id)} changes ${fmtInt(nAll)} PN-station levels vs ${baseN}: ${units >= 0 ? '+' : '−'}${fmtInt(Math.abs(units))} units, ${fmtAED(Math.abs(sumCap))} ${sumCap >= 0 ? 'more' : 'less'} allocation capital`)
         : sel === P2 ? `The ${baseN} is the base plan: no changes` : `No allocation rows exported for ${sn(sel.id)}`)),
       h('div', { class: 'row' }, provChip(prov)));
+    // keyed, flash-free update: hold the table's height across the swap, then fade in only the rows that are new
+    const before = new Set([...allocTable.querySelectorAll('[data-key]')].map((e) => e.dataset.key));
+    const hgt = allocTable.offsetHeight;
+    if (hgt) allocTable.style.minHeight = `${hgt}px`;
     allocTable.update(rows);
+    if (before.size && dur('fast')) allocTable.querySelectorAll('[data-key]').forEach((e) => { if (!before.has(e.dataset.key)) e.classList.add('co-row-in'); });
+    requestAnimationFrame(() => { allocTable.style.minHeight = ''; });
     allocMore.dataset.label = `Show all ${fmtInt(rows.length)} changes`;
     allocMore.textContent = allocCard.classList.contains('is-expanded') ? 'Show fewer rows' : allocMore.dataset.label;
     allocCard.classList.toggle('has-more', rows.length > 8);
@@ -523,6 +581,7 @@ export async function render(el, ctx) {
   showAlloc();
 
   function choose(p, fromChart) {
+    if (dead) return;
     sel = p;
     showSel(); showAlloc(); chart?.update(true);
     if (fromChart) { slInput.value = String(Math.ceil(p.cap / step) * step); slInput.dispatchEvent(new Event('input')); }
@@ -578,7 +637,7 @@ export async function render(el, ctx) {
       const narrow = w < 520;
       const lw = 0, capW = narrow ? 100 : 140, rowH = narrow ? 64 : 70;
       const Hh = rows.length * rowH + 30;
-      const svg = svgIn(fr.body, w, Hh, 'Annual cost breakdown');
+      const svg = svgIn(fr.body, w, Hh, 'Annual cost breakdown'); drawIn(svg, fr.body);
       // Reserve room for the longest total label so it always sits clear of its bar end.
       const labW = d3.max(rows, (r) => fmtAED(r.total).length) * 7 + 14;
       const bw = Math.max(60, w - lw - capW - labW - 8);
@@ -639,7 +698,7 @@ export async function render(el, ctx) {
       const narrow = w < 520;
       // Narrow: factor names sit on their own line above the bars, so setting labels never meet them.
       const lw = narrow ? 0 : 128, rowH = narrow ? 60 : 48, Hh = rows.length * rowH + 44;
-      const svg = svgIn(fr.body, w, Hh, 'Sensitivity tornado');
+      const svg = svgIn(fr.body, w, Hh, 'Sensitivity tornado'); drawIn(svg, fr.body);
       const vals = all.flatMap((s) => [s.v, num(s.ci?.[0]), num(s.ci?.[1])]).filter((v) => v != null).concat([0, base]);
       const x = d3.scaleLinear().domain(d3.extent(vals)).nice().range([lw + (narrow ? 34 : 0), w - (narrow ? 36 : 44)]);
       axisBottom(svg.append('g'), x, { height: Hh - 22, ticks: narrow ? 3 : 5, format: (v) => fmtAED(v, { digits: 0 }) });
@@ -701,7 +760,7 @@ export async function render(el, ctx) {
     stops.push(responsive(fr.body, (w) => {
       const narrow = w < 520;
       const lw = narrow ? 92 : 108, rowH = 26, Hh = top.length * rowH + 52;
-      const svg = svgIn(fr.body, w, Hh, 'Lever cost per AOG hour');
+      const svg = svgIn(fr.body, w, Hh, 'Lever cost per AOG hour'); drawIn(svg, fr.body);
       const vals = top.flatMap((c) => [c.b.cph, c.t.cph]).filter((v) => v > 0);
       const x = d3.scaleLog().domain([d3.min(vals) * 0.7, d3.max(vals) * 1.4]).range([lw, w - 12]);
       axisBottom(svg.append('g'), x, { height: Hh - 22, ticks: narrow ? 3 : 4, format: (v) => (String(v).match(narrow ? /^1/ : /^[125]/) ? fmtAED(v, { digits: 0 }) : '') });
@@ -780,5 +839,5 @@ export async function render(el, ctx) {
     ? 'Scope: 120 modelled part numbers, one fictional airline, simulated data. Part costs, reliability and sourcing are assumed. These are not forecasts of real airline savings.'
     : 'Scope: 120 modelled part numbers, one fictional airline (Falcon Hub Airways), simulated data. Part costs, reliability and sourcing are assumed; results are conditional on the stated scenario and are not forecasts of achievable airline savings.'));
 
-  return () => { stopChart(); stops.forEach((s) => s()); };
+  return () => { dead = true; onBudget.cancel(); stopChart(); stops.forEach((s) => s()); try { window.d3?.selectAll(el.querySelectorAll('svg *')).interrupt(); window.d3?.selectAll(el.querySelectorAll('svg *')).interrupt('sel'); } catch { /* view already gone */ } };
 }

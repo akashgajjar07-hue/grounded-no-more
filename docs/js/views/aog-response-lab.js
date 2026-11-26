@@ -8,8 +8,20 @@
  * The recommended option is the one ranked 1 by the lab (decision.recommended): exposure_aed already
  * includes direct cost, so the two are never added.
  */
-import { h, pageHead, card, provChip, pill, icon, intro3, scopeLine } from '../ui.js';
+import { h, pageHead, card, provChip, pill, icon, intro3, scopeLine, tooltip } from '../ui.js';
 import { isSimple } from '../lib/mode.js';
+import { dur } from '../lib/motion.js';
+
+/** Enter transition (opacity + 8 px rise, transform/opacity only) with a motion token; reduced motion → instant. */
+function enter(el, d = 'base') {
+  const ms = dur(d);
+  if (!el || !ms) return;
+  el.style.setProperty('--aog-enter-ms', `${ms}ms`);
+  el.classList.remove('aog-enter');
+  void el.offsetWidth; // restart the CSS animation (one read, outside any loop)
+  el.classList.add('aog-enter');
+  el.addEventListener('animationend', () => el.classList.remove('aog-enter'), { once: true });
+}
 import { term, termText } from '../lib/glossary.js';
 import { displayName } from '../lib/names.js';
 import { chartFrame, responsive, svgIn, theme, fmtAED, fmtHours, fmtInt, fmtPct, fmtWeek, withTooltip, truncate, refLine, chipLabel, HEADLINE_MAX, fmtMoney, fmtEnum, plural } from '../charts/theme.js';
@@ -250,6 +262,7 @@ export async function render(el, ctx) {
   const summaryHost = h('div', { class: 'mt-3' });
   el.append(summaryHost);
   let stops = [];
+  let drawnOnce = false;
 
   function select(i, focus) {
     inc = i;
@@ -410,6 +423,9 @@ export async function render(el, ctx) {
       h('div', { class: 'grid-12 mt-3' }, optsWrap),
       h('div', { class: 'grid-12 mt-3' }, human, h('div', { class: 'span-5 aog-side' }, cfCard, robCard)),
     );
+    // first load: the incident charts draw in (slow); switching incidents cross-fades the new one in (base)
+    enter(host, drawnOnce ? 'base' : 'slow');
+    drawnOnce = true;
   }
 
   // ---- network-wide counterfactual summary (all requests)
@@ -476,6 +492,7 @@ export async function render(el, ctx) {
           h('li', {}, 'Material AOG runs from removal (or the end of the rectification window) to release to service, overnight hours included, so it includes the fitting / release-to-service hours after the part reaches the aircraft (V2-SIM-7). Route waits in the options are sourcing and transport only. Pool exchange is shown for reference only: no contract existed under P0.'))),
     });
     summaryHost.replaceChildren(h('div', { class: 'grid-12' }, sc, cav));
+    enter(summaryHost, 'slow');
   }
   let stops2 = [];
   draw();
@@ -571,7 +588,10 @@ function drawTimeline(body, w, inc, slack) {
     c.append('circle').attr('r', 10).attr('fill', isFit ? theme.color.accent : theme.color.panel)
       .attr('stroke', isFit ? theme.color.accent : s.evidence?.context ? theme.color.neutral : theme.series.neutral).attr('stroke-dasharray', s.evidence?.context ? '2 2' : null).attr('stroke-width', 1.25);
     c.append('text').attr('text-anchor', 'middle').attr('dy', '0.35em').attr('font-family', theme.font.mono).attr('font-size', 9).style('fill', isFit ? theme.color.bg : theme.color.text).text(String(s.n).padStart(2, '0'));
-    withTooltip(c, () => ({ title: `${String(s.n).padStart(2, '0')} · ${stepLabel(s.step)}`, rows: [['T+', fmtHours(s.t_h)], ['Station', s.station || '—']], note: s.event }));
+    const tipOf = () => ({ title: `${String(s.n).padStart(2, '0')} · ${stepLabel(s.step)}`, rows: [['T+', fmtHours(s.t_h)], [isSimple() ? 'Airport' : 'Station', s.station || '—']], note: plainEvent(s.event) });
+    withTooltip(c, tipOf);
+    // keyboard: focusing a step shows its tooltip (visible effect); blur hides it
+    c.on('focus', function () { const r = this.getBoundingClientRect(); tooltip.show({ clientX: r.right, clientY: r.bottom }, tipOf()); }).on('blur', () => tooltip.hide());
     return c;
   };
 
