@@ -646,7 +646,7 @@ def run_frontier_holdout(candidates_path: Path | str, seeds, variant: str = "cen
     rel = str(p.relative_to(ROOT))
     if rel not in m["artefacts"] or m["artefacts"][rel] != sha256_file(p):
         raise RuntimeError(f"{rel} is not in the freeze manifest (or changed since freeze)")
-    require_frozen("frontier_holdout")
+    require_frozen("v2_frontier_holdout")
     from gnm.sim.api import load_world
     world = world or load_world(variant)
     cands = load_candidates(p)

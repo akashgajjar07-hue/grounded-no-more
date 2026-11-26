@@ -50,7 +50,7 @@ def policy_holdout(hold):
     from gnm.policy import forecast_pipeline as fp
     from gnm.policy.policies import stock_param_table
     from gnm.sim.api import load_world
-    _gate("policy_holdout")
+    _gate("v2_policy_holdout")
     pcfg = fp.load_policy_config()["evaluation"]
     warm_cache(hold, pcfg["variants"], pcfg["week_from"], pcfg["week_to"])
     champs = pd.read_csv(fp.FC_OUT / "champions.csv")
@@ -120,7 +120,7 @@ def forecast_holdout():
     from gnm.forecasting.evaluate import aggregate_errors, rolling_origin_evaluate
     from gnm.policy import forecast_pipeline as fp
     from gnm.sim.api import load_or_generate_scenario
-    _gate("forecast_holdout")
+    _gate("v2_forecast_holdout")
     cfg = load_config()
     hist = fp.load_history()
     if DRY:   # never touch weeks >= 104: fake a "continuation" from history weeks 52-103

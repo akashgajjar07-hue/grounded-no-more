@@ -1,0 +1,25 @@
+{
+  "frozen_at": "2026-11-26T02:25:21.525168+00:00",
+  "note": "Selection complete: champions, policy tables, frontier candidates frozen before holdout",
+  "artefacts": {
+    "outputs/forecasting/champions.csv": "3399c6aec948ea418999cefe9c576926e32a62d2d0830821137301a90c2ba3dc",
+    "outputs/policies/P0_stock_params.csv": "fd9a4ced6b334707cd2c5483da807f8db2c1f9355fc226bff4ad489e67ae7de6",
+    "outputs/policies/P1_stock_params.csv": "93354484cfc976180b608814a4877621d061d04a5d8884911c992f60b860f69c",
+    "outputs/policies/P2_stock_params.csv": "7ef1aacd1bb63445b2c3e5951f2a532d506e6d2a389b3941cfe80660b9cbcc4d",
+    "outputs/frontier/candidates.json": "c501ca5235d2811c92fde98ab9e071360ee2062b0746ad4a9ff7c783f646621f",
+    "config/assumptions.yaml": "b7138887031225f7b36799cf60a25e329cb5dc88d7d7248f97d3b4fb4aae186a",
+    "config/policy.yaml": "aba5be0f891f4728f24529c62d98b72f23b81319f699c75a49de59a9f82508d2",
+    "config/optimiser.yaml": "927d0388d3ac21777fb4da1638203b50bccec7a795c46bb7533350fe81e714e9",
+    "config/aog_lab.yaml": "af91afce3c99a3ca29d6ff9008c125b8d71d9d0029d1bbd38c94c97a9dd9f114",
+    "outputs/policies/variants/high_stress/P0_stock_params.csv": "fd9a4ced6b334707cd2c5483da807f8db2c1f9355fc226bff4ad489e67ae7de6",
+    "outputs/policies/variants/high_stress/P1@central_stock_params.csv": "9ec2420c7c21d83edc5c05a17a0c481f14a68199b4e7cad5cf5ddf03f3df04ec",
+    "outputs/policies/variants/high_stress/P1_stock_params.csv": "8b4ce4be9153173f0b37f2c30d925f7b1e282e2f121886e67ada080ff8ec4ffc",
+    "outputs/policies/variants/high_stress/P2@central_stock_params.csv": "778118fcdc4e76dff3c03f693fa3b8dce7f44e95f6f0f257c4f2e3afe7039b95",
+    "outputs/policies/variants/high_stress/P2_stock_params.csv": "3de4b0e6cbeb2a63adcb9fd07ff17d00bbd8092d3275b6684629617ba6319a9c",
+    "outputs/policies/variants/low_stress/P0_stock_params.csv": "fd9a4ced6b334707cd2c5483da807f8db2c1f9355fc226bff4ad489e67ae7de6",
+    "outputs/policies/variants/low_stress/P1@central_stock_params.csv": "9ec2420c7c21d83edc5c05a17a0c481f14a68199b4e7cad5cf5ddf03f3df04ec",
+    "outputs/policies/variants/low_stress/P1_stock_params.csv": "8c197f52fd806af781e200b4810010ef39bacbdd6185fc08f01be4b6f02d714c",
+    "outputs/policies/variants/low_stress/P2@central_stock_params.csv": "778118fcdc4e76dff3c03f693fa3b8dce7f44e95f6f0f257c4f2e3afe7039b95",
+    "outputs/policies/variants/low_stress/P2_stock_params.csv": "8b60cf2371885655d9296362b3b0e81c29adb71e518bc86b30ffc3e29fc9f8d4"
+  }
+}
