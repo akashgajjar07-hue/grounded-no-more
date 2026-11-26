@@ -159,7 +159,7 @@ export function dotWhisker(g, rows, { x, y, color = theme.color.accent, r = 4.5,
 
 /** Direct label at (x, y) in px. Use instead of legends. */
 export function directLabel(g, { x, y, text, color = theme.color.muted, anchor = 'start', strong = false, dy = '0.32em' }) {
-  return g.append('text').attr('x', x).attr('y', y).attr('dy', dy).attr('text-anchor', anchor).attr('class', strong ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('fill', color).text(text);
+  return g.append('text').attr('x', x).attr('y', y).attr('dy', dy).attr('text-anchor', anchor).attr('class', strong ? 'gnm-label gnm-label--strong' : 'gnm-label').style('fill', color || null).text(text);
 }
 
 /** Spread direct labels vertically so they never overlap (min gap in px). Mutates and returns. */

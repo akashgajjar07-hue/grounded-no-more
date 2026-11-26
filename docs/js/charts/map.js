@@ -51,7 +51,7 @@ function boxPolygon({ lon, lat }, n = 24) {
  *          inset?: boolean, aspect?: number, labelSub?: (s)=>string, label?: string}} opts
  */
 export async function renderNetworkMap(host, opts = {}) {
-  const { stations = [], arcs = [], onSelect, inset = true, aspect = 0.56, labelSub, label = 'Network map' } = opts;
+  const { stations = [], arcs = [], onSelect, inset = true, aspect = 0.56, labelSub, label = 'Network map', nodeRadius, nodeColor, tooltipRows, onDraw, nodeAria, labelOffsets = {} } = opts;
   let selected = opts.selected || null;
   const atlas = await loadAtlas();
   host.classList.add('map-host');
@@ -94,17 +94,21 @@ export async function renderNetworkMap(host, opts = {}) {
     stations.forEach((s) => {
       const [x, y] = projection([s.lon, s.lat]);
       const isHub = s.role === 'hub';
-      const g = nodeLayer.append('g').attr('transform', `translate(${x},${y})`).attr('tabindex', 0).attr('role', 'button').attr('aria-label', `${s.station} ${s.name || ''}`).style('cursor', onSelect ? 'pointer' : 'default').attr('data-station', s.station);
+      const g = nodeLayer.append('g').attr('transform', `translate(${x},${y})`).attr('tabindex', 0).attr('role', 'button').attr('aria-label', nodeAria ? nodeAria(s) : `${s.station} ${s.name || ''}`).style('cursor', onSelect ? 'pointer' : 'default').attr('data-station', s.station);
       if (isHub && !reducedMotion()) { g.append('circle').attr('class', 'map-pulse').attr('r', 9); g.append('circle').attr('class', 'map-pulse').attr('r', 9); }
       g.append('circle').attr('class', 'map-hit').attr('r', 16).attr('fill', 'transparent');
-      g.append('circle').attr('class', `map-node ${isHub ? 'map-node--hub' : ''}`).attr('r', isHub ? 8 : 5.5);
-      g.append('circle').attr('class', 'map-node-inner').attr('r', isHub ? 3 : 2).attr('fill', isHub ? theme.color.text : theme.color.accent);
-      g.append('circle').attr('class', 'map-sel').attr('r', isHub ? 13 : 10).attr('fill', 'none').attr('stroke', theme.color.accentHi).attr('stroke-width', 1.25).attr('stroke-dasharray', '2 3').style('display', s.station === selected ? null : 'none');
-      const [dx, dy, anchor] = LABEL[s.station] || [10, 4, 'start'];
+      // optional (additive): nodeRadius(s) → px, nodeColor(s) → stroke colour; defaults unchanged
+      const nr = nodeRadius ? nodeRadius(s) : isHub ? 8 : 5.5;
+      const nc = nodeColor ? nodeColor(s) : null;
+      const node = g.append('circle').attr('class', `map-node ${isHub ? 'map-node--hub' : ''}`).attr('r', nr);
+      if (nc) node.style('stroke', nc);
+      g.append('circle').attr('class', 'map-node-inner').attr('r', isHub ? 3 : 2).attr('fill', nc || (isHub ? theme.color.text : theme.color.accent));
+      g.append('circle').attr('class', 'map-sel').attr('r', nr + 5).attr('fill', 'none').attr('stroke', theme.color.accentHi).attr('stroke-width', 1.25).attr('stroke-dasharray', '2 3').style('display', s.station === selected ? null : 'none');
+      const [dx, dy, anchor] = labelOffsets[s.station] || LABEL[s.station] || [10, 4, 'start']; // labelOffsets: optional (additive) per-view override
       g.append('text').attr('class', 'map-label').attr('x', dx).attr('y', dy).attr('text-anchor', anchor).text(s.station);
       const sub = labelSub ? labelSub(s) : null;
       if (sub && w >= 520) g.append('text').attr('class', 'map-label-sub').attr('x', dx).attr('y', dy + 14).attr('text-anchor', anchor).text(sub);
-      const tip = (e) => tooltip.show(e, { title: `${s.station} · ${s.name || ''}`, rows: [['Role', s.role], ['Serviceable units', fmtInt(s.serviceable_units)], ['Stock value', fmtAED(s.stock_value)], ['Requests', fmtInt(s.requests)]] });
+      const tip = (e) => tooltip.show(e, { title: `${s.station} · ${s.name || ''}`, rows: tooltipRows ? tooltipRows(s) : [['Role', s.role], ['Serviceable units', fmtInt(s.serviceable_units)], ['Stock value', fmtAED(s.stock_value)], ['Requests', fmtInt(s.requests)]] });
       g.on('pointerenter', tip).on('pointermove', (e) => tooltip.move(e)).on('pointerleave', () => tooltip.hide());
       const fire = () => { api.select(s.station); onSelect?.(s.station); };
       g.on('click', fire).on('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fire(); } });
@@ -112,6 +116,7 @@ export async function renderNetworkMap(host, opts = {}) {
 
     const tokenLayer = svg.append('g').attr('class', 'map-tokens');
     ctx = { svg, projection, path, tokenLayer, w, hgt };
+    onDraw?.(ctx); // optional (additive): lets a view decorate after each responsive redraw
 
     // world locator inset
     if (inset && w >= 520) {
