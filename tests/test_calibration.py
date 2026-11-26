@@ -1,7 +1,4 @@
-"""SIM-CAL: P0-only calibration is inside the configured bands (fast: recorded summary; slow: recompute)."""
-import pytest
-
-pytestmark = pytest.mark.skip(reason="v2 recalibration pending user approval of the band")
+"""V2-SIM-CAL: v2 P0-only calibration is inside the configured band (fast: recorded summary; slow: recompute)."""
 import json
 
 import pytest
@@ -9,7 +6,7 @@ import pytest
 from gnm.config import load_config
 from gnm.sim.calibration import SUMMARY
 
-KEYS = ["immediate_fill_rate", "rotable_immediate_fill_rate", "aog_hours_per_year", "aog_events_per_year"]
+KEYS = ["rotable_immediate_fill_rate", "aog_hours_per_year", "aog_events_per_year"]
 
 
 def _targets():
@@ -17,20 +14,33 @@ def _targets():
     return {k: t[k] for k in KEYS}
 
 
-def test_recorded_summary_in_band():
+def test_recorded_v2_summary_in_band():
     s = json.loads(SUMMARY.read_text())
-    assert s["policy"] == "P0 only"
+    assert s["policy"] == "P0 only" and s["version"] == "v2"
     t = _targets()
-    c = s["variants"]["central"]["history"]
-    for k in KEYS:
-        assert t[k][0] <= c[k] <= t[k][1], (k, c[k], t[k])
+    c = s["variants"]["central"]
+    for k in KEYS:          # central world: history AND selection mean inside the band
+        assert t[k][0] <= c["history"][k] <= t[k][1], (k, c["history"][k], t[k])
+        assert t[k][0] <= c["selection_p0_mean"][k] <= t[k][1], (k, c["selection_p0_mean"][k], t[k])
     v = s["variants"]
-    # stress ordering: low < central < high in AOG hours; fill the other way round
-    assert v["low_stress"]["history"]["aog_hours_per_year"] < c["aog_hours_per_year"] < v["high_stress"]["history"]["aog_hours_per_year"]
-    assert v["low_stress"]["history"]["rotable_immediate_fill_rate"] >= v["high_stress"]["history"]["rotable_immediate_fill_rate"]
-    # year 1 and year 2 comparable (steady-state initialisation): within a factor of 1.5 for the central world
-    y1, y2 = v["central"]["history_year1"]["aog_hours_per_year"], v["central"]["history_year2"]["aog_hours_per_year"]
+    pooled = {w: v[w]["pooled_history_selection"] for w in v}
+    # stress worlds sit near the band ends and keep the ordering low < central < high (AOG), reverse for fill
+    assert pooled["low_stress"]["aog_hours_per_year"] < pooled["central"]["aog_hours_per_year"] < pooled["high_stress"]["aog_hours_per_year"]
+    assert pooled["low_stress"]["rotable_immediate_fill_rate"] > pooled["central"]["rotable_immediate_fill_rate"] > pooled["high_stress"]["rotable_immediate_fill_rate"]
+    lo, hi = t["aog_hours_per_year"], t["rotable_immediate_fill_rate"]
+    assert abs(pooled["low_stress"]["aog_hours_per_year"] - lo[0]) / lo[0] < 0.10            # AOG end binds
+    assert abs(pooled["high_stress"]["rotable_immediate_fill_rate"] - hi[0]) < 0.01           # fill end binds
+    for w in v:
+        assert 55 <= pooled[w]["aog_events_per_year"] <= 105
+    # year 1 vs year 2 comparable (steady-state initialisation)
+    y1, y2 = c["history_year1"]["aog_hours_per_year"], c["history_year2"]["aog_hours_per_year"]
     assert max(y1, y2) / min(y1, y2) < 1.5
+    # the user's choice: V1 applied, market settings and line kit not applied
+    su = s["settings_used"]
+    assert su["parts.quoted_mtbur_optimism"] == 1.10 and su["parts.quoted_mtbur_noise_sd_log"] == 0.20
+    assert su["generator.quoted_tat_optimism"] == 0.95 and su["generator.quoted_tat_noise_sd_log"] == 0.10
+    assert load_config()["aog_sourcing"]["robbery"]["availability"] == 0.60
+    assert "line_station_kit" not in load_config()["policy_baseline_P0"]
 
 
 @pytest.mark.slow

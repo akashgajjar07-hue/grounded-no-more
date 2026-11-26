@@ -1,140 +1,183 @@
 {
+  "version": "v2",
+  "policy": "P0 only",
+  "note": "v2 calibration; supersedes the v1 summary (v1 band kept under calibration_targets.v1_band)",
+  "status": "CALIBRATED (v2) with P0 only; V1 chosen by the user's fewest-changes rule (quote accuracy: quoted_mtbur_optimism 1.10, quoted_mtbur_noise_sd_log 0.20, quoted_tat_optimism 0.95, quoted_tat_noise_sd_log 0.10); AOG-market settings and the line-station kit NOT applied; locked in outputs/freeze/calibration_lock.json",
   "targets": {
-    "immediate_fill_rate": [
-      0.93,
-      0.97
-    ],
     "rotable_immediate_fill_rate": [
-      0.8,
-      0.88
+      0.78,
+      0.85
     ],
     "aog_hours_per_year": [
-      1500,
-      3500
+      1200,
+      2700
     ],
     "aog_events_per_year": [
       60,
-      250
+      100
     ]
   },
   "variant_targets": {
     "low_stress": {
-      "aog_hours_per_year": 1500,
-      "rotable_immediate_fill_rate": 0.88
+      "aog_hours_per_year": 1200,
+      "rotable_immediate_fill_rate": 0.85
     },
     "high_stress": {
-      "aog_hours_per_year": 3500,
-      "rotable_immediate_fill_rate": 0.8
+      "aog_hours_per_year": 2700,
+      "rotable_immediate_fill_rate": 0.78
     }
   },
-  "policy": "P0 only",
+  "settings_used": {
+    "parts.quoted_mtbur_optimism": 1.1,
+    "parts.quoted_mtbur_noise_sd_log": 0.2,
+    "generator.quoted_tat_optimism": 0.95,
+    "generator.quoted_tat_noise_sd_log": 0.1,
+    "generator.variants": {
+      "central": {
+        "true_mtbur_scale": 1.0
+      },
+      "low_stress": {
+        "true_mtbur_scale": 1.08
+      },
+      "high_stress": {
+        "true_mtbur_scale": 0.96
+      }
+    },
+    "not_applied": [
+      "AOG-market settings",
+      "line-station kit"
+    ]
+  },
+  "history_seed": 7,
+  "selection_seeds": [
+    100,
+    101,
+    102,
+    103,
+    104
+  ],
   "variants": {
     "central": {
+      "true_mtbur_scale": 1.0,
       "history": {
-        "immediate_fill_rate": 0.9581488837309469,
-        "rotable_immediate_fill_rate": 0.8323765786452354,
-        "expendable_immediate_fill_rate": 0.8003525782282944,
-        "consumable_immediate_fill_rate": 0.9734250926416094,
-        "aog_hours_per_year": 2753.5,
-        "aog_events_per_year": 90.0
+        "immediate_fill_rate": 0.9904331146842218,
+        "rotable_immediate_fill_rate": 0.8145161290322581,
+        "rotable_hub_pool_fill_rate": 0.8959948320413437,
+        "expendable_immediate_fill_rate": 0.9571201694017999,
+        "consumable_immediate_fill_rate": 0.9999740959486063,
+        "aog_hours_per_year": 1282.0,
+        "aog_events_per_year": 74.0
       },
       "history_year1": {
-        "immediate_fill_rate": 0.9595116892911011,
-        "rotable_immediate_fill_rate": 0.8056818181818182,
-        "expendable_immediate_fill_rate": 0.8231046931407943,
-        "consumable_immediate_fill_rate": 0.9744123153734138,
-        "aog_hours_per_year": 2739.0,
-        "aog_events_per_year": 88.0
+        "immediate_fill_rate": 0.9919648343337902,
+        "rotable_immediate_fill_rate": 0.8220140515222483,
+        "rotable_hub_pool_fill_rate": 0.9030144167758847,
+        "expendable_immediate_fill_rate": 0.9801762114537445,
+        "consumable_immediate_fill_rate": 1.0,
+        "aog_hours_per_year": 1190.0,
+        "aog_events_per_year": 63.0
       },
       "history_year2": {
-        "immediate_fill_rate": 0.9567436208991494,
-        "rotable_immediate_fill_rate": 0.8596287703016241,
-        "expendable_immediate_fill_rate": 0.7786391042204995,
-        "consumable_immediate_fill_rate": 0.9724018973695558,
-        "aog_hours_per_year": 2768.0,
-        "aog_events_per_year": 92.0
+        "immediate_fill_rate": 0.9888952164009112,
+        "rotable_immediate_fill_rate": 0.8072562358276644,
+        "rotable_hub_pool_fill_rate": 0.889171974522293,
+        "expendable_immediate_fill_rate": 0.9357798165137615,
+        "consumable_immediate_fill_rate": 0.9999479410692904,
+        "aog_hours_per_year": 1374.0,
+        "aog_events_per_year": 85.0
       },
       "history_kpis": {
-        "immediate_fill_rate": 0.9589145988370702,
-        "aog_hours": 2753.5,
-        "aog_events": 180.0,
-        "backorder_unit_hours": 101241.0,
-        "spare_capital_aed": 37034332.21134542,
-        "holding_cost_aed": 7406866.442269084,
-        "repair_cost_aed": 16992223.544999927,
-        "logistics_cost_aed": 281775.0,
-        "expedite_cost_aed": 1205370.126999998,
-        "aog_penalty_aed": 59085000.0,
-        "purchase_spend_aed": 16325162.595000034
+        "immediate_fill_rate": 0.9904331146842218,
+        "aog_hours": 1282.0,
+        "aog_events": 148.0,
+        "backorder_unit_hours": 12044.5,
+        "spare_capital_aed": 48282610.14234041,
+        "holding_cost_aed": 9656522.028468082,
+        "repair_cost_aed": 17212938.91724988,
+        "logistics_cost_aed": 171750.0,
+        "expedite_cost_aed": 1656894.714913126,
+        "aog_penalty_aed": 29510000.0,
+        "purchase_spend_aed": 13412848.324999997
+      },
+      "selection_p0_mean": {
+        "seeds": [
+          100,
+          101,
+          102,
+          103,
+          104
+        ],
+        "weeks": [
+          104,
+          155
+        ],
+        "start_week": 78,
+        "immediate_fill_rate": 0.9896368185514213,
+        "rotable_immediate_fill_rate": 0.8086472601198871,
+        "rotable_hub_pool_fill_rate": 0.8898519043212538,
+        "expendable_immediate_fill_rate": 0.9521407349738695,
+        "consumable_immediate_fill_rate": 0.9999679720626139,
+        "aog_hours_per_year": 1434.8,
+        "aog_events_per_year": 72.0,
+        "spare_capital_aed": 48471969.93196304
+      },
+      "pooled_history_selection": {
+        "immediate_fill_rate": 0.9900349666178215,
+        "rotable_immediate_fill_rate": 0.8115816945760725,
+        "rotable_hub_pool_fill_rate": 0.8929233681812987,
+        "expendable_immediate_fill_rate": 0.9546304521878347,
+        "consumable_immediate_fill_rate": 0.99997103400561,
+        "aog_hours_per_year": 1358.4,
+        "aog_events_per_year": 73.0
       },
       "in_central_band": {
-        "immediate_fill_rate": true,
         "rotable_immediate_fill_rate": true,
         "aog_hours_per_year": true,
         "aog_events_per_year": true
       },
-      "selection_p0_mean": {
-        "seeds": [
-          100,
-          101,
-          102,
-          103,
-          104
-        ],
-        "weeks": [
-          104,
-          155
-        ],
-        "start_week": 78,
-        "immediate_fill_rate": 0.9554912607736739,
-        "aog_hours": 2534.0,
-        "aog_events": 77.6,
-        "spare_capital_aed": 36891758.3560408
-      }
+      "stress_targets": null
     },
     "low_stress": {
+      "true_mtbur_scale": 1.08,
       "history": {
-        "immediate_fill_rate": 0.9697736151457478,
-        "rotable_immediate_fill_rate": 0.8808290155440415,
-        "expendable_immediate_fill_rate": 0.9168765743073047,
-        "consumable_immediate_fill_rate": 0.9737134688691232,
-        "aog_hours_per_year": 1816.5,
-        "aog_events_per_year": 57.0
+        "immediate_fill_rate": 0.9925661186561829,
+        "rotable_immediate_fill_rate": 0.8458177278401997,
+        "rotable_hub_pool_fill_rate": 0.940014114326041,
+        "expendable_immediate_fill_rate": 0.9634076615208691,
+        "consumable_immediate_fill_rate": 0.999974106009995,
+        "aog_hours_per_year": 1123.0,
+        "aog_events_per_year": 66.5
       },
       "history_year1": {
-        "immediate_fill_rate": 0.9731970975862579,
-        "rotable_immediate_fill_rate": 0.865979381443299,
-        "expendable_immediate_fill_rate": 0.9523809523809523,
-        "consumable_immediate_fill_rate": 0.9765189774561358,
-        "aog_hours_per_year": 1266.0,
-        "aog_events_per_year": 48.0
+        "immediate_fill_rate": 0.9929118500547072,
+        "rotable_immediate_fill_rate": 0.8451776649746193,
+        "rotable_hub_pool_fill_rate": 0.9330484330484331,
+        "expendable_immediate_fill_rate": 0.9673518742442564,
+        "consumable_immediate_fill_rate": 1.0,
+        "aog_hours_per_year": 1015.0,
+        "aog_events_per_year": 60.0
       },
       "history_year2": {
-        "immediate_fill_rate": 0.9662481573730494,
-        "rotable_immediate_fill_rate": 0.8958333333333334,
-        "expendable_immediate_fill_rate": 0.8846153846153846,
-        "consumable_immediate_fill_rate": 0.970811567666541,
-        "aog_hours_per_year": 2367.0,
-        "aog_events_per_year": 66.0
+        "immediate_fill_rate": 0.9922191990071125,
+        "rotable_immediate_fill_rate": 0.8464373464373465,
+        "rotable_hub_pool_fill_rate": 0.9468531468531468,
+        "expendable_immediate_fill_rate": 0.9598698481561823,
+        "consumable_immediate_fill_rate": 0.9999479519075626,
+        "aog_hours_per_year": 1231.0,
+        "aog_events_per_year": 73.0
       },
       "history_kpis": {
-        "immediate_fill_rate": 0.9704998497445657,
-        "aog_hours": 1816.5,
-        "aog_events": 114.0,
-        "backorder_unit_hours": 74306.5,
-        "spare_capital_aed": 31946639.47242009,
-        "holding_cost_aed": 6389327.894484018,
-        "repair_cost_aed": 9606390.135000002,
-        "logistics_cost_aed": 246600.0,
-        "expedite_cost_aed": 316805.77549999836,
-        "aog_penalty_aed": 39675000.0,
-        "purchase_spend_aed": 7628995.260000027
-      },
-      "in_central_band": {
-        "immediate_fill_rate": true,
-        "rotable_immediate_fill_rate": false,
-        "aog_hours_per_year": true,
-        "aog_events_per_year": false
+        "immediate_fill_rate": 0.9925661186561829,
+        "aog_hours": 1123.0,
+        "aog_events": 133.0,
+        "backorder_unit_hours": 8936.5,
+        "spare_capital_aed": 48271184.67687675,
+        "holding_cost_aed": 9654236.935375351,
+        "repair_cost_aed": 15998820.611249875,
+        "logistics_cost_aed": 160875.0,
+        "expedite_cost_aed": 931095.374409375,
+        "aog_penalty_aed": 27537500.0,
+        "purchase_spend_aed": 12468665.310000002
       },
       "selection_p0_mean": {
         "seeds": [
@@ -149,56 +192,76 @@
           155
         ],
         "start_week": 78,
-        "immediate_fill_rate": 0.9679529471475231,
-        "aog_hours": 1254.4,
-        "aog_events": 39.6,
-        "spare_capital_aed": 32260095.525553547
-      }
-    },
-    "high_stress": {
-      "history": {
-        "immediate_fill_rate": 0.9464164063050576,
-        "rotable_immediate_fill_rate": 0.8295238095238096,
-        "expendable_immediate_fill_rate": 0.7447526236881559,
-        "consumable_immediate_fill_rate": 0.9671437263564456,
-        "aog_hours_per_year": 3505.5,
-        "aog_events_per_year": 105.0
+        "immediate_fill_rate": 0.9917953664366216,
+        "rotable_immediate_fill_rate": 0.8363670707611673,
+        "rotable_hub_pool_fill_rate": 0.9228170928052946,
+        "expendable_immediate_fill_rate": 0.9606602140914365,
+        "consumable_immediate_fill_rate": 0.9999567484006532,
+        "aog_hours_per_year": 1225.8,
+        "aog_events_per_year": 62.8,
+        "spare_capital_aed": 48304903.927127205
       },
-      "history_year1": {
-        "immediate_fill_rate": 0.9455134135060129,
-        "rotable_immediate_fill_rate": 0.7903682719546742,
-        "expendable_immediate_fill_rate": 0.7847908745247149,
-        "consumable_immediate_fill_rate": 0.9650316948976411,
-        "aog_hours_per_year": 4062.0,
-        "aog_events_per_year": 108.0
-      },
-      "history_year2": {
-        "immediate_fill_rate": 0.9473483221156141,
-        "rotable_immediate_fill_rate": 0.8693563880883766,
-        "expendable_immediate_fill_rate": 0.7058388765705839,
-        "consumable_immediate_fill_rate": 0.9693344112099165,
-        "aog_hours_per_year": 2949.0,
-        "aog_events_per_year": 102.0
-      },
-      "history_kpis": {
-        "immediate_fill_rate": 0.947356057224741,
-        "aog_hours": 3505.5,
-        "aog_events": 210.0,
-        "backorder_unit_hours": 119733.5,
-        "spare_capital_aed": 37049714.58081857,
-        "holding_cost_aed": 7409942.916163715,
-        "repair_cost_aed": 19858482.804999877,
-        "logistics_cost_aed": 293025.0,
-        "expedite_cost_aed": 1376204.763499995,
-        "aog_penalty_aed": 70072500.0,
-        "purchase_spend_aed": 21032902.855000123
+      "pooled_history_selection": {
+        "immediate_fill_rate": 0.9921807425464022,
+        "rotable_immediate_fill_rate": 0.8410923993006836,
+        "rotable_hub_pool_fill_rate": 0.9314156035656678,
+        "expendable_immediate_fill_rate": 0.9620339378061529,
+        "consumable_immediate_fill_rate": 0.9999654272053241,
+        "aog_hours_per_year": 1174.4,
+        "aog_events_per_year": 64.65
       },
       "in_central_band": {
-        "immediate_fill_rate": true,
         "rotable_immediate_fill_rate": true,
         "aog_hours_per_year": false,
         "aog_events_per_year": true
       },
+      "stress_targets": {
+        "aog_hours_per_year": 1200,
+        "rotable_immediate_fill_rate": 0.85
+      }
+    },
+    "high_stress": {
+      "true_mtbur_scale": 0.96,
+      "history": {
+        "immediate_fill_rate": 0.988339431134191,
+        "rotable_immediate_fill_rate": 0.7803114571746385,
+        "rotable_hub_pool_fill_rate": 0.8610763454317898,
+        "expendable_immediate_fill_rate": 0.9514415781487102,
+        "consumable_immediate_fill_rate": 0.9999222596527598,
+        "aog_hours_per_year": 1631.5,
+        "aog_events_per_year": 84.5
+      },
+      "history_year1": {
+        "immediate_fill_rate": 0.989967500353257,
+        "rotable_immediate_fill_rate": 0.7914798206278026,
+        "rotable_hub_pool_fill_rate": 0.8726355611601513,
+        "expendable_immediate_fill_rate": 0.9715489989462592,
+        "consumable_immediate_fill_rate": 1.0,
+        "aog_hours_per_year": 1473.0,
+        "aog_events_per_year": 76.0
+      },
+      "history_year2": {
+        "immediate_fill_rate": 0.9867038894672092,
+        "rotable_immediate_fill_rate": 0.7693156732891833,
+        "rotable_hub_pool_fill_rate": 0.8496894409937888,
+        "expendable_immediate_fill_rate": 0.9328793774319066,
+        "consumable_immediate_fill_rate": 0.99984375,
+        "aog_hours_per_year": 1790.0,
+        "aog_events_per_year": 93.0
+      },
+      "history_kpis": {
+        "immediate_fill_rate": 0.988339431134191,
+        "aog_hours": 1631.5,
+        "aog_events": 169.0,
+        "backorder_unit_hours": 15788.5,
+        "spare_capital_aed": 48846477.272855885,
+        "holding_cost_aed": 9769295.454571178,
+        "repair_cost_aed": 17749381.72899993,
+        "logistics_cost_aed": 176550.0,
+        "expedite_cost_aed": 2457400.8240843723,
+        "aog_penalty_aed": 38952500.0,
+        "purchase_spend_aed": 12887295.46500001
+      },
       "selection_p0_mean": {
         "seeds": [
           100,
@@ -212,10 +275,32 @@
           155
         ],
         "start_week": 78,
-        "immediate_fill_rate": 0.9474875299102677,
-        "aog_hours": 3749.8,
-        "aog_events": 107.6,
-        "spare_capital_aed": 38462295.75623348
+        "immediate_fill_rate": 0.988019359543437,
+        "rotable_immediate_fill_rate": 0.7814412027314395,
+        "rotable_hub_pool_fill_rate": 0.8605041067897901,
+        "expendable_immediate_fill_rate": 0.9525238533454141,
+        "consumable_immediate_fill_rate": 0.9998697258142297,
+        "aog_hours_per_year": 1558.4,
+        "aog_events_per_year": 75.8,
+        "spare_capital_aed": 48449811.409104384
+      },
+      "pooled_history_selection": {
+        "immediate_fill_rate": 0.988179395338814,
+        "rotable_immediate_fill_rate": 0.780876329953039,
+        "rotable_hub_pool_fill_rate": 0.8607902261107899,
+        "expendable_immediate_fill_rate": 0.9519827157470622,
+        "consumable_immediate_fill_rate": 0.9998959927334947,
+        "aog_hours_per_year": 1594.95,
+        "aog_events_per_year": 80.15
+      },
+      "in_central_band": {
+        "rotable_immediate_fill_rate": true,
+        "aog_hours_per_year": true,
+        "aog_events_per_year": true
+      },
+      "stress_targets": {
+        "aog_hours_per_year": 2700,
+        "rotable_immediate_fill_rate": 0.78
       }
     }
   }

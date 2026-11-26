@@ -1,85 +1,296 @@
 {
-  "locked_at": "2026-11-26T01:42:41.020744+00:00",
-  "note": "SIM-CAL: P0-only calibration locked before any P1/P2 run",
+  "version": "v2",
+  "locked_at": "2026-11-26T07:55:06.960260+00:00",
+  "note": "V2-SIM-CAL: v2 P0-only calibration locked before any v2 P1/P2/optimiser run",
   "policy_used": "P0 only",
   "targets": {
-    "immediate_fill_rate": [
-      0.93,
-      0.97
-    ],
     "rotable_immediate_fill_rate": [
-      0.8,
-      0.88
+      0.78,
+      0.85
     ],
     "aog_hours_per_year": [
-      1500,
-      3500
+      1200,
+      2700
     ],
     "aog_events_per_year": [
       60,
-      250
+      100
+    ]
+  },
+  "variant_targets": {
+    "low_stress": {
+      "aog_hours_per_year": 1200,
+      "rotable_immediate_fill_rate": 0.85
+    },
+    "high_stress": {
+      "aog_hours_per_year": 2700,
+      "rotable_immediate_fill_rate": 0.78
+    }
+  },
+  "settings_used": {
+    "parts.quoted_mtbur_optimism": 1.1,
+    "parts.quoted_mtbur_noise_sd_log": 0.2,
+    "generator.quoted_tat_optimism": 0.95,
+    "generator.quoted_tat_noise_sd_log": 0.1,
+    "generator.variants": {
+      "central": {
+        "true_mtbur_scale": 1.0
+      },
+      "low_stress": {
+        "true_mtbur_scale": 1.08
+      },
+      "high_stress": {
+        "true_mtbur_scale": 0.96
+      }
+    },
+    "not_applied": [
+      "AOG-market settings",
+      "line-station kit"
     ]
   },
   "achieved": {
     "central": {
       "history": {
-        "immediate_fill_rate": 0.9581488837309469,
-        "rotable_immediate_fill_rate": 0.8323765786452354,
-        "expendable_immediate_fill_rate": 0.8003525782282944,
-        "consumable_immediate_fill_rate": 0.9734250926416094,
-        "aog_hours_per_year": 2753.5,
-        "aog_events_per_year": 90.0
+        "immediate_fill_rate": 0.9904331146842218,
+        "rotable_immediate_fill_rate": 0.8145161290322581,
+        "rotable_hub_pool_fill_rate": 0.8959948320413437,
+        "expendable_immediate_fill_rate": 0.9571201694017999,
+        "consumable_immediate_fill_rate": 0.9999740959486063,
+        "aog_hours_per_year": 1282.0,
+        "aog_events_per_year": 74.0
+      },
+      "selection_p0_mean": {
+        "seeds": [
+          100,
+          101,
+          102,
+          103,
+          104
+        ],
+        "weeks": [
+          104,
+          155
+        ],
+        "start_week": 78,
+        "immediate_fill_rate": 0.9896368185514213,
+        "rotable_immediate_fill_rate": 0.8086472601198871,
+        "rotable_hub_pool_fill_rate": 0.8898519043212538,
+        "expendable_immediate_fill_rate": 0.9521407349738695,
+        "consumable_immediate_fill_rate": 0.9999679720626139,
+        "aog_hours_per_year": 1434.8,
+        "aog_events_per_year": 72.0,
+        "spare_capital_aed": 48471969.93196304
+      },
+      "pooled_history_selection": {
+        "immediate_fill_rate": 0.9900349666178215,
+        "rotable_immediate_fill_rate": 0.8115816945760725,
+        "rotable_hub_pool_fill_rate": 0.8929233681812987,
+        "expendable_immediate_fill_rate": 0.9546304521878347,
+        "consumable_immediate_fill_rate": 0.99997103400561,
+        "aog_hours_per_year": 1358.4,
+        "aog_events_per_year": 73.0
       },
       "in_central_band": {
-        "immediate_fill_rate": true,
         "rotable_immediate_fill_rate": true,
         "aog_hours_per_year": true,
         "aog_events_per_year": true
-      }
+      },
+      "true_mtbur_scale": 1.0
     },
     "low_stress": {
       "history": {
-        "immediate_fill_rate": 0.9697736151457478,
-        "rotable_immediate_fill_rate": 0.8808290155440415,
-        "expendable_immediate_fill_rate": 0.9168765743073047,
-        "consumable_immediate_fill_rate": 0.9737134688691232,
-        "aog_hours_per_year": 1816.5,
-        "aog_events_per_year": 57.0
+        "immediate_fill_rate": 0.9925661186561829,
+        "rotable_immediate_fill_rate": 0.8458177278401997,
+        "rotable_hub_pool_fill_rate": 0.940014114326041,
+        "expendable_immediate_fill_rate": 0.9634076615208691,
+        "consumable_immediate_fill_rate": 0.999974106009995,
+        "aog_hours_per_year": 1123.0,
+        "aog_events_per_year": 66.5
+      },
+      "selection_p0_mean": {
+        "seeds": [
+          100,
+          101,
+          102,
+          103,
+          104
+        ],
+        "weeks": [
+          104,
+          155
+        ],
+        "start_week": 78,
+        "immediate_fill_rate": 0.9917953664366216,
+        "rotable_immediate_fill_rate": 0.8363670707611673,
+        "rotable_hub_pool_fill_rate": 0.9228170928052946,
+        "expendable_immediate_fill_rate": 0.9606602140914365,
+        "consumable_immediate_fill_rate": 0.9999567484006532,
+        "aog_hours_per_year": 1225.8,
+        "aog_events_per_year": 62.8,
+        "spare_capital_aed": 48304903.927127205
+      },
+      "pooled_history_selection": {
+        "immediate_fill_rate": 0.9921807425464022,
+        "rotable_immediate_fill_rate": 0.8410923993006836,
+        "rotable_hub_pool_fill_rate": 0.9314156035656678,
+        "expendable_immediate_fill_rate": 0.9620339378061529,
+        "consumable_immediate_fill_rate": 0.9999654272053241,
+        "aog_hours_per_year": 1174.4,
+        "aog_events_per_year": 64.65
       },
       "in_central_band": {
-        "immediate_fill_rate": true,
-        "rotable_immediate_fill_rate": false,
-        "aog_hours_per_year": true,
-        "aog_events_per_year": false
-      }
-    },
-    "high_stress": {
-      "history": {
-        "immediate_fill_rate": 0.9464164063050576,
-        "rotable_immediate_fill_rate": 0.8295238095238096,
-        "expendable_immediate_fill_rate": 0.7447526236881559,
-        "consumable_immediate_fill_rate": 0.9671437263564456,
-        "aog_hours_per_year": 3505.5,
-        "aog_events_per_year": 105.0
-      },
-      "in_central_band": {
-        "immediate_fill_rate": true,
         "rotable_immediate_fill_rate": true,
         "aog_hours_per_year": false,
         "aog_events_per_year": true
-      }
+      },
+      "true_mtbur_scale": 1.08
+    },
+    "high_stress": {
+      "history": {
+        "immediate_fill_rate": 0.988339431134191,
+        "rotable_immediate_fill_rate": 0.7803114571746385,
+        "rotable_hub_pool_fill_rate": 0.8610763454317898,
+        "expendable_immediate_fill_rate": 0.9514415781487102,
+        "consumable_immediate_fill_rate": 0.9999222596527598,
+        "aog_hours_per_year": 1631.5,
+        "aog_events_per_year": 84.5
+      },
+      "selection_p0_mean": {
+        "seeds": [
+          100,
+          101,
+          102,
+          103,
+          104
+        ],
+        "weeks": [
+          104,
+          155
+        ],
+        "start_week": 78,
+        "immediate_fill_rate": 0.988019359543437,
+        "rotable_immediate_fill_rate": 0.7814412027314395,
+        "rotable_hub_pool_fill_rate": 0.8605041067897901,
+        "expendable_immediate_fill_rate": 0.9525238533454141,
+        "consumable_immediate_fill_rate": 0.9998697258142297,
+        "aog_hours_per_year": 1558.4,
+        "aog_events_per_year": 75.8,
+        "spare_capital_aed": 48449811.409104384
+      },
+      "pooled_history_selection": {
+        "immediate_fill_rate": 0.988179395338814,
+        "rotable_immediate_fill_rate": 0.780876329953039,
+        "rotable_hub_pool_fill_rate": 0.8607902261107899,
+        "expendable_immediate_fill_rate": 0.9519827157470622,
+        "consumable_immediate_fill_rate": 0.9998959927334947,
+        "aog_hours_per_year": 1594.95,
+        "aog_events_per_year": 80.15
+      },
+      "in_central_band": {
+        "rotable_immediate_fill_rate": true,
+        "aog_hours_per_year": true,
+        "aog_events_per_year": true
+      },
+      "true_mtbur_scale": 0.96
     }
   },
   "artefacts": {
-    "config/assumptions.yaml": "b7138887031225f7b36799cf60a25e329cb5dc88d7d7248f97d3b4fb4aae186a",
+    "config/assumptions.yaml": "85615c217bc473f08d27618ec5fd26e9c0d4cef51ef7643c6e710693c5a9e60c",
+    "config/part_catalogue.csv": "89871fbc3dce032d7d0b42101e2894f7709ee18e94901ba5e9249b3ff0eb36f9",
     "src/gnm/sim/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "src/gnm/sim/api.py": "073678206b7990933821ee74e19385e3dbc954b7a41bd3b45f5b03639acbf580",
-    "src/gnm/sim/baseline.py": "0bba695fdc6a5d3670d39bdf0a170516f61ef6e4373b268a463fecf5552bda84",
-    "src/gnm/sim/calibration.py": "ef538a557cb35ffaa694aa61e7eda5773fc11328faa421644bce26c7af604e97",
-    "src/gnm/sim/engine.py": "b2542e734d2e2ffcaac1243667d8cb81a6d74ba0288adf7010defe46ccf988ea",
-    "src/gnm/sim/generator.py": "6cede879c49d13f7d5829b543f1cf7f966b9422dfd040a9cfec01ddea3c1ddc0",
-    "src/gnm/sim/quoted.py": "0f5ceac6af3447a6ac06a765749bc725fcb0b7ce0b1e65d440d508c297291cb4",
-    "src/gnm/sim/truth.py": "3f572e24b6963c293861dd323139a948d8a3519bab40d3f96a764786c82c51d9",
-    "outputs/calibration/p0_history_summary.json": "9143544dae5be1b7b711546af5332f066cb22adf73ef388a5d28eac59ea65d95"
+    "src/gnm/sim/api.py": "df33a6957f1165fd57d300da4f32a1b7575837ff0b1c40de874806a7106f9546",
+    "src/gnm/sim/baseline.py": "b6b76776ce1df8cc49eba89a8ca00365f8e1286ece15c18e668e77c168cefe66",
+    "src/gnm/sim/calibration.py": "0542c20abfd6ca3f2d5e526093c8a80750f7383b7061f56011e7b7884ab7909f",
+    "src/gnm/sim/crn.py": "f73e335c065f29bab8b7ba910a401011623812c848672ae527f50b3aae56978f",
+    "src/gnm/sim/engine.py": "5203908610fe3d5821332c11756643b395e8a97924dd3970d9141d7188ee9999",
+    "src/gnm/sim/generator.py": "2b371088c3aa5f34bfe7429cb58177b723a22535e831c153c51569d21339be22",
+    "src/gnm/sim/quoted.py": "1462a22f5236a41022c1212c41feafa2edb98858eb2dea1c64b2d4129f96fc5c",
+    "src/gnm/sim/truth.py": "120f1a5b6c20fdaa94c3f7a1b0ecc3854b3e9f7c91b4e22dd3968e8136070333",
+    "outputs/calibration/p0_history_summary.json": "bea04e8a61d4505216c852e2f2e619430d2ef3d05c0a2241d3d3d7c98054cab6"
+  },
+  "superseded_v1": {
+    "locked_at": "2026-11-26T01:42:41.020744+00:00",
+    "note": "SIM-CAL: P0-only calibration locked before any P1/P2 run",
+    "policy_used": "P0 only",
+    "targets": {
+      "immediate_fill_rate": [
+        0.93,
+        0.97
+      ],
+      "rotable_immediate_fill_rate": [
+        0.8,
+        0.88
+      ],
+      "aog_hours_per_year": [
+        1500,
+        3500
+      ],
+      "aog_events_per_year": [
+        60,
+        250
+      ]
+    },
+    "achieved": {
+      "central": {
+        "history": {
+          "immediate_fill_rate": 0.9581488837309469,
+          "rotable_immediate_fill_rate": 0.8323765786452354,
+          "expendable_immediate_fill_rate": 0.8003525782282944,
+          "consumable_immediate_fill_rate": 0.9734250926416094,
+          "aog_hours_per_year": 2753.5,
+          "aog_events_per_year": 90.0
+        },
+        "in_central_band": {
+          "immediate_fill_rate": true,
+          "rotable_immediate_fill_rate": true,
+          "aog_hours_per_year": true,
+          "aog_events_per_year": true
+        }
+      },
+      "low_stress": {
+        "history": {
+          "immediate_fill_rate": 0.9697736151457478,
+          "rotable_immediate_fill_rate": 0.8808290155440415,
+          "expendable_immediate_fill_rate": 0.9168765743073047,
+          "consumable_immediate_fill_rate": 0.9737134688691232,
+          "aog_hours_per_year": 1816.5,
+          "aog_events_per_year": 57.0
+        },
+        "in_central_band": {
+          "immediate_fill_rate": true,
+          "rotable_immediate_fill_rate": false,
+          "aog_hours_per_year": true,
+          "aog_events_per_year": false
+        }
+      },
+      "high_stress": {
+        "history": {
+          "immediate_fill_rate": 0.9464164063050576,
+          "rotable_immediate_fill_rate": 0.8295238095238096,
+          "expendable_immediate_fill_rate": 0.7447526236881559,
+          "consumable_immediate_fill_rate": 0.9671437263564456,
+          "aog_hours_per_year": 3505.5,
+          "aog_events_per_year": 105.0
+        },
+        "in_central_band": {
+          "immediate_fill_rate": true,
+          "rotable_immediate_fill_rate": true,
+          "aog_hours_per_year": false,
+          "aog_events_per_year": true
+        }
+      }
+    },
+    "artefacts": {
+      "config/assumptions.yaml": "b7138887031225f7b36799cf60a25e329cb5dc88d7d7248f97d3b4fb4aae186a",
+      "src/gnm/sim/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "src/gnm/sim/api.py": "073678206b7990933821ee74e19385e3dbc954b7a41bd3b45f5b03639acbf580",
+      "src/gnm/sim/baseline.py": "0bba695fdc6a5d3670d39bdf0a170516f61ef6e4373b268a463fecf5552bda84",
+      "src/gnm/sim/calibration.py": "ef538a557cb35ffaa694aa61e7eda5773fc11328faa421644bce26c7af604e97",
+      "src/gnm/sim/engine.py": "b2542e734d2e2ffcaac1243667d8cb81a6d74ba0288adf7010defe46ccf988ea",
+      "src/gnm/sim/generator.py": "6cede879c49d13f7d5829b543f1cf7f966b9422dfd040a9cfec01ddea3c1ddc0",
+      "src/gnm/sim/quoted.py": "0f5ceac6af3447a6ac06a765749bc725fcb0b7ce0b1e65d440d508c297291cb4",
+      "src/gnm/sim/truth.py": "3f572e24b6963c293861dd323139a948d8a3519bab40d3f96a764786c82c51d9",
+      "outputs/calibration/p0_history_summary.json": "9143544dae5be1b7b711546af5332f066cb22adf73ef388a5d28eac59ea65d95"
+    }
   }
 }

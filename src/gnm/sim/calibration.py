@@ -39,8 +39,9 @@ def in_band(metrics: dict, targets: dict) -> dict:
 
 
 def calibrate(variants=None, n_selection_seeds: int = 5) -> dict:
-    """Run P0 on the history (weeks 0–103, history_seed) and on the first selection seeds
-    (weeks 78–155, KPIs 104–155) for each variant; write outputs/calibration/p0_history_summary.json."""
+    """v2 P0-only calibration summary. For each world: P0 on the history (weeks 0-103, history seed) and on the
+    first selection seeds (weeks 78-155, KPIs 104-155); achieved vs the band / stress-end targets.
+    Writes outputs/calibration/p0_history_summary.json (supersedes the v1 summary)."""
     from gnm.sim.api import load_or_generate_scenario, load_world
     from gnm.sim.baseline import build_p0
     from gnm.sim.engine import run_policy
@@ -55,7 +56,18 @@ def calibrate(variants=None, n_selection_seeds: int = 5) -> dict:
     start = ev0 - cfg["calendar"]["warmup_weeks"]
     hseed = int(cfg["seeds"]["history_seed"])
     sel = list(range(cfg["seeds"]["selection_seeds"][0], cfg["seeds"]["selection_seeds"][1] + 1))[:n_selection_seeds]
-    out = {"targets": targets, "variant_targets": var_targets, "policy": "P0 only", "variants": {}}
+    keys = ["immediate_fill_rate", "rotable_immediate_fill_rate", "rotable_hub_pool_fill_rate",
+            "expendable_immediate_fill_rate", "consumable_immediate_fill_rate", "aog_hours_per_year", "aog_events_per_year"]
+    out = {"version": "v2", "policy": "P0 only",
+           "note": "v2 calibration; supersedes the v1 summary (v1 band kept under calibration_targets.v1_band)",
+           "status": cal.get("status"), "targets": targets, "variant_targets": var_targets,
+           "settings_used": {"parts.quoted_mtbur_optimism": cfg["parts"]["quoted_mtbur_optimism"],
+                             "parts.quoted_mtbur_noise_sd_log": cfg["parts"]["quoted_mtbur_noise_sd_log"],
+                             "generator.quoted_tat_optimism": cfg["generator"]["quoted_tat_optimism"],
+                             "generator.quoted_tat_noise_sd_log": cfg["generator"]["quoted_tat_noise_sd_log"],
+                             "generator.variants": cfg["generator"]["variants"],
+                             "not_applied": ["AOG-market settings", "line-station kit"]},
+           "history_seed": hseed, "selection_seeds": sel, "variants": {}}
     for v in (variants or VARIANTS):
         world = load_world(v)
         p0 = build_p0(world)
@@ -63,14 +75,18 @@ def calibrate(variants=None, n_selection_seeds: int = 5) -> dict:
         hist = history_metrics(world, res, w0, w1)
         y1 = history_metrics(world, res, w0, w0 + 51)
         y2 = history_metrics(world, res, w0 + 52, w1)
-        ks = [run_policy(world, load_or_generate_scenario(s, start, ev1, variant=v), p0, ev0, ev1, detail=False).kpis
-              for s in sel]
-        selm = {k: float(np.mean([x[k] for x in ks])) for k in ["immediate_fill_rate", "aog_hours", "aog_events",
-                                                                 "spare_capital_aed"]}
-        out["variants"][v] = {"history": hist, "history_year1": y1, "history_year2": y2,
-                              "history_kpis": {k: float(x) for k, x in res.kpis.items()},
-                              "in_central_band": in_band(hist, targets),
-                              "selection_p0_mean": {"seeds": sel, "weeks": [ev0, ev1], "start_week": start, **selm}}
+        rs = [run_policy(world, load_or_generate_scenario(s, start, ev1, variant=v), p0, ev0, ev1) for s in sel]
+        ms = [dict(history_metrics(world, r, ev0, ev1), spare_capital_aed=r.kpis["spare_capital_aed"]) for r in rs]
+        selm = {k: float(np.mean([m[k] for m in ms])) for k in ms[0]}
+        pooled = {k: (hist[k] + selm[k]) / 2 for k in keys}
+        out["variants"][v] = {
+            "true_mtbur_scale": cfg["generator"]["variants"][v]["true_mtbur_scale"],
+            "history": hist, "history_year1": y1, "history_year2": y2,
+            "history_kpis": {k: float(x) for k, x in res.kpis.items()},
+            "selection_p0_mean": {"seeds": sel, "weeks": [ev0, ev1], "start_week": start, **selm},
+            "pooled_history_selection": pooled,
+            "in_central_band": in_band(pooled, targets),
+            "stress_targets": var_targets.get(v)}
     SUMMARY.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY.write_text(json.dumps(out, indent=2))
     return out

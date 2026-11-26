@@ -33,7 +33,7 @@ seeds:
   world_seed: 2023                   # master data + hidden ground truth
   history_seed: 7                    # the airline's realised history (+ forecast-holdout continuation)
   selection_seeds: [100, 119]        # inclusive; policy tuning + frontier candidate selection
-  holdout_seeds: [1000, 1019]        # inclusive; run ONCE after freeze
+  holdout_seeds: [2000, 2019]        # v2: fresh seeds (1000–1019 retired after the v1 holdout; D012). Run ONCE after the v2 freeze
   provenance: ASSUMED
 
 fleet:
@@ -129,8 +129,8 @@ parts:
   # (v2) qty per aircraft is hand-set per PN in config/part_catalogue.csv (AV-17)
   mtbur_fh: [4000, 40000]            # rotables & expendables driven by FH (true value hidden; see ground truth)
   mtbur_fc: [2500, 25000]            # for cycle-driven parts (landing gear, brakes, doors, APU starts)
-  quoted_mtbur_noise_sd_log: 0.35    # OEM/vendor-quoted MTBUR in part master deviates from truth (lognormal)
-  quoted_mtbur_optimism: 1.25        # quoted figures are on average 25% optimistic (higher MTBUR)
+  quoted_mtbur_noise_sd_log: 0.20    # (v2 V1, was 0.35) vendor-quoted MTBUR deviates from truth (lognormal): quotes moderately noisy
+  quoted_mtbur_optimism: 1.10        # (v2 V1, was 1.25) vendor quotes moderately optimistic: ~10% higher MTBUR on average
   overdispersion:                    # negative-binomial clustering for some parts (k = shape; var = mu + mu^2/k)
     share_of_parts: 0.30
     k_range: [0.6, 3.0]
@@ -278,8 +278,8 @@ generator:                           # parameters of the synthetic generator not
   nff_shop_days: [2, 5]              # (v2, AV-19) test-and-release shop time for a no-fault-found unit
   nff_cost_pct_of_repair: 0.15       # NFF test-and-release cost vs a full repair; NFF units never condemn
   wear_planned_notice_days: [5, 10]  # (v2, AV-11) brake changes are known ahead from wear-pin checks and done at the hub
-  quoted_tat_noise_sd_log: 0.15      # vendor-quoted shop TAT vs true mean
-  quoted_tat_optimism: 0.90          # quotes are ~10% shorter than reality on average
+  quoted_tat_noise_sd_log: 0.10      # (v2 V1, was 0.15) contractual shop-TAT quotes are slightly noisy
+  quoted_tat_optimism: 0.95          # (v2 V1, was 0.90) contractual TAT quotes slightly biased: ~5% shorter than reality
   quoted_condemn_noise_sd_log: 0.30
   quoted_usage_noise_sd_log: 0.30    # consumables: quoted FC-per-unit vs true
   lead_time_true_noise_sd_log: 0.10  # true lead-time mean vs quoted
@@ -287,8 +287,8 @@ generator:                           # parameters of the synthetic generator not
   deferred_to_hub_share: 0.92        # D3/D10 removals found at an outstation are mostly deferred and rectified at AUH on the tail's next hub arrival
   variants:                          # calibration sensitivity worlds (scale TRUE MTBUR of R/E only; quoted data unchanged)
     central: {true_mtbur_scale: 1.00}
-    low_stress: {true_mtbur_scale: 1.00}    # v2: PENDING user-approved calibration band (mechanism ready, value not set)
-    high_stress: {true_mtbur_scale: 1.00}   # v2: PENDING
+    low_stress: {true_mtbur_scale: 1.08}    # v2 calibrated (P0 only): AOG end binds first (~1,200 h/yr; rotable fill ~0.84)
+    high_stress: {true_mtbur_scale: 0.96}   # v2 calibrated (P0 only): rotable-fill end binds first (~0.78)
   planted:
     PS1: {mtbur_fc: 1300, quoted_multiple: 2.5}   # (v2, AV-11) the catalogue row flagged PS1 (an unscheduled D0 LRU); true vs quoted MTBUR
     PS2: {tat_days: 88, quoted_tat_days: 60, stuck_repair_days: 200, weeks: [84, 92], seed: history}   # the first PS2 removal in the window (history seed only) gets 200 shop work days
@@ -309,7 +309,7 @@ engine:                              # event-engine settings (policy-agnostic)
   rationale: "Shop capacity slots are interpreted as bench/test-stand positions: a unit holds a slot only for its touch/test time (share of work time); awaiting-parts and paperwork time runs outside the slot. Without this, 14 slots could not process ~1,000 rotable removals a year at 15–90 day TATs. 0.05 was chosen in v1 for ~0.8 hub bench utilisation; queueing is light by construction (capacity slots are bench positions)."
 
 calibration_targets:                 # v2 band chosen by the user (before any v2 policy result); NOT yet calibrated or locked
-  status: "band recorded; calibration not yet run (quote/market settings not applied); not locked"
+  status: "CALIBRATED (v2) with P0 only; V1 chosen by the user's fewest-changes rule (quote accuracy: quoted_mtbur_optimism 1.10, quoted_mtbur_noise_sd_log 0.20, quoted_tat_optimism 0.95, quoted_tat_noise_sd_log 0.10); AOG-market settings and the line-station kit NOT applied; locked in outputs/freeze/calibration_lock.json"
   rotable_immediate_fill_rate: [0.78, 0.85]   # P0 network rotable immediate fill (all stations)
   aog_hours_per_year: [1200, 2700]            # material AOG, fleet-wide, merged per aircraft (30-68 h per aircraft-year)
   aog_events_per_year: [60, 100]
