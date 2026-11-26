@@ -127,6 +127,52 @@ def test_stock_param_table_capital(specs):
     assert np.allclose(t.capital_at_target_aed, t.target_units * t.unit_cost_aed)
     assert (t.capital_at_target_aed >= 0).all()
 
-# v2 rebuild (D012): these tests read v1 outputs / docs/data exports; skipped until v2 regeneration.
-import pytest as _pytest_v2  # noqa: E402
-pytestmark = [_pytest_v2.mark.v1_outputs, _pytest_v2.mark.skip(reason="awaiting v2 regeneration")]
+
+def test_loop_units_match_engine_seeding():
+    """POL-6/V2-SIM-11: loop units = round(quoted weekly rate / 7 x quoted pipeline days), as the engine seeds."""
+    from gnm.sim.quoted import pipeline_days, quoted_weekly_demand
+    w = world()
+    dem = quoted_weekly_demand(w).groupby("pn").weekly_demand.sum()
+    loop = pipeline_units_at_start(w)
+    for pn, n in loop.items():
+        assert n == int(round(float(dem.get(pn, 0.0)) / 7.0 * pipeline_days(w, pn)))
+
+
+def test_palm_uses_fill_definition():
+    """V2-SIM-10: protection level on P(X <= S-1) (immediate fill), not the ready rate P(X <= S)."""
+    from scipy import stats
+    mu, tgt = 2.3, 0.95
+    S = palm_base_stock(mu, tgt)
+    assert stats.poisson.cdf(S - 1, mu) >= tgt > stats.poisson.cdf(S - 2, mu)
+
+
+def test_route_expectation_v2():
+    from gnm.policy.policies import route_expectation
+    w = world()
+    lhr = route_expectation(w, "R", "LHR", 1.0, 100000.0)
+    cai = route_expectation(w, "R", "CAI", 1.0, 100000.0)
+    wb = route_expectation(w, "R", "CAI", 0.0, 100000.0)
+    hub = route_expectation(w, "R", "AUH", 1.0, 100000.0)
+    ce = route_expectation(w, "C", "CAI", 1.0, 100.0)
+    assert lhr["wait_h"] < cai["wait_h"] < wb["wait_h"]          # local borrow odds LHR > CAI; WB market thinner
+    assert hub["p_success_attempt"] > 0.6                          # robbery then exchange at the hub
+    assert ce["wait_h"] < 24 and ce["fee_aed"] == pytest.approx(50.0)
+
+
+def test_none_class_target():
+    from gnm.policy.forecast_pipeline import load_policy_config
+    w = world()
+    assert service_target(w, "NONE") == load_policy_config()["service_target_none"]
+
+
+def test_p2_positioning_v2_columns(specs):
+    from gnm.policy.policies import p2_positioning
+    w, ff, _, p2 = specs
+    pos = p2_positioning(w, ff)
+    assert {"route_wait_h", "route_fee_aed", "expected_aog_h_per_d0_miss", "hub_avail"} <= set(pos.columns)
+    assert (pos.cost_per_miss_aed >= 0).all()
+    # NONE-class (servicing fluid) rows never carry downtime value
+    assert (pos[pos.deadline_class == "NONE"].p_d0 == 0).all()
+    sp = p2.stock_params.set_index(["pn", "station"])
+    for r in pos[pos.part_class == "R"].itertuples(index=False):
+        assert sp.loc[(r.pn, r.station), "base_stock"] == r.units

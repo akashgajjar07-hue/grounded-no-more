@@ -47,7 +47,7 @@ p2_network:
   positioning_threshold_aed_per_aed_year: 0.20   # add an outstation unit while annual expected cost avoided / unit capital >= this
   include_auh_wait_in_outstation_lead_time: true # outstation resupply lead time = routine transit + expected hub backorder delay (EBO/lambda, METRIC-style)
   provenance: ASSUMED
-  rationale: "Network rule: the hub holds the pooled stock sized on network demand at the deadline-class target; an outstation gets a unit only while the annual expected AOG penalty plus emergency-logistics cost it avoids, per AED of capital, beats the threshold. The default 0.20 equals the carrying cost rate (the unit at least pays its own carrying cost); it is the main P2 tuning knob."
+  rationale: "Network rule: the hub holds the pooled stock sized on network demand at the deadline-class target; an outstation gets a unit only while the annual expected cost of local misses it avoids, per AED of capital, beats the threshold. v2: the miss cost uses the public AOG-route assumptions in assumptions.yaml aog_sourcing (hub transfer if the hub has stock, else local borrow / exchange-loan for rotables or local buy for C/E, with retries), downtime hours incl. fitting x the penalty rate, the fixed per-event cost (economics.aog_event_cost_aed), and shipment / route fees. The default 0.20 equals the carrying cost rate (the unit at least pays its own carrying cost); it is the main P2 tuning knob."
 
 evaluation:
   week_from: 78

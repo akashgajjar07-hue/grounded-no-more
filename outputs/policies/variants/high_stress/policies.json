@@ -109,7 +109,7 @@
     {
       "policy_id": "P2",
       "label": "Network",
-      "notes": "Hub: rotable float on network pipeline demand at the target (Palm), C/E (s,S) on network LTD over the estimated PO lead time. Outstations: units added while annual expected AOG penalty + logistics avoided per AED of capital >= 0.20. Lateral transfers and weekly rebalancing on.",
+      "notes": "Hub: rotable float on network pipeline demand at the target (Palm, fill definition), C/E (s,S) on network LTD over the estimated PO lead time. Outstations: units added while the annual expected cost of local misses avoided (v2 AOG routes, downtime hours x rate, fixed per-event cost, shipment/route fees) per AED of capital >= 0.20. Lateral transfers and weekly rebalancing on.",
       "lateral_transfers": true,
       "rebalance": true,
       "capital_at_target_aed": 34725839.36,
@@ -213,7 +213,7 @@
     {
       "policy_id": "P2@central",
       "label": "Network (central history)",
-      "notes": "Hub: rotable float on network pipeline demand at the target (Palm), C/E (s,S) on network LTD over the estimated PO lead time. Outstations: units added while annual expected AOG penalty + logistics avoided per AED of capital >= 0.20. Lateral transfers and weekly rebalancing on.",
+      "notes": "Hub: rotable float on network pipeline demand at the target (Palm, fill definition), C/E (s,S) on network LTD over the estimated PO lead time. Outstations: units added while the annual expected cost of local misses avoided (v2 AOG routes, downtime hours x rate, fixed per-event cost, shipment/route fees) per AED of capital >= 0.20. Lateral transfers and weekly rebalancing on.",
       "lateral_transfers": true,
       "rebalance": true,
       "capital_at_target_aed": 32141162.610000003,

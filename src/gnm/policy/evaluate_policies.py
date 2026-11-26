@@ -55,6 +55,7 @@ KPI_LABELS = {
     "aog_hours_excl_expiry_artefact": "Expected material-related downtime hours/yr excluding the expiry-on-arrival engine artefact",
 }
 PAIRS = [("P1", "P0"), ("P2", "P0"), ("P2", "P1")]
+RETIRED_HOLDOUT = set(range(1000, 1020))       # v1 holdout seeds, seen and retired (D012)
 
 
 # ---------------------------------------------------------------------------------- economics
@@ -329,9 +330,9 @@ def evaluate(variants=None, seeds=None, processes=None, out_dir: Path | None = N
     ecfg = pcfg["evaluation"]
     variants = variants or ecfg["variants"]
     seeds = list(seeds or cfg_seeds()["selection"])
-    hold = set(cfg_seeds()["holdout"])
+    hold = set(cfg_seeds()["holdout"]) | RETIRED_HOLDOUT
     if set(seeds) & hold:
-        raise ValueError("holdout seeds must not be used in the selection evaluation")
+        raise ValueError("holdout seeds (current, or retired v1 1000-1019) must not be used in the selection evaluation")
     out = Path(out_dir or POL_OUT)
     out.mkdir(parents=True, exist_ok=True)
     from gnm.sim.api import load_world

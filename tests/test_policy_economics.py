@@ -45,9 +45,20 @@ def test_paired_ci_matches_scipy():
     assert b[0] < d.mean() < b[1]
 
 
-def test_holdout_seeds_refused():
+@pytest.mark.parametrize("seed", [2000, 2019, 1000])
+def test_holdout_seeds_refused(seed):
+    """Current v2 holdout (2000-2019) and the retired v1 holdout (1000-1019) are refused before any run."""
     with pytest.raises(ValueError):
-        ep.evaluate(variants=["central"], seeds=[1000])
+        ep.evaluate(variants=["central"], seeds=[seed])
+
+
+def test_penalty_sensitivity_keeps_event_cost_fixed():
+    df = pd.DataFrame([dict(KPIS, aog_penalty_aed=5e6, aog_event_cost_aed=1e6)])
+    out = ep.penalty_sensitivity(df, [0.5, 1.0, 2.0])
+    base = df[ep.COST_COMPONENTS].sum(axis=1)
+    assert np.allclose(out["total_cost_pen_x1"], base)
+    assert np.allclose(out["total_cost_pen_x2"] - out["total_cost_pen_x1"], 4e6)     # hourly part only
+    assert np.allclose(out["total_cost_pen_x1"] - out["total_cost_pen_x0.5"], 2e6)
 
 
 def test_paired_seed_equivalence_and_engine_economics():
@@ -64,6 +75,8 @@ def test_paired_seed_equivalence_and_engine_economics():
         assert ep.total_annual_cost(k) == pytest.approx(sum(k[c] for c in ep.COST_COMPONENTS))
         assert k["holding_cost_aed"] == pytest.approx(w.cfg["economics"]["carrying_cost_pct_per_year"]
                                                       * k["spare_capital_aed"])
+        evc = ep.aog_event_cost(w, r, 104, 155)
+        assert 0.0 <= evc <= k["aog_penalty_aed"] + 1e-6
         srows, crows = ep.reduce_detail(w, r, "central", 104, 155)
         assert sum(x["aog_hours"] for x in srows) == pytest.approx(k["aog_hours"])
         assert sum(x["aog_hours"] for x in crows) == pytest.approx(k["aog_hours"])
@@ -84,7 +97,3 @@ def test_selection_outputs_consistent():
         for pid, gp in g.groupby("policy_id"):
             m = gp[ep.COST_COMPONENTS].sum(axis=1).mean()
             assert s["variants"][v]["policies"][pid]["total_annual_cost_aed"]["mean"] == pytest.approx(m)
-
-# v2 rebuild (D012): these tests read v1 outputs / docs/data exports; skipped until v2 regeneration.
-import pytest as _pytest_v2  # noqa: E402
-pytestmark = [_pytest_v2.mark.v1_outputs, _pytest_v2.mark.skip(reason="awaiting v2 regeneration")]

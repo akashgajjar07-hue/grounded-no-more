@@ -15,11 +15,19 @@ P1 Local optimised (single-echelon, each stocking point on its own)
 P2 Network (pooled hub + economically justified outstation positioning)
   * Hub: rotable float sized on NETWORK pipeline demand at the target; C/E as P1's hub row.
   * Outstation j gets its k-th unit only while
-        annual requests_j x [F(k) - F(k-1)] x (p_D0 x AOG transport h AUH->j x penalty + logistics/miss)
-        / unit cost  >=  threshold  (config/policy.yaml p2_network.positioning_threshold_aed_per_aed_year)
-    where F is the immediate-fill probability with resupply from the hub (routine transit + expected
-    hub backorder delay EBO/lambda, METRIC-style). C/E outstations that qualify run (k-1, k-1+EOQ).
+        annual requests_j x [F(k) - F(k-1)] x cost of a local miss / unit cost >= threshold
+    (config/policy.yaml p2_network.positioning_threshold_aed_per_aed_year). F is the immediate-fill
+    probability with resupply from the hub (routine transit + expected hub backorder delay EBO/lambda,
+    METRIC-style). v2 cost of a local miss (:func:`p2_positioning`): with probability A_H the hub ships
+    (AOG transport hours), otherwise the v2 AOG routes apply (local borrow / exchange-loan for rotables,
+    local buy for C/E, retried; public config ``aog_sourcing``); D0 misses pay (wait + fitting) x penalty
+    rate + the fixed per-event cost; every miss pays shipment or route fees. C/E outstations that
+    qualify run (k-1, k-1+EOQ).
   * lateral_transfers=True, rebalance=True. Both policies: repair_tat_multiplier = 1.
+v2 semantics (V2-SIM-10/11): the rotable protection level is the immediate fill P(X <= S-1) = P(X < S),
+the quantity the engine measures; S is TOTAL spares, so the serviceable target handed to the engine at
+the hub is S minus the repair-loop units the run starts with, counted exactly as P0 does
+(gnm.sim.baseline.p0_rotable_plan, quoted pipeline per gnm.sim.quoted.pipeline_days).
 """
 from __future__ import annotations
 
@@ -87,15 +95,14 @@ def palm_base_stock(mu: float, target: float, s_max: int = 60) -> int:
 def pipeline_units_at_start(world: World) -> dict:
     """Rotable units already owned in the repair loop (U/S or in the shop) when a run starts.
 
-    The engine seeds each rotable's pipeline with round(quoted removal rate x quoted pipeline days)
-    units ON TOP of the stations' serviceable base stock (data contract §4 'Initial state'; public
-    quoted figures via gnm.sim.quoted, identical across policies). Palm's S is the TOTAL number of
-    spares (serviceable + pipeline), so the serviceable target handed to the engine is S minus these
-    units. The planner's analogue: count the units currently in the repair loop before buying."""
-    from gnm.sim.quoted import pipeline_days, quoted_weekly_demand
-    dem = quoted_weekly_demand(world).groupby("pn").weekly_demand.sum()
-    return {pn: int(round(float(dem.get(pn, 0.0)) / 7.0 * pipeline_days(world, pn)))
-            for pn in world.parts.loc[world.parts.part_class == "R", "pn"]}
+    The engine seeds each rotable's loop with round(quoted removal rate x quoted pipeline days) units ON
+    TOP of the stations' serviceable base stock (data contract §4; public quoted figures, identical
+    across policies). Palm's S is TOTAL spares, so the serviceable target is S minus these units (POL-6).
+    Taken from P0's own plan (``p0_rotable_plan.loop_units``) so P0, P1 and P2 use one definition
+    (V2-SIM-11 pipeline). The planner's analogue: count the units currently in the repair loop."""
+    from gnm.sim.baseline import p0_rotable_plan
+    plan = p0_rotable_plan(world)
+    return {r.pn: int(r.loop_units) for r in plan.itertuples(index=False)}
 
 
 def emergency_cost(world: World, frm: str, to: str) -> float:
@@ -362,10 +369,11 @@ def build_p2(world: World, forecasts: pd.DataFrame, pcfg: dict | None = None) ->
                         _shelf_cap(world, pn, weekly, float(pcfg["ordering"]["shelf_life_cover_share"])))
                 rows.append((pn, st, k - 1, k - 1 + q, 0))
     return _spec("P2", "Network", rows, world, lateral_transfers=True, rebalance=True,
-                 notes="Hub: rotable float on network pipeline demand at the target (Palm), C/E (s,S) on network "
-                       "LTD over the estimated PO lead time. Outstations: units added while annual expected AOG "
-                       "penalty + logistics avoided per AED of capital >= %.2f. Lateral transfers and weekly "
-                       "rebalancing on." % float(pcfg["p2_network"]["positioning_threshold_aed_per_aed_year"]))
+                 notes="Hub: rotable float on network pipeline demand at the target (Palm, fill definition), C/E "
+                       "(s,S) on network LTD over the estimated PO lead time. Outstations: units added while the "
+                       "annual expected cost of local misses avoided (v2 AOG routes, downtime hours x rate, fixed "
+                       "per-event cost, shipment/route fees) per AED of capital >= %.2f. Lateral transfers and "
+                       "weekly rebalancing on." % float(pcfg["p2_network"]["positioning_threshold_aed_per_aed_year"]))
 
 
 # ---------------------------------------------------------------------------------- tables
