@@ -206,7 +206,7 @@ export function chartFrame(host, { headline, subtitle, implication, provenance, 
   if (sub) {
     const check = () => { if (!sub.isConnected || sub.classList.contains('is-expanded')) return; more.hidden = !(sub.scrollHeight > sub.clientHeight + 2); };
     requestAnimationFrame(check);
-    const ro = new ResizeObserver(() => check());
+    const ro = new ResizeObserver(() => requestAnimationFrame(check));   // deferred: toggling `more` inside the callback loops in WebKit
     ro.observe(sub);
   }
   if (isDev()) {

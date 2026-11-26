@@ -116,45 +116,8 @@ def route_id(t: str) -> str:
     return "cutaway" if t.startswith("lab/") else t.split("?")[0]
 
 
-# --------------------------------------------------------------------------------------------- harness adapters
-# audit_lib is shared (SHELL-owned); these runtime wrappers only adapt it to the 390 px off-canvas rail:
-#  * a nav item inside the CLOSED rail is operated the way a user would: open the menu first (#menu-btn), then click;
-#  * after each control the rail is closed again (audit_lib's _restore only knows .modal/.drawer/.story/tooltips, so an
-#    open rail + scrim would otherwise swallow every later click).
-_orig_operate, _orig_restore = AL._operate, AL._restore
-
-RAIL_CLOSED_JS = """(e) => !!e.closest('.rail') && !document.querySelector('#app')?.classList.contains('rail-open')
-  && e.getBoundingClientRect().right <= 0"""
-
-
-def _operate(page, d, cfg, box):
-    loc = page.locator(d["selector"]).first
-    try:
-        offcanvas = loc.evaluate(RAIL_CLOSED_JS)
-    except Exception:  # noqa: BLE001
-        offcanvas = False
-    if offcanvas and page.locator("#menu-btn").is_visible():
-        page.click("#menu-btn")
-        page.wait_for_timeout(450)          # rail slide-in (motion-slow)
-        page.evaluate(AL.OBSERVE_JS)       # do not credit the rail opening to the control
-        return "open-rail+" + _orig_operate(page, d, cfg, box)
-    return _orig_operate(page, d, cfg, box)
-
-
-def _restore(page, base_url, route):
-    try:
-        if page.evaluate("!!document.querySelector('#app')?.classList.contains('rail-open')"):
-            page.keyboard.press("Escape")
-            page.wait_for_timeout(200)
-            if page.evaluate("!!document.querySelector('#app')?.classList.contains('rail-open')"):
-                page.evaluate("document.querySelector('#rail-scrim')?.click()")
-                page.wait_for_timeout(200)
-    except Exception:  # noqa: BLE001
-        pass
-    return _orig_restore(page, base_url, route)
-
-
-AL._operate, AL._restore = _operate, _restore
+# --------------------------------------------------------------------------------------------- browser probe
+# (audit_lib itself now opens/closes the 390 px rail, closes open drawers and restores the audited mode.)
 
 _LAUNCH_OK: dict = {}
 
@@ -338,11 +301,29 @@ def run_cell(pw, base_index: str, browser: str, target: str, mode: str, vp: tupl
 # --------------------------------------------------------------------------------------------- aggregate
 
 
+ABORTED = re.compile(r"requestfailed: .*(cancelled|net::ERR_ABORTED|NS_BINDING_ABORTED)", re.I)
+
+
+def normalise(c: dict) -> dict:
+    """Reclassify two known harness artefacts (recorded in the note, never silently):
+    * a request aborted because the harness itself reloaded the page (WebKit reports 'cancelled') is not a site error;
+    * clicking the reading-mode radio that is ALREADY selected (Expert in an Expert cell) is a correct no-op."""
+    for e in c["elements"] + c["shortcuts"]:
+        if e["ok"] is False and e.get("errors") and all(ABORTED.search(x) for x in e["errors"]):
+            e["ok"] = bool(e.get("effects")) and "esc-did-not-close" not in e.get("effects", []) and not e.get("note", "").startswith(("Timeout", "Error"))
+            e["note"] = (e.get("note", "") + " | ignored: request aborted by the harness reload").strip(" |")
+        if e["ok"] is False and e["kind"] == "toggle" and not e.get("errors") and e["label"].strip().lower() == c["mode"] and not e.get("effects"):
+            e["ok"], e["note"] = None, "already-selected reading-mode radio (no-op by design)"
+    allr = c["elements"] + c["shortcuts"]
+    c["summary"].update(ok=sum(r["ok"] is True for r in allr), failed=sum(r["ok"] is False for r in allr), skipped=sum(r["ok"] is None for r in allr))
+    return c
+
+
 def aggregate(label: str | None = None) -> dict:
     cells = []
     for f in sorted(CELLS.glob("*/*.json")):
         try:
-            cells.append(json.loads(f.read_text()))
+            cells.append(normalise(json.loads(f.read_text())))
         except Exception:  # noqa: BLE001
             pass
     fails, by_browser, by_route, by_owner = [], {}, {}, {}

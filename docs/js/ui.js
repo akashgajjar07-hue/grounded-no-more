@@ -393,7 +393,7 @@ export function slidingThumb(g) {
     thumb.style.transform = `translateX(${on.offsetLeft}px)`;
   };
   new MutationObserver(() => requestAnimationFrame(sync)).observe(g, { subtree: true, attributes: true, attributeFilter: ['aria-checked', 'aria-pressed'] });
-  if (typeof ResizeObserver === 'function') new ResizeObserver(() => { thumb.classList.add('no-anim'); sync(); requestAnimationFrame(() => thumb.classList.remove('no-anim')); }).observe(g);
+  if (typeof ResizeObserver === 'function') new ResizeObserver(() => requestAnimationFrame(() => { thumb.classList.add('no-anim'); sync(); requestAnimationFrame(() => thumb.classList.remove('no-anim')); })).observe(g);
   let tries = 0;
   const first = () => { if (g.isConnected) { sync(); requestAnimationFrame(() => thumb.classList.remove('no-anim')); } else if (tries++ < 120) requestAnimationFrame(first); };
   requestAnimationFrame(first);
@@ -650,10 +650,14 @@ export async function blueprintAircraft(host, { active, onSelect, compactBelow =
     g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fire(); } });
   });
   if (active) setActive(active);
+  let bpRaf = 0;
   const ro = new ResizeObserver(([entry]) => {
     const small = entry.contentRect.width < compactBelow;
-    svg.classList.toggle('bp-compact', small);
-    svg.setAttribute('viewBox', small && compact ? compact : full);
+    cancelAnimationFrame(bpRaf);   // deferred to the next frame: a synchronous viewBox swap loops the observer in WebKit
+    bpRaf = requestAnimationFrame(() => {
+      svg.classList.toggle('bp-compact', small);
+      svg.setAttribute('viewBox', small && compact ? compact : full);
+    });
   });
   ro.observe(host);
   return { svg, setActive, destroy: () => ro.disconnect() };
@@ -875,6 +879,7 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
    * A target already fully inside the free band below the bar stays put.
    */
   function frame(el) {
+    if (!el || !el.isConnected) return false;
     const bar = barBottom();
     const r = el.getBoundingClientRect();
     const gapTop = isSheet() ? 8 : BAR_GAP;
@@ -903,8 +908,10 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
       cardEl.classList.toggle('is-sheet', isSheet());
       // views render charts asynchronously: content above the target can still grow after the first scroll, so
       // re-frame until the target stops moving (max 4 passes)
+      const el = target;   // local: closing the tour (Esc) mid-pass nulls the shared `target`
       for (let pass = 0; pass < 4; pass++) {
-        const moved = frame(target);
+        if (!el.isConnected || target !== el) break;
+        const moved = frame(el);
         await sleep(moved && !motionReduced() ? MOTION.slow : 120);
         if (my !== seq) return false;
         if (!moved && pass > 0) break;

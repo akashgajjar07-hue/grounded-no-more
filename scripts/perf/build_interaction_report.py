@@ -73,6 +73,38 @@ def main():
     o += ["", "| Route | cells | ok | failed | skipped |", "|---|---:|---:|---:|---:|"]
     for r, x in sorted(S.get("by_route", {}).items(), key=lambda kv: -kv[1]["failed"]):
         o.append(f"| {r} | {x['cells']} | {x['ok']} | {x['failed']} | {x['skipped']} |")
+    # route x browser
+    rb = defaultdict(lambda: defaultdict(lambda: [0, 0, 0, 0]))
+    for c in S.get("cells", []):
+        r = "cutaway" if c["target"].startswith("lab/") else c["target"].split("?")[0]
+        x = rb[r][c["browser"]]
+        x[0] += c["ok"]; x[1] += c["failed"]; x[2] += c["skipped"]; x[3] += 1
+    brs = sorted({c["browser"] for c in S.get("cells", [])})
+    o += ["", "**Totals per route × browser** (ok / failed / skipped, summed over modes, widths and deep links of that route):", "",
+          "| Route | " + " | ".join(brs) + " |", "|---|" + "---|" * len(brs)]
+    for r in sorted(rb):
+        o.append(f"| {r} | " + " | ".join(f"{rb[r][b][0]} / **{rb[r][b][1]}** / {rb[r][b][2]} ({rb[r][b][3]} cells)" for b in brs) + " |")
+    # disabled / skipped controls and fixed-since-baseline
+    cells_dir = ROOT / "test-results" / "audit_cells"
+    disabled = Counter()
+    for f in cells_dir.glob("*/*.json"):
+        try:
+            d = json.loads(f.read_text())
+        except Exception:  # noqa: BLE001
+            continue
+        for e in d["elements"]:
+            if e["ok"] is None and e.get("note") == "disabled":
+                disabled[(d["route_id"], e["label"][:60])] += 1
+    if disabled:
+        o += ["", "**Disabled controls seen (skipped, not failed):** " + "; ".join(f"{r}: {lbl} ({n} cells)" for (r, lbl), n in sorted(disabled.items()))]
+    base = jl(ROOT / "test-results" / "_summary_baseline.json")
+    if base and label != base.get("label"):
+        key = lambda f: (f["target"], f["kind"], f["label"])  # noqa: E731
+        now = {key(f) for f in S.get("failures", [])}
+        fixed = sorted({key(f) for f in base.get("failures", [])} - now)
+        o += ["", f"**Fixed since the baseline** ({base.get('generated', '')}: {base['totals']['failed']} failing control-instances → "
+              f"{t.get('failed', 0)} now): {len(fixed)} distinct (page, control) pairs no longer fail, e.g. "
+              + "; ".join(f"{a} · {c}" for a, _, c in fixed[:25]) + (" …" if len(fixed) > 25 else "")]
     o += ["", "### Failures by owner", "", "| Owner | failing control-instances |", "|---|---:|"]
     for k, v in S.get("failures_by_owner", {}).items():
         o.append(f"| {esc(k)} | {v} |")

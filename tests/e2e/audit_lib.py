@@ -218,8 +218,11 @@ def _new_page(pw, cfg: AuditConfig, base_url: str):
     page = ctx.new_page()
     errors: list[str] = []
     page.on("console", lambda m: errors.append(f"console.{m.type}: {m.text}") if m.type == "error" else None)
-    page.on("pageerror", lambda e: errors.append(f"pageerror: {e}"))
-    page.on("requestfailed", lambda r: errors.append(f"requestfailed: {r.url} {r.failure}"))
+    page.on("pageerror", lambda e: None if "due to access control checks" in str(e) and "/assets/" in str(e)   # WebKit's wording for an aborted same-origin fetch
+            else errors.append(f"pageerror: {e}"))
+    # fetches the browser cancels because the user navigated on are invisible to the user: not failures
+    page.on("requestfailed", lambda r: None if any(x in str(r.failure) for x in ("cancelled", "ERR_ABORTED", "NS_BINDING_ABORTED"))
+            else errors.append(f"requestfailed: {r.url} {r.failure}"))
     page.on("response", lambda r: errors.append(f"HTTP {r.status}: {r.url}") if r.status >= 400 else None)
     page.add_init_script("window.addEventListener('unhandledrejection', (e) => console.error('unhandledrejection: ' + (e.reason && e.reason.message || e.reason)));")
     return browser, ctx, page, errors
@@ -303,6 +306,11 @@ def _operate(page, d: dict, cfg: AuditConfig, download_box: list) -> str:
     if outside:
         page.keyboard.press("Escape")
         page.wait_for_timeout(200)
+    # a control inside a collapsed <details> is reached by opening it first, as a user would
+    # (the control's own <summary> is left alone: toggling it is the action under test)
+    if loc.evaluate("(e) => { let o = false; for (let d = e.parentElement?.closest('details'); d; d = d.parentElement?.closest('details')) {"
+                    " if (!d.open && !(e.tagName === 'SUMMARY' && e.parentElement === d)) { d.open = true; o = true; } } return o; }"):
+        page.wait_for_timeout(120)
     # keep the control clear of the sticky top bar after earlier scrolling
     loc.evaluate("(e) => e.scrollIntoView({block: 'center', inline: 'nearest'})")
     page.wait_for_timeout(60)
@@ -373,6 +381,15 @@ def audit_route(pw, base_url: str, cfg: AuditConfig) -> RouteReport:
                     r.note = "not found after a re-render"
                     rep.elements.append(r)
                     continue
+                vis_js = "(e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; }"
+                if not page.locator(d["selector"]).first.evaluate(vis_js, timeout=5000) and not page.locator(d["selector"]).first.evaluate("(e) => !!e.closest('details:not([open]), #app > nav, #nav')", timeout=5000):
+                    _goto(page, base_url, cfg.route)   # e.g. a deep-link drawer closed by an earlier control: reopen it
+                    if page.locator(d["selector"]).count() == 0 or not page.locator(d["selector"]).first.evaluate(vis_js, timeout=5000):
+                        r.note = "hidden after a re-render"
+                        rep.elements.append(r)
+                        continue
+                selected = page.locator(d["selector"]).first.evaluate(
+                    "(e) => e.getAttribute('role') === 'radio' && e.getAttribute('aria-checked') === 'true'", timeout=5000)
                 page.evaluate(OBSERVE_JS)
                 before = page.evaluate(STATE_JS)
                 page.wait_for_timeout(60)
@@ -384,9 +401,11 @@ def audit_route(pw, base_url: str, cfg: AuditConfig) -> RouteReport:
                 if idle and r.effects == ["dom-mutation"]:
                     r.note = f"page mutates while idle ({idle} in 60 ms): effect may be background noise"
                 same_route_link = d["kind"] == "link" and d["href"].split("?")[0] == _hash_of(cfg.route).split("?")[0] and before["hash"] == page.evaluate("location.hash")
-                r.ok = bool(r.effects) or same_route_link
+                r.ok = bool(r.effects) or same_route_link or selected
                 if same_route_link and not r.effects:
                     r.note = "link to the current route (no-op)"
+                elif selected and not r.effects:
+                    r.note = "option already selected (no-op)"
             except Exception as exc:  # noqa: BLE001
                 r.ok, r.note = False, f"{type(exc).__name__}: {str(exc).splitlines()[0][:200]}"
             r.errors = list(errors)
