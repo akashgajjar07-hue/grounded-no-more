@@ -15,7 +15,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 251.8,
+   "ms": 44.9,
    "esc": {
     "opened": [
      "story"
@@ -36,7 +36,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 14.9,
+   "ms": 43.5,
    "esc": {
     "opened": [
      "story"
@@ -57,7 +57,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 8.8,
+   "ms": 45.7,
    "esc": {
     "opened": [
      "story"
@@ -76,9 +76,9 @@
    "effects": [
     "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 345.9,
+   "ms": 43.5,
    "esc": {
     "opened": [
      "story"
@@ -98,7 +98,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 9.6,
+   "ms": 1.1,
    "esc": {
     "opened": [
      "modal"
@@ -118,7 +118,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 34.5,
+   "ms": 0.7,
    "esc": {
     "opened": [
      "modal"
@@ -137,7 +137,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 16.1,
+   "ms": 1.7,
    "control": "hours planes sat grounded waiting for a part (material AOG h",
    "tag": "span",
    "role": "",
@@ -148,7 +148,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 4.1,
+   "ms": 4.0,
    "control": "borrowing a part from another of our aircraft (robbery)",
    "tag": "span",
    "role": "",
@@ -159,7 +159,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 14.7,
+   "ms": 0.9,
    "control": "Must be fixed before the next flight (D0)",
    "tag": "span",
    "role": "",
@@ -170,7 +170,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 36.2,
+   "ms": 0.6,
    "control": "Event log · 10 steps, each with its record",
    "tag": "summary",
    "role": "",
@@ -181,7 +181,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 20.0,
+   "ms": 1.0,
    "control": "Event log · 10 steps, each with its record",
    "tag": "summary",
    "role": "",
@@ -192,7 +192,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 89.1,
+   "ms": 2.1,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -203,7 +203,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 12.0,
+   "ms": 1.6,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -214,7 +214,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 29.3,
+   "ms": 1.7,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -225,7 +225,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 16.4,
+   "ms": 1.2,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -236,7 +236,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 11.4,
+   "ms": 2.4,
    "control": "Not available (6)No contract, not possible at the time, or a",
    "tag": "summary",
    "role": "",
@@ -247,7 +247,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 56.3,
+   "ms": 0.8,
    "control": "Not available (6)No contract, not possible at the time, or a",
    "tag": "summary",
    "role": "",
@@ -258,7 +258,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 18.9,
+   "ms": 1.2,
    "control": "borrowing a part from another of our aircraft (robbery)",
    "tag": "span",
    "role": "",
@@ -269,7 +269,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 93.3,
+   "ms": 0.9,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -280,7 +280,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 60.6,
+   "ms": 1.3,
    "control": "View data",
    "tag": "summary",
    "role": "",

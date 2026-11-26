@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-26T19:47:39",
+ "generated": "2026-11-27T01:13:35",
  "routes": {
   "about": {
    "owner": "docs/js/views/about.js",
@@ -64,8 +64,8 @@
   },
   "mission": {
    "owner": "docs/js/views/mission-control.js",
-   "expected": 50,
-   "reached": 50,
+   "expected": 51,
+   "reached": 51,
    "cycled": true,
    "problems": [],
    "warnings": [
@@ -87,48 +87,7 @@
    "expected": 125,
    "reached": 125,
    "cycled": true,
-   "problems": [
-    {
-     "type": "Space-no-effect",
-     "control": "GN-32-C009 steady, ADI 1.05, CV² 0.47",
-     "tag": "circle",
-     "role": "button",
-     "note": "",
-     "errors": []
-    },
-    {
-     "type": "Space-no-effect",
-     "control": "GN-32-C030 steady, ADI 1.01, CV² 0.48",
-     "tag": "circle",
-     "role": "button",
-     "note": "",
-     "errors": []
-    },
-    {
-     "type": "Space-no-effect",
-     "control": "GN-32-E011 now and then, ADI 2.61, CV² 0.16",
-     "tag": "circle",
-     "role": "button",
-     "note": "",
-     "errors": []
-    },
-    {
-     "type": "Space-no-effect",
-     "control": "GN-32-R014 now and then, ADI 2.38, CV² 0.20",
-     "tag": "circle",
-     "role": "button",
-     "note": "",
-     "errors": []
-    },
-    {
-     "type": "Space-no-effect",
-     "control": "GN-32-R036 now and then, ADI 1.44, CV² 0.27",
-     "tag": "circle",
-     "role": "button",
-     "note": "",
-     "errors": []
-    }
-   ],
+   "problems": [],
    "warnings": [
     "upward-jump>400px"
    ]

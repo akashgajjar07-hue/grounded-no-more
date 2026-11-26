@@ -24,9 +24,9 @@
    "effects": [
     "navigation",
     "story",
-    "dom-mutation"
+    "chart-update"
    ],
-   "ms": 51.6,
+   "ms": 45.0,
    "esc": {
     "opened": [
      "story"
@@ -47,7 +47,7 @@
     "story",
     "chart-update"
    ],
-   "ms": 73.9,
+   "ms": 47.8,
    "esc": {
     "opened": [
      "story"
@@ -67,7 +67,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 75.2,
+   "ms": 0.9,
    "esc": {
     "opened": [
      "modal"
@@ -87,7 +87,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 19.2,
+   "ms": 0.8,
    "esc": {
     "opened": [
      "modal"
@@ -106,7 +106,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 109.6,
+   "ms": 0.8,
    "control": "repair time (TAT)",
    "tag": "span",
    "role": "",
@@ -117,40 +117,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 19.0,
-   "control": "On aircraft to Broken: 1,258 transitions",
-   "tag": "g",
-   "role": "img",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 53.5,
-   "control": "In repair to In transit: 1,130 transitions",
-   "tag": "g",
-   "role": "img",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 134.7,
-   "control": "In transit to Ready to fit: 1,036 transitions",
-   "tag": "g",
-   "role": "img",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 224.6,
+   "ms": 3.3,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -161,7 +128,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 89.9,
+   "ms": 1.7,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -173,7 +140,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 37.7,
+   "ms": 1.2,
    "control": "EU vendor",
    "tag": "button",
    "role": "radio",
@@ -185,7 +152,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 4.8,
+   "ms": 1.2,
    "control": "EU vendor",
    "tag": "button",
    "role": "radio",
@@ -196,62 +163,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 104.5,
-   "control": "RO-1650, serial GN-21-R026-S0003, AUH inhouse, open, overdue",
-   "tag": "g",
-   "role": "listitem",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 49.0,
-   "control": "RO-1612, serial GN-27-R009-S0016, EU vendor, open, overdue 2",
-   "tag": "g",
-   "role": "listitem",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 179.7,
-   "control": "RO-1638, serial GN-32-R013-S0014, EU vendor, open, overdue 2",
-   "tag": "g",
-   "role": "listitem",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 183.6,
-   "control": "RO-1648, serial GN-34-R018-S0081, EU vendor, open, overdue 1",
-   "tag": "g",
-   "role": "listitem",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 59.8,
-   "control": "RO-1690, serial GN-34-R019-S0076, EU vendor, open, overdue 6",
-   "tag": "g",
-   "role": "listitem",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 4.0,
+   "ms": 1.0,
    "control": "More",
    "tag": "button",
    "role": "",
@@ -262,7 +174,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 19.6,
+   "ms": 0.7,
    "control": "More",
    "tag": "button",
    "role": "",
@@ -273,7 +185,7 @@
    "effects": [
     "chart-update"
    ],
-   "ms": 19.8,
+   "ms": 1.4,
    "control": "Each Airport for Itself: 20",
    "tag": "button",
    "role": "",
@@ -284,7 +196,7 @@
    "effects": [
     "chart-update"
    ],
-   "ms": 64.3,
+   "ms": 1.1,
    "control": "Each Airport for Itself: 20",
    "tag": "button",
    "role": "",
@@ -295,7 +207,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 23.4,
+   "ms": 2.5,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -306,7 +218,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 8.2,
+   "ms": 1.4,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -317,7 +229,7 @@
    "effects": [
     "chart-update"
    ],
-   "ms": 68.7,
+   "ms": 1.5,
    "control": "Compare at the Simple Rulebook level (6 spares)",
    "tag": "button",
    "role": "",
@@ -328,7 +240,7 @@
    "effects": [
     "chart-update"
    ],
-   "ms": 20.0,
+   "ms": 0.9,
    "control": "Compare at the Simple Rulebook level (6 spares)",
    "tag": "button",
    "role": "",
@@ -339,7 +251,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 68.8,
+   "ms": 0.9,
    "control": "Job",
    "tag": "button",
    "role": "",
@@ -350,7 +262,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 31.7,
+   "ms": 0.9,
    "control": "Job",
    "tag": "button",
    "role": "",

@@ -1,16 +1,16 @@
 {
- "generated": "2026-11-26T22:14:46",
+ "generated": "2026-11-27T00:48:18",
  "effect_timeout_ms": 1000,
  "routes": [
   {
-   "route": "parts?ata=32",
-   "browser": "webkit",
-   "viewport": "390x844",
+   "route": "actions?id=EX-103-001",
+   "browser": "chromium",
+   "viewport": "1440x900",
    "mode": "simple",
    "reduced_motion": false,
-   "url": "http://127.0.0.1:54919/index.html#/parts?ata=32",
-   "started": "2026-11-26T22:13:37",
-   "seconds": 68.5,
+   "url": "http://127.0.0.1:57955/index.html#/actions?id=EX-103-001",
+   "started": "2026-11-27T00:47:41",
+   "seconds": 37.0,
    "elements": [
     {
      "id": "e000",
@@ -23,7 +23,7 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 2.7,
+     "ms": 0.7,
      "note": "",
      "errors": []
     },
@@ -35,10 +35,10 @@
      "action": "click",
      "effects": [
       "navigation",
-      "chart-update"
+      "dom-mutation"
      ],
      "ok": true,
-     "ms": 5.2,
+     "ms": 0.9,
      "note": "",
      "errors": []
     },
@@ -50,10 +50,10 @@
      "action": "click",
      "effects": [
       "navigation",
-      "chart-update"
+      "dom-mutation"
      ],
      "ok": true,
-     "ms": 3.8,
+     "ms": 0.7,
      "note": "",
      "errors": []
     },
@@ -65,10 +65,10 @@
      "action": "click",
      "effects": [
       "navigation",
-      "chart-update"
+      "dom-mutation"
      ],
      "ok": true,
-     "ms": 18.5,
+     "ms": 0.8,
      "note": "",
      "errors": []
     },
@@ -79,11 +79,10 @@
      "selector": "#nav > div:nth-of-type(1) > a:nth-of-type(3)",
      "action": "click",
      "effects": [
-      "navigation",
-      "dom-mutation"
+      "navigation"
      ],
      "ok": true,
-     "ms": 2.5,
+     "ms": 0.9,
      "note": "",
      "errors": []
     },
@@ -95,10 +94,10 @@
      "action": "click",
      "effects": [
       "navigation",
-      "chart-update"
+      "dom-mutation"
      ],
      "ok": true,
-     "ms": 5.4,
+     "ms": 0.9,
      "note": "",
      "errors": []
     },
@@ -110,10 +109,10 @@
      "action": "click",
      "effects": [
       "navigation",
-      "chart-update"
+      "dom-mutation"
      ],
      "ok": true,
-     "ms": 1.0,
+     "ms": 0.7,
      "note": "",
      "errors": []
     },
@@ -128,7 +127,7 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 1.2,
+     "ms": 0.7,
      "note": "",
      "errors": []
     },
@@ -143,7 +142,7 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 0.9,
+     "ms": 0.8,
      "note": "",
      "errors": []
     },
@@ -158,7 +157,7 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 30.3,
+     "ms": 0.8,
      "note": "",
      "errors": []
     },
@@ -170,11 +169,10 @@
      "action": "click",
      "effects": [
       "navigation",
-      "story",
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 3.2,
+     "ms": 1.0,
      "note": "",
      "errors": []
     },
@@ -189,7 +187,7 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 2.6,
+     "ms": 0.9,
      "note": "",
      "errors": []
     },
@@ -204,7 +202,7 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 1.4,
+     "ms": 0.8,
      "note": "",
      "errors": []
     },
@@ -219,7 +217,7 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 1.1,
+     "ms": 0.7,
      "note": "",
      "errors": []
     },
@@ -240,9 +238,24 @@
     },
     {
      "id": "e015",
-     "kind": "button",
-     "label": "Open navigation",
-     "selector": "#menu-btn",
+     "kind": "toggle",
+     "label": "Simple",
+     "selector": "#mode-slot > div:nth-of-type(1) > button:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 1.0,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e016",
+     "kind": "toggle",
+     "label": "Expert",
+     "selector": "#mode-slot > div:nth-of-type(1) > button:nth-of-type(2)",
      "action": "click",
      "effects": [
       "dom-mutation"
@@ -253,35 +266,7 @@
      "errors": []
     },
     {
-     "id": "e016",
-     "kind": "toggle",
-     "label": "Simple",
-     "selector": "#mode-slot > div:nth-of-type(1) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "focus-change"
-     ],
-     "ok": true,
-     "ms": 1013.7,
-     "note": "",
-     "errors": []
-    },
-    {
      "id": "e017",
-     "kind": "toggle",
-     "label": "Expert",
-     "selector": "#mode-slot > div:nth-of-type(1) > button:nth-of-type(2)",
-     "action": "click",
-     "effects": [
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 1.0,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e018",
      "kind": "focusable",
      "label": "Simulation W104–W155",
      "selector": "#sim-indicator",
@@ -290,7 +275,23 @@
       "chart-update"
      ],
      "ok": true,
-     "ms": 0.7,
+     "ms": 0.6,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e018",
+     "kind": "button",
+     "label": "Story",
+     "selector": "#story-btn",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "story",
+      "chart-update"
+     ],
+     "ok": true,
+     "ms": 0.8,
      "note": "",
      "errors": []
     },
@@ -301,50 +302,54 @@
      "selector": "#help-btn",
      "action": "click",
      "effects": [
+      "navigation",
       "modal",
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 0.7,
+     "ms": 1.0,
      "note": "",
      "errors": []
     },
     {
      "id": "e020",
      "kind": "term",
-     "label": "aircraft system group (ATA chapter)",
-     "selector": "#view > header:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(1) > span:nth-of-type(1) > span:nth-of-type(1)",
+     "label": "hours planes sat grounded waiting for a part (material AOG hours)",
+     "selector": "#view > section:nth-of-type(1) > dl:nth-of-type(1) > div:nth-of-type(2) > dd:nth-of-type(1) > span:nth-of-type(1)",
      "action": "hover",
      "effects": [
+      "tooltip",
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 1.8,
+     "ms": 0.9,
      "note": "",
      "errors": []
     },
     {
      "id": "e021",
-     "kind": "term",
-     "label": "parts needed only now and then (intermittent demand)",
-     "selector": "#view > header:nth-of-type(1) > div:nth-of-type(1) > p:nth-of-type(1) > span:nth-of-type(1) > span:nth-of-type(2)",
-     "action": "hover",
+     "kind": "button",
+     "label": "Station short of a spare: 23 exceptions; filter",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(3) > svg:nth-of-type(1) > g:nth-of-type(1)",
+     "action": "click",
      "effects": [
-      "dom-mutation"
+      "navigation",
+      "chart-update"
      ],
      "ok": true,
-     "ms": 1.5,
+     "ms": 1.0,
      "note": "",
      "errors": []
     },
     {
      "id": "e022",
-     "kind": "term",
-     "label": "hours planes sat grounded waiting for a part (material AOG hours)",
-     "selector": "#view > section:nth-of-type(1) > dl:nth-of-type(1) > div:nth-of-type(2) > dd:nth-of-type(1) > span:nth-of-type(1)",
-     "action": "hover",
+     "kind": "button",
+     "label": "Repair is late: 15 exceptions; filter",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(3) > svg:nth-of-type(1) > g:nth-of-type(2)",
+     "action": "click",
      "effects": [
-      "dom-mutation"
+      "navigation",
+      "chart-update"
      ],
      "ok": true,
      "ms": 1.1,
@@ -353,39 +358,158 @@
     },
     {
      "id": "e023",
-     "kind": "toggle",
-     "label": "Narrowbody",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
+     "kind": "button",
+     "label": "Scrapped part, new one not here yet: 11 exceptions; filter",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(3) > svg:nth-of-type(1) > g:nth-of-type(3)",
      "action": "click",
      "effects": [
       "navigation",
       "chart-update"
      ],
      "ok": true,
-     "ms": 2.6,
+     "ms": 0.9,
      "note": "",
      "errors": []
     },
     {
      "id": "e024",
-     "kind": "toggle",
-     "label": "Widebody",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)",
+     "kind": "button",
+     "label": "Too much stock, use falling: 7 exceptions; filter",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(3) > svg:nth-of-type(1) > g:nth-of-type(4)",
      "action": "click",
      "effects": [
       "navigation",
       "chart-update"
      ],
      "ok": true,
-     "ms": 36.5,
+     "ms": 0.6,
      "note": "",
      "errors": []
     },
     {
      "id": "e025",
+     "kind": "button",
+     "label": "Stock may expire before it is used: 4 exceptions; filter",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(3) > svg:nth-of-type(1) > g:nth-of-type(5)",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "chart-update"
+     ],
+     "ok": true,
+     "ms": 0.9,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e026",
+     "kind": "button",
+     "label": "Borrowed part not yet given back: 1 exceptions; filter",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(3) > svg:nth-of-type(1) > g:nth-of-type(6)",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "chart-update"
+     ],
+     "ok": true,
+     "ms": 0.9,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e027",
+     "kind": "button",
+     "label": "Supplier slower than promised: 1 exceptions; filter",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(3) > svg:nth-of-type(1) > g:nth-of-type(7)",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "chart-update"
+     ],
+     "ok": true,
+     "ms": 0.7,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e028",
+     "kind": "button",
+     "label": "A plane is still waiting for a part: 1 exceptions; filter",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(3) > svg:nth-of-type(1) > g:nth-of-type(8)",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "chart-update"
+     ],
+     "ok": true,
+     "ms": 0.9,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e029",
+     "kind": "expander",
+     "label": "View data",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(4) > details:nth-of-type(1) > summary:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 0.8,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e030",
      "kind": "toggle",
-     "label": "All fleet",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)",
+     "label": "Materials planning: 34 open, 21 urgent. Filter the inbox",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(1) > button:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "chart-update"
+     ],
+     "ok": true,
+     "ms": 0.8,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e031",
+     "kind": "toggle",
+     "label": "Repair control: 15 open, 2 urgent. Filter the inbox",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(2) > button:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "chart-update"
+     ],
+     "ok": true,
+     "ms": 0.8,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e032",
+     "kind": "toggle",
+     "label": "Procurement: 12 open, 1 urgent. Filter the inbox",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(3) > button:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "chart-update"
+     ],
+     "ok": true,
+     "ms": 0.8,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e033",
+     "kind": "toggle",
+     "label": "AOG desk: 2 open, 1 urgent. Filter the inbox",
+     "selector": "#view > div:nth-of-type(1) > section:nth-of-type(2) > div:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(4) > button:nth-of-type(1)",
      "action": "click",
      "effects": [
       "navigation",
@@ -397,245 +521,51 @@
      "errors": []
     },
     {
-     "id": "e026",
-     "kind": "toggle",
-     "label": "ATA 34 Navigation: OK (system level OK). 11 part numbers, 0 urgent; top part GN-",
-     "selector": "#ata-34 > g:nth-of-type(3)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 23.8,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e027",
-     "kind": "toggle",
-     "label": "ATA 24 Electrical power: OK (system level OK). 11 part numbers, 0 urgent; top pa",
-     "selector": "#ata-24 > g:nth-of-type(3)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 5.4,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e028",
-     "kind": "toggle",
-     "label": "ATA 21 Air conditioning & pressurisation: OK (system level OK). 15 part numbers,",
-     "selector": "#ata-21 > g:nth-of-type(3)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 22.1,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e029",
-     "kind": "toggle",
-     "label": "ATA 36 Pneumatic: OK (system level OK). 5 part numbers, 0 urgent; top part GN-36",
-     "selector": "#ata-36 > g:nth-of-type(3)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 6.3,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e030",
-     "kind": "toggle",
-     "label": "ATA 32 Landing gear: URGENT (system level Urgent). 20 part numbers, 6 urgent; to",
-     "selector": "#ata-32 > g:nth-of-type(3)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 0.9,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e031",
-     "kind": "toggle",
-     "label": "ATA 29 Hydraulic power: OK (system level OK). 12 part numbers, 0 urgent; top par",
-     "selector": "#ata-29 > g:nth-of-type(3)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 21.8,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e032",
-     "kind": "toggle",
-     "label": "ATA 27 Flight controls: URGENT (system level Urgent). 11 part numbers, 4 urgent;",
-     "selector": "#ata-27 > g:nth-of-type(3)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 1.1,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e033",
-     "kind": "toggle",
-     "label": "ATA 49 Airborne auxiliary power (APU): OK (system level OK). 9 part numbers, 0 u",
-     "selector": "#ata-49 > g:nth-of-type(3)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 6.2,
-     "note": "",
-     "errors": []
-    },
-    {
      "id": "e034",
      "kind": "button",
-     "label": "Top-risk part in ATA 32: GN-32-R014, risk 100, Urgent. Open the part drill-down.",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(2) > button:nth-of-type(1)",
+     "label": "Open the full item",
+     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
      "action": "click",
      "effects": [
       "navigation",
-      "chart-update"
+      "dom-mutation"
      ],
      "ok": true,
-     "ms": 0.7,
+     "ms": 0.8,
      "note": "",
      "errors": []
     },
     {
      "id": "e035",
      "kind": "button",
-     "label": "PS1GN-32-R014Nose wheel steering actuator (NB)100",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(1) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
+     "label": "Back",
+     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "disabled",
      "errors": []
     },
     {
      "id": "e036",
      "kind": "button",
-     "label": "PS2GN-34-R018Air data module (NB)0",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(2) > button:nth-of-type(1)",
+     "label": "Next",
+     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > button:nth-of-type(2)",
      "action": "click",
      "effects": [
-      "navigation",
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 0.7,
-     "note": "",
+     "ms": 0.8,
+     "note": "page mutates while idle (2 in 60 ms): effect may be background noise",
      "errors": []
     },
     {
      "id": "e037",
      "kind": "button",
-     "label": "PS3GN-20-C040Self-locking nut kit0",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(3) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e038",
-     "kind": "button",
-     "label": "PS4GN-33-E033Emergency light battery pack0",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(1) > section:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(4) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e039",
-     "kind": "button",
-     "label": "Open the part",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1) > section:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e040",
-     "kind": "focusable",
-     "label": "Parts driving Landing gear",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(3)",
-     "action": "focus+Enter",
-     "effects": [
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.6,
-     "note": "page mutates while idle (4 in 60 ms): effect may be background noise",
-     "errors": []
-    },
-    {
-     "id": "e041",
-     "kind": "select",
-     "label": "Sort rows by",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > select:nth-of-type(1)",
-     "action": "select:pn",
-     "effects": [
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.9,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e042",
-     "kind": "button",
-     "label": "Sort descending (switch to ascending)",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
+     "label": "Export CSV",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > button:nth-of-type(1)",
      "action": "click",
      "effects": [
       "dom-mutation"
@@ -646,100 +576,162 @@
      "errors": []
     },
     {
-     "id": "e043",
-     "kind": "button",
-     "label": "GN-32-R014Risk100Name Nose wheel steering actuator (NB)",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(1)",
+     "id": "e038",
+     "kind": "toggle",
+     "label": "All 63",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
+     "action": "click",
+     "effects": [
+      "chart-update"
+     ],
+     "ok": true,
+     "ms": 0.8,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e039",
+     "kind": "toggle",
+     "label": "Urgent 25",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(2)",
      "action": "click",
      "effects": [
       "navigation",
-      "dom-mutation"
+      "chart-update"
      ],
      "ok": true,
-     "ms": 0.6,
+     "ms": 1.5,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e040",
+     "kind": "toggle",
+     "label": "Review 29",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(3)",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "chart-update"
+     ],
+     "ok": true,
+     "ms": 1.0,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e041",
+     "kind": "toggle",
+     "label": "Info 9",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(4)",
+     "action": "click",
+     "effects": [
+      "navigation",
+      "chart-update"
+     ],
+     "ok": true,
+     "ms": 1.0,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e042",
+     "kind": "select",
+     "label": "All typesStation short of a spareRepair is lateScrapped part, new one not here y",
+     "selector": "#pac-type",
+     "action": "select:",
+     "effects": [
+      "navigation",
+      "chart-update"
+     ],
+     "ok": true,
+     "ms": 1.0,
+     "note": "",
+     "errors": []
+    },
+    {
+     "id": "e043",
+     "kind": "select",
+     "label": "All stationsAUHBOMCAIFRAJEDLHRSINNetwork",
+     "selector": "#pac-station",
+     "action": "select:AUH",
+     "effects": [
+      "navigation",
+      "chart-update"
+     ],
+     "ok": true,
+     "ms": 1.5,
      "note": "",
      "errors": []
     },
     {
      "id": "e044",
-     "kind": "button",
-     "label": "GN-32-R015Risk78Name Main wheel and tyre assembly (NB)",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2)",
-     "action": "click",
+     "kind": "select",
+     "label": "All ownersAOG deskMaterials planningProcurementRepair control",
+     "selector": "#pac-owner",
+     "action": "select:",
      "effects": [
       "navigation",
-      "dom-mutation"
+      "chart-update"
      ],
      "ok": true,
-     "ms": 0.7,
+     "ms": 3.0,
      "note": "",
      "errors": []
     },
     {
      "id": "e045",
      "kind": "button",
-     "label": "GN-32-R016Risk75Name Nose wheel and tyre assembly (NB)",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(3)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
+     "label": "Clear filters",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(2) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "disabled",
      "errors": []
     },
     {
      "id": "e046",
      "kind": "button",
-     "label": "GN-32-R037Risk72Name Main wheel and tyre assembly (WB)",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(4)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.6,
-     "note": "",
+     "label": "Show fewer",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
      "errors": []
     },
     {
      "id": "e047",
      "kind": "button",
-     "label": "GN-32-R013Risk65Name Carbon brake assembly (NB)",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(5)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 2.1,
-     "note": "",
+     "label": "Urgent: GN-32-R014 · Borrowed part not back. Give the part back from the next go",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(1) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
      "errors": []
     },
     {
      "id": "e048",
      "kind": "button",
-     "label": "GN-32-R036Risk64Name Carbon brake assembly (WB)",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(6)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
+     "label": "Urgent: GN-32-R014 · BOM: 0 of 2 on hand. Send 2 spares from AUH to BOM. Due W10",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
      "errors": []
     },
     {
      "id": "e049",
-     "kind": "link",
-     "label": "Open the first urgent action",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(5) > a:nth-of-type(1)",
+     "kind": "button",
+     "label": "Urgent: GN-32-R014 · CAI: 0 of 2 on hand. Send 2 spares from AUH to CAI. Due W10",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(3) > button:nth-of-type(1)",
      "action": "",
      "effects": [],
      "ok": null,
@@ -749,1024 +741,191 @@
     },
     {
      "id": "e050",
-     "kind": "toggle",
-     "label": "All 120 parts",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 1.5,
-     "note": "",
+     "kind": "button",
+     "label": "Urgent: GN-32-R014 · JED: 0 of 1 on hand. Send 1 spare from AUH to JED. Due W104",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(4) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
      "errors": []
     },
     {
      "id": "e051",
-     "kind": "toggle",
-     "label": "21Air conditioning & pressurisation15 parts · top risk 1OK",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(1) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 1.0,
-     "note": "",
+     "kind": "button",
+     "label": "Urgent: GN-33-E033 · Supplier 3.1× slower. Plan for about 78 days, not 25. Ask t",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(1) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
      "errors": []
     },
     {
      "id": "e052",
-     "kind": "toggle",
-     "label": "24Electrical power11 parts · top risk 1OK",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(2) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 1.0,
-     "note": "",
+     "kind": "button",
+     "label": "Review: GN-33-E033 · Plane still waiting. Keep every way to get the part open: b",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(2) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
      "errors": []
     },
     {
      "id": "e053",
-     "kind": "toggle",
-     "label": "27Flight controls11 parts · top risk 81Urgent▲ 4 urgent parts",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(3) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 1.1,
-     "note": "",
+     "kind": "button",
+     "label": "Show 1 more",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(3) > div:nth-of-type(1) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
      "errors": []
     },
     {
      "id": "e054",
-     "kind": "toggle",
-     "label": "29Hydraulic power12 parts · top risk 46OK",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(4) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 0.9,
-     "note": "",
+     "kind": "button",
+     "label": "Urgent: GN-27-R006 · BOM: 0 of 1 on hand. Send 1 spare from AUH to BOM. Due W104",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(1) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
      "errors": []
     },
     {
      "id": "e055",
-     "kind": "toggle",
-     "label": "32Landing gear20 parts · top risk 100Urgent▲ 6 urgent parts",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(5) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 0.9,
-     "note": "",
+     "kind": "button",
+     "label": "Urgent: GN-27-R006 · CAI: 0 of 1 on hand. Send 1 spare from AUH to CAI. Due W104",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(2) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
      "errors": []
     },
     {
      "id": "e056",
-     "kind": "toggle",
-     "label": "34Navigation11 parts · top risk 52OK",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(6) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "chart-update"
-     ],
-     "ok": true,
-     "ms": 0.9,
-     "note": "",
+     "kind": "button",
+     "label": "Urgent: GN-27-R006 · JED: 0 of 1 on hand. Send 1 spare from AUH to JED. Due W104",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(3) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
      "errors": []
     },
     {
      "id": "e057",
-     "kind": "toggle",
-     "label": "36Pneumatic5 parts · top risk 0OK",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(7) > button:nth-of-type(1)",
+     "kind": "button",
+     "label": "Urgent: GN-27-R007 · BOM: 0 of 1 on hand. Send 1 spare from AUH to BOM. Due W104",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(4) > ul:nth-of-type(1) > li:nth-of-type(1) > button:nth-of-type(1)",
      "action": "click",
      "effects": [
       "navigation",
-      "chart-update"
+      "dom-mutation"
      ],
      "ok": true,
-     "ms": 1.0,
+     "ms": 0.8,
      "note": "",
      "errors": []
     },
     {
      "id": "e058",
-     "kind": "toggle",
-     "label": "49Airborne auxiliary power (APU)9 parts · top risk 0OK",
-     "selector": "#view > div:nth-of-type(1) > div:nth-of-type(2) > section:nth-of-type(2) > ul:nth-of-type(1) > li:nth-of-type(8) > button:nth-of-type(1)",
+     "kind": "button",
+     "label": "Urgent: GN-27-R007 · CAI: 0 of 1 on hand. Send 1 spare from AUH to CAI. Due W104",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(4) > ul:nth-of-type(1) > li:nth-of-type(2) > button:nth-of-type(1)",
      "action": "click",
      "effects": [
       "navigation",
-      "chart-update"
+      "dom-mutation"
      ],
      "ok": true,
-     "ms": 1.0,
+     "ms": 0.8,
      "note": "",
      "errors": []
     },
     {
      "id": "e059",
      "kind": "button",
-     "label": "GN-32-R014 Nose wheel steering actuator (NB), risk 100: open part drill-down",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
+     "label": "Urgent: GN-27-R007 · JED: 0 of 1 on hand. Send 1 spare from AUH to JED. Due W104",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(3) > ul:nth-of-type(1) > li:nth-of-type(4) > ul:nth-of-type(1) > li:nth-of-type(3) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
+     "errors": []
+    },
+    {
+     "id": "e060",
+     "kind": "button",
+     "label": "Show all 63 items (50 more across 31 parts)",
+     "selector": "#view > section:nth-of-type(2) > div:nth-of-type(2) > button:nth-of-type(1)",
      "action": "click",
      "effects": [
       "navigation",
       "chart-update"
      ],
      "ok": true,
-     "ms": 0.8,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e060",
-     "kind": "button",
-     "label": "GN-32-R015 Main wheel and tyre assembly (NB), risk 78: open part drill-down",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(2)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.9,
+     "ms": 1.4,
      "note": "",
      "errors": []
     },
     {
      "id": "e061",
-     "kind": "button",
-     "label": "GN-32-R013 Carbon brake assembly (NB), risk 65: open part drill-down",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(3)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
+     "kind": "overlay-control",
+     "label": "Close",
+     "selector": "body:nth-of-type(1) > aside:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
      "errors": []
     },
     {
      "id": "e062",
-     "kind": "button",
-     "label": "GN-32-E010 Brake temperature sensor (NB), risk 0: open part drill-down",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(4)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.0,
-     "note": "",
+     "kind": "overlay-control",
+     "label": "Open part",
+     "selector": "body:nth-of-type(1) > aside:nth-of-type(1) > div:nth-of-type(3) > a:nth-of-type(1)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
      "errors": []
     },
     {
      "id": "e063",
-     "kind": "button",
-     "label": "GN-32-E027 Brake temperature sensor (WB), risk 0: open part drill-down",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(5)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
+     "kind": "overlay-control",
+     "label": "Open station",
+     "selector": "body:nth-of-type(1) > aside:nth-of-type(1) > div:nth-of-type(3) > a:nth-of-type(2)",
+     "action": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "not found after a re-render",
      "errors": []
     },
     {
      "id": "e064",
-     "kind": "button",
-     "label": "1GN-32-R014Nose wheel steering actuator (NB)100",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(1) > ol:nth-of-type(1) > li:nth-of-type(1) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.8,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e065",
-     "kind": "button",
-     "label": "2GN-32-R015Main wheel and tyre assembly (NB)78",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(1) > ol:nth-of-type(1) > li:nth-of-type(2) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e066",
-     "kind": "button",
-     "label": "3GN-32-R013Carbon brake assembly (NB)65",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(1) > ol:nth-of-type(1) > li:nth-of-type(3) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.0,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e067",
-     "kind": "button",
-     "label": "4GN-32-E010Brake temperature sensor (NB)0",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(1) > ol:nth-of-type(1) > li:nth-of-type(4) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e068",
-     "kind": "button",
-     "label": "5GN-32-E027Brake temperature sensor (WB)0",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(1) > ol:nth-of-type(1) > li:nth-of-type(5) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e069",
-     "kind": "button",
-     "label": "More",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "page mutates while idle (4 in 60 ms): effect may be background noise",
-     "errors": []
-    },
-    {
-     "id": "e070",
-     "kind": "button",
-     "label": "GN-32-C008 now and then, in bursts, ADI 1.83, CV² 0.98",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(100)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.2,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e071",
-     "kind": "button",
-     "label": "GN-32-C009 steady, ADI 1.05, CV² 0.47",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(101)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.8,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e072",
-     "kind": "button",
-     "label": "GN-32-C010 now and then, ADI 2.45, CV² 0.15",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(102)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.6,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e073",
-     "kind": "button",
-     "label": "GN-32-C011 steady, ADI 1.01, CV² 0.28",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(103)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e074",
-     "kind": "button",
-     "label": "GN-32-C029 steady, ADI 1.00, CV² 0.10",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(104)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.0,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e075",
-     "kind": "button",
-     "label": "GN-32-C030 steady, ADI 1.01, CV² 0.48",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(105)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.8,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e076",
-     "kind": "button",
-     "label": "GN-32-C031 now and then, ADI 2.23, CV² 0.37",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(106)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.6,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e077",
-     "kind": "button",
-     "label": "GN-32-C044 steady, ADI 1.00, CV² 0.07",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(107)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e078",
-     "kind": "button",
-     "label": "GN-32-E010 now and then, ADI 2.17, CV² 0.14",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(108)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e079",
-     "kind": "button",
-     "label": "GN-32-E011 now and then, ADI 2.61, CV² 0.16",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(109)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.6,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e080",
-     "kind": "button",
-     "label": "GN-32-E027 now and then, ADI 9.33, CV² 0.09",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(110)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e081",
-     "kind": "button",
-     "label": "GN-32-E028 now and then, ADI 7.63, CV² 0.08",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(111)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e082",
-     "kind": "button",
-     "label": "GN-32-R013 now and then, ADI 1.64, CV² 0.27",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(112)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e083",
-     "kind": "button",
-     "label": "GN-32-R014 now and then, ADI 2.38, CV² 0.20",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(113)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.0,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e084",
-     "kind": "button",
-     "label": "GN-32-R015 now and then, ADI 1.93, CV² 0.23",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(114)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.8,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e085",
-     "kind": "button",
-     "label": "GN-32-R016 now and then, ADI 4.11, CV² 0.10",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(115)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.0,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e086",
-     "kind": "button",
-     "label": "GN-32-R017 now and then, ADI 12.00, CV² 0.00",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(116)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e087",
-     "kind": "button",
-     "label": "GN-32-R036 now and then, ADI 1.44, CV² 0.27",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(117)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 2.5,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e088",
-     "kind": "button",
-     "label": "GN-32-R037 now and then, ADI 4.25, CV² 0.08",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(118)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.0,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e089",
-     "kind": "button",
-     "label": "GN-32-R038 now and then, ADI 9.29, CV² 0.00",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(2) > svg:nth-of-type(1) > g:nth-of-type(1) > g:nth-of-type(5) > circle:nth-of-type(119)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.8,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e090",
-     "kind": "expander",
-     "label": "View data",
-     "selector": "#view > div:nth-of-type(2) > section:nth-of-type(2) > figure:nth-of-type(1) > div:nth-of-type(4) > details:nth-of-type(1) > summary:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.3,
-     "note": "page mutates while idle (5 in 60 ms): effect may be background noise",
-     "errors": []
-    },
-    {
-     "id": "e091",
-     "kind": "input",
-     "label": "Search parts by part number or description",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(2) > input:nth-of-type(1)",
-     "action": "fill:a",
-     "effects": [
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.3,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e092",
-     "kind": "toggle",
-     "label": "All",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.0,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e093",
-     "kind": "toggle",
-     "label": "Repairable",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(2)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.2,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e094",
-     "kind": "toggle",
-     "label": "Thrown away",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(3)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.3,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e095",
-     "kind": "toggle",
-     "label": "Used once",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(2) > div:nth-of-type(1) > button:nth-of-type(4)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.9,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e096",
-     "kind": "focusable",
-     "label": "Parts for the selected ATA system",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3)",
-     "action": "focus+Enter",
-     "effects": [
-      "focus-change"
-     ],
-     "ok": true,
-     "ms": 1017.3,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e097",
-     "kind": "select",
-     "label": "Sort rows by",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > select:nth-of-type(1)",
-     "action": "select:pn",
-     "effects": [
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.8,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e098",
-     "kind": "button",
-     "label": "Sort descending (switch to ascending)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.0,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e099",
-     "kind": "button",
-     "label": "GN-32-R014PS1escalateRisk100Plan target 14Name Nose wheel steering actuator (NB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.8,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e100",
-     "kind": "button",
-     "label": "GN-32-R015Risk78Plan target 11Name Main wheel and tyre assembly (NB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(2)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.8,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e101",
-     "kind": "button",
-     "label": "GN-32-R016Risk75Plan target 8Name Nose wheel and tyre assembly (NB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(3)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.0,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e102",
-     "kind": "button",
-     "label": "GN-32-R037Risk72Plan target 8Name Main wheel and tyre assembly (WB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(4)",
-     "action": "click",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.9,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e103",
-     "kind": "button",
-     "label": "GN-32-R013flaggedRisk65Plan target 14Name Carbon brake assembly (NB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(5)",
+     "kind": "overlay-control",
+     "label": "Deep link",
+     "selector": "body:nth-of-type(1) > aside:nth-of-type(1) > div:nth-of-type(3) > a:nth-of-type(3)",
      "action": "",
      "effects": [],
      "ok": null,
      "ms": null,
      "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e104",
-     "kind": "button",
-     "label": "GN-32-R036flaggedRisk64Plan target 15Name Carbon brake assembly (WB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(6)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e105",
-     "kind": "button",
-     "label": "GN-32-R038Risk1Plan target 2Name Electric brake actuator controller (WB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(7)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e106",
-     "kind": "button",
-     "label": "GN-32-C008Risk0Plan target 85Name Brake wear indicator pin (NB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(8)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e107",
-     "kind": "button",
-     "label": "GN-32-C009Risk0Plan target 139Name Tyre valve core kit (NB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(9)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e108",
-     "kind": "button",
-     "label": "GN-32-C010Risk0Plan target 41Name Axle nut lock kit (NB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(10)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e109",
-     "kind": "button",
-     "label": "GN-32-C011Risk0Plan target 119Name Wheel bearing seal (NB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(11)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e110",
-     "kind": "button",
-     "label": "GN-32-C029Risk0Plan target 293Name Tyre valve core kit (WB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(12)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e111",
-     "kind": "button",
-     "label": "GN-32-C030Risk0Plan target 245Name Wheel bearing seal (WB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(13)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e112",
-     "kind": "button",
-     "label": "GN-32-C031Risk0Plan target 48Name Axle nut lock kit (WB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(14)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e113",
-     "kind": "button",
-     "label": "GN-32-C044Risk0Plan target 323Name Wheel bearing grease",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(15)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e114",
-     "kind": "button",
-     "label": "GN-32-E010Risk0Plan target 15Name Brake temperature sensor (NB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(16)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e115",
-     "kind": "button",
-     "label": "GN-32-E011Risk0Plan target 10Name Wheel speed transducer (NB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(17)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e116",
-     "kind": "button",
-     "label": "GN-32-E027Risk0Plan target 1Name Brake temperature sensor (WB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(18)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e117",
-     "kind": "button",
-     "label": "GN-32-E028Risk0Plan target 3Name Wheel speed transducer (WB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(19)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e118",
-     "kind": "button",
-     "label": "GN-32-R017Risk0Plan target 1Name Brake control unit (NB)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(3) > div:nth-of-type(1) > ul:nth-of-type(1) > li:nth-of-type(20)",
-     "action": "",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "not found after a re-render",
-     "errors": []
-    },
-    {
-     "id": "e119",
-     "kind": "term",
-     "label": "time allowed to fix it (rectification window)",
-     "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > div:nth-of-type(4) > span:nth-of-type(1) > span:nth-of-type(1)",
-     "action": "hover",
-     "effects": [
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.2,
-     "note": "page mutates while idle (5 in 60 ms): effect may be background noise",
-     "errors": []
-    },
-    {
-     "id": "e120",
-     "kind": "button",
-     "label": "More",
-     "selector": "#view > div:nth-of-type(4) > section:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 0.7,
-     "note": "",
-     "errors": []
-    },
-    {
-     "id": "e121",
-     "kind": "expander",
-     "label": "View data",
-     "selector": "#view > div:nth-of-type(4) > section:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(3) > details:nth-of-type(1) > summary:nth-of-type(1)",
-     "action": "click",
-     "effects": [
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 1.0,
-     "note": "",
      "errors": []
     }
    ],
@@ -1783,7 +942,7 @@
       "esc-closes"
      ],
      "ok": true,
-     "ms": 1.9,
+     "ms": 1.7,
      "note": "",
      "errors": []
     },
@@ -1800,7 +959,7 @@
       "esc-closes"
      ],
      "ok": true,
-     "ms": 44.4,
+     "ms": 1.8,
      "note": "",
      "errors": []
     },
@@ -1815,7 +974,7 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 0.9,
+     "ms": 1.4,
      "note": "",
      "errors": []
     },
@@ -1825,10 +984,13 @@
      "label": "key 2",
      "selector": "body",
      "action": "key:2",
-     "effects": [],
-     "ok": null,
-     "ms": null,
-     "note": "already on that route",
+     "effects": [
+      "navigation",
+      "dom-mutation"
+     ],
+     "ok": true,
+     "ms": 1.7,
+     "note": "",
      "errors": []
     },
     {
@@ -1842,7 +1004,7 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 1.2,
+     "ms": 2.1,
      "note": "",
      "errors": []
     },
@@ -1857,7 +1019,7 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 4.8,
+     "ms": 0.7,
      "note": "",
      "errors": []
     },
@@ -1872,7 +1034,7 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 3.3,
+     "ms": 6.3,
      "note": "",
      "errors": []
     },
@@ -1887,7 +1049,7 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 34.9,
+     "ms": 1.2,
      "note": "",
      "errors": []
     },
@@ -1902,7 +1064,7 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 3.5,
+     "ms": 2.0,
      "note": "",
      "errors": []
     },
@@ -1912,13 +1074,10 @@
      "label": "key 8",
      "selector": "body",
      "action": "key:8",
-     "effects": [
-      "navigation",
-      "dom-mutation"
-     ],
-     "ok": true,
-     "ms": 4.5,
-     "note": "",
+     "effects": [],
+     "ok": null,
+     "ms": null,
+     "note": "already on that route",
      "errors": []
     },
     {
@@ -1932,32 +1091,28 @@
       "dom-mutation"
      ],
      "ok": true,
-     "ms": 2.7,
+     "ms": 1.5,
      "note": "",
      "errors": []
     }
    ],
    "load_errors": [],
    "summary": {
-    "total": 133,
-    "ok": 114,
+    "total": 76,
+    "ok": 57,
     "failed": 0,
     "skipped": 19,
     "load_errors": 0,
     "by_kind": {
      "button": {
-      "ok": 52,
+      "ok": 17,
       "failed": 0
      },
      "expander": {
-      "ok": 2,
+      "ok": 1,
       "failed": 0
      },
      "focusable": {
-      "ok": 3,
-      "failed": 0
-     },
-     "input": {
       "ok": 1,
       "failed": 0
      },
@@ -1965,8 +1120,12 @@
       "ok": 14,
       "failed": 0
      },
+     "overlay-control": {
+      "ok": 0,
+      "failed": 0
+     },
      "select": {
-      "ok": 2,
+      "ok": 3,
       "failed": 0
      },
      "shortcut": {
@@ -1974,11 +1133,11 @@
       "failed": 0
      },
      "term": {
-      "ok": 4,
+      "ok": 1,
       "failed": 0
      },
      "toggle": {
-      "ok": 26,
+      "ok": 10,
       "failed": 0
      }
     }
@@ -1986,8 +1145,8 @@
   }
  ],
  "totals": {
-  "total": 133,
-  "ok": 114,
+  "total": 76,
+  "ok": 57,
   "failed": 0,
   "skipped": 19,
   "load_errors": 0

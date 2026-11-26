@@ -426,5 +426,11 @@ export function installTermTips() {
     if (t && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); if (pinned === t) hideTermTip(); else { showTip(t); pinned = t; } }
   });
   addEventListener('hashchange', hideTermTip);
-  addEventListener('scroll', () => { if (pop?.classList.contains('is-on')) hideTermTip(); }, { passive: true, capture: true });
+  // on scroll a tip closes, unless its term has keyboard focus (focusing a term below the fold scrolls the page):
+  // then it follows the term instead
+  addEventListener('scroll', () => {
+    if (!pop?.classList.contains('is-on')) return;
+    const f = termOf(document.activeElement);
+    if (f) showTip(f); else hideTermTip();
+  }, { passive: true, capture: true });
 }

@@ -31,7 +31,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 74.8,
+   "ms": 48.3,
    "esc": {
     "opened": [
      "story"
@@ -52,7 +52,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 33.3,
+   "ms": 45.2,
    "esc": {
     "opened": [
      "story"
@@ -71,9 +71,9 @@
    "effects": [
     "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 62.5,
+   "ms": 44.3,
    "esc": {
     "opened": [
      "story"
@@ -92,9 +92,9 @@
    "effects": [
     "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 82.1,
+   "ms": 43.2,
    "esc": {
     "opened": [
      "story"
@@ -114,7 +114,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 19.1,
+   "ms": 0.8,
    "esc": {
     "opened": [
      "modal"
@@ -134,7 +134,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 5.8,
+   "ms": 0.8,
    "esc": {
     "opened": [
      "modal"
@@ -153,7 +153,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 10.7,
+   "ms": 0.7,
    "control": "forecasting methods for rarely-needed parts (Croston / SBA /",
    "tag": "span",
    "role": "",
@@ -165,7 +165,7 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 21.5,
+   "ms": 1.5,
    "control": "GN-35-E032",
    "tag": "a",
    "role": "",
@@ -177,19 +177,8 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 3.4,
+   "ms": 1.5,
    "control": "GN-49-C032",
-   "tag": "a",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation"
-   ],
-   "ms": 1.6,
-   "control": "GN-32-C029",
    "tag": "a",
    "role": "",
    "key": "Enter"
@@ -200,7 +189,18 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 2.0,
+   "ms": 0.9,
+   "control": "GN-32-C029",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 0.7,
    "control": "GN-36-C012",
    "tag": "a",
    "role": "",
@@ -211,7 +211,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 1.2,
+   "ms": 2.2,
    "control": "GN-49-C014",
    "tag": "a",
    "role": "",
@@ -222,7 +222,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 1.5,
+   "ms": 0.8,
    "control": "GN-30-C016",
    "tag": "a",
    "role": "",
@@ -231,9 +231,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "dom-mutation"
    ],
-   "ms": 2.4,
+   "ms": 0.7,
    "control": "GN-49-E015",
    "tag": "a",
    "role": "",
@@ -242,9 +243,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "dom-mutation"
    ],
-   "ms": 7.1,
+   "ms": 1.7,
    "control": "GN-27-R009",
    "tag": "a",
    "role": "",
@@ -255,7 +257,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 2.0,
+   "ms": 0.7,
    "control": "GN-21-E001",
    "tag": "a",
    "role": "",
@@ -264,9 +266,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "dom-mutation"
    ],
-   "ms": 3.2,
+   "ms": 1.0,
    "control": "GN-32-C008",
    "tag": "a",
    "role": "",
@@ -275,9 +278,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "dom-mutation"
    ],
-   "ms": 1.2,
+   "ms": 1.5,
    "control": "GN-20-C038",
    "tag": "a",
    "role": "",
@@ -288,7 +292,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 2.0,
+   "ms": 0.9,
    "control": "GN-29-R012",
    "tag": "a",
    "role": "",
@@ -299,7 +303,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 24.7,
+   "ms": 0.7,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -310,7 +314,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.8,
+   "ms": 2.7,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -322,7 +326,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 4.0,
+   "ms": 1.1,
    "control": "steady",
    "tag": "button",
    "role": "radio",
@@ -334,7 +338,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 7.3,
+   "ms": 0.7,
    "control": "steady",
    "tag": "button",
    "role": "radio",
@@ -346,7 +350,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.6,
+   "ms": 0.9,
    "control": "uneven",
    "tag": "button",
    "role": "radio",
@@ -358,7 +362,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.4,
+   "ms": 1.1,
    "control": "uneven",
    "tag": "button",
    "role": "radio",
@@ -382,7 +386,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 4.8,
+   "ms": 0.7,
    "control": "now and then, in bursts",
    "tag": "button",
    "role": "radio",
@@ -394,7 +398,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 2.1,
+   "ms": 1.5,
    "control": "too little history",
    "tag": "button",
    "role": "radio",
@@ -406,7 +410,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.1,
+   "ms": 2.0,
    "control": "too little history",
    "tag": "button",
    "role": "radio",

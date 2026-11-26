@@ -15,7 +15,7 @@
     "story",
     "chart-update"
    ],
-   "ms": 163.6,
+   "ms": 44.5,
    "esc": {
     "opened": [
      "story"
@@ -34,9 +34,9 @@
    "effects": [
     "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 123.4,
+   "ms": 44.5,
    "esc": {
     "opened": [
      "story"
@@ -55,9 +55,9 @@
    "effects": [
     "navigation",
     "story",
-    "dom-mutation"
+    "chart-update"
    ],
-   "ms": 134.9,
+   "ms": 46.2,
    "esc": {
     "opened": [
      "story"
@@ -78,7 +78,7 @@
     "story",
     "chart-update"
    ],
-   "ms": 178.3,
+   "ms": 48.5,
    "esc": {
     "opened": [
      "story"
@@ -98,7 +98,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 30.8,
+   "ms": 12.7,
    "esc": {
     "opened": [
      "modal"
@@ -118,7 +118,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 16.4,
+   "ms": 2.6,
    "esc": {
     "opened": [
      "modal"
@@ -137,7 +137,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 3.2,
+   "ms": 1.0,
    "control": "hours planes sat grounded waiting for a part (material AOG h",
    "tag": "span",
    "role": "",
@@ -149,7 +149,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 23.9,
+   "ms": 1.4,
    "control": "Station short of a spare: 23 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -161,7 +161,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 28.1,
+   "ms": 6.9,
    "control": "Station short of a spare: 23 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -173,7 +173,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 26.9,
+   "ms": 1.0,
    "control": "Repair is late: 15 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -185,11 +185,47 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 12.3,
+   "ms": 6.5,
    "control": "Repair is late: 15 exceptions; filter",
    "tag": "g",
    "role": "button",
    "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 1.4,
+   "control": "Scrapped part, new one not here yet: 11 exceptions; filter",
+   "tag": "g",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 0.6,
+   "control": "Scrapped part, new one not here yet: 11 exceptions; filter",
+   "tag": "g",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 0.9,
+   "control": "Too much stock, use falling: 7 exceptions; filter",
+   "tag": "g",
+   "role": "button",
+   "key": "Enter"
   },
   {
    "ok": true,
@@ -198,42 +234,6 @@
     "chart-update"
    ],
    "ms": 7.2,
-   "control": "Scrapped part, new one not here yet: 11 exceptions; filter",
-   "tag": "g",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 19.6,
-   "control": "Scrapped part, new one not here yet: 11 exceptions; filter",
-   "tag": "g",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 38.2,
-   "control": "Too much stock, use falling: 7 exceptions; filter",
-   "tag": "g",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 49.7,
    "control": "Too much stock, use falling: 7 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -245,7 +245,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 53.9,
+   "ms": 1.2,
    "control": "Stock may expire before it is used: 4 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -257,7 +257,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 76.1,
+   "ms": 6.8,
    "control": "Stock may expire before it is used: 4 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -269,7 +269,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 15.6,
+   "ms": 1.9,
    "control": "Borrowed part not yet given back: 1 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -281,7 +281,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 24.7,
+   "ms": 1.8,
    "control": "Borrowed part not yet given back: 1 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -293,7 +293,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 30.3,
+   "ms": 1.0,
    "control": "Supplier slower than promised: 1 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -305,7 +305,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 6.7,
+   "ms": 21.9,
    "control": "Supplier slower than promised: 1 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -317,7 +317,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 8.0,
+   "ms": 1.6,
    "control": "A plane is still waiting for a part: 1 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -329,7 +329,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 22.7,
+   "ms": 1.2,
    "control": "A plane is still waiting for a part: 1 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -340,7 +340,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 5.5,
+   "ms": 1.1,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -351,7 +351,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 26.1,
+   "ms": 1.1,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -363,7 +363,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 19.9,
+   "ms": 1.0,
    "control": "Materials planning: 34 open, 21 urgent. Filter the inbox",
    "tag": "button",
    "role": "",
@@ -375,7 +375,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 28.0,
+   "ms": 2.4,
    "control": "Materials planning: 34 open, 21 urgent. Filter the inbox",
    "tag": "button",
    "role": "",
@@ -387,7 +387,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 8.5,
+   "ms": 1.5,
    "control": "Repair control: 15 open, 2 urgent. Filter the inbox",
    "tag": "button",
    "role": "",
@@ -399,7 +399,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 25.6,
+   "ms": 0.8,
    "control": "Repair control: 15 open, 2 urgent. Filter the inbox",
    "tag": "button",
    "role": "",
@@ -411,7 +411,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 48.5,
+   "ms": 0.9,
    "control": "Procurement: 12 open, 1 urgent. Filter the inbox",
    "tag": "button",
    "role": "",
@@ -423,7 +423,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 19.9,
+   "ms": 0.7,
    "control": "Procurement: 12 open, 1 urgent. Filter the inbox",
    "tag": "button",
    "role": "",
@@ -435,7 +435,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 23.9,
+   "ms": 1.6,
    "control": "AOG desk: 2 open, 1 urgent. Filter the inbox",
    "tag": "button",
    "role": "",
@@ -447,7 +447,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 19.8,
+   "ms": 1.1,
    "control": "AOG desk: 2 open, 1 urgent. Filter the inbox",
    "tag": "button",
    "role": "",
@@ -460,7 +460,7 @@
     "drawer",
     "dom-mutation"
    ],
-   "ms": 87.2,
+   "ms": 2.0,
    "esc": {
     "opened": [
      "drawer"
@@ -478,18 +478,9 @@
    "ok": true,
    "effects": [
     "navigation",
-    "drawer",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 153.3,
-   "esc": {
-    "opened": [
-     "drawer"
-    ],
-    "closed": true,
-    "focus": "k33",
-    "returned_to_invoker": true
-   },
+   "ms": 1.8,
    "control": "Open the full item",
    "tag": "button",
    "role": "",
@@ -500,7 +491,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 36.3,
+   "ms": 0.8,
    "control": "Next",
    "tag": "button",
    "role": "",
@@ -511,7 +502,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 32.3,
+   "ms": 0.7,
    "control": "Next",
    "tag": "button",
    "role": "",
@@ -523,7 +514,7 @@
     "download",
     "dom-mutation"
    ],
-   "ms": 58.7,
+   "ms": 2.1,
    "control": "Export CSV",
    "tag": "button",
    "role": "",
@@ -535,7 +526,7 @@
     "download",
     "dom-mutation"
    ],
-   "ms": 33.5,
+   "ms": 1.2,
    "control": "Export CSV",
    "tag": "button",
    "role": "",
@@ -547,7 +538,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 19.4,
+   "ms": 0.8,
    "control": "Urgent 25",
    "tag": "button",
    "role": "radio",
@@ -559,7 +550,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 23.7,
+   "ms": 3.1,
    "control": "Urgent 25",
    "tag": "button",
    "role": "radio",
@@ -571,7 +562,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 37.8,
+   "ms": 13.9,
    "control": "Review 29",
    "tag": "button",
    "role": "radio",
@@ -583,7 +574,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 27.9,
+   "ms": 1.9,
    "control": "Review 29",
    "tag": "button",
    "role": "radio",
