@@ -12,7 +12,7 @@ Result values are computed from `outputs/` and `docs/data/` by `scripts/render_d
 |---|---|
 | Project | GROUNDED NO MORE, an independent educational portfolio project |
 | Author | Akash Gajjar |
-| Version | 0.1.0 (data export at git 47878dc) |
+| Version | 0.1.0 (data export at git eea73a9) |
 | Data | Fully synthetic airline, Falcon Hub Airways (fictional). Station coordinates REAL (OurAirports). |
 | Status | Demonstration. Not validated on any operator's data. |
 

@@ -402,6 +402,14 @@ def aog_metrics() -> pd.DataFrame:
     return t
 
 
+def _stress_scales():
+    v = load_config()["generator"]["variants"] if "variants" in load_config().get("generator", {}) else {}
+    def g(k):
+        x = v.get(k, {})
+        return float(x.get("true_mtbur_scale", float("nan"))) if isinstance(x, dict) else float("nan")
+    return g("low_stress"), g("high_stress")
+
+
 def meta(provenance: str, sources: list[str], notes: str, **extra) -> dict:
     m = {"generated_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
          "git_sha": git_sha(), "provenance": provenance, "source": sources, "notes": notes}
@@ -621,7 +629,7 @@ def build_policies() -> dict:
                      "KPI weeks 104-155 annualised; money in AED; total annual cost = holding + repair + logistics + "
                      "expedite + AOG penalty (capital excluded). The recommended plan I125 is a frontier candidate "
                      "evaluated by the frozen frontier holdout run (frontier_points.csv), so it carries fewer metrics. "
-                     "'sensitivity' = low/high-stress worlds (true MTBUR x1.90 / x0.85), P1/P2 re-planned per world; "
+                     f"'sensitivity' = low/high-stress worlds (true MTBUR x{_stress_scales()[0]:.2f} / x{_stress_scales()[1]:.2f}), P1/P2 re-planned per world; "
                      "'@central' = the central plan dropped into that world. 'selection' = the same table on selection "
                      "seeds 100-119 (for the selection-vs-holdout consistency check).",
                      provenance_by_key={"seeds": "ASSUMED", "n_seeds": "ASSUMED"}),
