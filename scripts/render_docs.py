@@ -1109,7 +1109,8 @@ def v21_keys(V: dict[str, str], *, kpis, pol, fo, var, sp, pm, cal) -> dict[str,
             node = node.get(k_) if isinstance(node, dict) else None
         if node is not None and node != W[key]:
             raise SystemExit(f"{key} differs from the site export kpis.json {'/'.join(path)}")
-    ps1_mult = cfg["generator"]["planted"]["PS1"]["quoted_multiple"]
+    _esc = [v for v in json.loads((ROOT / "docs/data/parts.json").read_text()).get("parts", []) if v.get("escalation")]
+    ps1_mult = round(_esc[0]["escalation"]["estimated_ratio"], 1) if _esc else float("nan")   # history estimate (V21-A7)
     W["v21.hero_part"] = (f"Removing {ps1_mult:g}× faster than quoted → escalate to reliability engineering and "
                           "warranty review "
                           "first. Extra spares are interim cover, compared against faster repair or pool access.")

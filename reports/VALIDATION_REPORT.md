@@ -112,7 +112,7 @@ Added after the main v2 holdout at the user's request: the frozen central-built 
 
 v1 is archived, not a finding. Tag `v1-archive` (06a6280); see [archive/v1/README.md](../archive/v1/README.md). The archive gives these 11 reasons, all from the aviation domain review (`reports/review_aviation.md`):
 
-- Parts were shared across the narrowbody- and widebody archetypes (AV-01).
+- Parts were shared across the narrowbody and widebody archetypes (AV-01).
 - Cheap consumables were rated D0 and drove 29% of AOG (AV-02).
 - An always-available 5-day outright rotable buy grew the float (AV-03).
 - A straw-man P0 stocked to the pipeline mean (AV-04).

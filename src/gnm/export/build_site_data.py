@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 
 from gnm.config import HOURS_PER_WEEK, ROOT, load_config
+from gnm.export import v21
 
 OUT = ROOT / "outputs"
 HIST = ROOT / "data" / "processed" / "history"
@@ -67,10 +68,8 @@ METHOD_LABELS = {
     "tsb": "TSB", "adida": "ADIDA", "imapa": "IMAPA", "bootstrap": "Bootstrap (Willemain)",
     "reliability": "Reliability-exposure (FH/FC)", "zero": "Zero (benchmark, not eligible)",
 }
-POLICY_LABELS = {
-    "P0": "Legacy rules (baseline)", "P1": "Local optimised", "P2": "Network (multi-echelon)",
-    "I125": "Frontier option: P2 + greedy additions (I125)",
-}
+# v2.1 (A3): the exported policy label IS the display name; codes stay in policy_id / id (docs/js/lib/names.js mirrors it)
+POLICY_LABELS = {k: v21.DISPLAY_NAMES[k] for k in ("P0", "P1", "P2", "I125")}
 # data-story ids the story steps target for the current world (network-<station> follows the narrated incident)
 STORY_IDS = ["aog-incident-ps1", "aircraft", "rotable-float-calc", "network-bom", "action-inbox", "frontier-chart"]
 
@@ -439,6 +438,7 @@ def _ci(d: dict) -> dict:
     return {"mean": d["mean"], "ci": [d["ci_lo"], d["ci_hi"]]}
 
 
+@lru_cache(maxsize=None)
 def build_headline() -> dict:
     """The v2 site headline, computed from the outputs (never typed): P2 vs P0 is the core finding; I125 is a frontier
     option for additional capital; the honest findings stay next to it."""
@@ -524,11 +524,120 @@ def build_headline() -> dict:
     }
 
 
+def landing_stats() -> dict:
+    """A1 stat strip, computed from config / history / seeds (never typed)."""
+    c = cfg()
+    n_ac = int(c["fleet"]["narrowbody"]["count"]) + int(c["fleet"]["widebody"]["count"])
+    am = hist("aircraft_master")
+    if len(am) != n_ac:
+        raise RuntimeError(f"aircraft_master has {len(am)} tails, config fleet {n_ac}")
+    lo, hi = c["seeds"]["holdout_seeds"]
+    n_runs = int(hi) - int(lo) + 1
+    if n_runs != len(jload("outputs/holdout/policy_summary.json")["seeds"]):
+        raise RuntimeError("holdout seed count differs between config and policy_summary.json")
+    stats = [{"id": "aircraft", "value": n_ac, "label": "aircraft"},
+             {"id": "part_numbers", "value": int(len(hist("part_master"))), "label": "part numbers"},
+             {"id": "stations", "value": len(stations()), "label": "stations"},
+             {"id": "test_runs", "value": n_runs, "label": "fresh test runs"}]
+    return {"stats": stats, "text": " · ".join(f"{x['value']} {x['label']}" for x in stats),
+            "title": v21.A1_TITLE, "sub": v21.A1_SUB, "footer": v21.A1_FOOTER,
+            "sources": ["config/assumptions.yaml (fleet, network, seeds.holdout_seeds)",
+                        "data/processed/history/part_master.parquet", "data/processed/history/aircraft_master.parquet"],
+            "provenance": "ASSUMED"}
+
+
+def capital_table(remix: dict) -> dict:
+    """A4: rotables bought / removed going P0 -> P2 (stock tables x unit cost) and the net change in the simulated
+    time-average spare inventory (holdout P2 - P0 capital means). Never the net alone."""
+    fh = frontier_holdout()
+    net = float(fh.at[BASE_POLICY, "capital_mean"] - fh.at[BASELINE, "capital_mean"])
+    def fmt_aed(x):   # the A4 table always reads in AED millions (one decimal), so +AED 0.6M is never shown as 615k
+        return f"AED {abs(float(x)) / 1e6:.1f}M"
+    rows = [
+        {"id": "bought", "label": "New rotables bought", "units": remix["buy_units"], "aed": remix["buy_aed"],
+         "text": f"+{remix['buy_units']} units ≈ {fmt_aed(remix['buy_aed'])} assumed value"},
+        {"id": "removed", "label": "Rotables removed", "units": -remix["shed_units"], "aed": -remix["shed_aed"],
+         "text": f"−{remix['shed_units']} units ≈ {fmt_aed(remix['shed_aed'])}"},
+        {"id": "net_inventory", "label": "Net change in average simulated spare inventory", "units": None, "aed": net,
+         "text": ("+" if net >= 0 else "−") + fmt_aed(net)},
+    ]
+    return {"from": BASELINE, "to": BASE_POLICY, "from_display_name": v21.display_name(BASELINE),
+            "to_display_name": v21.display_name(BASE_POLICY),
+            "bought_units": remix["buy_units"], "bought_aed": remix["buy_aed"],
+            "removed_units": remix["shed_units"], "removed_aed": remix["shed_aed"],
+            "net_inventory_change_aed": net, "rows": rows, "note": v21.A4_NOTE,
+            "basis": ("bought / removed = P0 vs P2 rotable target units x unit cost per PN (outputs/policies/*_stock_params.csv); "
+                      "net = holdout P2 minus P0 simulated time-average spare capital (outputs/holdout/frontier_points.csv), "
+                      "so it is not bought minus removed"),
+            "provenance": "SIMULATED"}
+
+
+def stress_worlds() -> dict:
+    v = cfg()["generator"]["variants"]
+    sc = {k: float(v[k]["true_mtbur_scale"]) for k in ("high_stress", "central", "low_stress")}
+    return {"scales": sc, "text": v21.a6_text(sc["high_stress"], sc["central"], sc["low_stress"]),
+            "ranges_note": v21.A6_RANGES, "parameter": "true MTBUR scale (reliability only)",
+            "source": "config/assumptions.yaml generator.variants", "provenance": "ASSUMED"}
+
+
+def frontier_insight(headline: dict) -> dict:
+    t = headline["frontier_option"].get("repair_tat_x0_75") or {}
+    return {"text": v21.A8_INSIGHT, "levers": v21.A8_LEVERS, "levers_text": " · ".join(v21.A8_LEVERS),
+            "evidence": {"factor": "repair_tat", "setting": "x0.75",
+                         "net_benefit_vs_P2_aed": t.get("net_benefit_aed"),
+                         "net_benefit_significant": t.get("net_benefit_significant"),
+                         "source": "outputs/frontier/tornado.csv (selection seeds, one-at-a-time)"},
+            "provenance": "SIMULATED"}
+
+
+def donor_recount_block() -> dict:
+    """Workstream B (post-plan, exploratory): read outputs/postplan/donor_recount.json; kept apart from frozen KPIs."""
+    path = OUT / "postplan" / "donor_recount.json"
+    if not path.exists():
+        return {"status": "not run", "label": v21.DONOR_LABEL, "postplan": True,
+                "note": "run scripts/donor_recount.py", "provenance": "SIMULATED"}
+    j = read_json(path)
+    h, hi = j["holdout"], j["historical_p0"]
+    def mci(r):
+        return ({"mean": r["mean"], "ci": [r["ci_lo"], r["ci_hi"]]} if "mean" in r else {"status": r["status"]})
+    rob = {p: {**mci(r), "display_name": v21.display_name(p)} for p, r in h["robbery_count_per_year"].items()}
+    return {
+        "label": v21.DONOR_LABEL, "status": "post-plan, exploratory", "postplan": True, "decision": j.get("decision", "V21-B"),
+        "separate_from_frozen": True,
+        "holdout": {"split": "holdout", "seeds": [min(h["seeds"]), max(h["seeds"])], "variant": h["variant"],
+                    "robberies_per_year": rob,
+                    "robberies_paired": {k: mci(v) for k, v in h["robbery_count_paired"].items()},
+                    "robberies_note": h["robbery_count_note"],
+                    "donor_hours": v21.NOT_RECONSTRUCTIBLE, "donor_hours_why": h["donor_hours_why"],
+                    "combined_hours": v21.NOT_RECONSTRUCTIBLE,
+                    "recipient_hours_note": h["recipient_hours_note"], "provenance": "SIMULATED"},
+        "historical_p0": {"label": hi["label"], "split": "history", "policy": "P0",
+                          "robberies": hi["robberies"], "robberies_per_year": hi["robberies_per_year"],
+                          "donor_tails": hi["donor_tails"], "mean_days_held": hi["mean_days_held"],
+                          "share_d3_d10": hi["share_d3_d10"],
+                          "gross_donor_hours_per_year": hi["gross_donor_hours_per_year"],
+                          "donor_hours_per_tail_union_per_year": hi["donor_hours_per_tail_union_per_year"],
+                          "counted_material_aog_hours_per_year": hi["counted_material_aog_hours_per_year"],
+                          "provenance": "SIMULATED"},
+        "source": "outputs/postplan/donor_recount.json (scripts/donor_recount.py)", "provenance": "SIMULATED",
+    }
+
+
+def names_v21() -> dict:
+    """{code: {display_name, short_name}} for every policy / frontier code (A3)."""
+    return v21.names_map(frontier_holdout().index.tolist())
+
+
 def build_kpis() -> dict:
     rid = recommended_id()
     fh = frontier_holdout()
     fs = selection_points()
     acts = jload("outputs/actions/actions.json")
+    headline = build_headline()
+    for blk in ("core", "frontier_option"):
+        headline[blk]["scope"] = v21.SCOPE_LINE
+        headline[blk]["display_name"] = v21.display_name(headline[blk]["id"])
+        headline[blk]["vs_display_name"] = v21.display_name(headline[blk]["vs"])
     kpis, consistency = [], []
     for kid, label, unit, better, col, _ in KPI_DEFS:
         # v2 framing (user decision): the KPI value is the CORE finding P2 vs P0; I125 is a frontier option (frontier_option)
@@ -544,6 +653,8 @@ def build_kpis() -> dict:
             "reference": {"id": rid, "value": _v(unit, p2[f"{col}_mean"]),
                           "ci": [_v(unit, p2[f"{col}_lo"]), _v(unit, p2[f"{col}_hi"])], "role": "frontier option"},
             "baseline_id": BASELINE, "core_id": BASE_POLICY, "recommended_id": rid, "split": "holdout", "n_seeds": int(r.n_seeds),
+            "scope": v21.SCOPE_LINE, "display_name": v21.display_name(BASE_POLICY),
+            "baseline_display_name": v21.display_name(BASELINE), "reference_display_name": v21.display_name(rid),
             "selection": {"baseline": _v(unit, sel_b[f"{col}_mean"]), "recommended": _v(unit, sel_r[f"{col}_mean"]),
                           "ci": [_v(unit, sel_r[f"{col}_lo"]), _v(unit, sel_r[f"{col}_hi"])]},
         }
@@ -571,9 +682,14 @@ def build_kpis() -> dict:
                      "exported (UI must handle a missing spark). open_exceptions is DERIVED from history week 103.",
                      provenance_by_key={"seeds": "ASSUMED", "kpi_weeks": "ASSUMED"}),
         "split": "holdout", "recommended_id": rid, "core_id": BASE_POLICY, "baseline_id": BASELINE, "reference_id": rid,
-        "headline": build_headline(),
+        "headline": headline,
         "seeds": jload("outputs/holdout/policy_summary.json")["seeds"], "kpi_weeks": [104, 155],
         "kpis": kpis, "consistency": consistency,
+        # v2.1 (additive)
+        "scope_line": v21.SCOPE_LINE, "reading_note": v21.A2_READING_NOTE, "footer": v21.E4_FOOTER,
+        "display_names": names_v21(), "landing": landing_stats(),
+        "capital_table": capital_table(headline["core"]["remix"]), "stress_worlds": stress_worlds(),
+        "frontier_insight": frontier_insight(headline), "donor_recount": donor_recount_block(),
     }
 
 
@@ -594,6 +710,7 @@ def _policy_rows(block: dict, split: str) -> list[dict]:
         base_id = pid.split("@")[0]
         rows.append({"policy_id": pid,
                      "label": POLICY_LABELS.get(base_id, labels.get(base_id, pid)) + (" (central plan)" if "@" in pid else ""),
+                     "display_name": v21.display_name(pid), "short_name": v21.display_name(pid, short=True),
                      "description": labels.get(base_id, ""), "kind": "policy", "split": split,
                      "kpi": {m: {"mean": kp[m]["mean"], "ci_lo": kp[m]["ci_lo"], "ci_hi": kp[m]["ci_hi"]}
                              for m in POLICY_METRICS if m in kp},
@@ -610,6 +727,7 @@ def _paired(block: dict) -> dict:
 
 def _frontier_policy_row(fr: pd.Series, pid: str, split: str) -> dict:
     return {"policy_id": pid, "label": POLICY_LABELS.get(pid, pid),
+            "display_name": v21.display_name(pid), "short_name": v21.display_name(pid, short=True),
             "description": "P2 C/E parameters and network rules with greedy rotable additions up to 1.25 x P2's allocation capital (frozen candidate)",
             "kind": "recommended", "split": split,
             "kpi": {pm: {"mean": fr[f"{c}_mean"], "ci_lo": fr[f"{c}_lo"], "ci_hi": fr[f"{c}_hi"]}
@@ -645,6 +763,7 @@ def build_policies() -> dict:
                      provenance_by_key={"seeds": "ASSUMED", "n_seeds": "ASSUMED"}),
         "split": "holdout", "n_seeds": c["n_seeds"], "seeds": ps["seeds"], "ci_method": ps["ci_method"],
         "recommended_id": rid, "baseline_id": BASELINE, "reference_id": BASE_POLICY,
+        "display_names": names_v21(), "scope_line": v21.SCOPE_LINE, "reading_note": v21.A2_READING_NOTE,
         "policies": pols,
         "paired": {**_paired(c), "provenance": "SIMULATED"},
         "recommended_vs_P2": {**rec_vs_p2, "provenance": "SIMULATED",
@@ -670,8 +789,61 @@ ACTION_TYPE_LABEL = {
 }
 
 
+@lru_cache(maxsize=None)
+def brake_pns() -> frozenset:
+    """Brake assemblies (part_master.family brake_*): changed only at the hub in this model (A9)."""
+    pm = hist("part_master")
+    return frozenset(pm[pm.family.astype(str).str.startswith("brake")].pn)
+
+
+def invalid_brake_allocations() -> list[dict]:
+    """A9: outstation brake units in the frozen P2 / frontier-option allocations. Flagged, never removed."""
+    rid = recommended_id()
+    hub = cfg()["network"]["hub"]
+    st = stock_table()
+    rows = []
+    for pid in (BASE_POLICY, rid):
+        sub = st[st.pn.isin(brake_pns()) & (st.station != hub) & (st[pid] > 0)]
+        for r in sub.sort_values(["pn", "station"]).itertuples():
+            rows.append({"policy": pid, "display_name": v21.display_name(pid), "pn": r.pn, "station": r.station,
+                         "units": int(getattr(r, pid)), "flag": "invalid_recommendation", "text": v21.A9_FLAG,
+                         "provenance": "DERIVED"})
+    return rows
+
+
+def escalation_flags() -> dict:
+    """A7: rotables whose history-estimated MTBUR is >= 2x shorter than quoted -> escalate to reliability/warranty first.
+    The ratio is mtbur_quoted / mtbur_post (final_forecasts, hub row; estimated on history only). The text quotes the
+    planted quote multiple where the evaluation metadata states one (truth_recovery.json planted note), else the
+    estimated ratio."""
+    ff = pq("outputs/forecasting/final_forecasts.parquet")
+    h = ff[(ff.station == cfg()["network"]["hub"]) & (ff.part_class == "R")].set_index("pn")
+    ratio = (h.mtbur_quoted / h.mtbur_post).dropna()
+    planted_x = {}
+    for k, v in planted_meta().items():
+        m = re.search(r"true MTBUR (\d+(?:\.\d+)?) FC vs quoted (\d+(?:\.\d+)?)", str(v.get("note", "")))
+        if m and v.get("pn"):
+            planted_x[v["pn"]] = float(m.group(2)) / float(m.group(1))
+    out = {}
+    for pn, x in ratio.items():
+        if x >= 2.0:
+            shown = x   # V21-A7: planner-facing claim uses the HISTORY estimate only; the planted truth stays evaluation-only
+            out[pn] = {"flag": "escalate_reliability_warranty", "estimated_ratio": float(x),
+                       "quoted_multiple_shown": round(shown, 1),
+                       "quoted_multiple_basis": "history estimate (vendor-quoted MTBUR / history-based MTBUR)",
+                       "true_multiple_evaluation_only": planted_x.get(pn),
+                       "text": v21.A7_ESCALATION_TMPL.format(x=f"{shown:.1f}"), "threshold": 2.0,
+                       "first_action": "reliability engineering and warranty review", "provenance": "DERIVED"}
+    return out
+
+
 def build_parts() -> dict:
     rid = recommended_id()
+    esc = escalation_flags()
+    bad = invalid_brake_allocations()
+    bad_by_pn: dict = {}
+    for b in bad:
+        bad_by_pn.setdefault(b["pn"], []).append(b)
     pm = hist("part_master").set_index("pn")
     attrs = part_attributes()
     risk = risk_table()
@@ -719,6 +891,7 @@ def build_parts() -> dict:
             "exceptions": exc_by_pn.get(pn, [])[:3],
             "champion": hub.at[pn, "champion"], "lt_quoted_d": num(hub.at[pn, "lt_quoted_d"]),
             "lt_est_d": num(hub.at[pn, "lt_est_d"]),
+            "escalation": esc.get(pn), "allocation_flags": bad_by_pn.get(pn, []),
             "provenance": "SIMULATED",
         })
     systems = []
@@ -778,6 +951,11 @@ def build_parts() -> dict:
         "aog_metric_labels": AOG_METRIC_LABELS, "aog_lookback_weeks": AOG_LOOKBACK_WEEKS,
         "brake_note": brake_note(), "applicability_source": "config/part_catalogue.csv (applic: NB / WB / BOTH)",
         "parts": parts, "ata_systems": systems,
+        # v2.1 (additive): A7 escalation (hero part first), A9 invalid outstation brake allocations (frozen, flagged)
+        "escalation_rule": {"threshold_ratio": 2.0, "text_template": v21.A7_ESCALATION_TMPL,
+                            "pns": sorted(esc), "provenance": "ASSUMED"},
+        "invalid_allocations": bad, "invalid_allocation_text": v21.A9_FLAG,
+        "display_names": names_v21(),
     }
 
 
@@ -1036,6 +1214,23 @@ def build_rotables() -> dict:
                 "basis": "resupply" if rs is not None else "loop", "units": units,
                 "availability": {k: float(float_calc(rate30, basis_d, u, 0.0)["availability"]) for k, u in units.items()},
                 "provenance": "DERIVED"}
+    def station_views(pn):
+        """A10: every outstation's own float on the AUH resupply time (P2 positioning), no pooling with the hub."""
+        out = []
+        for r_ in outs_ff[outs_ff.pn == pn].itertuples():
+            rs = _p2_resupply().get((pn, r_.station))
+            if rs is None:
+                continue
+            rate30 = float(r_.removal_rate_day) * 30.0
+            units = {k: int(st_idx.at[(pn, r_.station), c]) for k, c in (("P0", "P0"), ("P1", "P1"), ("P2", "P2"), ("recommended", rid))}
+            if rate30 <= 0 and not any(units.values()):
+                continue   # part not flown to / not held at this station
+            out.append({"station": r_.station, "rate_per_30d": rate30, "resupply_days": rs, "basis": "resupply",
+                        "units": units,
+                        "availability": {k: float(float_calc(rate30, rs, u, 0.0)["availability"]) for k, u in units.items()},
+                        "invalid_recommendation": bool(pn in brake_pns() and (units["P2"] > 0 or units["recommended"] > 0)),
+                        "provenance": "DERIVED"})
+        return out
     floats = []
     for pn in hub.index:
         r = hub.loc[pn]
@@ -1050,6 +1245,7 @@ def build_rotables() -> dict:
                        "spares_total": {k: int(tot.at[pn, c]) + int(loop.get(pn, 0))
                                         for k, c in (("P0", "P0"), ("P1", "P1"), ("P2", "P2"), ("recommended", rid))},
                        "reason": reasons.get(pn, ""), "planted": planted.get(pn), "station_view": station_view(pn),
+                       "station_views": station_views(pn),
                        "provenance": "DERIVED"})
     floats.sort(key=lambda x: (x["planted"] is None, x["pn"]))
     keep = ["pn", "station", "deadline_class", "base_stock", "total_spares", "rate_per_year", "pipeline_days",
@@ -1083,6 +1279,21 @@ def build_rotables() -> dict:
                            "returned_last_8w": int(len(recent)), "provenance": "SIMULATED"},
         "tat": tat, "tat_distribution": dist,
         "float_examples": floats, "palm_vs_sim": pvs_rows, "palm_vs_sim_policy": "P1",
+        # v2.1 A10: which time each calculator view uses
+        "calculator_modes": {
+            "hub": {"label": "Hub pooled view", "basis": "network repair-loop time",
+                    "fields": {"rate": "float_examples[].rate_per_30d", "days": "float_examples[].pipeline_days",
+                               "spares": "float_examples[].spares_total"},
+                    "note": "network removal rate over the hub effective repair-loop time (T_eff); spares = serviceable base stock + units already in the loop"},
+            "outstation": {"label": "Outstation view", "basis": "resupply time from AUH",
+                           "fields": {"rate": "float_examples[].station_views[].rate_per_30d",
+                                      "days": "float_examples[].station_views[].resupply_days",
+                                      "spares": "float_examples[].station_views[].units"},
+                           "note": "station removal rate over the routine resupply time from AUH plus the expected hub wait "
+                                   "(outputs/policies/p2_positioning.csv), as the Network Plan sizes station stock"},
+        },
+        "outstation_mode": "enabled",
+        "resupply_source": "outputs/policies/p2_positioning.csv (resupply_days + hub_wait_days)",
     }
 
 
@@ -1171,7 +1382,7 @@ def build_network() -> dict:
     for pid in ["P0", "P1", "P2"]:
         for s in stations():
             m, b = means.loc[(pid, s)], bys[(pid, s)]
-            compare.append({"policy_id": pid, "station": s, "fill_rate": float(m.immediate_fill_rate),
+            compare.append({"policy_id": pid, "display_name": v21.display_name(pid), "station": s, "fill_rate": float(m.immediate_fill_rate),
                             "fill_ci": b["immediate_fill_rate_ci"], "rotable_fill_rate": float(m.rotable_fill_rate),
                             "aog_hours": float(m.aog_hours), "aog_ci": b["aog_hours_ci"],
                             "aog_hours_D0": float(m.aog_hours_D0), "aog_events": float(m.aog_events),
@@ -1200,6 +1411,7 @@ def build_network() -> dict:
         "hub": net["hub"], "recommended_id": rid,
         "stations": st_rows, "arcs": arcs, "lateral_flows": lateral,
         "transfer_replay": replay, "policy_compare": compare, "paired_by_station": paired,
+        "display_names": names_v21(),
     }
 
 
@@ -1211,7 +1423,8 @@ KIND_MAP = {"policy": "policy", "budget": "greedy", "incremental": "greedy", "re
 
 
 def _point(pid: str, r: pd.Series, sel: pd.Series, split: str) -> dict:
-    p = {"id": pid, "label": sel.label, "kind": KIND_MAP.get(sel.kind, sel.kind), "subkind": sel.kind,
+    p = {"id": pid, "label": sel.label, "display_name": v21.display_name(pid), "short_name": v21.display_name(pid, short=True),
+         "kind": KIND_MAP.get(sel.kind, sel.kind), "subkind": sel.kind,
          "capital_aed": r.capital_mean, "capital_ci": [r.capital_lo, r.capital_hi],
          "aog_hours": r.aog_hours_mean, "aog_ci": [r.aog_hours_lo, r.aog_hours_hi],
          "total_cost_aed": r.total_cost_mean, "total_cost_ci": [r.total_cost_lo, r.total_cost_hi],
@@ -1266,6 +1479,9 @@ def build_frontier() -> dict:
                    "alt_action": r["best_alternative_action"], "flag_more_than_doubles_p0": bool(r["flag_more_than_doubles_p0"])}
             if pid == rid and r.get("reason"):
                 row["reason"] = r["reason"]
+            if r["pn"] in brake_pns() and r["station"] != cfg()["network"]["hub"] and int(r["proposed"]) > 0:
+                row["invalid_recommendation"] = True     # A9: flagged, kept (frozen)
+                row["flag_text"] = v21.A9_FLAG
             out.append(row)
         allocs[pid] = out
     lev = csv("outputs/frontier/levers.csv")
@@ -1349,6 +1565,11 @@ def build_frontier() -> dict:
         "allocations": allocs, "allocation_totals": totals,
         "levers": levers, "lever_findings": summ["lever_findings"],
         "tornado": tornado, "variant_robustness": robust, "aog_desk_dependence": desk,
+        # v2.1 (additive)
+        "display_names": names_v21(), "scope_line": v21.SCOPE_LINE,
+        "insight": frontier_insight(build_headline()), "capital_table": capital_table(build_headline()["core"]["remix"]),
+        "stress_worlds": stress_worlds(), "invalid_allocation_text": v21.A9_FLAG,
+        "subtitle": "how much readiness each extra dirham buys",
     }
 
 
@@ -1456,10 +1677,47 @@ def v1_archive() -> dict:
                          "aog_ci": [int(m.group(4).replace(",", "")), int(m.group(5).replace(",", ""))], "capital_aed": float(m.group(6)) * 1e6})
     reasons = [l[2:].strip() for l in txt.split("## Why it was superseded", 1)[-1].splitlines() if l.startswith("- ")]
     tag_m = re.search(r"Git tag: `([^`]+)` \(commit ([0-9a-f]+)\)", txt)
-    return {"tag": tag_m.group(1) if tag_m else None, "commit": tag_m.group(2) if tag_m else None, "holdout_seeds": "1000–1019",
+    return {"tag": tag_m.group(1) if tag_m else None, "commit": tag_m.group(2) if tag_m else None, "holdout_seeds": "retired v1 holdout (archived)",
             "headline": rows, "superseded_because": reasons,
             "note": "v1 overstated P0's AOG and the size of the improvement; these numbers are not findings (archive/v1/README.md).",
             "provenance": "SIMULATED"}
+
+
+def av2_findings() -> list[dict]:
+    """A12: every AV2 finding (reports/review_aviation_v2.md) with its v2.1 status. fixed = the VALIDATION_REPORT
+    'v2 reviews' fixed list; next experiment = answered by a listed next experiment; disclosed = LIMITATIONS 29-39."""
+    txt = (ROOT / "reports" / "review_aviation_v2.md").read_text()
+    rows = []
+    for m in re.finditer(r"^\|\s*(AV2-\d{2})\s*\|\s*\**(critical|major|minor)\**\s*\|", txt, re.M):
+        fid, sev = m.group(1), m.group(2)
+        if fid in v21.AV2_FIXED:
+            status, detail, lim = "fixed", v21.AV2_FIXED[fid], None
+        else:
+            lim = v21.AV2_LIMITATION.get(fid, v21.AV2_MINOR_LIMITATION)
+            if fid in v21.AV2_NEXT:
+                status, detail = "next experiment", v21.AV2_NEXT[fid]
+            else:
+                status, detail = "disclosed", f"LIMITATIONS {lim}"
+        rows.append({"id": fid, "severity": sev, "title": v21.AV2_TITLES[fid], "status": status, "status_detail": detail,
+                     "limitation": lim, "v21_note": v21.AV2_V21_NOTE.get(fid), "provenance": "DERIVED"})
+    ids = [r["id"] for r in rows]
+    if ids != [f"AV2-{i:02d}" for i in range(1, 26)]:
+        raise RuntimeError(f"expected AV2-01..AV2-25 in reports/review_aviation_v2.md, got {ids}")
+    return rows
+
+
+def next_experiments() -> list[dict]:
+    path = ROOT / "docs" / "content" / "next_experiments.md"
+    if not path.exists():
+        return []
+    out = []
+    for m in re.finditer(r"^## (\d+)\. (.+?)\n+(.+?)(?=\n\n|\Z)", path.read_text(), re.M | re.S):
+        summ = m.group(3).strip().split("\n")[0]
+        summ = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", summ).replace("`", "")
+        summ = re.sub(r"\*+([^*]+)\*+", r"\1", summ)
+        out.append({"n": int(m.group(1)), "title": m.group(2).strip(), "summary": summ,
+                    "status": "proposed, not run", "provenance": "ASSUMED"})
+    return out
 
 
 def build_method() -> dict:
@@ -1574,6 +1832,19 @@ def build_method() -> dict:
                    "chain": [{"id": d, "text": decisions[d]} for d in ["V2-SIM-CAL", "D013", "D014", "D015"] if d in decisions],
                    "provenance": "DERIVED"},
         "v1_archive": v1_archive(),
+        # v2.1 (additive)
+        "calibration_note": {"text": v21.A5_CALIBRATION,
+                             "line_kit_variant_aog_h": jload("outputs/calibration/v2_p0_variants.json")["V3 = V1 + V2"]["history"]["aog_hours_per_year"],
+                             "target_range_aog_h": cal["targets"].get("aog_hours_per_year"),
+                             "source": "outputs/calibration/v2_p0_variants.json (V3 = V1 + V2 line kit), outputs/calibration/p0_history_summary.json",
+                             "provenance": "SIMULATED"},
+        "av2_findings": av2_findings(),
+        "av2_counts": {**{k: sum(r["status"] == k for r in av2_findings()) for k in ("fixed", "disclosed", "next experiment")},
+                       "provenance": "DERIVED"},
+        "av2_source": ("reports/review_aviation_v2.md (findings); reports/VALIDATION_REPORT.md 'v2 reviews' (fixed); "
+                       "LIMITATIONS.md 29-39 (disclosed); docs/content/next_experiments.md (next experiments)"),
+        "next_experiments": next_experiments(),
+        "stress_worlds": stress_worlds(), "scope_line": v21.SCOPE_LINE,
         "licences": lic_rows,
         "limitations": lim,
     }
@@ -1757,8 +2028,11 @@ def dumps(obj) -> str:
 
 def build_all(out_dir: Path = SITE, write: bool = True) -> dict:
     """Build every file; returns {name: payload}. Writes docs/data/<name>.json and the manifest."""
-    data = {name: clean(fn()) for name, fn in BUILDERS.items()}
-    data["story"] = clean(build_story(data))
+    data = {name: v21.scrub(clean(fn())) for name, fn in BUILDERS.items()}
+    data["story"] = v21.scrub(clean(build_story(data)))
+    bad = [(n, *v) for n, d in data.items() for v in v21.text_violations(d)]
+    if bad:
+        raise RuntimeError(f"v2.1 text gate: {len(bad)} exported strings break it, e.g. {bad[:3]}")
     data = {n: data[n] for n in FILES}
     sizes = {n: len(dumps(d).encode()) for n, d in data.items()}
     total = sum(sizes.values())

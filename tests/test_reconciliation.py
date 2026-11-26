@@ -243,3 +243,124 @@ def test_ps1_is_read_not_hard_coded(site):
     assert site["network"]["transfer_replay"]["focus"]["incident_id"] == ps1["id"]
     steps = site["story"]["steps"]
     assert any(ps1["pn"] in s["route"] for s in steps) and any(ps1["id"] in s["route"] for s in steps)
+
+
+# ---------------------------------------------------------------------------------------------- v2.1 (final release)
+FROZEN_HOLDOUT_AOG = {"P0": 1690.5, "P1": 565.9, "P2": 210.15, "I125": 76.0}   # brief §0: never changes
+
+
+def test_frozen_headline_numbers_unchanged(site):
+    """P0/P1/P2/I125 holdout means: outputs/holdout pinned to the frozen v2 values; the site equals the export rounding."""
+    from gnm.export.build_site_data import sig
+    fp = pd.read_csv(OUT / "holdout" / "frontier_points.csv").set_index("id")
+    res = pd.read_parquet(OUT / "holdout" / "policy_results.parquet")
+    res = res[res.variant == "central"]
+    ps = json.load(open(OUT / "holdout" / "policy_summary.json"))["variants"]["central"]["policies"]
+    assert sorted(res.seed.unique().tolist()) == list(range(2000, 2020))
+    for pid, frozen in FROZEN_HOLDOUT_AOG.items():
+        assert fp.at[pid, "aog_hours_mean"] == pytest.approx(frozen, abs=1e-9), pid
+        if pid != "I125":
+            assert res[res.policy_id == pid].aog_hours.mean() == pytest.approx(frozen, abs=1e-9), pid
+            assert ps[pid]["aog_hours"]["mean"] == pytest.approx(frozen, abs=1e-9), pid
+    pol = {p["policy_id"]: p for p in site["policies"]["policies"]}
+    pts = {p["id"]: p for p in site["frontier"]["points"]}
+    for pid, frozen in FROZEN_HOLDOUT_AOG.items():
+        assert pol[pid]["kpi"]["aog_hours"]["mean"] == sig(frozen), pid
+        assert pts[pid]["aog_hours"] == sig(frozen), pid
+    k = {x["id"]: x for x in site["kpis"]["kpis"]}
+    assert k["aog_hours"]["value"] == sig(FROZEN_HOLDOUT_AOG["P2"]) and k["aog_hours"]["baseline"] == sig(FROZEN_HOLDOUT_AOG["P0"])
+    assert k["aog_hours"]["reference"]["value"] == sig(FROZEN_HOLDOUT_AOG["I125"])
+
+
+def test_capital_table_recomputes(site):
+    """A4: bought / removed rotables (P0 -> P2 target units x unit cost) and the net change in average simulated
+    inventory (holdout capital P2 - P0), recomputed here from outputs/."""
+    r = {pid: pd.read_csv(OUT / "policies" / f"{pid}_stock_params.csv").query("part_class == 'R'").groupby("pn")
+         .agg(u=("target_units", "sum"), c=("unit_cost_aed", "first")) for pid in ("P0", "P2")}
+    d = (r["P2"].u - r["P0"].u).fillna(0)
+    c = r["P0"].c.combine_first(r["P2"].c)
+    fp = pd.read_csv(OUT / "holdout" / "frontier_points.csv").set_index("id")
+    for blk in (site["kpis"]["capital_table"], site["frontier"]["capital_table"]):
+        assert blk["bought_units"] == int(d[d > 0].sum()) == 68
+        assert close(blk["bought_aed"], float((d[d > 0] * c[d > 0]).sum()), True)
+        assert blk["removed_units"] == int(-d[d < 0].sum()) == 20
+        assert close(blk["removed_aed"], float((-d[d < 0] * c[d < 0]).sum()), True)
+        assert close(blk["net_inventory_change_aed"], fp.at["P2", "capital_mean"] - fp.at["P0", "capital_mean"], True)
+        assert [x["text"] for x in blk["rows"]] == ["+68 units ≈ AED 8.4M assumed value", "−20 units ≈ AED 3.1M", "+AED 0.6M"]
+        assert blk["note"] == "Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a discount."
+
+
+SCOPE = "across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part"
+
+
+def test_scope_line_on_every_headline_kpi(site):
+    k = site["kpis"]
+    assert k["scope_line"] == SCOPE
+    for x in k["kpis"]:
+        if x["provenance"] == "SIMULATED":
+            assert x["scope"] == SCOPE, x["id"]
+    assert k["headline"]["core"]["scope"] == SCOPE and k["headline"]["frontier_option"]["scope"] == SCOPE
+
+
+def _all_strings(obj):
+    if isinstance(obj, dict):
+        for v in obj.values():
+            yield from _all_strings(v)
+    elif isinstance(obj, list):
+        for v in obj:
+            yield from _all_strings(v)
+    elif isinstance(obj, str):
+        yield obj
+
+
+def test_no_forbidden_terms_or_oem_names_in_site_data(site):
+    """v2.1 text gate on every exported string (independent regexes, not the exporter's own list)."""
+    import re
+    oem = re.compile(r"\bA320|\bAirbus|\bBoeing|\bEtihad|(?<![\w.,])787(?=[\s-]*[A-Za-z])(?![\s-]*(?:h|AED|units?|k)\b)")
+    words = re.compile(r"\bvalidated\b|\boptimal\b|representative legacy airline practice|panel-proof|robust across worlds|"
+                       r"saves the airline AED", re.I)
+    stale = re.compile(r"1000[–-]1019|seeds 1000\b|naive 9/9")
+    docs = dict(site, manifest=json.load(open(SITE / "manifest.json")))
+    for name, d in docs.items():
+        for s in _all_strings(d):
+            for pat in (oem, words, stale):
+                assert not pat.search(s), (name, pat.pattern[:30], s[:160])
+    for path in SITE.glob("*.json"):   # raw text too (keys included)
+        txt = path.read_text()
+        assert not re.search(r"A320|Airbus|Boeing|Etihad|787-family", txt), path.name
+
+
+def test_donor_recount_is_postplan_and_separate(site):
+    """Workstream B: labelled post-plan, kept out of the frozen KPI list, numbers recomputed from outputs/ and history."""
+    dr = site["kpis"]["donor_recount"]
+    assert dr["label"] == ("Post-plan exploratory recount. Gross donor hours are an upper bound — a donor may already be "
+                           "in maintenance or not scheduled to fly.")
+    assert dr["postplan"] is True and dr["status"] == "post-plan, exploratory" and dr["separate_from_frozen"] is True
+    assert not any("donor" in x["id"] or "robber" in x["id"] for x in site["kpis"]["kpis"])
+    assert "donor" not in json.dumps(site["kpis"]["headline"]).lower()
+    cls = pd.read_parquet(OUT / "holdout" / "policy_class_kpis.parquet")
+    rob = cls[cls.variant == "central"].groupby(["policy_id", "seed"]).route_robbery.sum().unstack(0)
+    h = dr["holdout"]
+    for pid in ["P0", "P1", "P2"]:
+        assert close(h["robberies_per_year"][pid]["mean"], rob[pid].mean()), pid
+    d = (rob["P2"] - rob["P0"]).to_numpy(float)
+    assert close(h["robberies_paired"]["P2-P0"]["mean"], d.mean())
+    from scipy import stats
+    hw = stats.t.ppf(0.975, len(d) - 1) * d.std(ddof=1) / math.sqrt(len(d))
+    assert close(h["robberies_paired"]["P2-P0"]["ci"][0], d.mean() - hw) and close(h["robberies_paired"]["P2-P0"]["ci"][1], d.mean() + hw)
+    nr = "not reconstructible from current logs"
+    assert h["robberies_per_year"]["I125"]["status"] == nr and h["robberies_paired"]["I125-P2"]["status"] == nr
+    assert h["donor_hours"] == nr and h["combined_hours"] == nr
+    hist = dr["historical_p0"]
+    assert hist["split"] == "history" and "HISTORICAL" in hist["label"]
+    rb = pd.read_parquet(ROOT / "data" / "processed" / "history" / "aog_robberies.parquet")
+    done = rb[rb.reinstated_h.notna()]
+    assert close(hist["gross_donor_hours_per_year"], float((done.reinstated_h - done.robbed_h).sum()) / 2.0)
+    assert round(hist["gross_donor_hours_per_year"]) == 5285 and hist["robberies"] == len(rb)
+    assert hist["donor_hours_per_tail_union_per_year"] <= hist["gross_donor_hours_per_year"]
+    ae = pd.read_parquet(ROOT / "data" / "processed" / "history" / "aog_events.parquet")
+    assert close(hist["counted_material_aog_hours_per_year"], ae.hours.sum() / 2.0)
+    # the post-plan file never carries a frozen-number override
+    j = json.load(open(OUT / "postplan" / "donor_recount.json"))
+    for pid, v in FROZEN_HOLDOUT_AOG.items():
+        assert j["holdout"]["recipient_hours_per_year"][pid]["mean"] == pytest.approx(v, abs=1e-3)

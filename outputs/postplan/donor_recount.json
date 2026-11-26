@@ -1,0 +1,327 @@
+{
+ "label": "Post-plan exploratory recount. Gross donor hours are an upper bound — a donor may already be in maintenance or not scheduled to fly.",
+ "status": "post-plan, exploratory",
+ "decision": "V21-B",
+ "outcome": {
+  "robbery_counts": "computed for P0, P1, P2 (holdout, paired); not reconstructible from current logs for I125",
+  "donor_hours_holdout": "not reconstructible from current logs",
+  "historical_p0": "reported separately (history, not holdout)"
+ },
+ "inventory": {
+  "outputs/holdout/policy_class_kpis.parquet": "route_robbery per seed x policy x class (P0, P1, P2; 3 worlds)",
+  "outputs/holdout/policy_station_kpis.parquet": "route_robbery per seed x policy x station (same counts; all at AUH)",
+  "outputs/holdout/policy_results.parquet": "aggregate KPIs per seed (aog_hours = recipient hours); no route or donor columns",
+  "outputs/holdout/frontier_points.csv": "aggregate means/CIs per candidate incl. I125; no per-seed rows, no route columns",
+  "outputs/holdout/postplan_i125_*": "aggregate I125/P0/P2 stress-world rows; no route columns",
+  "donor robbed / reinstated times": "not stored by any holdout run"
+ },
+ "holdout": {
+  "split": "holdout",
+  "variant": "central",
+  "seeds": [
+   2000,
+   2001,
+   2002,
+   2003,
+   2004,
+   2005,
+   2006,
+   2007,
+   2008,
+   2009,
+   2010,
+   2011,
+   2012,
+   2013,
+   2014,
+   2015,
+   2016,
+   2017,
+   2018,
+   2019
+  ],
+  "kpi_weeks": [
+   104,
+   155
+  ],
+  "robbery_count_per_year": {
+   "P0": {
+    "mean": 33.2,
+    "ci_lo": 28.5356,
+    "ci_hi": 37.8644,
+    "sd": 9.9663,
+    "n": 20,
+    "per_seed": {
+     "2000": 32,
+     "2001": 38,
+     "2002": 15,
+     "2003": 56,
+     "2004": 26,
+     "2005": 38,
+     "2006": 36,
+     "2007": 28,
+     "2008": 35,
+     "2009": 36,
+     "2010": 30,
+     "2011": 42,
+     "2012": 39,
+     "2013": 35,
+     "2014": 25,
+     "2015": 10,
+     "2016": 35,
+     "2017": 29,
+     "2018": 45,
+     "2019": 34
+    },
+    "at_auh_mean": 33.2,
+    "elsewhere_mean": 0.0
+   },
+   "P1": {
+    "mean": 31.25,
+    "ci_lo": 27.0671,
+    "ci_hi": 35.4329,
+    "sd": 8.9376,
+    "n": 20,
+    "per_seed": {
+     "2000": 32,
+     "2001": 24,
+     "2002": 22,
+     "2003": 53,
+     "2004": 25,
+     "2005": 16,
+     "2006": 31,
+     "2007": 25,
+     "2008": 30,
+     "2009": 34,
+     "2010": 41,
+     "2011": 32,
+     "2012": 38,
+     "2013": 29,
+     "2014": 27,
+     "2015": 28,
+     "2016": 36,
+     "2017": 33,
+     "2018": 48,
+     "2019": 21
+    },
+    "at_auh_mean": 31.25,
+    "elsewhere_mean": 0.0
+   },
+   "P2": {
+    "mean": 22.45,
+    "ci_lo": 18.3517,
+    "ci_hi": 26.5483,
+    "sd": 8.7568,
+    "n": 20,
+    "per_seed": {
+     "2000": 20,
+     "2001": 17,
+     "2002": 13,
+     "2003": 39,
+     "2004": 12,
+     "2005": 9,
+     "2006": 20,
+     "2007": 17,
+     "2008": 15,
+     "2009": 28,
+     "2010": 27,
+     "2011": 24,
+     "2012": 30,
+     "2013": 23,
+     "2014": 22,
+     "2015": 22,
+     "2016": 32,
+     "2017": 24,
+     "2018": 42,
+     "2019": 13
+    },
+    "at_auh_mean": 22.45,
+    "elsewhere_mean": 0.0
+   },
+   "I125": {
+    "status": "not reconstructible from current logs",
+    "why": "the frozen frontier holdout run kept only aggregate KPIs for I125 (frontier_points.csv); no route counts were stored"
+   }
+  },
+  "robbery_count_paired": {
+   "P2-P0": {
+    "mean": -10.75,
+    "ci_lo": -15.0978,
+    "ci_hi": -6.4022,
+    "sd": 9.2899,
+    "n": 20,
+    "share_seeds_lower": 0.95,
+    "seeds": [
+     2000,
+     2001,
+     2002,
+     2003,
+     2004,
+     2005,
+     2006,
+     2007,
+     2008,
+     2009,
+     2010,
+     2011,
+     2012,
+     2013,
+     2014,
+     2015,
+     2016,
+     2017,
+     2018,
+     2019
+    ]
+   },
+   "P1-P0": {
+    "mean": -1.95,
+    "ci_lo": -6.118,
+    "ci_hi": 2.218,
+    "sd": 8.9058,
+    "n": 20,
+    "share_seeds_lower": 0.6,
+    "seeds": [
+     2000,
+     2001,
+     2002,
+     2003,
+     2004,
+     2005,
+     2006,
+     2007,
+     2008,
+     2009,
+     2010,
+     2011,
+     2012,
+     2013,
+     2014,
+     2015,
+     2016,
+     2017,
+     2018,
+     2019
+    ]
+   },
+   "I125-P2": {
+    "status": "not reconstructible from current logs",
+    "why": "no per-seed I125 robbery counts"
+   }
+  },
+  "robbery_count_note": "Requests in the 52-week KPI window whose AOG route was a robbery at AUH (a count per year). Robbery is used only for AUH needs in the engine.",
+  "recipient_hours_per_year": {
+   "P0": {
+    "mean": 1690.5,
+    "ci_lo": 1554.8262,
+    "ci_hi": 1826.1738,
+    "sd": 289.8924,
+    "n": 20,
+    "source": "outputs/holdout/policy_results.parquet aog_hours (frozen)"
+   },
+   "P1": {
+    "mean": 565.9,
+    "ci_lo": 451.5314,
+    "ci_hi": 680.2686,
+    "sd": 244.3698,
+    "n": 20,
+    "source": "outputs/holdout/policy_results.parquet aog_hours (frozen)"
+   },
+   "P2": {
+    "mean": 210.15,
+    "ci_lo": 146.0315,
+    "ci_hi": 274.2685,
+    "sd": 137.0011,
+    "n": 20,
+    "source": "outputs/holdout/policy_results.parquet aog_hours (frozen)"
+   },
+   "I125": {
+    "mean": 76.0,
+    "ci_lo": 49.9474,
+    "ci_hi": 102.0526,
+    "n": 20,
+    "source": "outputs/holdout/frontier_points.csv aog_hours (frozen)"
+   }
+  },
+  "recipient_hours_note": "Recipient hours = the frozen material AOG hours (the downtime of the aircraft waiting for the part).",
+  "gross_donor_hours_per_year": {
+   "P0": {
+    "status": "not reconstructible from current logs"
+   },
+   "P1": {
+    "status": "not reconstructible from current logs"
+   },
+   "P2": {
+    "status": "not reconstructible from current logs"
+   },
+   "I125": {
+    "status": "not reconstructible from current logs"
+   }
+  },
+  "combined_hours_per_year": {
+   "P0": {
+    "status": "not reconstructible from current logs"
+   },
+   "P1": {
+    "status": "not reconstructible from current logs"
+   },
+   "P2": {
+    "status": "not reconstructible from current logs"
+   },
+   "I125": {
+    "status": "not reconstructible from current logs"
+   }
+  },
+  "donor_hours_paired": {
+   "P2-P0": {
+    "status": "not reconstructible from current logs"
+   },
+   "I125-P2": {
+    "status": "not reconstructible from current logs"
+   }
+  },
+  "donor_hours_status": "not reconstructible from current logs",
+  "donor_hours_why": "The holdout runs stored aggregate KPIs only; donor robbed / reinstated times were not logged. Recomputing them needs a new simulation, which v2.1 does not run."
+ },
+ "historical_p0": {
+  "label": "HISTORICAL P0 (history weeks 0-103, one P0 world). Not holdout; never mix with the holdout numbers.",
+  "split": "history",
+  "policy": "P0",
+  "weeks": [
+   0,
+   103
+  ],
+  "robberies": 56,
+  "robberies_per_year": 28.0,
+  "donor_tails": 29,
+  "reinstated": 55,
+  "open_at_end_of_history": 1,
+  "mean_days_held": 8.0076,
+  "max_days_held": 29.7083,
+  "share_d3_d10": 0.8214,
+  "gross_donor_hours_per_year": 5285.0,
+  "gross_donor_hours_basis": "sum of (reinstated_h - robbed_h) over the reinstated robberies / 2 years (LIMITATIONS 29)",
+  "donor_hours_per_tail_union_per_year": 5093.5,
+  "donor_hours_per_tail_union_basis": "same robberies, overlapping intervals of one donor tail counted once",
+  "gross_donor_hours_incl_open_per_year": 5401.0,
+  "counted_material_aog_hours_per_year": 1282.0,
+  "counted_basis": "data/processed/history/aog_events.parquet hours / 2 years (the calibrated P0 history figure)",
+  "ratio_gross_donor_to_counted": 4.1225,
+  "source": [
+   "data/processed/history/aog_robberies.parquet",
+   "data/processed/history/aog_events.parquet",
+   "data/processed/history/material_requests.parquet"
+  ]
+ },
+ "not_reconstructible_text": "not reconstructible from current logs",
+ "provenance": "SIMULATED",
+ "sources": [
+  "outputs/holdout/policy_class_kpis.parquet",
+  "outputs/holdout/policy_station_kpis.parquet",
+  "outputs/holdout/policy_results.parquet",
+  "outputs/holdout/frontier_points.csv",
+  "data/processed/history/aog_robberies.parquet",
+  "data/processed/history/aog_events.parquet",
+  "data/processed/history/material_requests.parquet"
+ ]
+}

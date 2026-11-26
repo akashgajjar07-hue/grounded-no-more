@@ -12,7 +12,7 @@ Result values are computed from `outputs/` and `docs/data/` by `scripts/render_d
 |---|---|
 | Project | GROUNDED NO MORE, an independent educational portfolio project |
 | Author | Akash Gajjar |
-| Version | 0.1.0 (data export at git 48bebeb) |
+| Version | 0.1.0 (data export at git 28fa8c6) |
 | Data | Fully synthetic airline, Falcon Hub Airways (fictional). Station coordinates REAL (OurAirports). |
 | Status | Demonstration. Not verified against any operator's data. |
 | Scope of headline numbers | across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part |
@@ -134,7 +134,7 @@ Recommend rotable floats, consumable and expendable reorder points, and hub-vers
 - The target range for the starting-point policy was an exploratory assumption chosen after diagnosing the model, not benchmarked against real airline KPIs. A line-kit variant (≈1,052 h) was measured but not adopted because it fell outside that range. All results are conditional on this choice.
 - The downtime clock starts when the part is removed (for no-go items; for deferrable items, when the rectification window runs out), not at the next scheduled departure, and overnight and other non-flying hours count in full. Fitting and release-to-service time is included. A departure-based count would be lower for every plan.
 - Outstation brake allocations in the frozen plans are flagged as an **invalid recommendation — brakes are not changed outside the hub in this model**: 5 in the Network Plan `P2` (GN-32-R013 at BOM, GN-32-R013 at CAI, GN-32-R013 at JED, GN-32-R036 at LHR, GN-32-R036 at SIN), 7 in the Network Plan + Extra Spares `I125` and 6 in the Simple Rulebook (naive reference) `P0`. They stay in the frozen results so the numbers are unchanged, but no planner should act on them.
-- Hero part: Removing 2.5× faster than quoted → escalate to reliability engineering and warranty review first. Extra spares are interim cover, compared against faster repair or pool access.
+- Hero part: Removing 2.3× faster than quoted → escalate to reliability engineering and warranty review first. Extra spares are interim cover, compared against faster repair or pool access.
 - Faster repair can beat buying spares: with 25% shorter repair time, the extra-investment option loses its clear cost advantage.
 - **The AOG routes carry every policy.** Robbery, local borrow, exchange/loan and local buy are ASSUMED markets: with the routes switched off (selection seeds, a structural stress) material AOG rises from 1,727 h to 42,070 h a year under P0, from 235 h to 18,320 h under P2 and from 92 h to 11,080 h under I125.
 - The AOG cost per hour and per event is a planning scenario. P2's lead over P0 holds across ×0.5–×2 the hourly rate (×0.5 −AED 19.0M [−21.1 to −16.8]; ×1 −AED 33.9M [−37.9 to −29.9]; ×2 −AED 63.8M [−71.5 to −56.2]), but the frontier pick moves: on the selection seeds I125's net annual benefit over P2 is +AED 1.7M [0.7–2.7] at hourly penalty ×0.5 and +AED 8.0M [4.6–11.5] at ×2, against +AED 3.8M at ×1, and the rule's pick moves to I110 at ×0.5 and B150 at ×2 the hourly rate.

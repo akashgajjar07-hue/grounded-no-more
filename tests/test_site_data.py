@@ -138,3 +138,125 @@ def test_canonical_cross_screen_fields():
     assert aog["sim_calendar"]["epoch"] == "2023-01-02T00:00:00Z"
     theme = (SITE.parent / "js" / "charts" / "theme.js").read_text()
     assert f"SIM_EPOCH = '{aog['sim_calendar']['epoch']}'" in theme
+
+
+# ---------------------------------------------------------------------------------------------- v2.1 (final release)
+def _j(name):
+    return json.load(open(SITE / f"{name}.json"))
+
+
+def test_display_names_match_names_js():
+    """A3: the exporter's names are the same as docs/js/lib/names.js (one source of wording)."""
+    import re
+    from gnm.export.v21 import DISPLAY_NAMES, LEVER_NAMES, display_name
+    js = (ROOT / "docs" / "js" / "lib" / "names.js").read_text()
+    for code, name in {**DISPLAY_NAMES, **LEVER_NAMES}.items():
+        assert re.search(rf"\b{code}: '{re.escape(name)}'", js), code
+    assert display_name("B150") == "Frontier point B150" and display_name("P2@central") == "Network Plan (central plan)"
+
+
+@needs_site
+def test_display_names_exported_beside_codes():
+    from gnm.export.v21 import display_name
+    for p in _j("policies")["policies"]:
+        assert p["display_name"] == display_name(p["policy_id"]) and p["label"] == p["display_name"], p["policy_id"]
+    for p in _j("frontier")["points"]:
+        assert p["display_name"] == display_name(p["id"]), p["id"]
+    for name in ["kpis", "policies", "frontier", "network", "parts"]:
+        dn = _j(name)["display_names"]
+        assert dn["P0"]["display_name"] == "Simple Rulebook (naive reference)" and dn["I125"]["display_name"] == "Network Plan + Extra Spares"
+        assert dn["P2_GUARD"]["display_name"] == "Network Plan held to guardrails"
+    assert all(r["display_name"] for r in _j("network")["policy_compare"])
+
+
+@needs_site
+def test_v21_landing_and_verbatim_texts():
+    from gnm.config import load_config
+    k = _j("kpis")
+    c = load_config()
+    lo, hi = c["seeds"]["holdout_seeds"]
+    st = {x["id"]: x["value"] for x in k["landing"]["stats"]}
+    assert st == {"aircraft": c["fleet"]["narrowbody"]["count"] + c["fleet"]["widebody"]["count"], "part_numbers": 120,
+                  "stations": 1 + len(c["network"]["outstations"]), "test_runs": hi - lo + 1}
+    assert k["landing"]["text"] == "40 aircraft · 120 part numbers · 7 stations · 20 fresh test runs"
+    assert k["reading_note"].startswith("How to read these numbers: simulated downtime of the aircraft waiting for the part")
+    assert k["stress_worlds"]["text"] == "reliability scaled ×0.96 / ×1.00 / ×1.08 — a narrow range"
+    assert k["stress_worlds"]["ranges_note"] == ("Likely ranges reflect simulation randomness only, not uncertainty in "
+                                                 "prices, failure rates, suppliers or contracts.")
+    fi = k["frontier_insight"]
+    assert fi["text"].startswith("Faster repair can beat buying spares: with 25% shorter repair time")
+    assert fi["levers"] == ["faster repair", "pool access", "better reliability", "more spares"]
+    assert fi["evidence"]["net_benefit_significant"] is False
+    m = _j("method")
+    assert m["calibration_note"]["text"].startswith("The target range for the starting-point policy was an exploratory assumption")
+    assert round(m["calibration_note"]["line_kit_variant_aog_h"]) == 1052
+    assert m["calibration_note"]["line_kit_variant_aog_h"] < m["calibration_note"]["target_range_aog_h"][0]
+
+
+@needs_site
+def test_v21_parts_flags():
+    p = _j("parts")
+    esc = [x for x in p["parts"] if x["escalation"]]
+    assert [x["pn"] for x in esc] == ["GN-32-R014"]   # the hero part (PS1)
+    e = esc[0]["escalation"]
+    # V21-A7: the planner-facing multiple is the HISTORY estimate (planted truth is evaluation-only)
+    assert e["quoted_multiple_basis"].startswith("history estimate")
+    assert e["estimated_ratio"] >= 2 and e["text"] == (f"Removing {e['estimated_ratio']:.1f}× faster than quoted → escalate to reliability engineering "
+                                                       "and warranty review first. Extra spares are interim cover, compared "
+                                                       "against faster repair or pool access.")
+    flag = "invalid recommendation — brakes are not changed outside the hub in this model"
+    bad = p["invalid_allocations"]
+    assert bad and all(b["text"] == flag and b["station"] != "AUH" and b["policy"] in ("P2", "I125") for b in bad)
+    assert {(b["pn"], b["station"]) for b in bad if b["policy"] == "P2"} == {
+        ("GN-32-R013", "BOM"), ("GN-32-R013", "CAI"), ("GN-32-R013", "JED"), ("GN-32-R036", "LHR"), ("GN-32-R036", "SIN")}
+    by_pn = {x["pn"]: x for x in p["parts"]}
+    assert all(b in by_pn[b["pn"]]["allocation_flags"] for b in bad)
+    # frozen results kept: the flagged I125 allocation rows are still in the frontier file
+    rows = _j("frontier")["allocations"]["I125"]
+    fl = [r for r in rows if r.get("invalid_recommendation")]
+    assert fl and all(r["flag_text"] == flag and r["pn"] in ("GN-32-R013", "GN-32-R036") for r in fl)
+
+
+@needs_site
+def test_v21_rotables_calculator_modes():
+    r = _j("rotables")
+    assert r["calculator_modes"]["hub"]["basis"] == "network repair-loop time"
+    assert r["calculator_modes"]["outstation"]["basis"] == "resupply time from AUH"
+    assert r["outstation_mode"] == "enabled"
+    import pandas as pd
+    pp = pd.read_csv(ROOT / "outputs" / "policies" / "p2_positioning.csv").set_index(["pn", "station"])
+    n = 0
+    for f in r["float_examples"]:
+        for v in f["station_views"]:
+            assert v["station"] != "AUH" and v["basis"] == "resupply"
+            x = pp.loc[(f["pn"], v["station"])]
+            assert v["resupply_days"] == pytest.approx(float(x.resupply_days + x.hub_wait_days), rel=6e-4)
+            n += 1
+    assert n > 0
+
+
+@needs_site
+def test_v21_method_av2_status_table():
+    m = _j("method")
+    rows = m["av2_findings"]
+    assert [r["id"] for r in rows] == [f"AV2-{i:02d}" for i in range(1, 26)]
+    assert {r["status"] for r in rows} == {"fixed", "disclosed", "next experiment"}
+    st = {r["id"]: r["status"] for r in rows}
+    assert {k for k, v in st.items() if v == "fixed"} == {"AV2-03", "AV2-10", "AV2-11", "AV2-14", "AV2-21", "AV2-23"}
+    assert st["AV2-01"] == st["AV2-02"] == "next experiment"
+    assert all(29 <= r["limitation"] <= 39 for r in rows if r["status"] != "fixed")
+    sev = {r["id"]: r["severity"] for r in rows}
+    assert [k for k, v in sev.items() if v == "critical"] == ["AV2-01", "AV2-02", "AV2-03"]
+    assert [x["title"] for x in m["next_experiments"]] == ["P0-R: a revised reference policy", "Incremental donor unavailability",
+                                                          "Combined disruption scenarios", "An MRO-side model"]
+
+
+def test_scrub_relabels_archetypes_and_words():
+    from gnm.export.v21 import scrub_text, text_violations
+    assert scrub_text("A320-family archetype (generic single-aisle)") == "narrowbody archetype (generic single-aisle)"
+    assert scrub_text("787-family archetype (generic twin-aisle)") == "widebody archetype (generic twin-aisle)"
+    assert scrub_text("faster for A320-family LRUs than for 787 LRUs") == "faster for narrowbody LRUs than for widebody LRUs"
+    assert scrub_text("787 h a year at 1787 units") == "787 h a year at 1787 units"   # numbers untouched
+    assert scrub_text("holdout seeds 1000–1019") == "holdout the retired v1 holdout"
+    assert not text_violations({"a": scrub_text("Marginal analysis is optimal only for separable objectives; validated.")})
+    assert text_violations({"a": "an A320 fleet"}) and text_violations({"a": "optimal"})
