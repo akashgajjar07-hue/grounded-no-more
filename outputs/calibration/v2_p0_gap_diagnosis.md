@@ -297,3 +297,74 @@ Capital AED 48.3 M. Top drivers: Nose wheel steering actuator (NB) 340; Aileron 
 
 With these settings the estimate lands inside the band on rotable fill and events. AOG hours sit at the lower edge (1,138 history / 1,265 selection against 1,200–2,700).
 
+
+## 7. Measured variants V1–V4 on raw P0 after decisions A (in memory only; nothing written to config)
+
+Script: `scripts/v2_p0_variants_measure.py`. Each cell shows history / mean of 5 selection seeds. Band: rotable fill 0.78–0.85, AOG 1,200–2,700 h/yr, 60–100 events/yr.
+
+| Variant | Network rotable fill | Hub-pool fill | Overall fill | AOG h/yr | Events/yr | Capital AED M | Fill | AOG | Events | All inside? |
+|---|---|---|---|---|---|---|---|---|---|---|
+| V0 raw P0 (after A) | 0.678 / 0.673 | 0.760 / 0.750 | 0.984 / 0.981 | 1,712 / 1,907 | 97 / 90 | 44.9 / 45.2 | OUTSIDE | inside | inside | no |
+| V1 quote accuracy | 0.815 / 0.809 | 0.896 / 0.890 | 0.990 / 0.990 | 1,282 / 1,435 | 74 / 72 | 48.3 / 48.5 | inside | inside | inside | YES |
+| V2 legacy line-kit | 0.711 / 0.705 | 0.760 / 0.750 | 0.985 / 0.983 | 1,246 / 1,445 | 68 / 63 | 45.1 / 45.4 | OUTSIDE | inside | inside | no |
+| V3 = V1 + V2 | 0.832 / 0.830 | 0.896 / 0.890 | 0.991 / 0.991 | 1,052 / 1,142 | 59 / 54 | 48.4 / 48.6 | inside | OUTSIDE | OUTSIDE | no |
+| V4 = V3 + AOG market (reference) | 0.831 / 0.830 | 0.895 / 0.889 | 0.991 / 0.991 | 912 / 976 | 57 / 52 | 48.4 / 48.6 | inside | OUTSIDE | OUTSIDE | no |
+
+### Decision rule → candidate: **V1 (quote accuracy only)**
+
+V1 is the fewest-change variant inside the band, so the AOG-market settings are NOT used.
+
+* **V1:** AOG 1,282 / 1,435 h/yr is in the lower part of the band but inside it.
+* **V2** (line kit alone) leaves rotable fill at 0.71.
+* **V3 and V4** overshoot the band: AOG falls to 1,052–1,142 and 912–976 h/yr, and events to 54–59 and 52–57/yr, both below the band.
+
+### V1 top-10 AOG drivers (history)
+
+| PN | Description | Class | Deadline | Removal mode | Unit cost AED | AOG h/yr |
+|---|---|---|---|---|---|---|
+| GN-32-R014 | Nose wheel steering actuator (NB) | R | D0 | unscheduled | 104,446 | 386 |
+| GN-27-R032 | Aileron power control unit (WB) | R | D0 | unscheduled | 169,624 | 121 |
+| GN-27-R007 | Aileron servo control (NB) | R | D0 | unscheduled | 196,170 | 115 |
+| GN-27-R006 | Elevator servo control (NB) | R | D0 | unscheduled | 138,105 | 102 |
+| GN-27-R031 | Elevator power control unit (WB) | R | D0 | unscheduled | 231,228 | 100 |
+| GN-32-R015 | Main wheel and tyre assembly (NB) | R | D0 | unscheduled | 15,574 | 97 |
+| GN-32-R016 | Nose wheel and tyre assembly (NB) | R | D0 | unscheduled | 21,664 | 86 |
+| GN-32-R037 | Main wheel and tyre assembly (WB) | R | D0 | unscheduled | 20,357 | 71 |
+| GN-35-E032 | Crew quick-donning oxygen mask | E | D0 | unscheduled | 11,307 | 57 |
+| GN-32-R013 | Carbon brake assembly (NB) | R | D0 | wear_planned | 149,600 | 42 |
+
+* **AOG by trigger:** D0_no_stock 95%; deadline_expired 5%
+* **AOG by station:** AUH 25%; CAI 22%; BOM 16%; JED 16%; LHR 9%; SIN 7%; FRA 4%
+
+### Plausibility flags (V1)
+
+| Driver | Flag | Explanation |
+|---|---|---|
+| PS1 NWS actuator (386 h/yr) | Planted | By design: 2.5× optimistic quote and no BOM unit. P2 should fix it. |
+| Flight-control servo controls / PCUs (100–121 h/yr each) | Plausible | Expensive D0 LRUs with outstation removals and no line-station unit. |
+| Wheel & tyre assemblies (NB main 97, NB nose 86, WB main 71 h/yr) | Still implausible to a materials manager | Under P0 there is no wheel kit at outstations. V2/V3 show that a standard line kit removes most of this, but V3 then falls below the band. The user's rule keeps V1, so this stays as a legacy weakness for P2 to fix. |
+| Crew oxygen mask (E, AED 11k, 57 h/yr) | Mildly implausible | Same line-kit reasoning. |
+| NB carbon brake (wear-planned, 42 h/yr) | Acceptable | Residual only when AUH is short and the pre-arranged exchange fails (see the brake note). |
+
+### Drafts (NOT written)
+
+**Config text for V2 (prepared, not applied):**
+
+```yaml
+policy_baseline_P0:
+  line_station_kit:                  # standard airline line-station kit practice (ASSUMED)
+    families: [wheel_tyre, crew_mask]
+    min_qty_per_station: 1           # at every outstation the applicable fleet type serves, regardless of the >= 4/yr rule
+    rationale: "Standard airline line-station kit practice: outstations served daily hold a spare wheel/tyre assembly per applicable type and crew oxygen masks, independent of the quoted-removal threshold."
+```
+
+One unit is enough even for the NB main wheel at BOM/JED/CAI. The true outstation rate is about 5–10/yr, with about 4 d routine resupply, so λT ≈ 0.05–0.1 and P(no stock) is roughly 0.05–0.1. A second unit is not justified.
+
+**LIMITATIONS bullet (draft):**
+
+> Brakes are modelled as owned, wear-planned rotables. Cost-per-landing (per-landing) brake contracts, under which the OEM owns and positions the brake float, are not modelled. Brake changes are known 5–10 days ahead. Supply is arranged at notice (transfer or pre-arranged exchange/loan). Residual brake AOG occurs only when AUH is short and the exchange fails (WB exchange availability 0.50).
+
+**Parts-screen note (draft):**
+
+> Brakes: planned changes (wear pins), sourced at notice. Cost-per-landing contracts are not modelled. Any brake AOG shown means AUH was short and the WB/NB exchange could not be arranged in time.
+

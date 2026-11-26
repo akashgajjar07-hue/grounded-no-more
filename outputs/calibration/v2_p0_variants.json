@@ -1,0 +1,672 @@
+{
+  "V0 raw P0 (after A)": {
+    "history": {
+      "immediate_fill_rate": 0.9835184351985602,
+      "rotable_immediate_fill_rate": 0.6779953917050692,
+      "rotable_hub_pool_fill_rate": 0.7596899224806202,
+      "expendable_immediate_fill_rate": 0.9280042350449974,
+      "consumable_immediate_fill_rate": 0.9999740959486063,
+      "aog_hours_per_year": 1712.0,
+      "aog_events_per_year": 97.0,
+      "capital": 44918087.18353253
+    },
+    "selection_mean": {
+      "immediate_fill_rate": 0.9812865772879491,
+      "rotable_immediate_fill_rate": 0.673162032007111,
+      "rotable_hub_pool_fill_rate": 0.7498070803301646,
+      "expendable_immediate_fill_rate": 0.8960573798843962,
+      "consumable_immediate_fill_rate": 0.9999679720626139,
+      "aog_hours_per_year": 1907.2,
+      "aog_events_per_year": 90.4,
+      "capital": 45234596.93400339
+    },
+    "inside_band": {
+      "rotable_immediate_fill_rate": false,
+      "aog_hours_per_year": true,
+      "aog_events_per_year": true
+    },
+    "all_inside": false,
+    "top10_history": [
+      {
+        "pn": "GN-32-R015",
+        "description": "Main wheel and tyre assembly (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 15574.3,
+        "aog_h": 381.0
+      },
+      {
+        "pn": "GN-32-R014",
+        "description": "Nose wheel steering actuator (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 104445.76,
+        "aog_h": 327.0
+      },
+      {
+        "pn": "GN-32-R036",
+        "description": "Carbon brake assembly (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "wear_planned",
+        "unit_cost_aed": 270041.02,
+        "aog_h": 184.0
+      },
+      {
+        "pn": "GN-27-R032",
+        "description": "Aileron power control unit (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 169623.64,
+        "aog_h": 121.0
+      },
+      {
+        "pn": "GN-27-R007",
+        "description": "Aileron servo control (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 196170.46,
+        "aog_h": 115.0
+      },
+      {
+        "pn": "GN-27-R006",
+        "description": "Elevator servo control (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 138104.72,
+        "aog_h": 102.0
+      },
+      {
+        "pn": "GN-27-R031",
+        "description": "Elevator power control unit (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 231228.21,
+        "aog_h": 100.0
+      },
+      {
+        "pn": "GN-35-E032",
+        "description": "Crew quick-donning oxygen mask",
+        "part_class": "E",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 11306.9,
+        "aog_h": 87.0
+      },
+      {
+        "pn": "GN-32-R016",
+        "description": "Nose wheel and tyre assembly (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 21664.06,
+        "aog_h": 86.0
+      },
+      {
+        "pn": "GN-32-R037",
+        "description": "Main wheel and tyre assembly (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 20356.95,
+        "aog_h": 71.0
+      }
+    ],
+    "aog_share_by_trigger": {
+      "D0_no_stock": 0.947,
+      "deadline_expired": 0.053
+    },
+    "aog_share_by_station": {
+      "AUH": 0.316,
+      "BOM": 0.179,
+      "JED": 0.171,
+      "CAI": 0.165,
+      "LHR": 0.068,
+      "SIN": 0.055,
+      "FRA": 0.046
+    },
+    "line_kit_units": null
+  },
+  "V1 quote accuracy": {
+    "history": {
+      "immediate_fill_rate": 0.9904331146842218,
+      "rotable_immediate_fill_rate": 0.8145161290322581,
+      "rotable_hub_pool_fill_rate": 0.8959948320413437,
+      "expendable_immediate_fill_rate": 0.9571201694017999,
+      "consumable_immediate_fill_rate": 0.9999740959486063,
+      "aog_hours_per_year": 1282.0,
+      "aog_events_per_year": 74.0,
+      "capital": 48282610.14234041
+    },
+    "selection_mean": {
+      "immediate_fill_rate": 0.9896368185514213,
+      "rotable_immediate_fill_rate": 0.8086472601198871,
+      "rotable_hub_pool_fill_rate": 0.8898519043212538,
+      "expendable_immediate_fill_rate": 0.9521407349738695,
+      "consumable_immediate_fill_rate": 0.9999679720626139,
+      "aog_hours_per_year": 1434.8,
+      "aog_events_per_year": 72.0,
+      "capital": 48471969.93196304
+    },
+    "inside_band": {
+      "rotable_immediate_fill_rate": true,
+      "aog_hours_per_year": true,
+      "aog_events_per_year": true
+    },
+    "all_inside": true,
+    "top10_history": [
+      {
+        "pn": "GN-32-R014",
+        "description": "Nose wheel steering actuator (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 104445.76,
+        "aog_h": 386.0
+      },
+      {
+        "pn": "GN-27-R032",
+        "description": "Aileron power control unit (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 169623.64,
+        "aog_h": 121.0
+      },
+      {
+        "pn": "GN-27-R007",
+        "description": "Aileron servo control (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 196170.46,
+        "aog_h": 115.0
+      },
+      {
+        "pn": "GN-27-R006",
+        "description": "Elevator servo control (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 138104.72,
+        "aog_h": 102.0
+      },
+      {
+        "pn": "GN-27-R031",
+        "description": "Elevator power control unit (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 231228.21,
+        "aog_h": 100.0
+      },
+      {
+        "pn": "GN-32-R015",
+        "description": "Main wheel and tyre assembly (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 15574.3,
+        "aog_h": 97.0
+      },
+      {
+        "pn": "GN-32-R016",
+        "description": "Nose wheel and tyre assembly (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 21664.06,
+        "aog_h": 86.0
+      },
+      {
+        "pn": "GN-32-R037",
+        "description": "Main wheel and tyre assembly (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 20356.95,
+        "aog_h": 71.0
+      },
+      {
+        "pn": "GN-35-E032",
+        "description": "Crew quick-donning oxygen mask",
+        "part_class": "E",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 11306.9,
+        "aog_h": 57.0
+      },
+      {
+        "pn": "GN-32-R013",
+        "description": "Carbon brake assembly (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "wear_planned",
+        "unit_cost_aed": 149599.53,
+        "aog_h": 42.0
+      }
+    ],
+    "aog_share_by_trigger": {
+      "D0_no_stock": 0.946,
+      "deadline_expired": 0.054
+    },
+    "aog_share_by_station": {
+      "AUH": 0.248,
+      "CAI": 0.221,
+      "BOM": 0.162,
+      "JED": 0.161,
+      "LHR": 0.09,
+      "SIN": 0.073,
+      "FRA": 0.044
+    },
+    "line_kit_units": null
+  },
+  "V2 legacy line-kit": {
+    "history": {
+      "immediate_fill_rate": 0.984868218522816,
+      "rotable_immediate_fill_rate": 0.7108294930875576,
+      "rotable_hub_pool_fill_rate": 0.7596899224806202,
+      "expendable_immediate_fill_rate": 0.9280042350449974,
+      "consumable_immediate_fill_rate": 0.9999740959486063,
+      "aog_hours_per_year": 1245.5,
+      "aog_events_per_year": 68.5,
+      "capital": 45113243.99680836
+    },
+    "selection_mean": {
+      "immediate_fill_rate": 0.9826208721478776,
+      "rotable_immediate_fill_rate": 0.7050681827652655,
+      "rotable_hub_pool_fill_rate": 0.7500685609606961,
+      "expendable_immediate_fill_rate": 0.8960573798843962,
+      "consumable_immediate_fill_rate": 0.99995714427852,
+      "aog_hours_per_year": 1445.2,
+      "aog_events_per_year": 63.2,
+      "capital": 45422657.754851654
+    },
+    "inside_band": {
+      "rotable_immediate_fill_rate": false,
+      "aog_hours_per_year": true,
+      "aog_events_per_year": true
+    },
+    "all_inside": false,
+    "top10_history": [
+      {
+        "pn": "GN-32-R014",
+        "description": "Nose wheel steering actuator (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 104445.76,
+        "aog_h": 327.0
+      },
+      {
+        "pn": "GN-32-R036",
+        "description": "Carbon brake assembly (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "wear_planned",
+        "unit_cost_aed": 270041.02,
+        "aog_h": 184.0
+      },
+      {
+        "pn": "GN-27-R032",
+        "description": "Aileron power control unit (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 169623.64,
+        "aog_h": 121.0
+      },
+      {
+        "pn": "GN-27-R007",
+        "description": "Aileron servo control (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 196170.46,
+        "aog_h": 115.0
+      },
+      {
+        "pn": "GN-27-R006",
+        "description": "Elevator servo control (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 138104.72,
+        "aog_h": 102.0
+      },
+      {
+        "pn": "GN-27-R031",
+        "description": "Elevator power control unit (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 231228.21,
+        "aog_h": 100.0
+      },
+      {
+        "pn": "GN-35-E032",
+        "description": "Crew quick-donning oxygen mask",
+        "part_class": "E",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 11306.9,
+        "aog_h": 87.0
+      },
+      {
+        "pn": "GN-32-R015",
+        "description": "Main wheel and tyre assembly (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 15574.3,
+        "aog_h": 71.0
+      },
+      {
+        "pn": "GN-32-R013",
+        "description": "Carbon brake assembly (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "wear_planned",
+        "unit_cost_aed": 149599.53,
+        "aog_h": 47.0
+      },
+      {
+        "pn": "GN-28-R033",
+        "description": "Fuel boost pump (WB)",
+        "part_class": "R",
+        "deadline_class": "D3",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 212879.09,
+        "aog_h": 30.0
+      }
+    ],
+    "aog_share_by_trigger": {
+      "D0_no_stock": 0.927,
+      "deadline_expired": 0.073
+    },
+    "aog_share_by_station": {
+      "AUH": 0.435,
+      "JED": 0.141,
+      "CAI": 0.129,
+      "BOM": 0.105,
+      "LHR": 0.086,
+      "FRA": 0.057,
+      "SIN": 0.048
+    },
+    "line_kit_units": 138
+  },
+  "V3 = V1 + V2": {
+    "history": {
+      "immediate_fill_rate": 0.9911435269601458,
+      "rotable_immediate_fill_rate": 0.8317972350230415,
+      "rotable_hub_pool_fill_rate": 0.8959948320413437,
+      "expendable_immediate_fill_rate": 0.9571201694017999,
+      "consumable_immediate_fill_rate": 0.9999740959486063,
+      "aog_hours_per_year": 1052.5,
+      "aog_events_per_year": 59.0,
+      "capital": 48444393.264862396
+    },
+    "selection_mean": {
+      "immediate_fill_rate": 0.9905589505529422,
+      "rotable_immediate_fill_rate": 0.8303033794840445,
+      "rotable_hub_pool_fill_rate": 0.8898519043212538,
+      "expendable_immediate_fill_rate": 0.9521407349738695,
+      "consumable_immediate_fill_rate": 0.9999784798876515,
+      "aog_hours_per_year": 1142.4,
+      "aog_events_per_year": 53.6,
+      "capital": 48633963.23665902
+    },
+    "inside_band": {
+      "rotable_immediate_fill_rate": true,
+      "aog_hours_per_year": false,
+      "aog_events_per_year": false
+    },
+    "all_inside": false,
+    "top10_history": [
+      {
+        "pn": "GN-32-R014",
+        "description": "Nose wheel steering actuator (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 104445.76,
+        "aog_h": 386.0
+      },
+      {
+        "pn": "GN-27-R032",
+        "description": "Aileron power control unit (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 169623.64,
+        "aog_h": 121.0
+      },
+      {
+        "pn": "GN-27-R007",
+        "description": "Aileron servo control (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 196170.46,
+        "aog_h": 115.0
+      },
+      {
+        "pn": "GN-27-R006",
+        "description": "Elevator servo control (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 138104.72,
+        "aog_h": 102.0
+      },
+      {
+        "pn": "GN-27-R031",
+        "description": "Elevator power control unit (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 231228.21,
+        "aog_h": 100.0
+      },
+      {
+        "pn": "GN-35-E032",
+        "description": "Crew quick-donning oxygen mask",
+        "part_class": "E",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 11306.9,
+        "aog_h": 57.0
+      },
+      {
+        "pn": "GN-32-R013",
+        "description": "Carbon brake assembly (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "wear_planned",
+        "unit_cost_aed": 149599.53,
+        "aog_h": 42.0
+      },
+      {
+        "pn": "GN-32-R036",
+        "description": "Carbon brake assembly (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "wear_planned",
+        "unit_cost_aed": 270041.02,
+        "aog_h": 38.0
+      },
+      {
+        "pn": "GN-32-R015",
+        "description": "Main wheel and tyre assembly (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 15574.3,
+        "aog_h": 24.0
+      },
+      {
+        "pn": "GN-34-R019",
+        "description": "Air data inertial reference unit (NB)",
+        "part_class": "R",
+        "deadline_class": "D3",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 190848.19,
+        "aog_h": 22.0
+      }
+    ],
+    "aog_share_by_trigger": {
+      "D0_no_stock": 0.934,
+      "deadline_expired": 0.066
+    },
+    "aog_share_by_station": {
+      "AUH": 0.302,
+      "BOM": 0.174,
+      "JED": 0.167,
+      "CAI": 0.152,
+      "LHR": 0.101,
+      "SIN": 0.057,
+      "FRA": 0.046
+    },
+    "line_kit_units": 150
+  },
+  "V4 = V3 + AOG market (reference)": {
+    "history": {
+      "immediate_fill_rate": 0.9911198465509484,
+      "rotable_immediate_fill_rate": 0.831221198156682,
+      "rotable_hub_pool_fill_rate": 0.8953488372093024,
+      "expendable_immediate_fill_rate": 0.9571201694017999,
+      "consumable_immediate_fill_rate": 0.9999740959486063,
+      "aog_hours_per_year": 911.5,
+      "aog_events_per_year": 57.0,
+      "capital": 48444325.32147762
+    },
+    "selection_mean": {
+      "immediate_fill_rate": 0.9905690221242288,
+      "rotable_immediate_fill_rate": 0.8298325737500944,
+      "rotable_hub_pool_fill_rate": 0.889323976633,
+      "expendable_immediate_fill_rate": 0.9527697078446783,
+      "consumable_immediate_fill_rate": 0.9999784798876515,
+      "aog_hours_per_year": 975.6,
+      "aog_events_per_year": 52.2,
+      "capital": 48630215.95615425
+    },
+    "inside_band": {
+      "rotable_immediate_fill_rate": true,
+      "aog_hours_per_year": false,
+      "aog_events_per_year": false
+    },
+    "all_inside": false,
+    "top10_history": [
+      {
+        "pn": "GN-32-R014",
+        "description": "Nose wheel steering actuator (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 104445.76,
+        "aog_h": 340.0
+      },
+      {
+        "pn": "GN-27-R032",
+        "description": "Aileron power control unit (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 169623.64,
+        "aog_h": 121.0
+      },
+      {
+        "pn": "GN-27-R006",
+        "description": "Elevator servo control (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 138104.72,
+        "aog_h": 102.0
+      },
+      {
+        "pn": "GN-27-R007",
+        "description": "Aileron servo control (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 196170.46,
+        "aog_h": 102.0
+      },
+      {
+        "pn": "GN-27-R031",
+        "description": "Elevator power control unit (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 231228.21,
+        "aog_h": 100.0
+      },
+      {
+        "pn": "GN-35-E032",
+        "description": "Crew quick-donning oxygen mask",
+        "part_class": "E",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 11306.9,
+        "aog_h": 57.0
+      },
+      {
+        "pn": "GN-32-R036",
+        "description": "Carbon brake assembly (WB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "wear_planned",
+        "unit_cost_aed": 270041.02,
+        "aog_h": 38.0
+      },
+      {
+        "pn": "GN-32-R015",
+        "description": "Main wheel and tyre assembly (NB)",
+        "part_class": "R",
+        "deadline_class": "D0",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 15574.3,
+        "aog_h": 20.0
+      },
+      {
+        "pn": "GN-34-R019",
+        "description": "Air data inertial reference unit (NB)",
+        "part_class": "R",
+        "deadline_class": "D3",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 190848.19,
+        "aog_h": 18.0
+      },
+      {
+        "pn": "GN-28-R033",
+        "description": "Fuel boost pump (WB)",
+        "part_class": "R",
+        "deadline_class": "D3",
+        "removal_mode": "unscheduled",
+        "unit_cost_aed": 212879.09,
+        "aog_h": 8.0
+      }
+    ],
+    "aog_share_by_trigger": {
+      "D0_no_stock": 0.965,
+      "deadline_expired": 0.035
+    },
+    "aog_share_by_station": {
+      "AUH": 0.244,
+      "BOM": 0.183,
+      "JED": 0.179,
+      "CAI": 0.159,
+      "LHR": 0.117,
+      "SIN": 0.065,
+      "FRA": 0.053
+    },
+    "line_kit_units": 150
+  }
+}
