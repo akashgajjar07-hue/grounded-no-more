@@ -13,7 +13,7 @@ import subprocess
 import time
 from datetime import datetime, timezone
 
-from gnm.aog.actions import generate_actions, to_table
+from gnm.aog.actions import ACTION_FIELDS, generate_actions, to_table
 from gnm.aog.data import default_view, load_aog_config
 from gnm.aog.incidents import ROUTE_LABELS, build_all_incidents, select_showcase, summarise
 from gnm.aog.options import OPTION_LABELS, REASON_CODES
@@ -44,16 +44,19 @@ def main():
     incidents = build_all_incidents(view)
     summary = summarise(view, incidents)
     assert summary["reconciles"], "incident hours do not reconcile to aog_events"
-    ids = select_showcase(incidents, int(acfg["showcase"]["n"]))
+    ids = select_showcase(incidents, int(acfg["showcase"]["n"]), view)
     by_id = {i["id"]: i for i in incidents}
     show = [by_id[i] for i in ids]
     out = OUTPUTS / "aog_lab"
-    notes = ("Falcon Hub Airways (fictional). History weeks 0-103 under P0. Options evaluated at request time from "
-             "information available then (stock before the request, open POs/ROs at quoted due dates). "
-             "exposure_aed = max(0, wait_h - deadline slack) x AOG penalty/h (archetype) + direct cost. "
-             "Deadline classes are hypothetical, not MEL categories.")
+    notes = ("Falcon Hub Airways (fictional). v2 history weeks 0-103 under P0. Options evaluated at request time from "
+             "information available then (stock before the request, open POs/ROs at quoted dates, published AOG-route "
+             "odds; never the per-request draws). Material shortage exposure = expected material-related downtime "
+             "hours (wait beyond the rectification window + fitting/RTS) x rate/h + fixed cost per event (if late) + "
+             "direct cost; exposure_aed already includes direct_cost. Robbery = engineering/quality approval required, "
+             "human decision, never ranked. Rectification windows are hypothetical, not operator MEL decisions.")
     _dump({"meta": _meta("scripts/run_aog_lab.py (gnm.aog.incidents/options)", notes),
-           "showcase_ids": ids, "option_labels": OPTION_LABELS, "reason_codes": REASON_CODES,
+           "showcase_ids": ids, "ps1_incident_id": next((i for i in ids if by_id[i].get("planted") == "PS1"), None),
+           "option_labels": OPTION_LABELS, "reason_codes": REASON_CODES,
            "route_labels": ROUTE_LABELS, "incidents": show, "provenance": "SIMULATED"}, out / "incidents.json")
     _dump({"meta": _meta("scripts/run_aog_lab.py (gnm.aog.incidents)", notes),
            **summary, "showcase_ids": ids, "provenance": "SIMULATED"}, out / "summary.json")
@@ -69,11 +72,12 @@ def main():
               "by_severity": {k: int(v) for k, v in df.severity.value_counts().items()},
               "by_type_severity": {f"{a}|{b}": int(n) for (a, b), n in df.groupby(["type", "severity"]).size().items()}}
     _dump({"meta": _meta("scripts/run_aog_lab.py (gnm.aog.actions)",
-                         "Planner exceptions for history week 103 (DERIVED from the SIMULATED history). "
-                         "QUARANTINE_DOCS rows are SIMULATED by a seeded RNG (no document data exists). "
+                         "Planner exceptions for v2 history week 103 (DERIVED from the SIMULATED history). Only "
+                         "exception types the simulation produces; no documentation data exists, so none is invented. "
                          "KIT_SHORTAGE checks projected A-checks for weeks 104-106 (history schedule ends at week 103).",
                          provenance="DERIVED"),
            "as_of_week": int(acfg["actions"]["as_of_week"]), "counts": counts,
+           "owners": sorted(df.owner.unique().tolist()), "action_fields": ACTION_FIELDS,
            "actions": json.loads(df.to_json(orient="records")), "provenance": "DERIVED"}, aout / "actions.json")
     cf = summary["counterfactual"]
     print(f"incidents {summary['n_incidents']} ({summary['n_requests']} requests), AOG h {summary['aog_hours_total']:.0f} "

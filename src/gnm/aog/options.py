@@ -166,6 +166,8 @@ class _Ctx:
         self.win = snap.window_h if snap.window_h is not None else math.inf
 
     def opt(self, key, feasible, codes, wait_h=None, cost=0.0, **kw):
+        if wait_h is not None:                 # publish-precision first, so exposure reconciles with shown numbers
+            wait_h, cost = round(float(wait_h), 1), round(float(cost), 2)
         o = {"key": key, "option": OPTION_LABELS[key], "feasible": bool(feasible), "reason_codes": list(codes),
              "wait_h": None if wait_h is None else float(round(wait_h, 1)), "direct_cost": float(round(cost, 2)),
              "greyed": False, "human_decision": False, "estimate": False, "rank": None,
@@ -274,7 +276,7 @@ def evaluate_options(snap: Snapshot, net: Network, cfg: dict | None = None, acfg
         opts["lateral"] = c.opt("lateral", False, codes, evidence={"donors": rows})
 
     # inbound supply (needed for loan-duration estimates)
-    over_h = 7 * 24.0
+    over_h = float(acfg["inbound"]["overdue_assumed_remaining_days"]) * 24.0
     cands = []
     trs = sorted(snap.inbound_transfers, key=lambda x: (x["eta_h"], x["transfer_id"]))
     for tr_ in trs[snap.station_backorders_ahead:]:
@@ -312,7 +314,6 @@ def evaluate_options(snap: Snapshot, net: Network, cfg: dict | None = None, acfg
     else:
         opts["inbound"] = c.opt("inbound", False, ["NO_OPEN_SUPPLY" if not n_in else "QUEUED_BEHIND_BACKORDERS"],
                                 evidence={"inbound_units": n_in, "backorders_ahead": snap.backorders_ahead})
-        sw, _, _ = c.leg(hub, 1e9)
         transit = float(net.shop_transit_h.get(snap.repair_shop, 0.0)) if snap.repair_shop else 0.0
         own_unit_h = snap.quoted_tat_d * 24 + transit + (0 if st == hub else net.hours(hub, st))
 

@@ -312,7 +312,7 @@ def generate_actions(view: HistoryView, week: int | None = None) -> pd.DataFrame
         if cls == "R":
             continue
         u = mr[mr.pn == pn]
-        recent = float(u[u.need_h >= T - win * W].qty.sum())
+        recent = float(u[u.need_h >= T - win * W].qty.sum())      # year over year (decline_window_weeks)
         prior = float(u[(u.need_h >= T - 2 * win * W) & (u.need_h < T - win * W)].qty.sum())
         net_oh = _network_serviceable(view, pn, T)
         rate_w = recent / win
@@ -323,7 +323,7 @@ def generate_actions(view: HistoryView, week: int | None = None) -> pd.DataFrame
         qlist = [int(x) for x in q.reindex(range(int((T - 1) // (13 * W)) + 1), fill_value=0).tolist()]
         unit = float(parts.loc[pn].unit_cost_aed)
         excess_units = None if cover == math.inf else max(0.0, net_oh - rate_w * float(a["excess_cover_weeks"]))
-        ev = {"usage_recent_26w": recent, "usage_prior_26w": prior,
+        ev = {"usage_recent": recent, "usage_prior": prior, "window_weeks": win,
               "ratio": round(ratio, 3) if ratio != math.inf else None, "network_on_hand": net_oh,
               "cover_weeks_at_recent_rate": None if cover == math.inf else round(cover, 1), "quarterly_usage": qlist,
               "unit_cost_aed": unit,

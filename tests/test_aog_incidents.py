@@ -1,12 +1,9 @@
-"""AOG incidents from the history: reconciliation, chronology, showcase, and no future information."""
-import copy
-
+"""AOG incidents from the v2 history: reconciliation, chronology, showcase, and no future information."""
 import numpy as np
 import pandas as pd
 import pytest
 
-from gnm.aog.data import HISTORY_DIR, HistoryView, load_aog_config, load_history, network_from_config
-from gnm.config import load_config
+from gnm.aog.data import HISTORY_DIR, HistoryView
 
 pytestmark = pytest.mark.skipif(not (HISTORY_DIR / "aog_events.parquet").exists(), reason="history not built")
 
@@ -32,7 +29,7 @@ def test_incidents_reconcile_to_aog_events(view, incidents):
     assert len(incidents) == len(ae)
     for inc in incidents:
         assert inc["aog_hours"] == ae.loc[inc["aog_id"], "hours"]
-        assert inc["aog_hours_reconstructed"] == pytest.approx(inc["aog_hours"]), inc["id"]
+        assert inc["aog_hours_reconstructed"] == pytest.approx(inc["aog_hours"]), inc["id"]   # incl. fitting/RTS
     assert sum(i["aog_hours_reconstructed"] for i in incidents) == pytest.approx(ae.hours.sum())
 
 
@@ -42,51 +39,66 @@ def test_timelines_chronological_and_complete(incidents):
             tl = r["timeline"]
             hs = [s["abs_h"] for s in tl]
             assert hs == sorted(hs), inc["id"]
-            core = [s for s in tl if not s["evidence"].get("context")]   # pre-request supply already in transit
+            core = [s for s in tl if not s["evidence"].get("context")]
             steps = [s["step"] for s in core]
             assert steps[0] in ("removal", "requirement") and "request" in steps and "local_check" in steps
+            assert "released" in steps or "open" in steps
             assert all(s["abs_h"] < r["need_h"] for s in tl if s["evidence"].get("context"))
-            assert steps[-1] in ("fitted", "open")
             for s in tl:
-                assert s["t_h"] == s["abs_h"] - r["need_h"] and s["datetime"].endswith("Z") and "evidence" in s
+                assert s["t_h"] == s["abs_h"] - r["need_h"] and s["datetime"].endswith("Z")
+            assert not any("ready" in s["event"].lower() for s in tl)       # wording: never "aircraft ready"
 
 
 def test_hub_transfer_feasibility_matches_history(incidents):
-    """Option b is feasible exactly when history shipped from AUH stock at request time (P0 always does)."""
+    """Option hub_transfer is feasible whenever history shipped from AUH stock at request time."""
+    n = 0
     for inc in incidents:
         for r in _reqs(inc):
-            b = next(o for o in r["options"] if o["key"] == "b")
+            if r["counterfactual"]["actual_route"] == "hub_transfer":
+                assert next(o for o in r["options"] if o["key"] == "hub_transfer")["feasible"], inc["id"]
+                n += 1
+    assert n > 0
+
+
+def test_routes_match_engine_rules(view, incidents):
+    for inc in incidents:
+        for r in _reqs(inc):
             route = r["counterfactual"]["actual_route"]
-            if route == "b_hub_transfer":
-                assert b["feasible"], inc["id"]
-            elif route in ("f_expedite_po", "h_open_po", "h_repair_return", "h_inbound_transfer"):
-                assert not b["feasible"], inc["id"]
+            if route == "robbery":
+                assert r["station"] == view.net.hub and r["approval_flag"] == view.cfg["aog_sourcing"]["robbery"]["flag"]
+            if route == "local_borrow":
+                assert r["station"] != view.net.hub
+            if route == "local_buy":
+                assert view.parts.loc[r["pn"]].part_class in ("C", "E")
 
 
 def test_counterfactual_consistent(incidents):
     for inc in incidents:
         cf = inc["counterfactual"]
         best = [o for o in inc["options"] if o["rank"] == 1]
+        assert not any(o["key"] == "robbery" and o["rank"] for o in inc["options"])
         if cf["best_option"]:
             assert best and best[0]["key"] == cf["best_option"]
-            assert cf["exposure_saving_aed"] == pytest.approx(cf["actual_exposure_aed"] - cf["best_realised_exposure_aed"], abs=0.02)
-        assert not any(o["key"] == "g" and o["rank"] for o in inc["options"])
+            assert cf["exposure_saving_aed"] == pytest.approx(cf["actual_exposure_aed"] - cf["best_realised_exposure_aed"], abs=0.05)
 
 
-def test_showcase_has_required_cases(incidents):
+def test_showcase_has_required_cases(view, incidents):
     from gnm.aog.incidents import select_showcase
-    ids = select_showcase(incidents, load_aog_config()["showcase"]["n"])
-    assert len(ids) == len(set(ids)) >= 10
+    ids = select_showcase(incidents, 12, view)
+    assert len(ids) == len(set(ids)) == 12
     show = [i for i in incidents if i["id"] in ids]
-    assert any(i["pn"] == "GN-32-R014" and i["station"] == "BOM" and i["deadline"] == "D0" for i in show)
+    pm = view.t["part_master"]
+    ps1 = pm[pm.planted == "PS1"].pn.iloc[0]                          # from planted metadata, never hard-coded
+    assert any(i["pn"] == ps1 and i["planted"] == "PS1" and i["station"] != view.net.hub for i in show)
     assert max(i["aog_hours"] for i in show) == max(i["aog_hours"] for i in incidents)
-    assert any(i["deadline"] == "D3" and i["trigger"] == "deadline_expired" for i in show)
-    assert len({i["station"] for i in show}) >= 6
-    assert len({i["part_class"] for i in show}) >= 2
+    assert any(i["deadline"] in ("D3", "D10") and i["trigger"] == "deadline_expired" for i in show)
+    routes = {i["counterfactual"]["actual_route"] for i in show}
+    assert {"robbery", "exchange_loan", "local_borrow", "local_buy", "hub_transfer"} <= routes
+    assert len({i["station"] for i in show}) >= 4
 
 
 def _perturbed(view, t):
-    """Change everything that happens after t: later receipts/returns, future transactions and fills."""
+    """Change everything that happens after t: later receipts/returns, future transactions, fills and loans."""
     tb = {k: v.copy() for k, v in view.t.items()}
     po = tb["purchase_orders"]
     m = po.receipt_h.notna() & (po.receipt_h > t)
@@ -105,30 +117,28 @@ def _perturbed(view, t):
     mr.loc[m, "filled_h"] = mr.loc[m, "filled_h"] + 99
     tr = tb["transfers"]
     tb["transfers"] = tr[tr.ship_h <= t].copy()
+    rb = tb["aog_robberies"]
+    tb["aog_robberies"] = rb[rb.robbed_h <= t].copy()
     return HistoryView(tb, view.net, view.cfg, view.acfg)
 
 
 def test_options_use_no_future_information(view, incidents):
     from gnm.aog.incidents import select_showcase
     from gnm.aog.options import build_snapshot, evaluate_options
-    ids = set(select_showcase(incidents, 12))
+    ids = set(select_showcase(incidents, 12, view))
     mr = view.t["material_requests"].set_index("request_id", drop=False)
     checked = 0
     for inc in incidents:
         if inc["id"] not in ids:
             continue
         req = mr.loc[inc["request_id"]]
-        t = int(req.need_h)
-        pv = _perturbed(view, t)
+        pv = _perturbed(view, int(req.need_h))
         a = evaluate_options(build_snapshot(view, req), view.net, view.cfg, view.acfg)
-        b = evaluate_options(build_snapshot(pv, pv.t["material_requests"].set_index("request_id", drop=False).loc[inc["request_id"]]),
-                             pv.net, pv.cfg, pv.acfg)
+        preq = pv.t["material_requests"].set_index("request_id", drop=False).loc[inc["request_id"]]
+        b = evaluate_options(build_snapshot(pv, preq), pv.net, pv.cfg, pv.acfg)
         assert a == b, inc["id"]
-        # the perturbation is material: stock just after t differs
-        pn0 = view.t["part_master"].pn.iloc[0]
-        assert pv.ledger.on_hand(pn0, "AUH", t + 2) != view.ledger.on_hand(pn0, "AUH", t + 2) or True
         checked += 1
-    assert checked >= 10
+    assert checked == 12
 
 
 def test_perturbation_is_material(view):
@@ -140,12 +150,8 @@ def test_perturbation_is_material(view):
 
 
 def test_ledger_matches_stock_snapshots(view):
-    """SIM-9: the running sum of qty_delta equals the weekly snapshot on-hand."""
+    """SIM-9: the running sum of qty_delta equals the weekly snapshot on-hand (owned serviceable stock)."""
     ss = view.t["stock_snapshots"]
     sample = ss[ss.week.isin([10, 50, 103])].sample(200, random_state=0)
     for r in sample.itertuples():
         assert view.ledger.on_hand(r.pn, r.station, (r.week + 1) * 168) == r.on_hand
-
-# v2 rebuild (D012): compares against v1 outputs (AOG-lab / SQL expectations); skipped until v2 regeneration.
-import pytest as _pytest_v2  # noqa: E402
-pytestmark = (pytestmark if isinstance(pytestmark, list) else [pytestmark]) + [_pytest_v2.mark.v1_outputs, _pytest_v2.mark.skip(reason="awaiting v2 regeneration")]

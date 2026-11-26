@@ -535,6 +535,12 @@ def summarise(view: HistoryView, incidents: list[dict]) -> dict:
             "best_option_exposure_aed_ex_ante": round(float(df.best_exposure_aed.fillna(0).sum()), 0),
             "best_option_exposure_aed": round(float(df.best_realised_exposure_aed.fillna(0).sum()), 0),
             "net_exposure_saving_aed": round(float(df.exposure_saving_aed.fillna(0).sum()), 0),
+            "excluding_history_robbery": {
+                "requests": int((df.actual_route != "robbery").sum()),
+                "actual_request_aog_h": float(df[df.actual_route != "robbery"].actual_aog_h.sum()),
+                "best_option_request_aog_h": float(df[df.actual_route != "robbery"].best_realised_aog_h.fillna(0).sum()),
+                "net_exposure_saving_aed": round(float(df[df.actual_route != "robbery"].exposure_saving_aed.fillna(0).sum()), 0),
+            },
             "realised_basis_counts": {str(k): int(v) for k, v in df.realised_basis.value_counts().items()},
             "by_best_option_where_lower": {str(k): {"requests": int(len(g)), "aog_h_saving": float(g.aog_h_saving.sum()),
                                                     "exposure_saving_aed": round(float(g.exposure_saving_aed.sum()), 0)}
