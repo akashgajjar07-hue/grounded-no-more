@@ -71,7 +71,7 @@ def n_story_steps():
 
 def story_next(page):
     """Advance the story the way a viewer would: click a visible Next button, else press the right arrow."""
-    for sel in ("[data-story-next]", ".story-next", "button:has-text('Next')"):
+    for sel in (".story-card .story-actions button:has-text('Next')", "[data-story-next]", ".story-next"):
         loc = page.locator(sel)
         try:
             if loc.count() and loc.first.is_visible():
@@ -112,7 +112,24 @@ def sweep_slider(page, sl, steps, dwell_ms, on_frame=None):
             on_frame()
 
 
-def record_video(base, out):
+def start_story(page):
+    """Open the guided tour: the header Story button (wave B), else a 'Start the story' button."""
+    for loc in (page.locator("#story-btn"), page.get_by_role("button", name="Start the story")):
+        try:
+            if loc.count() and loc.first.is_visible():
+                loc.first.click()
+                break
+        except Exception:
+            pass
+    page.wait_for_selector(".story-card", state="visible", timeout=10000)
+
+
+def story_state(page):
+    return page.evaluate("""() => { const c = document.querySelector('.story-card');
+        return c ? {hash: location.hash, text: c.innerText.split(String.fromCharCode(10)).slice(0, 3).join(' | ')} : null; }""")
+
+
+def record_video(base, out, stills_dir=None):
     from playwright.sync_api import sync_playwright
     tmp = Path(tempfile.mkdtemp(prefix="gnm-video-"))
     t0 = time.time()
@@ -124,11 +141,21 @@ def record_video(base, out):
         wait_ready(page, "[data-story='mission-hero']")
         n = n_story_steps()
         page.wait_for_timeout(3000)  # let the viewer see Mission Control
-        page.get_by_role("button", name="Start the story").first.click()
-        page.wait_for_timeout(int(STEP_S * 1000))
-        for i in range(1, n):
-            story_next(page)
+        errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        start_story(page)
+        log = []
+        for i in range(n):
+            if i:
+                story_next(page)
             page.wait_for_timeout(int(STEP_S * 1000))
+            log.append(story_state(page))
+            if stills_dir:
+                page.screenshot(path=str(Path(stills_dir) / f"step-{i + 1}.png"))
+        for i, s in enumerate(log, 1):
+            print(f"  step {i}: {s}")
+        if errors:
+            print(f"  ! page errors: {errors}")
         page.keyboard.press("Escape")
         page.wait_for_timeout(600)
         page.goto(base + "#/capital")
@@ -136,6 +163,8 @@ def record_video(base, out):
         page.wait_for_timeout(1500)
         sl = capital_slider(page)
         sweep_slider(page, sl, steps=12, dwell_ms=700)
+        if stills_dir:
+            page.screenshot(path=str(Path(stills_dir) / "capital.png"))
         page.wait_for_timeout(1500)
         video = page.video
         ctx.close()
@@ -205,6 +234,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--url", default=None, help=f"site to record (default: local server of docs/; live: {LIVE})")
     ap.add_argument("--only", choices=["video", "hero", "gif"])
+    ap.add_argument("--stills", default=None, help="directory for per-step stills taken during the video")
     a = ap.parse_args()
     ctx = local_server() if a.url is None else contextlib.nullcontext(a.url)
     with ctx as url:
@@ -215,7 +245,7 @@ def main():
         if a.only in (None, "gif"):
             gif(base, ROOT / "docs" / "assets" / "readme" / "demo.gif")
         if a.only in (None, "video"):
-            record_video(base, ROOT / "presentations" / "demo.webm")
+            record_video(base, ROOT / "presentations" / "demo.webm", a.stills)
 
 
 if __name__ == "__main__":
