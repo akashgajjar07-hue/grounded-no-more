@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-26T20:05:28",
+ "generated": "2026-11-26T20:07:33",
  "label": "baseline",
  "effect_timeout_ms": 1000,
  "matrix": {
@@ -50,11 +50,11 @@
   "firefox": "[pid=86274][err] Could not find profile folder."
  },
  "totals": {
-  "cells": 202,
-  "elements": 16244,
-  "ok": 14414,
-  "failed": 865,
-  "skipped": 965,
+  "cells": 207,
+  "elements": 16655,
+  "ok": 14782,
+  "failed": 874,
+  "skipped": 999,
   "load_errors": 2
  },
  "by_browser": {
@@ -66,10 +66,10 @@
    "load_errors": 0
   },
   "webkit": {
-   "cells": 96,
-   "ok": 6868,
-   "failed": 404,
-   "skipped": 463,
+   "cells": 101,
+   "ok": 7236,
+   "failed": 413,
+   "skipped": 497,
    "load_errors": 2
   }
  },
@@ -82,10 +82,10 @@
    "load_errors": 0
   },
   "actions": {
-   "cells": 19,
-   "ok": 1190,
-   "failed": 71,
-   "skipped": 293,
+   "cells": 21,
+   "ok": 1320,
+   "failed": 79,
+   "skipped": 318,
    "load_errors": 0
   },
   "aog": {
@@ -103,10 +103,10 @@
    "load_errors": 0
   },
   "forecast": {
-   "cells": 13,
-   "ok": 965,
-   "failed": 29,
-   "skipped": 39,
+   "cells": 15,
+   "ok": 1117,
+   "failed": 30,
+   "skipped": 45,
    "load_errors": 0
   },
   "glossary": {
@@ -138,10 +138,10 @@
    "load_errors": 0
   },
   "network": {
-   "cells": 15,
-   "ok": 1137,
+   "cells": 16,
+   "ok": 1223,
    "failed": 97,
-   "skipped": 85,
+   "skipped": 88,
    "load_errors": 0
   },
   "parts": {
@@ -167,7 +167,7 @@
   }
  },
  "failures_by_owner": {
-  "SHELL (docs/js/app.js / ui.js)": 363,
+  "SHELL (docs/js/app.js / ui.js)": 371,
   "docs/js/views/rotable-repair.js": 143,
   "docs/js/views/data-method.js": 100,
   "docs/js/views/parts-intelligence.js": 89,
@@ -175,7 +175,7 @@
   "docs/js/views/mission-control.js": 29,
   "docs/lab/cutaway.js (CUTAWAY)": 25,
   "docs/js/views/aog-response-lab.js": 15,
-  "docs/js/views/forecast-lab.js": 9,
+  "docs/js/views/forecast-lab.js": 10,
   "docs/js/views/glossary.js": 7,
   "docs/js/views/about.js": 6
  },
@@ -7937,6 +7937,126 @@
   {
    "browser": "webkit",
    "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "GROUNDED NO MORE — Mission Control",
+   "selector": "#app > nav:nth-of-type(1) > a:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Planner Action Centre8",
+   "selector": "#nav > div:nth-of-type(1) > a:nth-of-type(2)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Parts Intelligence2",
+   "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Rotable & Repair4",
+   "selector": "#nav > div:nth-of-type(2) > a:nth-of-type(3)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Capital Optimiser6",
+   "selector": "#nav > div:nth-of-type(3) > a:nth-of-type(2)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Data & Method0",
+   "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "link",
+   "label": "Glossary",
+   "selector": "#nav > div:nth-of-type(4) > a:nth-of-type(3)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Page.click: Timeout 30000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "390x844",
+   "owner": "SHELL (docs/js/app.js / ui.js)",
+   "kind": "button",
+   "label": "Open navigation",
+   "selector": "#menu-btn",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
    "mode": "simple",
    "viewport": "1440x900",
    "owner": "SHELL (docs/js/app.js / ui.js)",
@@ -8886,6 +9006,21 @@
    "errors": [
     "console.error: SyntaxError: Importing binding name 'tx' is not found."
    ]
+  },
+  {
+   "browser": "webkit",
+   "target": "forecast?pn=GN-21-R001",
+   "mode": "simple",
+   "viewport": "390x844",
+   "owner": "docs/js/views/forecast-lab.js",
+   "kind": "button",
+   "label": "More",
+   "selector": "#view > div:nth-of-type(3) > section:nth-of-type(1) > figure:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > button:nth-of-type(1)",
+   "action": "",
+   "effects": [],
+   "ms": null,
+   "note": "TimeoutError: Locator.click: Timeout 1000ms exceeded.",
+   "errors": []
   },
   {
    "browser": "webkit",
@@ -16425,6 +16560,18 @@
   {
    "browser": "webkit",
    "target": "actions?id=EX-103-001",
+   "mode": "expert",
+   "viewport": "390x844",
+   "seconds": 244.8,
+   "total": 84,
+   "ok": 57,
+   "failed": 8,
+   "skipped": 19,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?id=EX-103-001",
    "mode": "simple",
    "viewport": "1440x900",
    "seconds": 40.2,
@@ -16444,6 +16591,18 @@
    "ok": 57,
    "failed": 8,
    "skipped": 19,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "actions?severity=urgent",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "seconds": 36.5,
+   "total": 79,
+   "ok": 73,
+   "failed": 0,
+   "skipped": 6,
    "load_errors": 0
   },
   {
@@ -16695,6 +16854,30 @@
    "total": 82,
    "ok": 77,
    "failed": 2,
+   "skipped": 3,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "forecast?pn=GN-21-R001",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "seconds": 52.4,
+   "total": 77,
+   "ok": 74,
+   "failed": 0,
+   "skipped": 3,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "forecast?pn=GN-21-R001",
+   "mode": "simple",
+   "viewport": "390x844",
+   "seconds": 56.6,
+   "total": 82,
+   "ok": 78,
+   "failed": 1,
    "skipped": 3,
    "load_errors": 0
   },
@@ -17078,6 +17261,18 @@
    "seconds": 50.1,
    "total": 82,
    "ok": 79,
+   "failed": 0,
+   "skipped": 3,
+   "load_errors": 0
+  },
+  {
+   "browser": "webkit",
+   "target": "network?station=LHR",
+   "mode": "simple",
+   "viewport": "390x844",
+   "seconds": 55.4,
+   "total": 89,
+   "ok": 86,
    "failed": 0,
    "skipped": 3,
    "load_errors": 0

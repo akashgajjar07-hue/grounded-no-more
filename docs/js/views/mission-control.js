@@ -247,6 +247,19 @@ export async function render(el, ctx) {
   // ================================================================ today's planner priorities
   res.append(prioritiesCard(ranked, actions, parts, partBy, ctx));
 
+  // ================================================================ EXPLORE (V21-D2: cutaway below the 4.3 hero bar → Explore, hero unchanged)
+  const ex = h('section', { class: 'mc-explore', id: 'explore', dataset: { role: 'explore' }, 'aria-labelledby': 'explore-h' });
+  const exHead = sectionTitle('Explore');
+  exHead.querySelector('h2').id = 'explore-h';
+  ex.append(exHead, card({
+    cls: 'mc-explore-card', kicker: 'Interactive drawing', prov: 'ASSUMED',
+    title: 'Where the parts sit on a generic narrowbody',
+    body: h('div', { class: 'mc-body' },
+      h('p', {}, 'A cutaway drawing of a generic aircraft. Pick a numbered part to see where it is fitted and how often it comes off.'),
+      h('p', {}, h('a', { class: 'btn btn--ghost', href: 'lab/cutaway.html', dataset: { role: 'explore-cutaway' } }, 'Open the cutaway drawing', icon('chevron-right')))),
+  }));
+  el.append(ex);
+
   if (ctx.params?.section === 'results') scrollToResults(false);
   return () => { cleanups.forEach((f) => { try { f?.(); } catch { /* ignore */ } }); };
 }
