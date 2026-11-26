@@ -1,8 +1,5 @@
 {
-  "grade": 5.8,
-  "maxSentenceWords": 29,
-  "longSentences": [
-    "I want to work in materials, inventory or demand planning in Abu Dhabi, a major aviation hub, so I built this project to learn the problem properly.",
-    "The starting point turned out to be simpler than a competent airline would run, so the headline gap is bigger than it would be against a careful real operator."
-  ]
+  "grade": 5.7,
+  "maxSentenceWords": 25,
+  "longSentences": []
 }

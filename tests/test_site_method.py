@@ -3,9 +3,20 @@ from __future__ import annotations
 
 import pytest
 
-from _sitefx import VIEWPORTS, audit, browser, open_page, site  # noqa: F401
+import json
+import re
+
+from _sitefx import DOCS, VIEWPORTS, audit, browser, open_page, site  # noqa: F401
 
 pytestmark = pytest.mark.browser
+METHOD = json.loads((DOCS / "data" / "method.json").read_text())
+
+
+def _mode(page, mode):
+    page.evaluate(f"import('./js/lib/mode.js').then(m => m.setMode('{mode}'))")
+    page.wait_for_timeout(300)
+    page.wait_for_function("document.documentElement.dataset.ready === 'true'")
+    page.wait_for_timeout(900)
 
 
 @pytest.mark.parametrize("vp", list(VIEWPORTS))
@@ -29,6 +40,7 @@ def test_method_renders_clean(site, browser, vp):  # noqa: F811
 def test_assumption_register_filters(site, browser):  # noqa: F811
     ctx, page, problems = open_page(browser, site + "#/method", "1440")
     try:
+        _mode(page, "expert")
         showing = page.locator(".dm-showing")
         total = int(showing.inner_text().split(" of ")[1].replace(",", ""))
         assert total > 0
@@ -66,6 +78,7 @@ def test_wave2_validation_no_clamping(site, browser, vp):  # noqa: F811
     """Critic #7: every selection diamond lies inside the plot (shared % axis), headlines <= 90, ✓/✕ column is named."""
     ctx, page, problems = open_page(browser, site + "#/method", vp)
     try:
+        _mode(page, "expert")
         page.wait_for_selector('[data-story="method-validation"] svg path')
         res = page.evaluate("""() => {
           const frames = [...document.querySelectorAll('#view figure.chart-frame')];
@@ -92,6 +105,7 @@ def test_wave3_no_raw_iso_tests_card_and_register_keys(site, browser, vp):  # no
     import re
     ctx, page, problems = open_page(browser, site + "#/method", vp)
     try:
+        _mode(page, "expert")
         text = page.locator("#view").inner_text()
         # config values (e.g. calendar.epoch) are data; build timestamps outside the register must be humanised
         outside = page.evaluate("""() => { const v = document.querySelector('#view').cloneNode(true);
@@ -106,6 +120,65 @@ def test_wave3_no_raw_iso_tests_card_and_register_keys(site, browser, vp):  # no
             bad = page.evaluate("""() => [...document.querySelectorAll('.dm-wrap .dts-primary')].slice(0, 40)
               .filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent)""")
             assert not bad, bad
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+# ---- v2.1 (PAGE-5): plain-English Simple mode, verbatim A5/A6, AV2 table, next experiments, donor recount
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+@pytest.mark.parametrize("mode", ["simple", "expert"])
+def test_v21_method_content(site, browser, vp, mode):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/method", vp)
+    try:
+        if mode == "expert":
+            _mode(page, "expert")
+        assert page.evaluate("document.body.classList.contains('mode-%s')" % mode)
+        audit(page, problems, min_frames=2)
+        assert page.locator('#view [data-role="intro3"]').count() == 1
+        view = page.locator("#view")
+        text = view.inner_text()
+        # A5 verbatim, A6 verbatim + ranges note
+        assert page.locator('[data-role="a5"]').inner_text().strip() == METHOD["calibration_note"]["text"]
+        assert page.locator('[data-role="a6"]').inner_text().strip() == METHOD["stress_worlds"]["text"]
+        assert METHOD["stress_worlds"]["ranges_note"] in text
+        # AV2 status table: all 25 rows, statuses from method.json; closed in Simple, open in Expert
+        xp = page.locator('[data-role="av2-table"]')
+        assert xp.evaluate("e => e.open") == (mode == "expert")
+        if mode == "simple":
+            xp.locator("summary").click()
+        tbl = xp.inner_text()
+        for f in METHOD["av2_findings"]:
+            assert f["id"] in tbl, f["id"]
+        c = METHOD["av2_counts"]
+        assert f"{c['fixed']} fixed" in text and f"{c['disclosed']} disclosed" in text
+        # next experiments hosted here
+        nx = page.locator('[data-role="next-experiments"] .dm-next-item')
+        assert nx.count() == len(METHOD["next_experiments"])
+        assert "proposed, not run" in page.locator('[data-role="next-experiments"]').inner_text().lower()
+        # donor recount note is post-plan; frozen chain and superseded v1 present
+        dr = page.locator('[data-role="donor-recount"]')
+        assert dr.count() == 1 and page.locator('[data-role="postplan"]').count() >= 1
+        assert page.locator('[data-role="holdout-chain"]').count() == 1
+        assert page.locator('[data-role="superseded"]').count() == 1
+        # wording
+        low = text.lower()
+        assert "verified" in low and "validated" not in low and "optimal" not in low
+        if mode == "simple":
+            assert not re.search(r"\b(P0|P1|P2|I125)\b", page.evaluate(
+                "(() => { const v = document.querySelector('#view').cloneNode(true); v.querySelectorAll('.mono-tag,.expert-only,[data-readability=skip],details:not([open]),.table-wrap,.data-table-stack,svg').forEach(e => e.remove()); return v.innerText; })()")), "bare policy code in Simple prose"
+            r = page.evaluate("import('./js/lib/readability.js').then(R => R.readability())")
+            assert r["grade"] <= 9 and r["maxSentenceWords"] <= 25, r
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+def test_v21_next_section_deep_link(site, browser):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/method?section=next", "1440")
+    try:
+        top = page.evaluate("document.getElementById('next-experiments').getBoundingClientRect().top")
+        assert -5 < top < 300, top
         assert not problems, problems
     finally:
         ctx.close()

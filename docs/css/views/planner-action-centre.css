@@ -111,3 +111,5 @@
 .pac-walk-dots span { width: 24px; height: 3px; border-radius: 2px; background: var(--line-strong); }
 .pac-walk-dots span.is-on { background: var(--primary); }
 @media (max-width: 480px) { .pac-shown { display: flex; flex-wrap: wrap; column-gap: 4px; min-width: 0; max-width: 100%; } }
+/* v2.1: Simple-mode record lines in the drawer */
+.pac-record { overflow-wrap: anywhere; }

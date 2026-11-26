@@ -40,8 +40,8 @@ def test_actions_renders_clean(site, browser, vp, route):  # noqa: F811
         if "id=" in route:
             dr = page.locator(".drawer.is-open")
             dr.wait_for()
-            assert FIRST_URGENT["exception_id"] in dr.inner_text()
-            assert FIRST_URGENT["recommended_action"][:30] in dr.inner_text()
+            assert FIRST_URGENT["exception_id"] in dr.text_content()
+            assert FIRST_URGENT["recommended_action"][:30] in dr.text_content()
     finally:
         ctx.close()
 
@@ -151,6 +151,64 @@ def test_wave3_actions(site, browser, vp):  # noqa: F811
         dr = page.locator(".drawer").inner_text()
         assert not re.search(r"\b[A-Z]+_[A-Z_]+\b", dr), re.findall(r"\b[A-Z]+_[A-Z_]+\b", dr)
         assert "(s)" not in dr
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+# ---- v2.1 (PAGE-5): plain-English Simple mode; Expert keeps the planner wording; CSV unchanged
+def _mode(page, mode):
+    page.evaluate(f"import('./js/lib/mode.js').then(m => m.setMode('{mode}'))")
+    page.wait_for_timeout(300)
+    page.wait_for_function("document.documentElement.dataset.ready === 'true'")
+    page.wait_for_timeout(900)
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+@pytest.mark.parametrize("mode", ["simple", "expert"])
+def test_v21_actions_modes(site, browser, vp, mode):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/actions", vp)
+    try:
+        if mode == "expert":
+            _mode(page, "expert")
+        audit(page, problems, min_frames=1)
+        assert page.locator('#view [data-role="intro3"]').count() == 1
+        assert page.locator('#view [data-role="scope"]').count() >= 1
+        walk = page.locator('[data-story="action-walkthrough"]').text_content()
+        opts = page.locator("#pac-type option").all_inner_texts()
+        acts = page.locator(".pac-c-action").all_inner_texts()
+        if mode == "simple":
+            assert "Why it came up" in walk and "What we know" in walk
+            assert "Station short of a spare" in opts and "Outstation depletion" not in opts
+            # plain actions: no planner shorthand in the rows
+            assert not any(re.search(r"\b(RO|PO|min/max|D0|D3|D10|AOG)\b", a) for a in acts), acts[:5]
+            prose = page.evaluate("(() => { const v = document.querySelector('#view').cloneNode(true); v.querySelectorAll('.mono,.mono-tag,.expert-only,.term-expert,svg,.table-wrap').forEach(e => e.remove()); return v.innerText; })()")
+            assert not re.search(r"\b(P0|P1|P2|I125)\b", prose)
+            r = page.evaluate("import('./js/lib/readability.js').then(R => R.readability())")
+            assert r["grade"] <= 9 and r["maxSentenceWords"] <= 25, r
+        else:
+            assert "What triggered it" in walk and "Outstation depletion" in opts
+            first = page.locator(".pac-row").first.get_attribute("data-id")
+            a = next(x for x in A if x["exception_id"] == first)
+            assert acts[0].split(";")[0][:20] in a["recommended_action"] or acts[0][:20] in a["recommended_action"].replace("_", " ")
+        page.locator(".pac-row").first.click()
+        dr = page.locator(".drawer.is-open")
+        dr.wait_for()
+        assert ("What to do" if mode == "simple" else "Recommended action") in dr.text_content()
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+def test_v21_csv_unchanged_in_simple(site, browser):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/actions", "1440")
+    try:
+        with page.expect_download() as dl:
+            page.locator('[data-action="export-csv"]').click()
+        rows = list(csv.reader(io.StringIO(open(dl.value.path(), encoding="utf-8").read())))
+        assert rows[0] == HEADER and len(rows) - 1 == len(A)
+        by = {a["exception_id"]: a for a in A}
+        assert all(r[7].split(" ")[0] == by[r[0]]["recommended_action"].split(" ")[0] for r in rows[1:])
         assert not problems, problems
     finally:
         ctx.close()

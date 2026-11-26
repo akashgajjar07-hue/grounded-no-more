@@ -6,7 +6,10 @@
  * freeze + holdout log including any forced rerun), limitations, author, licences and the full disclaimer.
  * Story hooks: method-provenance, method-assumptions, method-validation.
  */
-import { h, pageHead, card, provChip, pill, icon, dataTable, sectionTitle, segmented, DISCLAIMER } from '../ui.js';
+import { h, pageHead, card, provChip, pill, icon, dataTable, sectionTitle, segmented, DISCLAIMER, intro3, postPlanBadge } from '../ui.js';
+import { isSimple, byMode } from '../lib/mode.js';
+import { displayName, nameTag, replaceCodes } from '../lib/names.js';
+import { term } from '../lib/glossary.js';
 import { chartFrame, responsive, svgIn, theme, truncate, refLine, fmtPct, fmtInt, fmtNum, fmtStamp } from '../charts/theme.js';
 import { assetURL } from '../data.js';
 
@@ -19,6 +22,12 @@ const PROV_TEXT = {
   DERIVED: 'Computed in this repo from REAL or SIMULATED data.',
   ASSUMED: 'A planning assumption chosen by the author, with a rationale.',
   SIMULATED: 'Produced by the synthetic world generator and simulation engine.',
+};
+const PROV_SIMPLE = {
+  REAL: 'Taken from a public source we can cite, such as airport locations.',
+  DERIVED: 'Worked out in this project from real or simulated data.',
+  ASSUMED: 'A planning choice made by the author, with a reason given.',
+  SIMULATED: 'Made by the computer model of a made-up airline.',
 };
 const AUTHOR_FALLBACK = { name: 'Akash Gajjar', degree: 'MSc Supply Chain Management, University of Liverpool (2025)', github: 'https://github.com/akashgajjar07-hue', linkedin: '' };
 
@@ -43,21 +52,33 @@ const humanISO = (s) => String(s ?? '').replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?
 export async function render(el, ctx) {
   await ensureCSS();
   const M = ctx.data.method || {};
+  const K = ctx.data.kpis || {};
+  const simple = isSimple();
   const cleanups = [];
   const sources = M.source_manifest || [];
   // wave 5: rows with a real rationale first (stable within each group); site metadata without one (meta.*) sinks to the end
   const assumptions = (M.assumptions || []).map((a, i) => ({ a, i })).sort((x, y) => (!x.a.rationale - !y.a.rationale) || x.i - y.i).map(({ a }) => a);
   const countBy = (list) => Object.fromEntries(PROV.map((p) => [p, list.filter((x) => up(x.provenance) === p).length]));
   const srcN = countBy(sources), asmN = countBy(assumptions);
+  const p0 = displayName('P0', { mode: 'short' }), p2 = displayName('P2', { mode: 'short' });
 
   el.append(pageHead({
     eyebrow: 'Reference · Data & Method', title: 'Where every number comes from',
-    lede: 'Every value on this site carries a provenance tag. Models run offline in Python; the site only loads their exported results. Falcon Hub Airways (fictional) and its fleet do not exist.',
+    lede: byMode('Every number on this site is labelled with where it came from. The models run offline; the site only shows their results. Falcon Hub Airways (fictional) and its planes do not exist.',
+      'Every value on this site carries a provenance tag. Models run offline in Python; the site only loads their exported results. Falcon Hub Airways (fictional) and its fleet do not exist.'),
     meta: [provChip(M.meta?.provenance || 'DERIVED'), M.meta?.git_sha ? h('span', { class: 'chip chip-mono' }, `build ${String(M.meta.git_sha).slice(0, 7)}`) : null, M.meta?.generated_at ? h('span', { class: 'chip chip-mono', title: `Exported ${fmtTime(M.meta.generated_at)}` }, `exported ${fmtDate(M.meta.generated_at)}`) : null].filter(Boolean),
   }));
+  // v2.1 (C2): what the page is, in three lines
+  el.append(intro3({
+    what: byMode('Where each number comes from, what was assumed, and how the results were checked.', 'Provenance of every input, the assumption register, the calibrate → freeze → holdout chain, review findings and limitations.'),
+    why: byMode('Every result here is simulated. You should know what was assumed before you trust a number.', 'All results are conditional on simulated data and stated assumptions; the evaluation chain is what makes the holdout numbers credible.'),
+    action: byMode('Read the limits and the open findings before you quote any number.', 'Check the calibration note, the AV2 status table and the limitations before citing a result.'),
+  }));
+  /** Heavy tables sit in an expander: closed in Simple mode, open in Expert. */
+  const xp = (label, content, { role } = {}) => h('details', { class: 'dm-xp', open: !simple, dataset: role ? { role } : undefined }, h('summary', {}, icon('chevron-right'), h('span', {}, label)), h('div', { class: 'dm-xp-body' }, content));
 
   // ---------------------------------------------------------------- legend
-  el.append(h('div', { class: 'dm-legend' }, PROV.map((p) => card({ body: [h('div', { class: 'row' }, provChip(p, { force: true }), h('span', { class: 'dm-count' }, `${fmtInt(srcN[p])} src · ${fmtInt(asmN[p])} asm`)), h('p', {}, PROV_TEXT[p])] }))));
+  el.append(h('div', { class: 'dm-legend' }, PROV.map((p) => card({ body: [h('div', { class: 'row' }, provChip(p, { force: true }), h('span', { class: 'dm-count' }, `${fmtInt(srcN[p])} src · ${fmtInt(asmN[p])} asm`)), h('p', {}, (simple ? PROV_SIMPLE : PROV_TEXT)[p])] }))));
 
   // ---------------------------------------------------------------- provenance flow
   const flowCard = h('section', { class: 'card mt-3', dataset: { story: 'method-provenance' } });
@@ -65,34 +86,202 @@ export async function render(el, ctx) {
   const realNames = sources.filter((s) => up(s.provenance) === 'REAL').map((s) => s.name);
   const stages = [
     { id: 'src', tag: 'REAL', title: 'Public sources', text: realNames.length ? realNames.join(' · ') : 'No REAL sources listed' },
-    { id: 'gen', tag: 'SIMULATED', title: 'World generator', text: 'Fictional fleet, part master, removals, demand and repair TATs' },
-    { id: 'eng', tag: 'SIMULATED', title: 'Simulation engine', text: 'Stock, transfers, repairs, AOG desk; seeded scenarios' },
-    { id: 'mod', tag: 'DERIVED', title: 'Models', text: 'Forecasting, inventory policy, capital frontier, AOG lab' },
+    { id: 'gen', tag: 'SIMULATED', title: 'World generator', text: byMode('Made-up fleet, parts, removals, demand and repair times', 'Fictional fleet, part master, removals, demand and repair TATs') },
+    { id: 'eng', tag: 'SIMULATED', title: 'Simulation engine', text: byMode('Stock, transfers, repairs and the urgent-parts desk, run many times', 'Stock, transfers, repairs, AOG desk; seeded scenarios') },
+    { id: 'mod', tag: 'DERIVED', title: 'Models', text: byMode('Forecasts, stock plans, spending trade-offs, urgent-parts lab', 'Forecasting, inventory policy, capital frontier, AOG lab') },
     { id: 'exp', tag: 'DERIVED', title: 'Site exports', text: 'docs/data/*.json, loaded read-only by this site' },
   ];
   const asm = { id: 'asm', tag: 'ASSUMED', title: 'Assumptions', text: `${fmtInt(asmN.ASSUMED)} tagged ASSUMED in the register (config/*.yaml)` };
   const ff = chartFrame(flowCard, {
-      implication: 'Every number traces to a source, a model or a stated assumption; none is measured airline data.',
+    implication: 'Every number traces to a source, a model or a stated assumption; none is measured airline data.',
     headline: `${fmtInt(srcN.REAL)} of ${fmtInt(sources.length)} sources are real public data; every result is derived from simulation`,
-    subtitle: 'Sources → generator → engine → models → exports · the fleet, demand and repairs are SIMULATED · holdout seeds run only after the freeze',
+    subtitle: byMode('Sources → generator → engine → models → exports · the fleet, demand and repairs are simulated · the 20 fresh test runs ran only after the freeze',
+      'Sources → generator → engine → models → exports · the fleet, demand and repairs are SIMULATED · holdout seeds run only after the freeze'),
     provenance: 'DERIVED', source: 'method.json (source_manifest, assumptions)',
     table: { columns: [{ key: 'title', label: 'Stage' }, { key: 'tag', label: 'Provenance' }, { key: 'text', label: 'What' }], rows: [stages[0], asm, ...stages.slice(1)] },
   });
   ff.body.classList.add('dm-flow');
   cleanups.push(responsive(ff.body, (w) => drawFlow(ff.body, w, stages, asm)));
 
+  // ---------------------------------------------------------------- how the results were tested (verification)
+  el.append(sectionTitle(byMode('How the results were tested', 'Verification')));
+  const V = M.validation || {};
+  const checks = V.checks || [];
+  const testsRun = num(V.tests_total) && V.tests_total > 0;
+  const nPassChk = checks.filter((c) => c.status === 'pass').length;
+  const testsCard = card({
+    cls: 'dm-tests-card', prov: 'DERIVED', kicker: byMode('Automated tests and pipeline checks', 'Automated tests (pytest) and pipeline checks'),
+    body: h('div', { class: 'dm-tests' },
+      h('div', { class: 'dm-tests-sum' },
+        testsRun ? h('div', {}, h('div', { class: 'dm-big' }, fmtInt(V.tests_passed), h('small', {}, ` / ${fmtInt(V.tests_total)}`)), h('p', { class: 't-14 muted mt-1' }, 'tests verified passing')) : h('div', {}, h('div', { class: 'dm-big' }, h('small', {}, 'Tests: not run')), V.reason ? h('p', { class: 'faint t-12 mt-1' }, V.reason) : null),
+        V.ran_at ? h('p', { class: 'dm-tests-at' }, `Run ${fmtTime(V.ran_at)}`) : null,
+        testsRun && V.tests_failed ? (simple ? h('p', { class: 't-12 faint mt-1' }, `${fmtInt(V.tests_failed)} did not pass on the full run. Expert mode gives the reason.`) : h('p', { class: 't-12 faint mt-1', dataset: { readability: 'skip' } }, humanISO(V.summary_line || ''))) : null,
+        h('p', { class: 't-14 muted mt-2' }, `${fmtInt(nPassChk)} of ${fmtInt(checks.length)} pipeline checks verified`)),
+      xp(byMode(`Show the ${fmtInt(checks.length)} pipeline checks`, `${fmtInt(checks.length)} pipeline checks`), h('div', { class: 'dm-checks' }, checks.map((c) => h('div', { class: 'dm-check' }, pill(c.status === 'pass' ? 'ok' : c.status === 'fail' ? 'urgent' : c.status === 'warn' ? 'review' : 'unknown', c.status === 'pass' ? 'Pass' : c.status === 'fail' ? 'Fail' : c.status === 'warn' ? 'Warn' : 'Not run'), h('span', {}, replaceCodes(humanISO(c.name))), c.detail ? h('span', { class: 'faint' }, humanISO(c.detail)) : null))))),
+  });
+  // v2: the calibration → freeze → holdout chain (DECISIONS rows) — the frozen holdout chain
+  const freeze = M.freeze || {};
+  const chain = freeze.chain || [];
+  const STEPS = [
+    ['Set the starting point.', `The ${p0} was tuned to land in a target range. Then the model was locked.`],
+    ['Freeze the plans.', 'Every plan was chosen on practice runs, then frozen and fingerprinted so it cannot change.'],
+    ['Test once on fresh runs.', [term('holdout'), ' were run once, after the freeze. Those results never change.']],
+    ['Label anything later.', ['Checks added after that are marked ', postPlanBadge(), ' and kept apart.']],
+  ];
+  const chainCard = card({
+    prov: 'DERIVED', kicker: byMode('The frozen test chain', 'v2 evaluation chain'), title: byMode('Tune, lock, freeze, then test once', `Calibrate ${p0}, lock, freeze, then one holdout (plus one disclosed post-plan check)`), story: undefined,
+    body: h('div', { class: 'stack-3', dataset: { role: 'holdout-chain' } },
+      h('ol', { class: 'dm-steps' }, STEPS.map(([t, d]) => h('li', {}, h('b', {}, t), ' ', h('span', {}, d)))),
+      chain.length ? xp(byMode(`Show the ${fmtInt(chain.length)} decision records behind it`, `Decision records (${fmtInt(chain.length)})`),
+        // wave C: each entry shows its first sentence; the full DECISIONS.md entry opens in place (no hard truncation)
+        h('ol', { class: 'dm-chain', dataset: { readability: 'skip' } }, chain.map((c) => { const t = replaceCodes(humanISO(stripMd(c.text)), { mode: 'code' }); const first = (t.match(/^.+?[.;](\s|$)/) || [t])[0].trim(); return h('li', {}, h('b', { class: 'mono' }, c.id), h('span', {}, ` ${first}`), first.length < t.length ? h('details', { class: 'dm-chain-more' }, h('summary', {}, 'Full entry'), h('p', { class: 'm-0' }, t)) : null); }))) : null),
+  });
+  // A5 calibration note (verbatim) + the calibration chart
+  const CN = M.calibration_note || {};
+  const calCard = h('section', { class: 'card', dataset: { role: 'calibration-note' } });
+  calCard.append(h('div', { class: 'card-kicker mb-1' }, byMode('How the starting point was set', 'Calibration (A5)')),
+    CN.text ? h('p', { class: 'dm-verbatim', dataset: { readability: 'skip', role: 'a5' } }, CN.text) : h('p', { class: 'faint t-14' }, 'Calibration note not exported.'),
+    ...(simple ? [h('p', { class: 't-14 muted mt-1' }, `In short: the ${p0}’s target range was our own choice. Every result depends on it.`)] : []));
+  const calChart = h('div', { class: 'mt-2' });
+  calCard.append(xp(byMode('Show the targets and what was reached', 'Calibration targets vs achieved'), calChart));
+  cleanups.push(calibration(calChart, M.calibration, p0));
+  // A6 stress worlds
+  const SW = M.stress_worlds || K.stress_worlds || {};
+  const swCard = card({
+    prov: SW.provenance || 'ASSUMED', kicker: byMode('Stress tests', 'Stress worlds (A6)'),
+    body: h('div', { class: 'stack-2', dataset: { role: 'stress-worlds' } },
+      h('p', { class: 'm-0' }, byMode('The plans were also run in a harder and an easier world: ', 'Stress worlds: '), h('span', { class: 'dm-verbatim-inline', dataset: { role: 'a6' } }, SW.text || 'not exported'), '.'),
+      SW.ranges_note ? h('p', { class: 'm-0 t-14 muted', dataset: { role: 'ranges-note' } }, SW.ranges_note) : null,
+      !simple && SW.parameter ? h('p', { class: 'm-0 t-12 faint' }, `Parameter: ${SW.parameter} · source ${SW.source || '—'}`) : null),
+  });
+  const conCard = h('section', { class: 'card' });
+  const conBody = h('div', {});
+  conCard.append(h('div', { class: 'card-kicker mb-1' }, byMode('Did the plan hold up on fresh runs?', 'Selection vs holdout consistency')), xp(byMode('Show the practice-run versus fresh-run check', 'Selection-seed vs holdout chart'), conBody));
+  cleanups.push(consistency(conBody, K));
+  const log = freeze.holdout_log || M.holdout_log || [];
+  const forced = log.filter((r) => r.forced);
+  const nArt = num(freeze.n_artefacts) ? freeze.n_artefacts : Array.isArray(freeze.artefacts) ? freeze.artefacts.length : null;
+  const logCard = card({
+    prov: 'DERIVED', kicker: byMode('Freeze and test log', 'Freeze and holdout log'),
+    title: freeze.frozen_at ? `Selection frozen ${fmtTime(freeze.frozen_at)}${nArt != null ? ` · ${fmtInt(nArt)} artefacts hashed${freeze.verified ? ', verified unchanged' : ''}` : ''}` : 'Freeze not exported',
+    body: [
+      forced.length ? h('div', { class: 'dm-callout', role: 'note' }, icon('alert'), h('div', {}, h('b', {}, `Disclosed: ${forced.length} forced rerun${forced.length > 1 ? 's' : ''} (${forced.map((r) => `${r.run}, ${fmtTime(r.at)}`).join('; ')}). `), humanISO(stripMd(freeze.forced_rerun_note || forced.map((r) => r.note).filter(Boolean).join(' '))))) : null,
+      xp(byMode(`Show the log (${fmtInt(log.length)} runs)`, `Holdout log (${fmtInt(log.length)} runs)`), h('div', { dataset: { readability: 'skip' } },
+        freeze.note ? h('p', { class: 't-14 muted mb-2' }, humanISO(freeze.note)) : null,
+        freeze.reporting_note ? h('p', { class: 't-14 muted mb-2' }, humanISO(stripMd(freeze.reporting_note))) : null,
+        log.length ? h('div', { class: 'dm-log' }, log.map((r) => h('div', { class: `dm-log-item ${r.forced ? 'is-forced' : ''}` }, h('span', { class: 'dm-log-dot', 'aria-hidden': 'true' }), h('div', { style: { minWidth: 0 } }, h('div', { class: 'dm-log-run' }, r.run), h('div', { class: 'dm-log-at' }, fmtTime(r.at)), r.note ? h('div', { class: 'dm-log-note' }, humanISO(r.note)) : null), pill(r.forced ? 'review' : 'ok', r.forced ? 'Forced rerun' : 'Single run')))) : h('p', { class: 'faint t-14' }, 'Holdout log not exported.'))),
+    ],
+  });
+  const V1 = M.v1_archive;
+  const v1Card = V1?.headline?.length ? card({
+    prov: 'SIMULATED', kicker: `Archived v1 world${V1.tag ? ` · git tag ${V1.tag}` : ''}`, title: 'v1 results are superseded and are not findings',
+    actions: h('span', { class: 'chip chip-superseded', dataset: { role: 'superseded' } }, 'Superseded'),
+    body: h('div', { class: 'stack', dataset: { role: 'v1-archive' } },
+      h('p', { class: 't-14 muted' }, byMode('An earlier version of this model had design flaws. Its numbers are kept for the record only.', V1.note || '')),
+      xp(byMode('Show the old v1 numbers', 'Archived v1 headline'), h('div', {},
+        dataTable({ caption: `Archived v1 headline (${V1.holdout_seeds || 'archived'})`, bare: true, dense: true, rows: V1.headline, mobileColumns: ['label', 'aog_hours', 'capital_aed'],
+          columns: [{ key: 'label', label: 'v1 policy', format: (v, r) => (simple ? `${displayName(r.policy, { mode: 'short' })} (old v1 version)` : `${v} (${r.policy})`) }, { key: 'aog_hours', label: byMode('Hours grounded / yr (v1)', 'AOG h/yr'), num: true, format: (v, r) => `${fmtInt(v)} [${fmtInt(r.aog_ci[0])}–${fmtInt(r.aog_ci[1])}]` }, { key: 'capital_aed', label: 'Capital', num: true, format: (v) => `AED ${(v / 1e6).toFixed(1)}M` }] }),
+        V1.superseded_because?.length ? h('details', { class: 'dm-v1-why' }, h('summary', {}, `Why v1 was superseded (${fmtInt(V1.superseded_because.length)} domain findings)`), h('ul', { dataset: { readability: 'skip' } }, V1.superseded_because.map((r) => h('li', {}, r)))) : null))),
+  }) : null;
+  el.append(h('div', { class: 'dm-stack', dataset: { story: 'method-validation' } }, chainCard, calCard, swCard, testsCard, conCard, logCard, v1Card));
+
+  // ---------------------------------------------------------------- AV2 review findings (A12)
+  const F = M.av2_findings || [];
+  const C = M.av2_counts || {};
+  if (F.length) {
+    el.append(sectionTitle(byMode('Review findings and what happened to each', 'Aviation review findings (AV2)')));
+    const STATUS = { fixed: ['ok', 'Fixed'], disclosed: ['review', 'Disclosed'], 'next experiment': ['info', 'Next experiment'] };
+    const range = `${F[0].id}…${F.at(-1).id}`;
+    el.append(card({
+      prov: C.provenance || 'DERIVED', kicker: byMode('An outside-style review found problems', `${range} · ${fmtInt(F.length)} findings`),
+      title: byMode(`${fmtInt(F.length)} findings: ${fmtInt(C.fixed)} fixed, ${fmtInt(C.disclosed)} disclosed, ${fmtInt(C['next experiment'])} for the next experiments`, `${fmtInt(C.fixed)} fixed · ${fmtInt(C.disclosed)} disclosed · ${fmtInt(C['next experiment'])} next experiment`),
+      body: h('div', { class: 'stack-2', dataset: { role: 'av2' } },
+        h('div', { class: 'dm-av2-counts' }, Object.entries(STATUS).map(([k, [tone, lab]]) => h('div', { class: `dm-av2-count dm-av2-count--${k.replace(' ', '-')}` }, h('span', { class: 'dm-av2-n' }, fmtInt(C[k] ?? F.filter((f) => f.status === k).length)), h('span', {}, lab)))),
+        h('p', { class: 'm-0 t-14 muted' }, byMode('Fixed means changed in this release. Disclosed means written up as a known limit. Next experiment means it needs a new run.', 'Fixed = changed in v2/v2.1; disclosed = LIMITATIONS 29–39; next experiment = needs a new simulation (proposed, not run).')),
+        xp(byMode(`Show all ${fmtInt(F.length)} findings`, `Status table (${range})`), h('div', { class: 'dm-wrap' }, dataTable({
+          caption: `Review findings ${range}: status`, bare: true, dense: true, rows: F, mobileColumns: ['title', 'status', 'id'],
+          columns: [
+            { key: 'id', label: 'ID', mono: true },
+            { key: 'title', label: 'Finding', render: (r) => replaceCodes(r.title) },
+            { key: 'severity', label: 'Severity', format: (v) => String(v || '—').replace(/^./, (c) => c.toUpperCase()) },
+            { key: 'status', label: 'Status', render: (r) => pill((STATUS[r.status] || ['unknown'])[0], (STATUS[r.status] || [null, r.status])[1]) },
+            { key: 'status_detail', label: 'Detail', render: (r) => [replaceCodes(r.status_detail || '—'), r.limitation ? h('span', { class: 'faint' }, ` · Limitation ${r.limitation}`) : null, r.v21_note ? h('span', { class: 'faint' }, ` · ${replaceCodes(r.v21_note)}`) : null] },
+          ],
+        })), { role: 'av2-table' }),
+        M.av2_source && !simple ? h('p', { class: 't-12 faint m-0' }, `Source: ${M.av2_source}`) : null),
+    }));
+  }
+
+  // ---------------------------------------------------------------- next experiments (hosted here: #/method?section=next)
+  const NX = M.next_experiments || [];
+  const nextSec = h('section', { id: 'next-experiments', class: 'dm-next', dataset: { role: 'next-experiments' }, tabindex: '-1' });
+  el.append(nextSec);
+  if (NX.length) {
+    const md = await fetch(assetURL('content/next_experiments.md')).then((r) => (r.ok ? r.text() : '')).catch(() => '');
+    const parsed = parseNext(md);
+    nextSec.append(sectionTitle('Next experiments'),
+      card({
+        prov: 'ASSUMED', kicker: byMode('Ideas to test next', 'Proposed experiments'),
+        title: byMode(`${fmtInt(NX.length)} experiments, proposed but not run`, `${fmtInt(NX.length)} next experiments · proposed, not run`),
+        body: h('div', { class: 'stack-3' },
+          h('p', { class: 'm-0 t-14 muted' }, ['Anything built from these would be labelled ', postPlanBadge(), ' and kept apart from the frozen results.']),
+          h('ol', { class: 'dm-next-list' }, NX.map((x) => {
+            const [code, rest] = /^([A-Z0-9-]+):\s*(.+)$/.test(x.title) ? x.title.match(/^([A-Z0-9-]+):\s*(.+)$/).slice(1) : [null, x.title];
+            const body = parsed[x.n];
+            const plain = (t) => (simple ? String(t).replace(/\s*\(P0\)/g, '') : t);
+            return h('li', { class: 'dm-next-item', dataset: { n: x.n } },
+              h('div', { class: 'row-wrap' }, h('h3', { class: 'dm-next-title' }, rest.replace(/^./, (c) => c.toUpperCase())), code ? h('span', { class: 'mono-tag expert-only' }, code) : null, h('span', { class: 'chip' }, x.status || 'proposed, not run')),
+              // AUTHOR-owned copy, shown as written (docs/content/next_experiments.md)
+              h('div', { class: 'dm-next-body', dataset: { readability: 'skip' } },
+                body ? body.map((b) => (Array.isArray(b) ? h('ul', {}, b.map((li) => h('li', {}, plain(li)))) : h('p', {}, plain(b)))) : h('p', {}, plain(x.summary || ''))));
+          }))),
+      }));
+    if (ctx.params.section === 'next') requestAnimationFrame(() => { nextSec.scrollIntoView({ block: 'start' }); nextSec.focus({ preventScroll: true }); });
+  }
+
+  // ---------------------------------------------------------------- donor recount (post-plan) — methodology note
+  const D = K.donor_recount;
+  if (D) {
+    const HO = D.holdout || {}, HP = D.historical_p0 || {};
+    el.append(sectionTitle(byMode('Counting planes that gave up a part', 'Donor recount methodology'), postPlanBadge()));
+    const hoRows = Object.entries(HO.robberies_per_year || {}).map(([code, v]) => ({ code, name: displayName(code, { mode: 'short' }), mean: v.mean, ci: v.ci, status: v.status }));
+    el.append(card({
+      prov: D.provenance || 'SIMULATED', kicker: byMode('Added after the frozen results', 'Post-plan, exploratory · separate from the frozen holdout'),
+      title: byMode('How borrowed-part downtime was recounted', 'Donor recount: what was counted, and what could not be'),
+      body: h('div', { class: 'stack-2', dataset: { role: 'donor-recount' } },
+        h('p', { class: 'm-0', dataset: { readability: 'skip', role: 'donor-label' } }, D.label),
+        simple ? h('ul', { class: 'dm-plain-list' },
+          h('li', {}, 'We counted how often each plan borrowed a part from another of our planes in the 20 fresh test runs.'),
+          h('li', {}, 'The hours the giving plane sat waiting were not logged in those runs. Getting them needs a new run, which this release does not do.'),
+          h('li', {}, `A separate count from the ${p0}’s history is shown on its own. It is never mixed with the test-run numbers.`))
+          : h('ul', { class: 'dm-plain-list' },
+            HO.robberies_note ? h('li', {}, HO.robberies_note) : null,
+            HO.donor_hours_why ? h('li', {}, `Donor hours: ${HO.donor_hours}. ${HO.donor_hours_why}`) : null,
+            HO.recipient_hours_note ? h('li', {}, HO.recipient_hours_note) : null,
+            HP.label ? h('li', {}, replaceCodes(HP.label, { mode: 'code' })) : null),
+        xp(byMode('Show the counts', 'Recount figures'), h('div', { class: 'stack-2' },
+          h('div', { class: 'dm-wrap' }, dataTable({
+            caption: `Holdout borrowings per year (${HO.variant || 'central'}, ${(HO.seeds || []).join('–')})`, bare: true, dense: true, rows: hoRows, mobileColumns: ['name', 'mean'],
+            columns: [{ key: 'name', label: 'Plan', render: (r) => nameTag(r.code, { mode: 'short' }) }, { key: 'mean', label: byMode('Borrowings / yr (fresh runs)', 'Robberies / yr (holdout)'), num: true, format: (v, r) => (num(v) ? `${fmtNum(v, 1)} [${fmtNum(r.ci[0], 1)}–${fmtNum(r.ci[1], 1)}]` : r.status) }],
+          })),
+          HP.robberies_per_year != null ? h('div', { class: 'dm-hist', dataset: { role: 'historical-p0' } },
+            h('div', { class: 'card-kicker' }, `Historical ${p0} · not a test-run number`),
+            h('p', { class: 'm-0 t-14', dataset: { readability: 'skip' } }, `${fmtInt(HP.robberies_per_year)} borrowings a year · ${fmtInt(HP.gross_donor_hours_per_year)} gross donor hours a year (an upper bound) · ${fmtInt(HP.counted_material_aog_hours_per_year)} counted waiting hours a year.`)) : null))),
+    }));
+  }
+
   // ---------------------------------------------------------------- sources
   el.append(sectionTitle('Source manifest', provChip('REAL')));
   el.append(card({
     prov: 'DERIVED', kicker: 'Where inputs come from', title: `${fmtInt(sources.length)} sources`,
-    body: h('div', { class: 'dm-wrap' }, dataTable({
+    body: xp(byMode(`Show the ${fmtInt(sources.length)} sources`, 'Source table'), h('div', { class: 'dm-wrap' }, dataTable({
       caption: 'Source manifest', bare: true, rows: sources, mobileColumns: ['name', 'provenance', 'used_for', 'licence'],
       columns: [
         { key: 'name', label: 'Source', render: (r) => (r.url ? h('a', { href: r.url, target: '_blank', rel: 'noopener noreferrer' }, r.name) : r.name) },
         { key: 'licence', label: 'Licence' }, { key: 'used_for', label: 'Used for' },
         { key: 'provenance', label: 'Provenance', render: (r) => provChip(r.provenance, { force: true }) },
       ],
-    })),
+    }))),
   }));
 
   // ---------------------------------------------------------------- assumption register
@@ -123,65 +312,15 @@ export async function render(el, ctx) {
     segmented({ label: 'Filter by provenance', value: 'ALL', options: [{ value: 'ALL', label: 'All' }, ...PROV.filter((p) => asmN[p]).map((p) => ({ value: p, label: `${GLYPH[p]} ${p[0]}${p.slice(1).toLowerCase()}` }))], onChange: (v) => { pf = v; apply(); } }),
     groups.length > 1 ? h('select', { class: 'dm-search', style: { flex: '0 1 200px' }, 'aria-label': 'Filter by group', onchange: (e) => { gf = e.target.value; apply(); } }, h('option', { value: 'ALL' }, 'All groups'), groups.map((g) => h('option', { value: g }, g))) : null,
     showing);
-  el.append(card({ story: 'method-assumptions', prov: 'ASSUMED', kicker: 'Planning assumptions, with rationale', title: `${fmtInt(assumptions.length)} entries · ${PROV.filter((p) => asmN[p]).map((p) => `${fmtInt(asmN[p])} ${p.toLowerCase()}`).join(' · ')}`, body: [filters, h('div', { class: 'dm-wrap' }, table)] }));
+  el.append(card({ story: 'method-assumptions', prov: 'ASSUMED', kicker: 'Planning assumptions, with rationale', title: `${fmtInt(assumptions.length)} entries · ${PROV.filter((p) => asmN[p]).map((p) => `${fmtInt(asmN[p])} ${p.toLowerCase()}`).join(' · ')}`,
+    body: xp(byMode(`Show and search all ${fmtInt(assumptions.length)} assumptions`, 'Searchable register'), h('div', {}, filters, h('div', { class: 'dm-wrap' }, table)), { role: 'register' }) }));
   apply();
-
-  // ---------------------------------------------------------------- validation
-  el.append(sectionTitle('Validation'));
-  const V = M.validation || {};
-  const checks = V.checks || [];
-  const testsRun = num(V.tests_total) && V.tests_total > 0;
-  const nPassChk = checks.filter((c) => c.status === 'pass').length;
-  const testsCard = card({
-    cls: 'dm-tests-card', prov: 'DERIVED', kicker: 'Automated tests (pytest) and pipeline checks',
-    body: h('div', { class: 'dm-tests' },
-      h('div', { class: 'dm-tests-sum' },
-        testsRun ? h('div', { class: 'dm-big' }, fmtInt(V.tests_passed), h('small', {}, ` / ${fmtInt(V.tests_total)} passed`)) : h('div', {}, h('div', { class: 'dm-big' }, h('small', {}, 'pytest: not run')), V.reason ? h('p', { class: 'faint t-12 mt-1' }, V.reason) : null),
-        V.ran_at ? h('p', { class: 'dm-tests-at' }, `Run ${fmtTime(V.ran_at)}`) : null,
-        h('p', { class: 't-14 muted mt-2' }, `${fmtInt(nPassChk)} of ${fmtInt(checks.length)} pipeline checks pass`)),
-      h('div', { class: 'dm-checks' }, checks.map((c) => h('div', { class: 'dm-check' }, pill(c.status === 'pass' ? 'ok' : c.status === 'fail' ? 'urgent' : c.status === 'warn' ? 'review' : 'unknown', c.status === 'pass' ? 'Pass' : c.status === 'fail' ? 'Fail' : c.status === 'warn' ? 'Warn' : 'Not run'), h('span', {}, humanISO(c.name)), c.detail ? h('span', { class: 'faint' }, humanISO(c.detail)) : null)))),
-  });
-  const calCard = h('section', { class: 'card' });
-  cleanups.push(calibration(calCard, M.calibration));
-  const conCard = h('section', { class: 'card' });
-  cleanups.push(consistency(conCard, ctx.data.kpis));
-  const freeze = M.freeze || {};
-  const log = freeze.holdout_log || M.holdout_log || [];
-  const forced = log.filter((r) => r.forced);
-  const nArt = num(freeze.n_artefacts) ? freeze.n_artefacts : Array.isArray(freeze.artefacts) ? freeze.artefacts.length : null;
-  const logCard = card({
-    prov: 'DERIVED', kicker: 'Freeze and holdout log',
-    title: freeze.frozen_at ? `Selection frozen ${fmtTime(freeze.frozen_at)}${nArt != null ? ` · ${fmtInt(nArt)} artefacts hashed${freeze.verified ? ', verified unchanged' : ''}` : ''}` : 'Freeze not exported',
-    body: [
-      forced.length ? h('div', { class: 'dm-callout', role: 'note' }, icon('alert'), h('div', {}, h('b', {}, `Disclosed: ${forced.length} forced rerun${forced.length > 1 ? 's' : ''} (${forced.map((r) => `${r.run}, ${fmtTime(r.at)}`).join('; ')}). `), humanISO(stripMd(freeze.forced_rerun_note || forced.map((r) => r.note).filter(Boolean).join(' '))))) : null,
-      freeze.note ? h('p', { class: 't-14 muted mb-2' }, humanISO(freeze.note)) : null,
-      freeze.reporting_note ? h('p', { class: 't-14 muted mb-2' }, humanISO(stripMd(freeze.reporting_note))) : null,
-      log.length ? h('div', { class: 'dm-log' }, log.map((r) => h('div', { class: `dm-log-item ${r.forced ? 'is-forced' : ''}` }, h('span', { class: 'dm-log-dot', 'aria-hidden': 'true' }), h('div', { style: { minWidth: 0 } }, h('div', { class: 'dm-log-run' }, r.run), h('div', { class: 'dm-log-at' }, fmtTime(r.at)), r.note ? h('div', { class: 'dm-log-note' }, humanISO(r.note)) : null), pill(r.forced ? 'review' : 'ok', r.forced ? 'Forced rerun' : 'Single run')))) : h('p', { class: 'faint t-14' }, 'Holdout log not exported.'),
-    ],
-  });
-  // v2: the calibration → freeze → holdout chain (DECISIONS rows) and the archived v1 headline (superseded, not findings)
-  const chain = freeze.chain || [];
-  const chainCard = chain.length ? card({
-    prov: 'DERIVED', kicker: 'v2 evaluation chain', title: 'Calibrate P0, lock, freeze, then one holdout (plus one disclosed post-plan check)',
-    // wave C: each entry shows its first sentence; the full DECISIONS.md entry opens in place (no hard truncation)
-    body: h('ol', { class: 'dm-chain' }, chain.map((c) => { const t = humanISO(stripMd(c.text)); const first = (t.match(/^.+?[.;](\s|$)/) || [t])[0].trim(); return h('li', {}, h('b', { class: 'mono' }, c.id), h('span', {}, ` ${first}`), first.length < t.length ? h('details', { class: 'dm-chain-more' }, h('summary', {}, 'Full entry'), h('p', { class: 'm-0' }, t)) : null); })),
-  }) : null;
-  const V1 = M.v1_archive;
-  const v1Card = V1?.headline?.length ? card({
-    prov: 'SIMULATED', kicker: `Archived v1 world${V1.tag ? ` · git tag ${V1.tag}` : ''}`, title: 'v1 results are superseded and are not findings',
-    body: h('div', { class: 'stack' },
-      h('p', { class: 't-14 muted' }, V1.note || ''),
-      dataTable({ caption: 'Archived v1 headline (holdout seeds 1000–1019)', bare: true, dense: true, rows: V1.headline, mobileColumns: ['label', 'aog_hours', 'capital_aed'],
-        columns: [{ key: 'label', label: 'v1 policy' }, { key: 'aog_hours', label: 'AOG h/yr', num: true, format: (v, r) => `${fmtInt(v)} [${fmtInt(r.aog_ci[0])}–${fmtInt(r.aog_ci[1])}]` }, { key: 'capital_aed', label: 'Capital', num: true, format: (v) => `AED ${(v / 1e6).toFixed(1)}M` }] }),
-      V1.superseded_because?.length ? h('details', { class: 'dm-v1-why' }, h('summary', {}, `Why v1 was superseded (${fmtInt(V1.superseded_because.length)} domain findings)`), h('ul', {}, V1.superseded_because.map((r) => h('li', {}, r)))) : null),
-  }) : null;
-  el.append(h('div', { class: 'dm-stack', dataset: { story: 'method-validation' } }, testsCard, calCard, conCard, logCard, chainCard, v1Card));
 
   // ---------------------------------------------------------------- limitations
   el.append(sectionTitle('Limitations'));
   const lims = M.limitations || [];
   el.append(card({ prov: 'DERIVED', kicker: 'Read before using any number', title: lims.length ? `${fmtInt(lims.length)} known limitations` : 'Limitations not exported',
-    body: lims.length ? h('div', { class: 'dm-limits' }, lims.map((l) => h('div', { class: 'dm-limit' }, typeof l === 'string' ? stripMd(l) : [l.title ? h('b', {}, stripMd(l.title)) : null, stripMd(l.text || l.detail || ''), l.section ? h('span', { class: 'faint t-12' }, ` · ${l.section}`) : null]))) : h('p', { class: 'faint t-14' }, 'See LIMITATIONS.md in the repository.') }));
+    body: lims.length ? xp(byMode(`Show all ${fmtInt(lims.length)} limitations`, 'All limitations'), h('div', { class: 'dm-limits', dataset: { readability: 'skip' } }, lims.map((l) => h('div', { class: 'dm-limit' }, typeof l === 'string' ? replaceCodes(stripMd(l)) : [l.title ? h('b', {}, replaceCodes(stripMd(l.title))) : null, replaceCodes(stripMd(l.text || l.detail || '')), l.section ? h('span', { class: 'faint t-12' }, ` · ${l.section}`) : null])))) : h('p', { class: 'faint t-14' }, 'See LIMITATIONS.md in the repository.') }));
 
   // ---------------------------------------------------------------- author, licences, disclaimer
   el.append(sectionTitle('Author, licences and disclaimer'));
@@ -192,11 +331,31 @@ export async function render(el, ctx) {
     // LinkedIn is shown only once a real URL exists (no placeholder chip)
     A.linkedin ? h('a', { class: 'btn btn--sm', href: A.linkedin, target: '_blank', rel: 'noopener noreferrer' }, 'LinkedIn', icon('chevron-right')) : null))) });
   const licCard = card({ cls: 'dm-span-12', kicker: 'Third-party licences', title: `${fmtInt((M.licences || []).length)} vendored packages and fonts`, prov: 'REAL',
-    body: h('div', { class: 'dm-wrap' }, dataTable({ caption: 'Licences', bare: true, dense: true, rows: (M.licences || []).map((r) => ({ ...r, name: stripMd(r.name) })), mobileColumns: ['name', 'licence', 'version'], columns: [{ key: 'name', label: 'Package' }, { key: 'version', label: 'Version', mono: true }, { key: 'licence', label: 'Licence' }] })) });
-  const discCard = card({ cls: 'dm-span-7', bp: true, kicker: 'Disclaimer', body: [h('p', { class: 'dm-disclaimer' }, M.disclaimer || DISCLAIMER), h('p', {}, 'Falcon Hub Airways, its tails and its part numbers are fictional; no real airline names, logos or liveries are used. Simulated rates are not measured reliability. D0/D3/D10 are hypothetical rectification windows; D3 and D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions.')] });
+    body: xp(byMode('Show the licences', 'Licence table'), h('div', { class: 'dm-wrap' }, dataTable({ caption: 'Licences', bare: true, dense: true, rows: (M.licences || []).map((r) => ({ ...r, name: stripMd(r.name) })), mobileColumns: ['name', 'licence', 'version'], columns: [{ key: 'name', label: 'Package' }, { key: 'version', label: 'Version', mono: true }, { key: 'licence', label: 'Licence' }] }))) });
+  const discCard = card({ cls: 'dm-span-7', bp: true, kicker: 'Disclaimer', body: [h('p', { class: 'dm-disclaimer', dataset: { readability: 'skip' } }, M.disclaimer || DISCLAIMER), h('p', {}, byMode('Falcon Hub Airways, its planes and its part numbers are made up. No real airline names, logos or colours are used. Simulated failure rates are not measured reliability. Urgency classes are made up for teaching, not real airline safety rules.',
+    'Falcon Hub Airways, its tails and its part numbers are fictional; no real airline names, logos or liveries are used. Simulated rates are not measured reliability. D0/D3/D10 are hypothetical rectification windows; D3 and D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions.'))] });
   el.append(h('div', { class: 'dm-grid' }, authorCard, discCard, licCard));
 
   return () => cleanups.forEach((f) => { try { f?.(); } catch { /* ignore */ } });
+}
+
+/** docs/content/next_experiments.md → {n: [paragraph | [bullet…]]} (plain text; markdown emphasis and links stripped). */
+export function parseNext(md) {
+  const out = {};
+  const clean = (t) => t.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1').replace(/`([^`]+)`/g, '$1').trim();
+  String(md || '').split(/^## /m).slice(1).forEach((sec) => {
+    const m = sec.match(/^(\d+)\.\s+.*\n([\s\S]*)$/);
+    if (!m) return;
+    const blocks = [];
+    m[2].split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean).forEach((b) => {
+      if (/^Back:/.test(b)) return;
+      const lines = b.split('\n');
+      if (lines.every((l) => /^\s*-\s+/.test(l))) blocks.push(lines.map((l) => clean(l.replace(/^\s*-\s+/, '').replace(/;$|\.$/, ''))));
+      else blocks.push(clean(lines.join(' ')));
+    });
+    out[+m[1]] = blocks;
+  });
+  return out;
 }
 
 // ------------------------------------------------------------------ provenance flow (original SVG via D3)
@@ -258,14 +417,14 @@ function hatch(svg, id) {
 }
 let hatchSeq = 0;
 
-function calibration(host, cal) {
+function calibration(host, cal, p0Name = displayName('P0', { mode: 'short' })) {
   const list = Array.isArray(cal) ? cal : cal?.targets_vs_achieved || [];
   const rows = list.filter((r) => num(r.achieved) && num(r.target_lo) && num(r.target_hi)).map((r) => ({ ...r, pass: r.pass ?? r.in_band, label: r.label || String(r.metric || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()).replace(/\baog\b/gi, 'AOG') }));
   const nPass = rows.filter((r) => (r.pass ?? (r.achieved >= r.target_lo && r.achieved <= r.target_hi))).length;
   const f = chartFrame(host, {
-      implication: 'P0 lands inside an ASSUMED plausibility band chosen before any policy comparison; the band is author judgement, not an external benchmark, so improvements are measured against that assumption.',
-    headline: rows.length ? `${fmtInt(nPass)} of ${fmtInt(rows.length)} calibration targets met by the P0 history` : 'Calibration results not exported',
-    subtitle: `Hatched band = target range (ASSUMED) · dot = achieved · ${cal?.policy || 'P0'} on the public history · each row on its own scale`,
+    implication: byMode(`The ${p0Name} lands inside a target range the author chose. It is not a real airline benchmark.`, `The ${p0Name} (P0) lands inside an ASSUMED band chosen after diagnosing the model, not an external benchmark, so improvements are measured against that assumption.`),
+    headline: rows.length ? `${fmtInt(nPass)} of ${fmtInt(rows.length)} calibration targets met by the ${p0Name} history` : 'Calibration results not exported',
+    subtitle: `Hatched band = target range (ASSUMED) · dot = achieved · ${byMode(p0Name, displayName(cal?.policy || 'P0', { mode: 'code' }))} on the public history · each row on its own scale`,
     provenance: cal?.provenance || 'SIMULATED', source: 'method.json (calibration)',
     table: { columns: [{ key: 'label', label: 'Metric' }, { key: 'target_lo', label: 'Target low', num: true, format: (v, r) => fmtV(v, r) }, { key: 'target_hi', label: 'Target high', num: true, format: (v, r) => fmtV(v, r) }, { key: 'achieved', label: 'Achieved', num: true, format: (v, r) => fmtV(v, r) }], rows: rows.map((r) => ({ ...r, label: r.label || r.metric })) },
   });
@@ -312,10 +471,10 @@ function consistency(host, kpis) {
   const rows = rows0.map((r) => ({ ...r, ok: r.selection_inside_holdout_ci ?? (r.selection_recommended >= r.holdout_ci[0] && r.selection_recommended <= r.holdout_ci[1]), dSel: rel(r.selection_recommended, r), dLo: rel(r.holdout_ci[0], r), dHi: rel(r.holdout_ci[1], r) }));
   const inside = rows.filter((r) => r.ok);
   const worst = rows.filter((r) => !r.ok).sort((a, b) => Math.abs(b.dSel) - Math.abs(a.dSel))[0];
-  const rec = kpis?.core_id || 'P2'; // wave C: the consistency rows are the core plan P2 (exporter sel_r = P2)
+  const rec = displayName(kpis?.core_id || 'P2', { mode: isSimple() ? 'short' : 'code' }); // wave C: the consistency rows are the core plan P2 (exporter sel_r = P2)
   const f = chartFrame(host, {
-      implication: 'Selection-to-holdout gaps show how much the plan was fitted to the seeds it was chosen on.',
-    headline: rows.length ? `${fmtInt(inside.length)} of ${fmtInt(rows.length)} selection-seed results fall inside the holdout 95% CI` : 'Selection vs holdout comparison not exported',
+    implication: byMode('A big gap between practice runs and fresh runs would mean the plan was tuned to the practice runs.', 'Selection-to-holdout gaps show how much the plan was fitted to the seeds it was chosen on.'),
+    headline: rows.length ? byMode(`${fmtInt(inside.length)} of ${fmtInt(rows.length)} practice-run (selection-seed) results fall inside the fresh-run likely range`, `${fmtInt(inside.length)} of ${fmtInt(rows.length)} selection-seed results fall inside the holdout 95% CI`) : 'Selection vs holdout comparison not exported',
     subtitle: `${rec} · % difference from the holdout mean · teal = holdout 95% CI · ◇ = selection-seed mean${worst ? ` · largest gap: ${label(worst.id)}, ${fmtU(worst.selection_recommended, worst)} on selection vs ${fmtU(worst.holdout_recommended, worst)} on holdout` : ''}`,
     provenance: 'SIMULATED', source: 'kpis.json (consistency)',
     table: { columns: [{ key: 'label', label: 'KPI' }, { key: 'sel', label: 'Selection' }, { key: 'hold', label: 'Holdout' }, { key: 'ci', label: 'Holdout 95% CI' }, { key: 'd', label: 'Selection vs holdout' }, { key: 'in', label: 'Selection inside CI' }],
@@ -329,7 +488,7 @@ function consistency(host, kpis) {
     const rowH = narrow ? 76 : 40, labelW = narrow ? 0 : Math.min(190, w * 0.28), valW = narrow ? 0 : 168;
     const iw = Math.max(80, w - labelW - valW - 24);
     const H = headH + rows.length * rowH + axisH;
-    const svg = svgIn(f.body, w, H, 'Selection versus holdout results for the core plan P2, as % difference from the holdout mean');
+    const svg = svgIn(f.body, w, H, `Selection versus holdout results for the core plan, ${rec}, as % difference from the holdout mean`);
     const ext = d3().max(rows, (r) => Math.max(Math.abs(r.dSel), Math.abs(r.dLo), Math.abs(r.dHi))) || 0.1;
     const x = d3().scaleLinear().domain([-ext * 1.12, ext * 1.12]).nice(4).range([labelW + 8, labelW + 8 + iw]);
     const top = headH, bottom = headH + rows.length * rowH;

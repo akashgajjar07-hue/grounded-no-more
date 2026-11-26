@@ -6,8 +6,11 @@
  * drawer per exception (numbers behind it, a small chart where it helps, recommended action, owner, due
  * week) and a client-side CSV export of the current filtered list.
  */
-import { h, pageHead, card, provChip, pill, drawer, icon, segmented } from '../ui.js';
+import { h, pageHead, card, provChip, pill, drawer, icon, segmented, intro3, scopeLine } from '../ui.js';
 import { chartFrame, responsive, svgIn, theme, fmtAED, fmtHours, fmtInt, fmtNum, fmtWeek, withTooltip, fmtEnum, plural } from '../charts/theme.js';
+import { isSimple, byMode } from '../lib/mode.js';
+import { displayName, replaceCodes } from '../lib/names.js';
+import { term, termText } from '../lib/glossary.js';
 
 export const data = ['actions', 'parts'];
 
@@ -26,6 +29,89 @@ const TYPE_LABEL = {
 };
 const TYPE_ICON = { OVERDUE_REPAIR: 'wrench', OUTSTATION_DEPLETION: 'map-pin', EXCESS_DECLINING_DEMAND: 'warehouse', CONDEMNED_AWAITING_REPLACEMENT: 'rotable', QUARANTINE_DOCS: 'shield', LEAD_TIME_DRIFT: 'chart', EXPIRY_RISK: 'clock', KIT_SHORTAGE: 'layers' };
 const typeLabel = (t) => TYPE_LABEL[t] || String(t || '').toLowerCase().replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+
+// ----------------------------------------------------------------------------- v2.1 Simple mode (plain English)
+/** Plain-English names for the exception types (Simple mode). The CSV keeps the expert labels. */
+export const SIMPLE_TYPE = {
+  OUTSTATION_DEPLETION: 'Station short of a spare',
+  OVERDUE_REPAIR: 'Repair is late',
+  CONDEMNED_AWAITING_REPLACEMENT: 'Scrapped part, new one not here yet',
+  EXCESS_DECLINING_DEMAND: 'Too much stock, use falling',
+  EXPIRY_RISK: 'Stock may expire before it is used',
+  DONOR_NOT_REINSTATED: 'Borrowed part not yet given back',
+  LEAD_TIME_DRIFT: 'Supplier slower than promised',
+  OPEN_REQUIREMENT: 'A plane is still waiting for a part',
+  QUARANTINE_DOCS: 'Paperwork check needed',
+  KIT_SHORTAGE: 'Kit is missing parts',
+};
+/** Why each type is raised, in one or two short sentences. */
+const SIMPLE_WHY = {
+  OUTSTATION_DEPLETION: 'This station holds fewer spares than its demand needs.',
+  OVERDUE_REPAIR: 'The repair shop has kept this part past the promised date.',
+  CONDEMNED_AWAITING_REPLACEMENT: 'A broken part could not be fixed and was scrapped. The order for a new one is still open.',
+  EXCESS_DECLINING_DEMAND: 'Use has dropped, but we still hold a lot of stock.',
+  EXPIRY_RISK: 'At today’s use, the stock will last longer than its shelf life.',
+  DONOR_NOT_REINSTATED: 'We took this part from another of our planes. That plane is still without it.',
+  LEAD_TIME_DRIFT: 'Recent orders took much longer to arrive than the supplier said.',
+  OPEN_REQUIREMENT: 'A plane asked for this part and is still waiting.',
+  QUARANTINE_DOCS: 'A part arrived and its papers need a check before use.',
+  KIT_SHORTAGE: 'A kit of parts is not complete.',
+};
+export const labelFor = (t) => (isSimple() ? SIMPLE_TYPE[t] || typeLabel(t) : typeLabel(t));
+const plur = (n, w) => `${fmtInt(n)} ${+n === 1 ? w : `${w}s`}`;
+/** What to do, in plain words (Simple mode). Built from the exception's own fields; falls back to the expert text. */
+export function simpleAction(a) {
+  const e = a.evidence || {};
+  switch (a.type) {
+    case 'OUTSTATION_DEPLETION': return a.quantity != null && a.destination ? `Send ${plur(a.quantity, 'spare')} from ${a.source || 'the hub'} to ${a.destination}.` : 'Send a spare to this station.';
+    case 'OVERDUE_REPAIR': return 'Ask the shop for a firm return date. If spares run low, borrow or swap a unit.';
+    case 'CONDEMNED_AWAITING_REPLACEMENT': return 'Confirm the delivery date with the supplier. Line up a loan in case a plane needs one.';
+    case 'EXCESS_DECLINING_DEMAND': return 'Lower the reorder levels, stop open orders and move spare stock to where it is used.';
+    case 'EXPIRY_RISK': return 'Order smaller amounts. Move stock to where it is used before it expires.';
+    case 'DONOR_NOT_REINSTATED': return 'Give the part back from the next good unit at the hub. Keep the approval record open.';
+    case 'LEAD_TIME_DRIFT': return e.mean_lead_d != null && e.mean_quoted_d != null ? `Plan for about ${fmtInt(e.mean_lead_d)} days, not ${fmtInt(e.mean_quoted_d)}. Ask the supplier when it will recover.` : 'Plan for the longer delivery time. Ask the supplier when it will recover.';
+    case 'OPEN_REQUIREMENT': return 'Keep every way to get the part open: borrow, swap or buy locally. Speed up the unit on its way.';
+    case 'QUARANTINE_DOCS': return 'Check the papers before the part is used.';
+    default: return tidyEnums(a.recommended_action || 'No action recorded');
+  }
+}
+/** The key numbers, in plain words (Simple mode). */
+export function simpleEvidence(a) {
+  const e = a.evidence || {};
+  const m = rowMetrics(a);
+  const stn = a.station || 'The network';
+  switch (a.type) {
+    case 'OUTSTATION_DEPLETION': {
+      const have = m.stock ? `${stn} has ${fmtInt(m.stock.have)} of the ${fmtInt(m.stock.target)} it needs.` : `${stn} is below its target.`;
+      return m.aogH ? `${have} Planes there waited ${fmtInt(m.aogH)} hours for this part in the last ${fmtInt(m.lookback || 52)} weeks.` : have;
+    }
+    case 'OVERDUE_REPAIR': return e.weeks_overdue != null ? `The part is ${wk1(e.weeks_overdue)} weeks past the date the shop promised.` : 'The repair is past its promised date.';
+    case 'CONDEMNED_AWAITING_REPLACEMENT': return e.quoted_due_week != null ? `The new part was due in ${fmtWeek(e.quoted_due_week)}.${e.network_serviceable != null ? ` The network has ${plur(e.network_serviceable, 'good spare')}.` : ''}` : 'The new part has not arrived.';
+    case 'EXCESS_DECLINING_DEMAND': return e.cover_weeks_at_recent_rate != null ? `Use is down. We hold about ${fmtInt(e.cover_weeks_at_recent_rate)} weeks of stock.` : 'Use is down and stock is high.';
+    case 'EXPIRY_RISK': return e.cover_weeks_at_recent_rate != null && e.shelf_life_weeks != null ? `We hold about ${fmtInt(e.cover_weeks_at_recent_rate)} weeks of stock. It expires after ${fmtInt(e.shelf_life_weeks)} weeks.` : 'Stock may expire before it is used.';
+    case 'LEAD_TIME_DRIFT': return e.mean_lead_d != null && e.mean_quoted_d != null ? `Recent orders took ${fmtInt(e.mean_lead_d)} days. The supplier quoted ${fmtInt(e.mean_quoted_d)} days.` : 'Recent orders arrived late.';
+    case 'DONOR_NOT_REINSTATED': return e.days_waiting != null ? `The other plane has waited ${fmtNum(e.days_waiting, 0)} days for the part to come back.` : 'The other plane is still waiting.';
+    case 'OPEN_REQUIREMENT': return 'The request is still open at the end of the week.';
+    default: return tidyEnums(a.summary || '');
+  }
+}
+/** Short issue phrase for the row (Simple mode). */
+function simpleIssue(a) {
+  const e = a.evidence || {};
+  switch (a.type) {
+    case 'OUTSTATION_DEPLETION': return 'Short of spares';
+    case 'OVERDUE_REPAIR': return e.weeks_overdue != null ? `${wk1(e.weeks_overdue)} wk late at the shop` : 'Repair is late';
+    case 'LEAD_TIME_DRIFT': return e.ratio != null ? `Supplier ${fmtNum(e.ratio, 1)}× slower` : 'Supplier is slow';
+    case 'EXCESS_DECLINING_DEMAND': return e.cover_weeks_at_recent_rate != null ? `${fmtInt(e.cover_weeks_at_recent_rate)} wk of stock, use falling` : 'Too much stock';
+    case 'EXPIRY_RISK': return e.cover_weeks_at_recent_rate != null && e.shelf_life_weeks != null ? `${fmtInt(e.cover_weeks_at_recent_rate)} wk stock vs ${fmtInt(e.shelf_life_weeks)} wk life` : 'May expire';
+    case 'CONDEMNED_AWAITING_REPLACEMENT': return e.quoted_due_week != null ? `New part due ${fmtWeek(e.quoted_due_week)}` : 'Waiting for a new part';
+    case 'DONOR_NOT_REINSTATED': return 'Borrowed part not back';
+    case 'OPEN_REQUIREMENT': return 'Plane still waiting';
+    default: return SIMPLE_TYPE[a.type] || typeLabel(a.type);
+  }
+}
+const whyText = (a) => (isSimple() ? SIMPLE_WHY[a.type] || tidyEnums(a.summary || '') : tidyEnums(a.trigger || a.summary || ''));
+const actionText = (a) => (isSimple() ? simpleAction(a) : a.recommended_action ? tidyEnums(a.recommended_action) : 'No action recorded');
 const sevPill = (s) => pill(s === 'info' ? 'info' : s, SEV_LABEL[s] || s);
 const NETWORK = 'Network';
 const nOr = (v) => (v === null || v === undefined || Number.isNaN(+v) ? null : +v);
@@ -55,6 +141,7 @@ export function rowMetrics(a) {
 }
 /** One short phrase for the "Issue" column: the type's key number, not the whole rationale. */
 export function issueText(a) {
+  if (isSimple()) return simpleIssue(a);
   const e = a.evidence || {};
   switch (a.type) {
     case 'OUTSTATION_DEPLETION': return 'Below station target';
@@ -73,7 +160,7 @@ export function shortTitle(a) {
   const stn = a.station || NETWORK;
   const m = rowMetrics(a);
   if (a.type === 'OUTSTATION_DEPLETION' && m.stock) return `${a.pn} · ${stn}: ${fmtInt(m.stock.have)} of ${fmtInt(m.stock.target)} on hand`;
-  if (a.type === 'OVERDUE_REPAIR' && e.weeks_overdue != null) return `${a.pn} · repair ${wk1(e.weeks_overdue)} wk past quoted due`;
+  if (a.type === 'OVERDUE_REPAIR' && e.weeks_overdue != null) return `${a.pn} · repair ${wk1(e.weeks_overdue)} ${byMode('weeks past the promised date', 'wk past quoted due')}`;
   return a.pn ? `${a.pn} · ${issueText(a)}` : a.summary;
 }
 
@@ -86,7 +173,7 @@ export function actionFields(a) {
   if (a.source || a.destination) out.push(['Source → destination', `${a.source ? tidyEnums(a.source) : '—'} → ${a.destination ? tidyEnums(a.destination) : '—'}`, true]);
   if (a.required_by_week != null) out.push(['Required by', fmtWeek(a.required_by_week), true]);
   if (ea && (ea.week != null || ea.basis)) out.push(['Expected availability', `${ea.week != null ? fmtWeek(ea.week) : 'not known'}${ea.basis ? ` · ${ea.basis}` : ''}${ea.past_quote ? ' · already past quote' : ''}`]);
-  if (Array.isArray(a.constraints) && a.constraints.length) out.push(['Constraints', h('ul', { class: 'pac-list-inline' }, a.constraints.map((c) => h('li', {}, tidyEnums(c))))]);
+  if (Array.isArray(a.constraints) && a.constraints.length) out.push(['Constraints', h('ul', { class: 'pac-list-inline' }, a.constraints.map((c) => h('li', {}, replaceCodes(tidyEnums(c)))))]);
   if (eb && typeof eb === 'object') {
     const bits = [];
     if (eb.observed_downtime_h_lookback != null) bits.push(`${fmtInt(eb.observed_downtime_h_lookback)} h downtime observed here in the lookback`);
@@ -109,7 +196,7 @@ function ensureCSS() {
 
 // ----------------------------------------------------------------------------- evidence formatting
 const EV_LABEL = {
-  on_hand: 'On hand (serviceable)', inbound: 'Inbound', p0_target: 'P0 station target', demand_implied_protection: 'Demand-implied protection level',
+  on_hand: 'On hand (serviceable)', inbound: 'Inbound', p0_target: `${displayName('P0', { mode: 'short' })} station target`, demand_implied_protection: 'Demand-implied protection level',
   target: 'Target used', target_basis: 'Target basis', d0_requests_lookback: 'D0 requests in lookback', lookback_weeks: 'Lookback', aog_events_lookback: 'AOG events in lookback',
   aog_hours_lookback: 'AOG hours in lookback', auh_on_hand: 'AUH on hand', aog_transport_h_from_auh: 'AOG transport from AUH', part_class: 'Part class',
   ro_id: 'Repair order', serial: 'Serial', shop: 'Shop', removed_week: 'Removed', shop_in_week: 'At shop', quoted_due_week: 'Quoted due', weeks_overdue: 'Weeks overdue',
@@ -183,9 +270,9 @@ function evidenceChart(a) {
     return host;
   }
   if (e.target != null && e.on_hand != null) {
-    const rows = [{ k: 'On hand + inbound', v: (e.on_hand || 0) + (e.inbound || 0) }, { k: 'P0 station target', v: e.p0_target ?? 0 }, { k: 'Target used', v: e.target, hi: true }];
+    const rows = [{ k: byMode('On hand + on the way', 'On hand + inbound'), v: (e.on_hand || 0) + (e.inbound || 0) }, { k: byMode(`${displayName('P0', { mode: 'short' })} target`, `${displayName('P0', { mode: 'short' })} station target (P0)`), v: e.p0_target ?? 0 }, { k: 'Target used', v: e.target, hi: true }];
     const fr = chartFrame(host, {
-      implication: 'The station is below the level its demand needs: the next D0 request there could ground an aircraft.',
+      implication: byMode('The station has fewer spares than it needs. The next urgent request there could ground a plane.', 'The station is below the level its demand needs: the next D0 request there could ground an aircraft.'),
       headline: `${a.station} holds ${fmtInt(rows[0].v)} against a target of ${fmtInt(e.target)}`,
       subtitle: `Serviceable units · ${a.pn} · target basis: ${e.target_basis || 'not recorded'}`,
       provenance: 'DERIVED', source: 'actions.json',
@@ -286,9 +373,18 @@ export async function render(el, ctx) {
   const topType = types[0];
   el.append(pageHead({
     num: '08', eyebrow: 'Planner Action Centre',
-    title: asOf != null ? `${fmtWeek(asOf)}: ${fmtInt(all.length)} exceptions, ${fmtInt(nSev.urgent)} urgent` : `${fmtInt(all.length)} exceptions this week`,
-    lede: 'The weekly exception inbox for Falcon Hub Airways (fictional). Each exception carries the numbers behind it, a recommended action, an owner and a due week. Recommendations support a planner; they do not replace engineering, quality or airworthiness judgement.',
+    title: byMode(asOf != null ? `${fmtWeek(asOf)}: ${fmtInt(all.length)} issues to check, ${fmtInt(nSev.urgent)} urgent` : `${fmtInt(all.length)} issues to check this week`,
+      asOf != null ? `${fmtWeek(asOf)}: ${fmtInt(all.length)} exceptions, ${fmtInt(nSev.urgent)} urgent` : `${fmtInt(all.length)} exceptions this week`),
+    lede: byMode('The weekly to-do list for Falcon Hub Airways (fictional). Each item shows the numbers behind it, what to do, who owns it and when it is due. It supports a planner. It does not replace engineering, quality or safety judgement.',
+      'The weekly exception inbox for Falcon Hub Airways (fictional). Each exception carries the numbers behind it, a recommended action, an owner and a due week. Recommendations support a planner; they do not replace engineering, quality or airworthiness judgement.'),
     meta: [provChip(metaProv), h('span', { class: 'chip chip-mono' }, asOf != null ? `As of ${fmtWeek(asOf)}` : 'As-of week not exported')],
+  }));
+
+  // v2.1 (C2): the three intro lines
+  el.append(intro3({
+    what: byMode(`This week’s list of parts problems that need a planner, ranked by urgency.`, 'The weekly exception inbox: rule-based flags on stock, repairs, suppliers and open requirements, ranked by severity and due week.'),
+    why: ['Each item is a part that could ground a plane, tie up money or go to waste. ', isSimple() ? 'Acting early keeps ' : 'Acting early cuts ', term('aog_hours'), isSimple() ? ' low.' : '.'],
+    action: byMode('Start with the urgent items. Open one to see the numbers, then do the action and close it by its due week.', 'Work the urgent queue first, open the evidence drawer, confirm the action and clear it by the due week; export the filtered list as CSV.'),
   }));
 
   // ---- summary row: severity counts + where-the-work-is chart
@@ -305,15 +401,15 @@ export async function render(el, ctx) {
   const summaryCard = card({
     cls: 'span-4', kicker: 'This week', title: 'Who owns the work', prov: metaProv,
     body: h('div', { class: 'stack-3' }, ownerList,
-      h('p', { class: 't-12 faint m-0' }, 'Click an owner to filter the inbox. Rules live in config/aog_lab.yaml; only exception types the v2 simulation produces are raised (no document data exists).')),
+      h('p', { class: 't-12 faint m-0' }, byMode('Click a team to show only its items. Only problems the simulation can produce are raised.', 'Click an owner to filter the inbox. Rules live in config/aog_lab.yaml; only exception types the v2 simulation produces are raised (no document data exists).'))),
   });
   const chartCard = h('section', { class: 'card span-8', dataset: { story: 'action-types' } });
-  const byType = types.map((t) => ({ t, label: typeLabel(t), ...Object.fromEntries(SEV.map((s) => [s, count((a) => a.type === t && a.severity === s)])), n: count((a) => a.type === t) }));
+  const byType = types.map((t) => ({ t, label: labelFor(t), ...Object.fromEntries(SEV.map((s) => [s, count((a) => a.type === t && a.severity === s)])), n: count((a) => a.type === t) }));
   const top = byType[0];
   const frame = chartFrame(chartCard, {
-      implication: 'Most planner work is repair follow-up and stock positioning: staff the desk for those queues.',
-    headline: top ? `${typeLabel(topType)} is the biggest queue: ${fmtInt(top.n)} of ${fmtInt(all.length)} exceptions, ${fmtInt(top.urgent)} urgent` : 'No exceptions this week',
-    subtitle: `Open exceptions by type and severity · ${asOf != null ? fmtWeek(asOf) : 'week not exported'} · click a bar to filter`,
+    implication: byMode('Most of the work is moving spares and chasing repairs. Put planners on those first.', 'Most planner work is repair follow-up and stock positioning: staff the desk for those queues.'),
+    headline: top ? byMode(`Biggest pile: ${labelFor(topType).toLowerCase()} (${fmtInt(top.n)} of ${fmtInt(all.length)}, ${fmtInt(top.urgent)} urgent)`, `${typeLabel(topType)} is the biggest queue: ${fmtInt(top.n)} of ${fmtInt(all.length)} exceptions, ${fmtInt(top.urgent)} urgent`) : 'No exceptions this week',
+    subtitle: `${byMode('Open items by type and urgency', 'Open exceptions by type and severity')} · ${asOf != null ? fmtWeek(asOf) : 'week not exported'} · click a bar to filter`,
     provenance: metaProv, source: 'actions.json',
     table: { columns: [{ key: 'label', label: 'Type' }, ...SEV.map((s) => ({ key: s, label: SEV_LABEL[s], num: true })), { key: 'n', label: 'Total', num: true }], rows: byType },
   });
@@ -362,18 +458,18 @@ export async function render(el, ctx) {
       const a = walk[wi];
       wBody.replaceChildren(
         h('div', { class: 'pac-walk-step' }, `${String(wi + 1).padStart(2, '0')} / ${String(walk.length).padStart(2, '0')} · ${a.owner || 'Owner not set'}`),
-        h('h4', { class: 'pac-walk-title' }, sevPill(a.severity), h('span', {}, `${a.type_label || typeLabel(a.type)} · `), h('span', { class: 'mono' }, a.pn || ''), a.station ? h('span', { class: 'mono faint' }, ` · ${a.station}`) : null),
+        h('h4', { class: 'pac-walk-title' }, sevPill(a.severity), h('span', {}, `${isSimple() ? labelFor(a.type) : a.type_label || typeLabel(a.type)} · `), h('span', { class: 'mono' }, a.pn || ''), a.station ? h('span', { class: 'mono faint' }, ` · ${a.station}`) : null),
         h('dl', { class: 'pac-walk-dl' },
-          h('dt', {}, 'What triggered it'), h('dd', {}, tidyEnums(a.trigger || a.summary || '')),
-          h('dt', {}, 'The evidence'), h('dd', {}, tidyEnums(a.summary || '')),
-          h('dt', {}, 'What to do'), h('dd', {}, tidyEnums(a.recommended_action || 'No action recorded'))),
+          h('dt', {}, byMode('Why it came up', 'What triggered it')), h('dd', {}, whyText(a)),
+          h('dt', {}, byMode('What we know', 'The evidence')), h('dd', {}, isSimple() ? simpleEvidence(a) : tidyEnums(a.summary || '')),
+          h('dt', {}, 'What to do'), h('dd', {}, actionText(a))),
         h('button', { type: 'button', class: 'btn btn--sm', onclick: () => open(a) }, icon('chevron-right'), 'Open the full exception'));
       [...dots.children].forEach((d, j) => d.classList.toggle('is-on', j <= wi));
       wBack.disabled = wi === 0; wNext.disabled = wi === walk.length - 1;
     }
     el.append(h('div', { class: 'grid-12 mt-3' }, card({
       cls: 'span-12 pac-walk', kicker: 'Guided walkthrough', story: 'action-walkthrough', prov: metaProv,
-      title: `Monday morning: ${fmtInt(walk.length)} typical exceptions from the ${asOf != null ? fmtWeek(asOf) : ''} queue, in the order a planner works them`,
+      title: byMode(`Monday morning: ${fmtInt(walk.length)} typical items from the ${asOf != null ? fmtWeek(asOf) : ''} list, in the order a planner works them`, `Monday morning: ${fmtInt(walk.length)} typical exceptions from the ${asOf != null ? fmtWeek(asOf) : ''} queue, in the order a planner works them`),
       body: h('div', {}, wBody, h('div', { class: 'pac-walk-nav' }, dots, h('div', { class: 'row' }, wBack, wNext))),
     })));
     showWalk(0);
@@ -386,7 +482,7 @@ export async function render(el, ctx) {
     return h('label', { class: 'pac-filter', for: id }, h('span', { class: 'field-label' }, label), s);
   };
   const sevSeg = h('div', { class: 'pac-filter' }, h('span', { class: 'field-label' }, 'Severity'), h('div', { class: 'pac-sevseg' }));
-  const typeSel = sel('Type', 'type', types, typeLabel);
+  const typeSel = sel('Type', 'type', types, labelFor);
   const stationSel = sel('Station', 'station', stations);
   const ownerSel = sel('Owner', 'owner', owners);
   const shown = h('span', { class: 'pac-shown mono t-12', 'aria-live': 'polite' });
@@ -394,17 +490,19 @@ export async function render(el, ctx) {
   const csvBtn = h('button', { type: 'button', class: 'btn btn--sm', dataset: { action: 'export-csv' }, onclick: () => exportCSV() }, icon('download'), 'Export CSV');
   const list = h('ul', { class: 'pac-list list-reset', role: 'list', 'aria-label': 'Exceptions, grouped by part number' });
   const gridHead = h('div', { class: 'pac-grid pac-grid-head', 'aria-hidden': 'true' },
-    h('span', {}, 'Severity'), h('span', {}, 'Part · station'), h('span', {}, 'Issue'), h('span', { class: 'is-num', title: 'Serviceable + inbound vs station target' }, 'On hand'), h('span', { class: 'is-num', title: 'AOG hours in the last 52 weeks' }, 'AOG h · 52 wk'), h('span', { class: 'is-num', title: 'D0 requests in the last 52 weeks' }, 'D0 req'), h('span', {}, 'Recommended action'), h('span', { class: 'is-num' }, 'Due'));
+    h('span', {}, byMode('Urgency', 'Severity')), h('span', {}, 'Part · station'), h('span', {}, 'Issue'), h('span', { class: 'is-num', title: 'Serviceable + inbound vs station target' }, 'On hand'), h('span', { class: 'is-num', title: 'AOG hours in the last 52 weeks' }, byMode('Hours grounded', 'AOG h · 52 wk')), h('span', { class: 'is-num', title: 'D0 requests in the last 52 weeks' }, byMode('Urgent asks', 'D0 req')), h('span', {}, byMode('What to do', 'Recommended action')), h('span', { class: 'is-num' }, 'Due'));
   const PAGE = 12;
   const GROUP_PEEK = 3;
   const openGroups = new Set();
   let expanded = false;
   const moreBtn = h('button', { type: 'button', class: 'btn btn--sm pac-more', dataset: { action: 'show-all' }, onclick: () => { expanded = !expanded; sync(); } });
   const inbox = card({
-    cls: 'mt-3', kicker: 'Exception inbox', title: 'Ranked by severity, then due week · grouped by part', prov: metaProv, story: 'action-inbox',
+    cls: 'mt-3', kicker: 'Exception inbox', title: byMode('Most urgent first, then by due week · grouped by part', 'Ranked by severity, then due week · grouped by part'), prov: metaProv, story: 'action-inbox',
     actions: csvBtn,
     body: h('div', { class: 'stack-3' }, h('div', { class: 'pac-filters' }, sevSeg, typeSel, stationSel, ownerSel), h('div', { class: 'row-between pac-shownrow' }, shown, resetBtn), h('div', { class: 'pac-table' }, gridHead, list), moreBtn,
-      h('p', { class: 't-12 faint m-0' }, 'On hand = serviceable + inbound vs the station target. AOG h and D0 requests count the last 52 weeks (depletion rules only; — = not applicable). Open a row for the full rationale and evidence.')),
+      h('p', { class: 't-12 faint m-0' }, byMode('On hand means good spares there or on the way, against the target. Hours grounded and urgent asks count the last 52 weeks. A dash means it does not apply. Open a row to see the full story.',
+        'On hand = serviceable + inbound vs the station target. AOG h and D0 requests count the last 52 weeks (depletion rules only; — = not applicable). Open a row for the full rationale and evidence.')),
+      scopeLine()),
   });
   inbox.dataset.story = 'action-inbox';
   el.append(inbox);
@@ -428,15 +526,15 @@ export async function render(el, ctx) {
     const m = rowMetrics(a);
     const stn = stationOf(a);
     return h('li', { class: 'pac-li' },
-      h('button', { type: 'button', class: `pac-row pac-grid pac-row--${a.severity}${inGroup ? ' is-grouped' : ''}`, dataset: { id: a.exception_id, sev: a.severity }, 'aria-label': `${SEV_LABEL[a.severity] || a.severity}: ${shortTitle(a)}. ${tidyEnums(a.recommended_action || '')}. Due ${a.due_week != null ? fmtWeek(a.due_week) : 'not set'}. Open evidence.`, onclick: () => open(a) },
+      h('button', { type: 'button', class: `pac-row pac-grid pac-row--${a.severity}${inGroup ? ' is-grouped' : ''}`, dataset: { id: a.exception_id, sev: a.severity }, 'aria-label': `${SEV_LABEL[a.severity] || a.severity}: ${shortTitle(a)}. ${actionText(a)} Due ${a.due_week != null ? fmtWeek(a.due_week) : 'not set'}. Open evidence.`, onclick: () => open(a) },
         h('span', { class: 'pac-c-sev' }, sevPill(a.severity)),
         h('span', { class: 'pac-c-part mono' }, inGroup ? h('span', { class: 'pac-stn' }, h('span', { class: 'faint' }, '↳ '), stn) : h('span', {}, h('b', {}, a.pn || '—'), h('span', { class: 'faint' }, ' · '), stn)),
-        h('span', { class: 'pac-c-issue', title: typeLabel(a.type) }, icon(a.type_icon || TYPE_ICON[a.type] || 'info'), h('span', { class: 'pac-c-issue-t' }, issueText(a)), prov ? provChip(prov) : null),
+        h('span', { class: 'pac-c-issue', title: labelFor(a.type) }, icon(a.type_icon || TYPE_ICON[a.type] || 'info'), h('span', { class: 'pac-c-issue-t' }, issueText(a)), prov ? provChip(prov) : null),
         h('span', { class: 'pac-c-stock is-num mono', dataset: { k: 'On hand' } }, m.stock ? h('span', { class: m.stock.have < m.stock.target ? 'pac-short' : '' }, `${fmtInt(m.stock.have)} / ${fmtInt(m.stock.target)}`) : num(null)),
-        h('span', { class: 'pac-c-aog is-num mono', dataset: { k: 'AOG h' } }, num(m.aogH)),
-        h('span', { class: 'pac-c-d0 is-num mono', dataset: { k: 'D0' } }, num(m.d0)),
+        h('span', { class: 'pac-c-aog is-num mono', dataset: { k: byMode('Hours grounded', 'AOG h') } }, num(m.aogH)),
+        h('span', { class: 'pac-c-d0 is-num mono', dataset: { k: byMode('Urgent asks', 'D0') } }, num(m.d0)),
         // wave 5: the whole action, clamped to two lines by CSS (the browser's own ellipsis), full text in the title
-        h('span', { class: 'pac-c-action', title: tidyEnums(a.recommended_action || '') }, a.recommended_action ? tidyEnums(a.recommended_action) : 'No action recorded'),
+        h('span', { class: 'pac-c-action', title: tidyEnums(a.recommended_action || '') }, actionText(a)),
         h('span', { class: 'pac-c-due is-num mono' }, a.due_week != null ? fmtWeek(a.due_week) : '—', icon('chevron-right'))));
   }
   /** Same-PN exceptions collapse under one header ("GN-… · 6 stations · 63 AOG h max"); singletons stay plain rows. */
@@ -458,7 +556,7 @@ export async function render(el, ctx) {
     return h('li', { class: `pac-group pac-group--${sevKey}`, dataset: { pn: g.pn } },
       h('div', { class: 'pac-ghead' },
         h('span', { class: 'pac-ghead-pn mono' }, g.pn),
-        h('span', { class: 'pac-ghead-meta' }, `${fmtInt(g.rows.length)} exceptions · ${fmtInt(stations.size)} ${stations.size === 1 ? 'station' : 'stations'}${nU ? ` · ${fmtInt(nU)} urgent` : ''}`, g.aog ? h('span', { class: 'pac-nw', title: `${aogLabel} (${aogShort})` }, ` · worst station ${g.aogSt ? `${g.aogSt} ` : ''}${fmtHours(g.aog)}${g.aogSt && !g.rows.some((a) => a.station === g.aogSt) ? ' (no exception there)' : ''}`) : null),
+        h('span', { class: 'pac-ghead-meta' }, `${fmtInt(g.rows.length)} ${byMode('items', 'exceptions')} · ${fmtInt(stations.size)} ${stations.size === 1 ? 'station' : 'stations'}${nU ? ` · ${fmtInt(nU)} urgent` : ''}`, g.aog ? h('span', { class: 'pac-nw', title: `${aogLabel} (${aogShort})` }, ` · worst station ${g.aogSt ? `${g.aogSt} ` : ''}${fmtHours(g.aog)}${g.aogSt && !g.rows.some((a) => a.station === g.aogSt) ? ' (no exception there)' : ''}`) : null),
         g.rows.length > GROUP_PEEK ? toggle : null),
       h('ul', { class: 'list-reset pac-grows' }, g.rows.map((a, i) => { const li = row(a, { inGroup: true }); if (i >= GROUP_PEEK && !isOpen) li.hidden = true; return li; })));
   }
@@ -473,19 +571,22 @@ export async function render(el, ctx) {
     const chart = evidenceChart(a);
     activeDrawer?.close();
     activeDrawer = drawer({
-      kicker: `${a.exception_id} · ${typeLabel(a.type)}`, title: shortTitle(a),
+      kicker: `${a.exception_id} · ${labelFor(a.type)}`, title: shortTitle(a),
       onClose: () => { if (alive) ctx.setParams({ id: '' }); activeDrawer = null; },
       body: h('div', { class: 'stack-3 pac-drawer' },
-        h('div', { class: 'row-wrap' }, sevPill(a.severity), h('span', { class: 'chip chip-mono' }, typeLabel(a.type)), provChip(prov)),
-        h('div', { class: 'pac-why' }, h('div', { class: 'card-kicker mb-1' }, 'Why it was raised'), h('p', { class: 'm-0' }, tidyEnums(a.summary))),
-        h('div', { class: 'pac-action' }, h('div', { class: 'card-kicker' }, 'Recommended action'), h('p', { class: 'm-0' }, a.recommended_action ? tidyEnums(a.recommended_action) : 'No action recorded'),
+        h('div', { class: 'row-wrap' }, sevPill(a.severity), h('span', { class: 'chip chip-mono' }, labelFor(a.type)), provChip(prov)),
+        h('div', { class: 'pac-why' }, h('div', { class: 'card-kicker mb-1' }, 'Why it was raised'),
+          isSimple() ? h('p', { class: 'm-0' }, `${SIMPLE_WHY[a.type] || ''} ${simpleEvidence(a)}`.trim()) : null,
+          h('p', { class: isSimple() ? 'm-0 mt-1 t-12 faint pac-record' : 'm-0' }, isSimple() ? `Record: ${replaceCodes(tidyEnums(a.summary))}` : tidyEnums(a.summary))),
+        h('div', { class: 'pac-action' }, h('div', { class: 'card-kicker' }, byMode('What to do', 'Recommended action')), h('p', { class: 'm-0' }, actionText(a)),
+          isSimple() && a.recommended_action ? h('p', { class: 'm-0 mt-1 t-12 faint pac-record' }, `Planner’s exact instruction: ${replaceCodes(tidyEnums(a.recommended_action))}`) : null,
           // wave B: only the fields the v2 actions.json produces; a field the rule does not fill is left out
           h('dl', { class: 'meta-list mt-2', dataset: { role: 'action-fields' } }, ...actionFields(a).flatMap(([k, v, mono]) => [h('dt', {}, k), h('dd', { class: mono ? 'mono' : '' }, v)]))),
         chart,
         h('div', {}, h('div', { class: 'card-kicker mb-1' }, 'Evidence · the numbers behind it'),
           h('table', { class: 'data-table data-table--dense pac-evtable' }, h('caption', { class: 'sr-only' }, 'Evidence'), h('tbody', {}, evRows.map(([k, v]) => h('tr', {}, h('th', { scope: 'row' }, evLabel(k)), h('td', { class: 'is-num mono' }, fmtEv(k, v))))))),
         prov === 'SIMULATED' ? h('p', { class: 't-12 faint m-0' }, 'This exception comes from a seeded random flag, not from document data. It illustrates the quarantine workflow only.') : null,
-        h('p', { class: 't-12 faint m-0' }, 'D0/D3/D10 are hypothetical rectification windows; D3 and D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions. A planner confirms before acting.')),
+        h('p', { class: 't-12 faint m-0' }, byMode('Urgency classes in this model are made up for teaching. They are not real airline safety rules. A planner checks before acting.', 'D0/D3/D10 are hypothetical rectification windows; D3 and D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions. A planner confirms before acting.'))),
       foot: [
         a.pn ? h('a', { class: 'btn btn--sm', href: ctx.buildHash('parts', { ata: a.pn.split('-')[1], pn: a.pn }) }, icon('layers'), 'Open part') : null,
         a.station && a.station !== NETWORK ? h('a', { class: 'btn btn--sm', href: ctx.buildHash('network', { station: a.station }) }, icon('map-pin'), 'Open station') : null,
