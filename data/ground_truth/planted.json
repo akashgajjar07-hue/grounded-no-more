@@ -1,0 +1,29 @@
+{
+  "PS1": {
+    "pn": "GN-32-R014",
+    "station": "BOM",
+    "weeks": "all history",
+    "note": "D0 rotable on both fleets; true MTBUR 4200 FC vs quoted 10500, so P0 sees < 4 removals/yr at BOM and holds no unit there while the true BOM rate is well above that"
+  },
+  "PS2": {
+    "pn": "GN-28-R031",
+    "station": "EU_VENDOR",
+    "weeks": [
+      84,
+      92
+    ],
+    "note": "true shop TAT 88 d vs quoted 60 d; on the history seed the first removal in weeks [84, 92] gets 200 shop work days -> that RO is still open and far past its quoted due date at week 103"
+  },
+  "PS3": {
+    "pn": "GN-21-C010",
+    "station": "network (AUH largest)",
+    "weeks": "0-103 (declining)",
+    "note": "true usage multiplies by 0.45 per year; quoted usage reflects the week-0 rate, so static min/max over-stocks"
+  },
+  "PS4": {
+    "pn": "GN-30-E025",
+    "station": "AUH",
+    "weeks": 70,
+    "note": "supplier change: true PO lead time 64 d -> 165 d for orders placed from week 70; part master still quotes 65 d"
+  }
+}

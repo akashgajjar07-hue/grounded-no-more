@@ -24,7 +24,7 @@ code disagree, the code wins and this document gets fixed.
 | Train | 0–77 | Fit forecasting models; estimate removal rates |
 | Selection | 78–103 | Rolling-origin model selection (origins every 4 weeks, horizon 4 weeks) |
 | Evaluation horizon (holdout) | 104–155 | Run **once** after freeze |
-| Policy warm-up | 96–103 | Policy runs start at week 96; KPIs counted from week 104 |
+| Policy warm-up | 78–103 | Policy runs start at week 78 (26-week warm-up; selection/holdout scenarios cover weeks 78–155); KPIs counted from week 104. Runs also start in approximate steady state (repair pipeline seeded from quoted figures, see §4) |
 
 | Seed | Value | Use |
 |---|---|---|
@@ -69,6 +69,7 @@ random numbers. It never contains true rates.
 * **Rotables (serialised).** Each serial is in exactly one state and location: `SERVICEABLE@station → INSTALLED@tail → REMOVED → IN_REPAIR@shop → SERVICEABLE@AUH` or `CONDEMNED`. The removed core travels to AUH (`removed_unit_return_days`), then to the shop (`vendor_transit_days_from_auh`). The shop queues work against `capacity_slots`, with work time `repair_days[removal_id] × repair_tat_multiplier[pn]`. Condemned if `condemn_flag[removal_id]`. **Note:** reality needs the true condemnation probability and true repair durations; they arrive **pre-sampled in the Scenario** (`condemn_flag`, `repair_days`), so the engine never touches truth. A condemnation triggers a replacement PO (lead time from `lead_time_days[pn]` stream).
   * Base stock: the network keeps each station at its `base_stock`. After a station issues a unit, AUH sends a routine replenishment if it has stock. Repair returns land at AUH.
 * **Consumables/expendables (counts).** Continuous review on inventory position = on-hand + on-order + in-transit-in − backorders − reservations. When IP ≤ s, order up to S. Outstations replenish from AUH (routine transfer); AUH replenishes by PO. Scheduled kits reserve stock from `known_h`. Shelf-life items expire FIFO.
+* **Initial state.** At `week_from` each station holds its target (rotables: `base_stock` serials; C/E: on-hand spread between s+1 and S using the Scenario's `initial` CRN stream), every aircraft has its installed serials, and each rotable PN's repair pipeline is seeded with round(quoted removal rate × quoted pipeline days) units in REMOVED/IN_REPAIR, with remaining times drawn from the Scenario's `pipeline` CRN stream (public quoted figures only; identical across policies).
 * **Conservation invariants** (tests): each serial has exactly one current state; per PN, `opening serials + purchased − condemned = closing serials`; for counts, `opening + receipts − issues − expiries ± transfers = closing`; every transfer debits its origin; repairs never create units.
 * **KPIs** (window = evaluation weeks, annualised to 52 w): `immediate_fill_rate` = qty filled from local serviceable stock at need time ÷ requested qty; `aog_hours`; `spare_capital_aed` = time-average value (unit cost) of owned spares (serviceable anywhere + in transit + rotable units in the U/S + repair pipeline); annual `holding_cost_aed` = carrying % × spare capital; `repair_cost_aed`; `logistics_cost_aed`; `expedite_cost_aed`; `aog_penalty_aed` = AOG hours × penalty by archetype. Total annual cost = holding + repair + logistics + expedite + AOG penalty. Capital is reported separately and never summed into it.
 

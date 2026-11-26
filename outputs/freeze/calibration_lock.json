@@ -1,0 +1,85 @@
+{
+  "locked_at": "2026-11-26T01:42:41.020744+00:00",
+  "note": "SIM-CAL: P0-only calibration locked before any P1/P2 run",
+  "policy_used": "P0 only",
+  "targets": {
+    "immediate_fill_rate": [
+      0.93,
+      0.97
+    ],
+    "rotable_immediate_fill_rate": [
+      0.8,
+      0.88
+    ],
+    "aog_hours_per_year": [
+      1500,
+      3500
+    ],
+    "aog_events_per_year": [
+      60,
+      250
+    ]
+  },
+  "achieved": {
+    "central": {
+      "history": {
+        "immediate_fill_rate": 0.9581488837309469,
+        "rotable_immediate_fill_rate": 0.8323765786452354,
+        "expendable_immediate_fill_rate": 0.8003525782282944,
+        "consumable_immediate_fill_rate": 0.9734250926416094,
+        "aog_hours_per_year": 2753.5,
+        "aog_events_per_year": 90.0
+      },
+      "in_central_band": {
+        "immediate_fill_rate": true,
+        "rotable_immediate_fill_rate": true,
+        "aog_hours_per_year": true,
+        "aog_events_per_year": true
+      }
+    },
+    "low_stress": {
+      "history": {
+        "immediate_fill_rate": 0.9697736151457478,
+        "rotable_immediate_fill_rate": 0.8808290155440415,
+        "expendable_immediate_fill_rate": 0.9168765743073047,
+        "consumable_immediate_fill_rate": 0.9737134688691232,
+        "aog_hours_per_year": 1816.5,
+        "aog_events_per_year": 57.0
+      },
+      "in_central_band": {
+        "immediate_fill_rate": true,
+        "rotable_immediate_fill_rate": false,
+        "aog_hours_per_year": true,
+        "aog_events_per_year": false
+      }
+    },
+    "high_stress": {
+      "history": {
+        "immediate_fill_rate": 0.9464164063050576,
+        "rotable_immediate_fill_rate": 0.8295238095238096,
+        "expendable_immediate_fill_rate": 0.7447526236881559,
+        "consumable_immediate_fill_rate": 0.9671437263564456,
+        "aog_hours_per_year": 3505.5,
+        "aog_events_per_year": 105.0
+      },
+      "in_central_band": {
+        "immediate_fill_rate": true,
+        "rotable_immediate_fill_rate": true,
+        "aog_hours_per_year": false,
+        "aog_events_per_year": true
+      }
+    }
+  },
+  "artefacts": {
+    "config/assumptions.yaml": "b7138887031225f7b36799cf60a25e329cb5dc88d7d7248f97d3b4fb4aae186a",
+    "src/gnm/sim/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/gnm/sim/api.py": "073678206b7990933821ee74e19385e3dbc954b7a41bd3b45f5b03639acbf580",
+    "src/gnm/sim/baseline.py": "0bba695fdc6a5d3670d39bdf0a170516f61ef6e4373b268a463fecf5552bda84",
+    "src/gnm/sim/calibration.py": "ef538a557cb35ffaa694aa61e7eda5773fc11328faa421644bce26c7af604e97",
+    "src/gnm/sim/engine.py": "b2542e734d2e2ffcaac1243667d8cb81a6d74ba0288adf7010defe46ccf988ea",
+    "src/gnm/sim/generator.py": "6cede879c49d13f7d5829b543f1cf7f966b9422dfd040a9cfec01ddea3c1ddc0",
+    "src/gnm/sim/quoted.py": "0f5ceac6af3447a6ac06a765749bc725fcb0b7ce0b1e65d440d508c297291cb4",
+    "src/gnm/sim/truth.py": "3f572e24b6963c293861dd323139a948d8a3519bab40d3f96a764786c82c51d9",
+    "outputs/calibration/p0_history_summary.json": "9143544dae5be1b7b711546af5332f066cb22adf73ef388a5d28eac59ea65d95"
+  }
+}

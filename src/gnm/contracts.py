@@ -31,6 +31,7 @@ class World:
     aog_hours: pd.DataFrame         # station x station AOG transport hours (index/cols = IATA)
     repair_shops: dict              # shop_id -> {location, capacity_slots, transit_days}
     cfg: dict                       # parsed config/assumptions.yaml
+    kit_eligible: list = field(default_factory=list)   # (sim-engine ext.) consumable PNs used in scheduled A-check kits
 
 
 @dataclass
@@ -48,6 +49,9 @@ class Scenario:
     condemn_flag: dict = field(default_factory=dict)     # removal_id -> bool (decided by generator from true condemnation prob)
     lead_time_days: dict = field(default_factory=dict)   # pn -> np.ndarray of successive PO lead times (days); engine consumes in order per pn
     transport_jitter: dict = field(default_factory=dict) # optional: stream of U(0,1) for routine transport
+    # (sim-engine ext.) time-indexed lead-time regimes: pn -> [(start_h, np.ndarray), ...]; a PO ordered at
+    # order_h consumes the next draw of the last regime with start_h <= order_h. PNs absent use lead_time_days.
+    lead_time_regimes: dict = field(default_factory=dict)
 
 
 @dataclass

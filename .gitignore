@@ -12,3 +12,4 @@ outputs/runs/
 node_modules/
 *.log
 .env
+outputs/cache/
