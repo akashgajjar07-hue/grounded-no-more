@@ -449,3 +449,48 @@ def test_v2_quoted_pipeline_matches_engine_definition():
         share = 0.0 if r.removal_mode == "wear_planned" else (0.5 if r.deadline_class == "D0" else 0.5 * (1 - hub))
         assert abs(pipeline_days(w, pn) - (r.repair_tat_mean_d + 2 * tr + ret * share)) < 1e-9
 
+
+def test_v2_wheel_tyre_is_fast_cheap_hub_repairable():
+    """A.a data correction: wheel/tyre rebuild takes days at the hub wheel shop."""
+    w, gt = full_world()
+    wt = w.parts[w.parts.family == "wheel_tyre"]
+    assert len(wt) == 3 and (wt.part_class == "R").all() and (wt.repair_shop == "AUH_INHOUSE").all()
+    t = gt.parts.set_index("pn").loc[wt.pn]
+    assert t.repair_tat_mean_true_d.between(2, 7).all() and t.condemnation_prob_true.between(0.01, 0.03).all()
+    assert (wt.unit_cost_aed < 50000).all()
+
+
+def test_v2_planned_brake_supply_triggered_at_notice():
+    """V2-SIM-13: when the hub will be short at the planned change, supply is sourced at notice."""
+    w, sc, res = full_run()
+    rq = res.requests
+    pl = rq[rq.source == "planned_removal"]
+    res_kinds = set(pl.aog_route_result.dropna())
+    assert res_kinds <= {"planned_covered", "planned_transfer", "planned_loan", "planned_none", "none", "robbery",
+                         "exchange_loan", "local_borrow"}
+    pre = pl[pl.aog_route_result == "planned_loan"]
+    assert len(pre) > 0
+    # pre-arranged loans are ordered at notice (before need) and fitted at the planned change, not later than arrival
+    assert (pre.aog_route_h < pre.need_h).all()
+    fitted = pre[pre.filled_h.notna()]
+    assert (fitted.filled_h >= fitted.need_h).all() and (fitted.fill_source == "exchange_loan").all()
+    late = (fitted.filled_h > fitted.need_h).mean()
+    assert late < 0.2                                      # almost all arrive by the due date
+    ln = res.loans.set_index("request_id")
+    assert set(pre.request_id) <= set(ln.index)
+
+
+def test_v2_failed_routes_are_retried_with_paired_draws():
+    """V2-SIM-14: an unavailable AOG route is re-tried while the need is open; draws are deterministic."""
+    from gnm.sim.crn import request_uniforms
+    w, sc, res = full_run()
+    rq = res.requests
+    assert (rq.aog_route_attempts > 1).any()
+    a = request_uniforms(sc.seed + 104_729, [123456])
+    b = request_uniforms(sc.seed + 104_729, [123456])
+    assert (a == b).all() and not (a == request_uniforms(sc.seed, [123456])).all()
+    # an expendable whose local buy failed no longer waits months for a PO
+    e = rq[(rq.aog_route_attempts > 1) & rq.pn.isin(set(w.parts.pn[w.parts.part_class != "R"])) & rq.filled_h.notna()]
+    if len(e):
+        assert ((e.filled_h - e.need_h) < 24 * 10).mean() > 0.9
+

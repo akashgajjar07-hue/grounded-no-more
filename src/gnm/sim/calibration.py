@@ -26,6 +26,7 @@ def history_metrics(world, result, week_from: int, week_to: int) -> dict:
     return {
         "immediate_fill_rate": float((rq.qty * imm).sum() / rq.qty.sum()),
         "rotable_immediate_fill_rate": float(imm[rot].mean()),
+        "rotable_hub_pool_fill_rate": float(imm[rot & (rq.station == load_config()["network"]["hub"])].mean()),
         "expendable_immediate_fill_rate": float(imm[rq.part_class == "E"].mean()),
         "consumable_immediate_fill_rate": float((rq.qty * imm)[rq.part_class == "C"].sum() / rq.qty[rq.part_class == "C"].sum()),
         "aog_hours_per_year": float(ev.hours.sum() / yrs),
@@ -138,7 +139,7 @@ def analytic_rotable_fill(world, station_share: dict | None = None) -> float:
     return float(num / den) if den else float("nan")
 
 
-def v2_diagnostics(n_selection_seeds: int = 5, variant: str = "central") -> dict:
+def v2_diagnostics(n_selection_seeds: int = 5, variant: str = "central", cfg_override=None, write: bool = True) -> dict:
     """P0 on the v2 history (weeks 0–103, history seed) + P0 on the first selection seeds (diagnostic only)."""
     from gnm.sim.api import load_or_generate_scenario, load_world
     from gnm.sim.baseline import build_p0, p0_rotable_plan
@@ -149,9 +150,15 @@ def v2_diagnostics(n_selection_seeds: int = 5, variant: str = "central") -> dict
     ev0, ev1 = cfg["calendar"]["evaluation_weeks"]
     start = ev0 - cfg["calendar"]["warmup_weeks"]
     hseed = int(cfg["seeds"]["history_seed"])
-    world = load_world(variant)
+    if cfg_override is None:
+        world = load_world(variant)
+        scen = lambda s, a, b: load_or_generate_scenario(s, a, b, variant=variant)   # noqa: E731
+    else:   # in-memory diagnostic world (NOT written to config); P0 rebuilt on its public data
+        from gnm.sim.generator import generate_scenario, generate_world
+        world, _truth = generate_world(cfg_override, variant=variant)
+        scen = lambda s, a, b: generate_scenario(world, _truth, s, a, b)   # noqa: E731
     p0 = build_p0(world)
-    res = run_policy(world, load_or_generate_scenario(hseed, w0, w1, variant=variant), p0, w0, w1)
+    res = run_policy(world, scen(hseed, w0, w1), p0, w0, w1)
     yrs = (w1 - w0 + 1) / 52.0
     n_ac = len(world.aircraft)
     end_h = (w1 + 1) * 168
@@ -168,7 +175,8 @@ def v2_diagnostics(n_selection_seeds: int = 5, variant: str = "central") -> dict
         return {str(k): {"requests": int(r.n), "hours_per_year": round(float(r.hours_per_year), 1),
                          "share": round(float(r.share), 4)} for k, r in g.sort_values("hours", ascending=False).iterrows()}
 
-    top = (rq[rq.aog_h > 0].groupby(["pn", "description", "part_class", "deadline_class", "unit_cost_aed"])
+    rq = rq.merge(world.parts[["pn", "removal_mode"]], on="pn")
+    top = (rq[rq.aog_h > 0].groupby(["pn", "description", "part_class", "deadline_class", "unit_cost_aed", "removal_mode"])
            .agg(n=("aog_h", "size"), hours=("aog_h", "sum")).sort_values("hours", ascending=False).head(10).reset_index())
     routes = {}
     src = rq.fill_source.fillna("none")
@@ -182,7 +190,7 @@ def v2_diagnostics(n_selection_seeds: int = 5, variant: str = "central") -> dict
     sim_share = {pn: dict(g.station.value_counts(normalize=True)) for pn, g in rr.groupby("pn")}
     ks = []
     for s in list(range(cfg["seeds"]["selection_seeds"][0], cfg["seeds"]["selection_seeds"][1] + 1))[:n_selection_seeds]:
-        r2 = run_policy(world, load_or_generate_scenario(s, start, ev1, variant=variant), p0, ev0, ev1)
+        r2 = run_policy(world, scen(s, start, ev1), p0, ev0, ev1)
         m2 = history_metrics(world, r2, ev0, ev1)
         ks.append({"seed": s, **{k: round(v, 4) for k, v in m2.items()}, "spare_capital_aed": r2.kpis["spare_capital_aed"],
                    "aog_hours_kpi": r2.kpis["aog_hours"], "aog_events_kpi": r2.kpis["aog_events"]})
@@ -201,6 +209,7 @@ def v2_diagnostics(n_selection_seeds: int = 5, variant: str = "central") -> dict
         "aog_by_archetype": by("archetype"),
         "consumable_share_of_aog": round(float(rq[rq.part_class == "C"].aog_h.sum() / tot_req_aog), 4) if tot_req_aog else 0.0,
         "top10_aog_pns": [{"pn": r.pn, "description": r.description, "class": r.part_class, "deadline": r.deadline_class,
+                           "removal_mode": r.removal_mode,
                            "unit_cost_aed": round(float(r.unit_cost_aed), 0), "aog_requests": int(r.n),
                            "aog_hours_per_year": round(float(r.hours / yrs), 1)} for r in top.itertuples()],
         "sourcing_routes": routes,
@@ -216,19 +225,21 @@ def v2_diagnostics(n_selection_seeds: int = 5, variant: str = "central") -> dict
         "selection_p0": {"seeds": [k["seed"] for k in ks], "weeks": [ev0, ev1], "start_week": start, "mean": selm,
                          "per_seed": ks},
     }
-    V2_DIAG.parent.mkdir(parents=True, exist_ok=True)
-    V2_DIAG.write_text(json.dumps(out, indent=2, default=float))
-    V2_DIAG_MD.write_text(_diag_md(out))
+    if write:
+        V2_DIAG.parent.mkdir(parents=True, exist_ok=True)
+        V2_DIAG.write_text(json.dumps(out, indent=2, default=float))
+        V2_DIAG_MD.write_text(_diag_md(out))
     return out
 
 
 def _diag_md(d: dict) -> str:
     h, s = d["history"], d["selection_p0"]["mean"]
-    L = ["# v2 P0 diagnostics (diagnostic only: no band, nothing tuned or locked)", "",
+    L = ["# v2 P0 diagnostics (raw P0; band recorded in config, nothing tuned or locked)", "",
          f"Policy: {d['policy']}. History = weeks {h['weeks'][0]}–{h['weeks'][1]}, seed {h['seed']}. "
          f"Selection = seeds {d['selection_p0']['seeds']}, weeks {d['selection_p0']['weeks']} (start week {d['selection_p0']['start_week']}).", "",
          "| Metric | History | Year 1 | Year 2 | Selection mean |", "|---|---|---|---|---|"]
-    for k, lab in [("immediate_fill_rate", "Immediate fill (all)"), ("rotable_immediate_fill_rate", "Rotable fill"),
+    for k, lab in [("immediate_fill_rate", "Immediate fill (all)"), ("rotable_immediate_fill_rate", "Rotable fill (network)"),
+                   ("rotable_hub_pool_fill_rate", "Rotable fill (hub pool, AUH demand)"),
                    ("expendable_immediate_fill_rate", "Expendable fill"), ("consumable_immediate_fill_rate", "Consumable fill"),
                    ("aog_hours_per_year", "Material AOG h/yr (fleet)"), ("aog_events_per_year", "AOG events/yr")]:
         L.append(f"| {lab} | {h[k]:,.3f} | {h['year1'][k]:,.3f} | {h['year2'][k]:,.3f} | {s[k]:,.3f} |")
@@ -238,9 +249,9 @@ def _diag_md(d: dict) -> str:
                        ("aog_by_station", "AOG by station"), ("aog_by_archetype", "AOG by archetype")]:
         L += [f"**{title}** (per-request hours/yr, share): " + "; ".join(
             f"{k} {v['hours_per_year']:,.0f} h ({v['share']:.0%})" for k, v in d[key].items()), ""]
-    L += ["| Top AOG PN | Description | Class | Deadline | Unit cost AED | AOG h/yr |", "|---|---|---|---|---|---|"]
+    L += ["| Top AOG PN | Description | Class | Deadline | Removal mode | Unit cost AED | AOG h/yr |", "|---|---|---|---|---|---|---|"]
     for r in d["top10_aog_pns"]:
-        L.append(f"| {r['pn']} | {r['description']} | {r['class']} | {r['deadline']} | {r['unit_cost_aed']:,.0f} | {r['aog_hours_per_year']:,.0f} |")
+        L.append(f"| {r['pn']} | {r['description']} | {r['class']} | {r['deadline']} | {r['removal_mode']} | {r['unit_cost_aed']:,.0f} | {r['aog_hours_per_year']:,.0f} |")
     L += ["", "| Sourcing route | Requests | Mean wait h | Median wait h |", "|---|---|---|---|"]
     for k, v in sorted(d["sourcing_routes"].items(), key=lambda kv: -kv[1]["requests"]):
         L.append(f"| {k} | {v['requests']:,} | {v['mean_wait_h']} | {v['median_wait_h']} |")

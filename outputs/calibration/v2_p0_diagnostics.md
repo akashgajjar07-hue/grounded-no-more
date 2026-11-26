@@ -4,47 +4,48 @@ Policy: P0 (OEM-recommended provisioning on quoted data). History = weeks 0–10
 
 | Metric | History | Year 1 | Year 2 | Selection mean |
 |---|---|---|---|---|
-| Immediate fill (all) | 0.983 | 0.986 | 0.980 | 0.981 |
-| Rotable fill | 0.672 | 0.690 | 0.654 | 0.668 |
-| Expendable fill | 0.928 | 0.973 | 0.887 | 0.895 |
+| Immediate fill (all) | 0.984 | 0.986 | 0.981 | 0.981 |
+| Rotable fill (network) | 0.678 | 0.690 | 0.667 | 0.673 |
+| Rotable fill (hub pool, AUH demand) | 0.760 | 0.772 | 0.748 | 0.750 |
+| Expendable fill | 0.928 | 0.973 | 0.887 | 0.896 |
 | Consumable fill | 1.000 | 1.000 | 1.000 | 1.000 |
-| Material AOG h/yr (fleet) | 4,708.500 | 4,443.000 | 4,974.000 | 5,681.800 |
-| AOG events/yr | 136.000 | 138.000 | 134.000 | 132.200 |
+| Material AOG h/yr (fleet) | 1,712.000 | 1,699.000 | 1,725.000 | 1,907.200 |
+| AOG events/yr | 97.000 | 90.000 | 104.000 | 90.400 |
 
-AOG h per aircraft-year: 117.7. P0 spare capital: AED 45,644,535 (selection mean AED 45,954,291). Consumable share of AOG hours: 0.0%.
+AOG h per aircraft-year: 42.8. P0 spare capital: AED 44,918,087 (selection mean AED 45,234,597). Consumable share of AOG hours: 0.0%.
 
-**AOG by trigger** (per-request hours/yr, share): D0_no_stock 3,022 h (64%); deadline_expired 1,718 h (36%)
+**AOG by trigger** (per-request hours/yr, share): D0_no_stock 1,621 h (95%); deadline_expired 91 h (5%)
 
-**AOG by class** (per-request hours/yr, share): R 3,747 h (79%); E 994 h (21%)
+**AOG by class** (per-request hours/yr, share): R 1,625 h (95%); E 87 h (5%)
 
-**AOG by station** (per-request hours/yr, share): AUH 3,270 h (69%); CAI 370 h (8%); JED 339 h (7%); BOM 322 h (7%); FRA 230 h (5%); LHR 116 h (2%); SIN 94 h (2%)
+**AOG by station** (per-request hours/yr, share): AUH 542 h (32%); BOM 306 h (18%); JED 292 h (17%); CAI 283 h (17%); LHR 116 h (7%); SIN 94 h (5%); FRA 80 h (5%)
 
-**AOG by archetype** (per-request hours/yr, share): narrowbody 2,485 h (52%); widebody 2,256 h (48%)
+**AOG by archetype** (per-request hours/yr, share): narrowbody 1,132 h (66%); widebody 580 h (34%)
 
-| Top AOG PN | Description | Class | Deadline | Unit cost AED | AOG h/yr |
-|---|---|---|---|---|---|
-| GN-32-R015 | Main wheel and tyre assembly (NB) | R | D0 | 15,574 | 731 |
-| GN-32-R036 | Carbon brake assembly (WB) | R | D0 | 270,041 | 616 |
-| GN-32-R013 | Carbon brake assembly (NB) | R | D0 | 149,600 | 516 |
-| GN-33-E033 | Emergency light battery pack | E | D10 | 4,919 | 412 |
-| GN-24-R029 | Auto-transformer rectifier unit (WB) | R | D10 | 74,569 | 405 |
-| GN-32-R014 | Nose wheel steering actuator (NB) | R | D0 | 104,446 | 327 |
-| GN-36-E013 | Bleed temperature sensor (NB) | E | D10 | 1,200 | 244 |
-| GN-35-E032 | Crew quick-donning oxygen mask | E | D0 | 11,307 | 238 |
-| GN-29-R034 | Electric motor pump (WB) | R | D3 | 92,085 | 191 |
-| GN-34-R021 | Pitot probe (NB) | R | D3 | 31,055 | 138 |
+| Top AOG PN | Description | Class | Deadline | Removal mode | Unit cost AED | AOG h/yr |
+|---|---|---|---|---|---|---|
+| GN-32-R015 | Main wheel and tyre assembly (NB) | R | D0 | unscheduled | 15,574 | 381 |
+| GN-32-R014 | Nose wheel steering actuator (NB) | R | D0 | unscheduled | 104,446 | 327 |
+| GN-32-R036 | Carbon brake assembly (WB) | R | D0 | wear_planned | 270,041 | 184 |
+| GN-27-R032 | Aileron power control unit (WB) | R | D0 | unscheduled | 169,624 | 121 |
+| GN-27-R007 | Aileron servo control (NB) | R | D0 | unscheduled | 196,170 | 115 |
+| GN-27-R006 | Elevator servo control (NB) | R | D0 | unscheduled | 138,105 | 102 |
+| GN-27-R031 | Elevator power control unit (WB) | R | D0 | unscheduled | 231,228 | 100 |
+| GN-35-E032 | Crew quick-donning oxygen mask | E | D0 | unscheduled | 11,307 | 87 |
+| GN-32-R016 | Nose wheel and tyre assembly (NB) | R | D0 | unscheduled | 21,664 | 86 |
+| GN-32-R037 | Main wheel and tyre assembly (WB) | R | D0 | unscheduled | 20,357 | 71 |
 
 | Sourcing route | Requests | Mean wait h | Median wait h |
 |---|---|---|---|
-| local stock | 35,477 | 0.0 | 0.0 |
-| robbery (AUH) | 153 | 41.1 | 7.0 |
-| AUH/network transfer | 152 | 19.3 | 11.0 |
-| AOG exchange/loan | 128 | 69.7 | 40.0 |
-| backorder -> repair return | 119 | 92.2 | 77.0 |
-| AOG local buy | 101 | 135.3 | 209.0 |
-| backorder -> PO receipt | 41 | 136.1 | 78.0 |
-| local borrow | 12 | 33.7 | 5.5 |
+| local stock | 35,488 | 0.0 | 0.0 |
+| AUH/network transfer | 162 | 17.9 | 11.0 |
+| AOG exchange/loan | 154 | 50.3 | 29.0 |
+| robbery (AUH) | 118 | 55.4 | 7.5 |
+| backorder -> repair return | 110 | 71.8 | 69.5 |
+| AOG local buy | 107 | 135.9 | 209.0 |
+| backorder -> PO receipt | 35 | 76.9 | 63.0 |
+| local borrow | 9 | 43.1 | 6.0 |
 | unfilled at end | 1 | None | None |
 
-Rotable fill implied by the 90–95% Poisson rule on quoted data: 0.497 (quoted station split) / 0.852 (simulated station split); simulated: 0.672. analytic = P0's own expectation from quoted MTBUR/TAT (Poisson pipeline at AUH, line-station unit at outstations); simulated reflects true rates (quotes are optimistic), queueing and variability.
+Rotable fill implied by the 90–95% Poisson rule on quoted data: 0.497 (quoted station split) / 0.852 (simulated station split); simulated: 0.678. analytic = P0's own expectation from quoted MTBUR/TAT (Poisson pipeline at AUH, line-station unit at outstations); simulated reflects true rates (quotes are optimistic), queueing and variability.
 

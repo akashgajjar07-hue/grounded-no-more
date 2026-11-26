@@ -43,7 +43,7 @@ SALT_WORLD, SALT_SCHED, SALT_WEEK, SALT_LT, SALT_JIT, SALT_KITS = 11, 12, 13, 14
 ARCHS = ("narrowbody", "widebody")
 CLASS_KEY = {"C": "consumable", "E": "expendable", "R": "rotable"}
 LT_STREAM_LEN = 400
-GEN_VERSION = "v2.1"                 # bump when sampling logic changes (invalidates scenario caches)
+GEN_VERSION = "v2.2"                 # bump when sampling logic changes (invalidates scenario caches)
 JITTER_LEN = 20000
 
 
@@ -218,16 +218,17 @@ def generate_world(cfg: dict | None = None, variant: str = "central") -> tuple[W
             row["mtbur_quoted"] = round(m * float(np.exp(pc["quoted_mtbur_noise_sd_log"] * Z["qmtbur"][i]))
                                         * pc["quoted_mtbur_optimism"], 0)
         if cls == "R":
-            tat = lin(U["tat"][i], *pc["repair_tat_days"])
+            tat = lin(U["tat"][i], *(fam.get("repair_tat_days") or pc["repair_tat_days"]))
             t["repair_tat_mean_true_d"] = tat
-            t["repair_tat_cv_true"] = lin(U["tatcv"][i], *pc["repair_tat_cv"])
-            cond = lin(U["cond"][i], *pc["condemnation_prob"])
+            t["repair_tat_cv_true"] = lin(U["tatcv"][i], *(fam.get("repair_tat_cv") or pc["repair_tat_cv"]))
+            cond = lin(U["cond"][i], *(fam.get("condemnation_prob") or pc["condemnation_prob"]))
             t["condemnation_prob_true"] = cond
             t["nff_prob_true"] = float(fam.get("nff_share", 0.0)) * lin(U["nff"][i], 0.8, 1.2)
-            row["repair_shop"] = shops[ata]
+            row["repair_shop"] = fam.get("repair_shop") or shops[ata]
             row["repair_tat_mean_d"] = round(tat * float(np.exp(gc["quoted_tat_noise_sd_log"] * Z["qtat"][i]))
                                              * gc["quoted_tat_optimism"], 1)
-            row["repair_cost_aed"] = round(unit_cost * lin(U["rcost"][i], *pc["repair_cost_pct_of_unit"]), 2)
+            row["repair_cost_aed"] = round(unit_cost * lin(U["rcost"][i], *(fam.get("repair_cost_pct_of_unit")
+                                                                            or pc["repair_cost_pct_of_unit"])), 2)
             row["condemnation_prob_quoted"] = round(min(0.5, cond * float(np.exp(gc["quoted_condemn_noise_sd_log"] * Z["qcond"][i]))), 4)
         for arch, q in (("narrowbody", int(c.qty_nb)), ("widebody", int(c.qty_wb))):
             if q > 0:

@@ -8,124 +8,127 @@
       103
     ],
     "seed": 7,
-    "immediate_fill_rate": 0.9833,
-    "rotable_immediate_fill_rate": 0.6717,
+    "immediate_fill_rate": 0.9835,
+    "rotable_immediate_fill_rate": 0.678,
+    "rotable_hub_pool_fill_rate": 0.7597,
     "expendable_immediate_fill_rate": 0.928,
     "consumable_immediate_fill_rate": 1.0,
-    "aog_hours_per_year": 4708.5,
-    "aog_events_per_year": 136.0,
-    "aog_hours_per_aircraft_year": 117.7,
+    "aog_hours_per_year": 1712.0,
+    "aog_events_per_year": 97.0,
+    "aog_hours_per_aircraft_year": 42.8,
     "year1": {
       "immediate_fill_rate": 0.9863,
       "rotable_immediate_fill_rate": 0.6897,
+      "rotable_hub_pool_fill_rate": 0.772,
       "expendable_immediate_fill_rate": 0.9725,
       "consumable_immediate_fill_rate": 1.0,
-      "aog_hours_per_year": 4443.0,
-      "aog_events_per_year": 138.0
+      "aog_hours_per_year": 1699.0,
+      "aog_events_per_year": 90.0
     },
     "year2": {
-      "immediate_fill_rate": 0.9802,
-      "rotable_immediate_fill_rate": 0.6542,
+      "immediate_fill_rate": 0.9807,
+      "rotable_immediate_fill_rate": 0.6667,
+      "rotable_hub_pool_fill_rate": 0.7478,
       "expendable_immediate_fill_rate": 0.8869,
       "consumable_immediate_fill_rate": 0.9999,
-      "aog_hours_per_year": 4974.0,
-      "aog_events_per_year": 134.0
+      "aog_hours_per_year": 1725.0,
+      "aog_events_per_year": 104.0
     },
-    "spare_capital_aed": 45644535.0,
+    "spare_capital_aed": 44918087.0,
     "kpis": {
       "immediate_fill_rate": 0.98,
-      "aog_hours": 4708.5,
-      "aog_events": 272.0,
-      "backorder_unit_hours": 24383.5,
-      "spare_capital_aed": 45644534.71,
-      "holding_cost_aed": 9128906.94,
-      "repair_cost_aed": 16916459.16,
-      "logistics_cost_aed": 177750.0,
-      "expedite_cost_aed": 3449095.1,
-      "aog_penalty_aed": 112000000.0,
-      "purchase_spend_aed": 13444070.69
+      "aog_hours": 1712.0,
+      "aog_events": 194.0,
+      "backorder_unit_hours": 21348.5,
+      "spare_capital_aed": 44918087.18,
+      "holding_cost_aed": 8983617.44,
+      "repair_cost_aed": 17018323.8,
+      "logistics_cost_aed": 169875.0,
+      "expedite_cost_aed": 4335685.86,
+      "aog_penalty_aed": 40037500.0,
+      "purchase_spend_aed": 13436677.22
     },
     "extra": {
       "phantom_removals": 0,
-      "aog_route_failures": 28,
-      "loans": 140,
+      "aog_route_failures": 27,
+      "loans": 163,
       "loans_open_at_end": 0,
-      "robberies": 153,
+      "robberies": 118,
       "donors_open_at_end": 1
     }
   },
   "aog_note": "breakdowns use per-request material-late hours (unmerged); the fleet totals use merged per-aircraft events",
   "aog_by_trigger": {
     "D0_no_stock": {
-      "requests": 260,
-      "hours_per_year": 3022.5,
-      "share": 0.6375
+      "requests": 185,
+      "hours_per_year": 1621.0,
+      "share": 0.9468
     },
     "deadline_expired": {
-      "requests": 14,
-      "hours_per_year": 1718.5,
-      "share": 0.3625
+      "requests": 9,
+      "hours_per_year": 91.0,
+      "share": 0.0532
     }
   },
   "aog_by_class": {
     "R": {
-      "requests": 254,
-      "hours_per_year": 3747.0,
-      "share": 0.7903
+      "requests": 178,
+      "hours_per_year": 1625.0,
+      "share": 0.9492
     },
     "E": {
-      "requests": 20,
-      "hours_per_year": 994.0,
-      "share": 0.2097
+      "requests": 16,
+      "hours_per_year": 87.0,
+      "share": 0.0508
     }
   },
   "aog_by_station": {
     "AUH": {
-      "requests": 133,
-      "hours_per_year": 3270.0,
-      "share": 0.6897
-    },
-    "CAI": {
-      "requests": 32,
-      "hours_per_year": 370.0,
-      "share": 0.078
-    },
-    "JED": {
-      "requests": 39,
-      "hours_per_year": 339.0,
-      "share": 0.0715
+      "requests": 53,
+      "hours_per_year": 541.5,
+      "share": 0.3163
     },
     "BOM": {
       "requests": 39,
-      "hours_per_year": 322.0,
-      "share": 0.0679
+      "hours_per_year": 306.5,
+      "share": 0.179
     },
-    "FRA": {
-      "requests": 8,
-      "hours_per_year": 230.5,
-      "share": 0.0486
+    "JED": {
+      "requests": 39,
+      "hours_per_year": 292.0,
+      "share": 0.1706
+    },
+    "CAI": {
+      "requests": 32,
+      "hours_per_year": 283.0,
+      "share": 0.1653
     },
     "LHR": {
       "requests": 12,
       "hours_per_year": 116.0,
-      "share": 0.0245
+      "share": 0.0678
     },
     "SIN": {
       "requests": 11,
       "hours_per_year": 93.5,
-      "share": 0.0197
+      "share": 0.0546
+    },
+    "FRA": {
+      "requests": 8,
+      "hours_per_year": 79.5,
+      "share": 0.0464
     }
   },
   "aog_by_archetype": {
     "narrowbody": {
-      "requests": 186,
-      "hours_per_year": 2485.0,
-      "share": 0.5242
+      "requests": 135,
+      "hours_per_year": 1131.5,
+      "share": 0.6609
     },
     "widebody": {
-      "requests": 88,
-      "hours_per_year": 2256.0,
-      "share": 0.4758
+      "requests": 59,
+      "hours_per_year": 580.5,
+      "share": 0.3391
     }
   },
   "consumable_share_of_aog": 0.0,
@@ -135,115 +138,125 @@
       "description": "Main wheel and tyre assembly (NB)",
       "class": "R",
       "deadline": "D0",
+      "removal_mode": "unscheduled",
       "unit_cost_aed": 15574.0,
-      "aog_requests": 59,
-      "aog_hours_per_year": 731.0
-    },
-    {
-      "pn": "GN-32-R036",
-      "description": "Carbon brake assembly (WB)",
-      "class": "R",
-      "deadline": "D0",
-      "unit_cost_aed": 270041.0,
-      "aog_requests": 37,
-      "aog_hours_per_year": 615.5
-    },
-    {
-      "pn": "GN-32-R013",
-      "description": "Carbon brake assembly (NB)",
-      "class": "R",
-      "deadline": "D0",
-      "unit_cost_aed": 149600.0,
-      "aog_requests": 36,
-      "aog_hours_per_year": 516.5
-    },
-    {
-      "pn": "GN-33-E033",
-      "description": "Emergency light battery pack",
-      "class": "E",
-      "deadline": "D10",
-      "unit_cost_aed": 4919.0,
-      "aog_requests": 2,
-      "aog_hours_per_year": 411.5
-    },
-    {
-      "pn": "GN-24-R029",
-      "description": "Auto-transformer rectifier unit (WB)",
-      "class": "R",
-      "deadline": "D10",
-      "unit_cost_aed": 74569.0,
-      "aog_requests": 1,
-      "aog_hours_per_year": 405.0
+      "aog_requests": 43,
+      "aog_hours_per_year": 381.0
     },
     {
       "pn": "GN-32-R014",
       "description": "Nose wheel steering actuator (NB)",
       "class": "R",
       "deadline": "D0",
+      "removal_mode": "unscheduled",
       "unit_cost_aed": 104446.0,
       "aog_requests": 39,
       "aog_hours_per_year": 327.0
     },
     {
-      "pn": "GN-36-E013",
-      "description": "Bleed temperature sensor (NB)",
-      "class": "E",
-      "deadline": "D10",
-      "unit_cost_aed": 1200.0,
-      "aog_requests": 1,
-      "aog_hours_per_year": 244.5
+      "pn": "GN-32-R036",
+      "description": "Carbon brake assembly (WB)",
+      "class": "R",
+      "deadline": "D0",
+      "removal_mode": "wear_planned",
+      "unit_cost_aed": 270041.0,
+      "aog_requests": 12,
+      "aog_hours_per_year": 184.5
+    },
+    {
+      "pn": "GN-27-R032",
+      "description": "Aileron power control unit (WB)",
+      "class": "R",
+      "deadline": "D0",
+      "removal_mode": "unscheduled",
+      "unit_cost_aed": 169624.0,
+      "aog_requests": 13,
+      "aog_hours_per_year": 121.0
+    },
+    {
+      "pn": "GN-27-R007",
+      "description": "Aileron servo control (NB)",
+      "class": "R",
+      "deadline": "D0",
+      "removal_mode": "unscheduled",
+      "unit_cost_aed": 196170.0,
+      "aog_requests": 12,
+      "aog_hours_per_year": 115.0
+    },
+    {
+      "pn": "GN-27-R006",
+      "description": "Elevator servo control (NB)",
+      "class": "R",
+      "deadline": "D0",
+      "removal_mode": "unscheduled",
+      "unit_cost_aed": 138105.0,
+      "aog_requests": 15,
+      "aog_hours_per_year": 102.5
+    },
+    {
+      "pn": "GN-27-R031",
+      "description": "Elevator power control unit (WB)",
+      "class": "R",
+      "deadline": "D0",
+      "removal_mode": "unscheduled",
+      "unit_cost_aed": 231228.0,
+      "aog_requests": 11,
+      "aog_hours_per_year": 99.5
     },
     {
       "pn": "GN-35-E032",
       "description": "Crew quick-donning oxygen mask",
       "class": "E",
       "deadline": "D0",
+      "removal_mode": "unscheduled",
       "unit_cost_aed": 11307.0,
       "aog_requests": 16,
-      "aog_hours_per_year": 238.0
+      "aog_hours_per_year": 87.0
     },
     {
-      "pn": "GN-29-R034",
-      "description": "Electric motor pump (WB)",
+      "pn": "GN-32-R016",
+      "description": "Nose wheel and tyre assembly (NB)",
       "class": "R",
-      "deadline": "D3",
-      "unit_cost_aed": 92085.0,
-      "aog_requests": 2,
-      "aog_hours_per_year": 191.0
+      "deadline": "D0",
+      "removal_mode": "unscheduled",
+      "unit_cost_aed": 21664.0,
+      "aog_requests": 13,
+      "aog_hours_per_year": 85.5
     },
     {
-      "pn": "GN-34-R021",
-      "description": "Pitot probe (NB)",
+      "pn": "GN-32-R037",
+      "description": "Main wheel and tyre assembly (WB)",
       "class": "R",
-      "deadline": "D3",
-      "unit_cost_aed": 31055.0,
-      "aog_requests": 2,
-      "aog_hours_per_year": 138.0
+      "deadline": "D0",
+      "removal_mode": "unscheduled",
+      "unit_cost_aed": 20357.0,
+      "aog_requests": 9,
+      "aog_hours_per_year": 71.0
     }
   ],
   "sourcing_routes": {
     "AOG exchange/loan": {
-      "requests": 128,
-      "units": 128,
-      "mean_wait_h": 69.7,
-      "median_wait_h": 40.0
+      "requests": 154,
+      "units": 154,
+      "mean_wait_h": 50.3,
+      "median_wait_h": 29.0
     },
     "local stock": {
-      "requests": 35477,
-      "units": 41522,
+      "requests": 35488,
+      "units": 41533,
       "mean_wait_h": 0.0,
       "median_wait_h": 0.0
     },
     "local borrow": {
-      "requests": 12,
-      "units": 12,
-      "mean_wait_h": 33.7,
-      "median_wait_h": 5.5
+      "requests": 9,
+      "units": 9,
+      "mean_wait_h": 43.1,
+      "median_wait_h": 6.0
     },
     "AOG local buy": {
-      "requests": 101,
-      "units": 101,
-      "mean_wait_h": 135.3,
+      "requests": 107,
+      "units": 107,
+      "mean_wait_h": 135.9,
       "median_wait_h": 209.0
     },
     "unfilled at end": {
@@ -253,40 +266,40 @@
       "median_wait_h": null
     },
     "backorder -> PO receipt": {
-      "requests": 41,
-      "units": 41,
-      "mean_wait_h": 136.1,
-      "median_wait_h": 78.0
+      "requests": 35,
+      "units": 35,
+      "mean_wait_h": 76.9,
+      "median_wait_h": 63.0
     },
     "backorder -> repair return": {
-      "requests": 119,
-      "units": 119,
-      "mean_wait_h": 92.2,
-      "median_wait_h": 77.0
+      "requests": 110,
+      "units": 110,
+      "mean_wait_h": 71.8,
+      "median_wait_h": 69.5
     },
     "robbery (AUH)": {
-      "requests": 153,
-      "units": 153,
-      "mean_wait_h": 41.1,
-      "median_wait_h": 7.0
+      "requests": 118,
+      "units": 118,
+      "mean_wait_h": 55.4,
+      "median_wait_h": 7.5
     },
     "AUH/network transfer": {
-      "requests": 152,
-      "units": 152,
-      "mean_wait_h": 19.3,
+      "requests": 162,
+      "units": 162,
+      "mean_wait_h": 17.9,
       "median_wait_h": 11.0
     }
   },
   "rotable_fill_analytic_vs_sim": {
     "analytic_quoted_plan_split": 0.4971,
-    "analytic_simulated_station_split": 0.8521,
-    "simulated_history": 0.6717,
+    "analytic_simulated_station_split": 0.8522,
+    "simulated_history": 0.678,
     "note": "analytic = P0's own expectation from quoted MTBUR/TAT (Poisson pipeline at AUH, line-station unit at outstations); simulated reflects true rates (quotes are optimistic), queueing and variability"
   },
   "p0_rotable_plan_totals": {
-    "S_total": 241,
-    "loop_units": 112,
-    "auh_serviceable_target": 129,
+    "S_total": 229,
+    "loop_units": 105,
+    "auh_serviceable_target": 124,
     "outstation_units": 4
   },
   "selection_p0": {
@@ -303,76 +316,82 @@
     ],
     "start_week": 78,
     "mean": {
-      "immediate_fill_rate": 0.9810000000000001,
-      "rotable_immediate_fill_rate": 0.6680200000000001,
-      "expendable_immediate_fill_rate": 0.8946400000000001,
-      "consumable_immediate_fill_rate": 0.9999399999999999,
-      "aog_hours_per_year": 5681.8,
-      "aog_events_per_year": 132.2,
-      "spare_capital_aed": 45954290.96278478,
-      "aog_hours_kpi": 5681.8,
-      "aog_events_kpi": 132.2
+      "immediate_fill_rate": 0.9812799999999999,
+      "rotable_immediate_fill_rate": 0.67318,
+      "rotable_hub_pool_fill_rate": 0.7498,
+      "expendable_immediate_fill_rate": 0.89606,
+      "consumable_immediate_fill_rate": 0.9999600000000001,
+      "aog_hours_per_year": 1907.2,
+      "aog_events_per_year": 90.4,
+      "spare_capital_aed": 45234596.93400339,
+      "aog_hours_kpi": 1907.2,
+      "aog_events_kpi": 90.4
     },
     "per_seed": [
       {
         "seed": 100,
-        "immediate_fill_rate": 0.982,
-        "rotable_immediate_fill_rate": 0.6995,
-        "expendable_immediate_fill_rate": 0.8893,
+        "immediate_fill_rate": 0.9825,
+        "rotable_immediate_fill_rate": 0.7066,
+        "rotable_hub_pool_fill_rate": 0.7892,
+        "expendable_immediate_fill_rate": 0.8934,
         "consumable_immediate_fill_rate": 1.0,
-        "aog_hours_per_year": 6516.0,
-        "aog_events_per_year": 140.0,
-        "spare_capital_aed": 45548516.54963497,
-        "aog_hours_kpi": 6516.0,
-        "aog_events_kpi": 140
+        "aog_hours_per_year": 2058.0,
+        "aog_events_per_year": 93.0,
+        "spare_capital_aed": 44868998.990975484,
+        "aog_hours_kpi": 2058.0,
+        "aog_events_kpi": 93
       },
       {
         "seed": 101,
-        "immediate_fill_rate": 0.9797,
-        "rotable_immediate_fill_rate": 0.6208,
-        "expendable_immediate_fill_rate": 0.9029,
+        "immediate_fill_rate": 0.9802,
+        "rotable_immediate_fill_rate": 0.6348,
+        "rotable_hub_pool_fill_rate": 0.7083,
+        "expendable_immediate_fill_rate": 0.9018,
         "consumable_immediate_fill_rate": 0.9999,
-        "aog_hours_per_year": 5688.0,
-        "aog_events_per_year": 149.0,
-        "spare_capital_aed": 46911620.54286379,
-        "aog_hours_kpi": 5688.0,
-        "aog_events_kpi": 149
+        "aog_hours_per_year": 2243.0,
+        "aog_events_per_year": 103.0,
+        "spare_capital_aed": 46108080.46236599,
+        "aog_hours_kpi": 2243.0,
+        "aog_events_kpi": 103
       },
       {
         "seed": 102,
-        "immediate_fill_rate": 0.9821,
-        "rotable_immediate_fill_rate": 0.6837,
-        "expendable_immediate_fill_rate": 0.9013,
+        "immediate_fill_rate": 0.9824,
+        "rotable_immediate_fill_rate": 0.6895,
+        "rotable_hub_pool_fill_rate": 0.7658,
+        "expendable_immediate_fill_rate": 0.9023,
         "consumable_immediate_fill_rate": 0.9999,
-        "aog_hours_per_year": 5529.0,
-        "aog_events_per_year": 108.0,
-        "spare_capital_aed": 45617160.38142535,
-        "aog_hours_kpi": 5529.0,
-        "aog_events_kpi": 108
+        "aog_hours_per_year": 1599.0,
+        "aog_events_per_year": 74.0,
+        "spare_capital_aed": 44940923.040703826,
+        "aog_hours_kpi": 1599.0,
+        "aog_events_kpi": 74
       },
       {
         "seed": 103,
-        "immediate_fill_rate": 0.9798,
-        "rotable_immediate_fill_rate": 0.6787,
-        "expendable_immediate_fill_rate": 0.8623,
-        "consumable_immediate_fill_rate": 0.9999,
-        "aog_hours_per_year": 6944.0,
-        "aog_events_per_year": 128.0,
-        "spare_capital_aed": 45565443.061429575,
-        "aog_hours_kpi": 6944.0,
-        "aog_events_kpi": 128
+        "immediate_fill_rate": 0.98,
+        "rotable_immediate_fill_rate": 0.6776,
+        "rotable_hub_pool_fill_rate": 0.7549,
+        "expendable_immediate_fill_rate": 0.8665,
+        "consumable_immediate_fill_rate": 1.0,
+        "aog_hours_per_year": 2063.0,
+        "aog_events_per_year": 93.0,
+        "spare_capital_aed": 44862471.13619612,
+        "aog_hours_kpi": 2063.0,
+        "aog_events_kpi": 93
       },
       {
         "seed": 104,
-        "immediate_fill_rate": 0.9814,
+        "immediate_fill_rate": 0.9813,
         "rotable_immediate_fill_rate": 0.6574,
-        "expendable_immediate_fill_rate": 0.9174,
+        "rotable_hub_pool_fill_rate": 0.7308,
+        "expendable_immediate_fill_rate": 0.9163,
         "consumable_immediate_fill_rate": 1.0,
-        "aog_hours_per_year": 3732.0,
-        "aog_events_per_year": 136.0,
-        "spare_capital_aed": 46128714.27857026,
-        "aog_hours_kpi": 3732.0,
-        "aog_events_kpi": 136
+        "aog_hours_per_year": 1573.0,
+        "aog_events_per_year": 89.0,
+        "spare_capital_aed": 45392511.039775506,
+        "aog_hours_kpi": 1573.0,
+        "aog_events_kpi": 89
       }
     ]
   }

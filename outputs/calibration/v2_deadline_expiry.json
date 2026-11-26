@@ -1,0 +1,170 @@
+{
+  "years_pooled": 7.0,
+  "total_h_per_yr": 123.3,
+  "by_reason": {
+    "route exchange_loan succeeded only on a retry (earlier draw unavailable), after the deadline": {
+      "requests": 9,
+      "h_per_yr": 63.9
+    },
+    "route exchange_loan succeeded but its response time exceeds the window (triggered at need)": {
+      "requests": 9,
+      "h_per_yr": 31.3
+    },
+    "route robbery succeeded only on a retry (earlier draw unavailable), after the deadline": {
+      "requests": 10,
+      "h_per_yr": 16.3
+    },
+    "route local_buy succeeded only on a retry (earlier draw unavailable), after the deadline": {
+      "requests": 2,
+      "h_per_yr": 6.1
+    },
+    "robbery/exchange unavailable on draw (AUH) -> waited for repair return": {
+      "requests": 2,
+      "h_per_yr": 3.9
+    },
+    "route local_borrow succeeded only on a retry (earlier draw unavailable), after the deadline": {
+      "requests": 1,
+      "h_per_yr": 1.9
+    }
+  },
+  "by_pn": [
+    {
+      "pn": "GN-29-R034",
+      "description": "Electric motor pump (WB)",
+      "class": "R",
+      "deadline": "D3",
+      "requests": 8,
+      "h_per_yr": 26.0,
+      "reasons": {
+        "robbery/exchange unavailable on draw (AUH) -> waited for repair return": 3.9,
+        "route exchange_loan succeeded but its response time exceeds the window (triggered at need)": 10.3,
+        "route exchange_loan succeeded only on a retry (earlier draw unavailable), after the deadline": 8.6,
+        "route robbery succeeded only on a retry (earlier draw unavailable), after the deadline": 3.3
+      }
+    },
+    {
+      "pn": "GN-29-R035",
+      "description": "Engine-driven hydraulic pump (WB)",
+      "class": "R",
+      "deadline": "D3",
+      "requests": 1,
+      "h_per_yr": 17.4,
+      "reasons": {
+        "route exchange_loan succeeded only on a retry (earlier draw unavailable), after the deadline": 17.4
+      }
+    },
+    {
+      "pn": "GN-28-R033",
+      "description": "Fuel boost pump (WB)",
+      "class": "R",
+      "deadline": "D3",
+      "requests": 4,
+      "h_per_yr": 16.0,
+      "reasons": {
+        "route exchange_loan succeeded but its response time exceeds the window (triggered at need)": 16.0
+      }
+    },
+    {
+      "pn": "GN-34-R019",
+      "description": "Air data inertial reference unit (NB)",
+      "class": "R",
+      "deadline": "D3",
+      "requests": 5,
+      "h_per_yr": 15.7,
+      "reasons": {
+        "route exchange_loan succeeded only on a retry (earlier draw unavailable), after the deadline": 10.6,
+        "route local_borrow succeeded only on a retry (earlier draw unavailable), after the deadline": 1.9,
+        "route robbery succeeded only on a retry (earlier draw unavailable), after the deadline": 3.3
+      }
+    },
+    {
+      "pn": "GN-27-R008",
+      "description": "Spoiler servo control (NB)",
+      "class": "R",
+      "deadline": "D10",
+      "requests": 3,
+      "h_per_yr": 15.1,
+      "reasons": {
+        "route exchange_loan succeeded only on a retry (earlier draw unavailable), after the deadline": 15.1
+      }
+    },
+    {
+      "pn": "GN-34-R021",
+      "description": "Pitot probe (NB)",
+      "class": "R",
+      "deadline": "D3",
+      "requests": 5,
+      "h_per_yr": 8.0,
+      "reasons": {
+        "route robbery succeeded only on a retry (earlier draw unavailable), after the deadline": 8.0
+      }
+    },
+    {
+      "pn": "GN-34-R018",
+      "description": "Air data module (NB)",
+      "class": "R",
+      "deadline": "D10",
+      "requests": 1,
+      "h_per_yr": 6.7,
+      "reasons": {
+        "route exchange_loan succeeded only on a retry (earlier draw unavailable), after the deadline": 12.1
+      }
+    },
+    {
+      "pn": "GN-34-R018",
+      "description": "Air data module (NB)",
+      "class": "R",
+      "deadline": "D3",
+      "requests": 1,
+      "h_per_yr": 5.4,
+      "reasons": {
+        "route exchange_loan succeeded only on a retry (earlier draw unavailable), after the deadline": 12.1
+      }
+    },
+    {
+      "pn": "GN-34-R040",
+      "description": "Weather radar transceiver (WB)",
+      "class": "R",
+      "deadline": "D3",
+      "requests": 1,
+      "h_per_yr": 3.9,
+      "reasons": {
+        "route exchange_loan succeeded but its response time exceeds the window (triggered at need)": 3.9
+      }
+    },
+    {
+      "pn": "GN-34-E029",
+      "description": "Total air temperature probe (WB)",
+      "class": "E",
+      "deadline": "D3",
+      "requests": 1,
+      "h_per_yr": 3.3,
+      "reasons": {
+        "route local_buy succeeded only on a retry (earlier draw unavailable), after the deadline": 3.3
+      }
+    },
+    {
+      "pn": "GN-21-R025",
+      "description": "Cabin air compressor (WB)",
+      "class": "R",
+      "deadline": "D3",
+      "requests": 2,
+      "h_per_yr": 2.9,
+      "reasons": {
+        "route exchange_loan succeeded but its response time exceeds the window (triggered at need)": 1.1,
+        "route robbery succeeded only on a retry (earlier draw unavailable), after the deadline": 1.7
+      }
+    },
+    {
+      "pn": "GN-33-E033",
+      "description": "Emergency light battery pack",
+      "class": "E",
+      "deadline": "D10",
+      "requests": 1,
+      "h_per_yr": 2.9,
+      "reasons": {
+        "route local_buy succeeded only on a retry (earlier draw unavailable), after the deadline": 2.9
+      }
+    }
+  ]
+}

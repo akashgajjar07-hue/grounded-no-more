@@ -246,7 +246,15 @@ generator:                           # parameters of the synthetic generator not
     power_conversion: {cost_aed: [40000, 150000], nff_share: 0.25}
     brake_nb: {cost_aed: [80000, 180000], nff_share: 0.0, mtbur_fc: [1800, 3000]}
     brake_wb: {cost_aed: [150000, 350000], nff_share: 0.0, mtbur_fc: [1800, 3000]}
-    wheel_tyre: {cost_aed: [15000, 45000], nff_share: 0.0, mtbur_fc: [3000, 8000]}
+    wheel_tyre:                      # (v2 A.a data correction) cheap, high-volume repairable assembly rebuilt in a hub wheel & tyre shop
+      cost_aed: [15000, 45000]
+      nff_share: 0.0
+      mtbur_fc: [3000, 8000]
+      repair_shop: AUH_INHOUSE       # wheel & tyre shop at the hub (was the EU vendor via the ATA 32 mapping)
+      repair_tat_days: [2, 7]        # tyre change/retread + wheel NDT inspection: days, not weeks (was the generic 15-90 d)
+      repair_tat_cv: [0.20, 0.40]
+      repair_cost_pct_of_unit: [0.15, 0.35]   # new/retreaded tyre + inspection per rebuild
+      condemnation_prob: [0.01, 0.03]         # wheel-half scrap at inspection (tyre scrap is inside the rebuild cost)
     probe: {cost_aed: [8000, 35000], nff_share: 0.25}
     sensor: {cost_aed: [800, 9000]}
     valve_small: {cost_aed: [1500, 8000]}
@@ -300,18 +308,22 @@ engine:                              # event-engine settings (policy-agnostic)
   provenance: ASSUMED
   rationale: "Shop capacity slots are interpreted as bench/test-stand positions: a unit holds a slot only for its touch/test time (share of work time); awaiting-parts and paperwork time runs outside the slot. Without this, 14 slots could not process ~1,000 rotable removals a year at 15–90 day TATs. 0.05 was chosen in v1 for ~0.8 hub bench utilisation; queueing is light by construction (capacity slots are bench positions)."
 
-calibration_targets:                 # v2: PENDING user approval of a new band (status below). The v1 band is kept under v1_band for reference only.
-  status: "PENDING v2 recalibration (user approval of the band); not enforced"
-  v1_band:                           # SIM-CAL (v1): P0 history (weeks 0–103, history_seed) of the central world must land inside these bands
+calibration_targets:                 # v2 band chosen by the user (before any v2 policy result); NOT yet calibrated or locked
+  status: "band recorded; calibration not yet run (quote/market settings not applied); not locked"
+  rotable_immediate_fill_rate: [0.78, 0.85]   # P0 network rotable immediate fill (all stations)
+  aog_hours_per_year: [1200, 2700]            # material AOG, fleet-wide, merged per aircraft (30-68 h per aircraft-year)
+  aog_events_per_year: [60, 100]
+  sensitivity_variants:              # low/high stress worlds at the band ends (generator.variants scalars NOT set yet)
+    low_stress: {aog_hours_per_year: 1200, rotable_immediate_fill_rate: 0.85}
+    high_stress: {aog_hours_per_year: 2700, rotable_immediate_fill_rate: 0.78}
+  p0_rule: "unchanged: legacy OEM-quote provisioning; line-station unit only for D0 PNs with >= 4 quoted removals/yr at that station"
+  provenance: ASSUMED
+  rationale: "Legacy OEM-quote provisioning (Poisson 95%/90% on quoted data) with no line-station units for low-volume D0 parts; the legacy line-station rule (>= 4 quoted removals/yr) is kept - P2 is the remedy. Chosen by the user after the v2 P0 gap diagnosis and before any v2 P1/P2/optimiser result."
+  v1_band:                           # SIM-CAL (v1), archived reference only
     immediate_fill_rate: [0.93, 0.97]
     rotable_immediate_fill_rate: [0.80, 0.88]
-    aog_hours_per_year: [1500, 3500]   # material AOG, fleet-wide, merged per aircraft (~40–90 h per aircraft-year)
+    aog_hours_per_year: [1500, 3500]
     aog_events_per_year: [60, 250]
-    sensitivity_variants:              # selected via generator.variants (true-MTBUR scalar); P0 history should land near
-      low_stress: {aog_hours_per_year: 1500, rotable_immediate_fill_rate: 0.88}
-      high_stress: {aog_hours_per_year: 3500, rotable_immediate_fill_rate: 0.80}
-  provenance: ASSUMED
-  rationale: "Order-of-magnitude plausibility band for a 40-aircraft hub carrier run on static legacy rules (quoted reliability, no safety stock, hub-centric float): mediocre but not broken, leaving realistic headroom for data-driven policies. Not operator data; chosen before any policy comparison; sensitivity-tested at the band's low and high ends."
 
 aog_sourcing:                        # (v2) AOG recovery routes, all ASSUMED; availability/response drawn from paired per-request CRNs
   exchange_loan:                     # AV-03: AOG exchange/loan for rotables (replaces the v1 guaranteed outright buy)
@@ -337,6 +349,7 @@ aog_sourcing:                        # (v2) AOG recovery routes, all ASSUMED; av
     availability: 0.95
     response_hours: [4, 12]
     premium_pct: 0.50                # over list, incl. AOG handling
+  retry_hours: {C: 24, E: 24, R: 72}   # (V2-SIM-14) a failed AOG route is re-tried with a fresh paired draw while the need is open (distributors daily; rotable exchange/loan market every 3 days)
   provenance: ASSUMED
   rationale: "AOG desks recover rotables by exchange or loan (not outright purchase), faster and more available for A320-family LRUs than for 787 LRUs where the surplus market is thin; outstations borrow from local MROs/other operators where they exist; hubs rob check/parked aircraft with engineering approval; consumables/expendables are bought or borrowed locally within hours. None of these units join the owned pool."
 

@@ -56,9 +56,9 @@ from gnm.contracts import PolicySpec, RunResult, Scenario, World
 from gnm.sim.crn import request_uniforms
 
 # event types
-EV_SNAP, EV_ARRIVE, EV_PO, EV_RET, EV_SHOP_IN, EV_BENCH, EV_WORKDONE, EV_CONDEMN, EV_EXPIRE, EV_KIT, EV_REQ, EV_DEADLINE, EV_AOG, EV_ROUTE = range(14)
+EV_SNAP, EV_ARRIVE, EV_PO, EV_RET, EV_SHOP_IN, EV_BENCH, EV_WORKDONE, EV_CONDEMN, EV_EXPIRE, EV_KIT, EV_REQ, EV_DEADLINE, EV_AOG, EV_ROUTE, EV_PREFIT = range(15)
 PRIO = {EV_SNAP: 0, EV_ARRIVE: 1, EV_PO: 1, EV_RET: 1, EV_SHOP_IN: 2, EV_BENCH: 2, EV_WORKDONE: 2, EV_CONDEMN: 2,
-        EV_EXPIRE: 3, EV_KIT: 4, EV_REQ: 5, EV_DEADLINE: 6, EV_AOG: 6, EV_ROUTE: 1}
+        EV_EXPIRE: 3, EV_KIT: 4, EV_REQ: 5, EV_DEADLINE: 6, EV_AOG: 6, EV_ROUTE: 1, EV_PREFIT: 7}
 DL_HOURS = schemas.DEADLINE_HOURS
 SRC_KIT, SRC_REM, SRC_USE, SRC_PLAN = 0, 1, 2, 3
 BIG_H = 10 ** 9          # NONE deadline class: never an AOG driver
@@ -140,6 +140,7 @@ class _Engine:
         self.rob = ags["robbery"]
         self.buy = ags["local_buy"]
         self.rob_on = bool(self.rob.get("enabled", True))
+        self.retry_h = {k: (float(v) if v else None) for k, v in (ags.get("retry_hours") or {}).items()}
         self.nff_pct = float(cfg["generator"]["nff_cost_pct_of_repair"])
         net = cfg["network"]
         rt = net["routine_transport_days"]
@@ -547,11 +548,15 @@ class _Engine:
 
     def _aog_route(self, r, t):
         """Try the AOG recovery routes for an uncovered need (paired per-request CRNs)."""
-        if self.r_unc[r] <= 0 or self.r_route[r]:
+        if self.r_unc[r] <= 0 or self.r_route_res[r] not in (None, "none", "planned_none", "planned_covered", "planned_transfer"):
             return
-        self.r_route[r] = 1
+        attempt = self.r_route[r]
+        self.r_route[r] = attempt + 1
+        if self.r_route_t[r] is None:
+            self.r_route_t[r] = t
+        self.r_route_res[r] = "none"
         p, j = self.r_pn[r], self.r_st[r]
-        u = self.ru[r]
+        u = self.ru[r] if attempt == 0 else self._retry_u(r, attempt)
         arch = self.tail_arch[self.r_tail[r]]
         if self.is_rot[p]:
             if j == self.H and self.rob_on and u[2] < self.rob["availability"]:
@@ -569,13 +574,54 @@ class _Engine:
             lo, hi = self.buy["response_hours"]
             return self._commit_route(r, t, "local_buy", lo + (hi - lo) * u[5])
         self.n_route_fail += 1
+        rh = self.retry_h.get(self.cls[p])           # V2-SIM-14: the AOG desk re-checks the market
+        if rh:
+            self._push(t + int(rh), EV_DEADLINE, r)
+
+    def _retry_u(self, r, attempt):
+        """Paired, deterministic fresh draws for retry `attempt` of request r (same for every policy)."""
+        return request_uniforms(self.sc.seed + 104_729 * attempt, [self.r_reqid[r]])[0].tolist()
 
     def _commit_route(self, r, t, kind, delay_h, donor=None):
+        self.r_route_res[r] = kind
         p, j = self.r_pn[r], self.r_st[r]
         q = self.r_unc[r]
         self.r_unc[r] = 0
         self.bo_unc[p][j] -= q
         self._push(t + max(1, int(round(delay_h))), EV_ROUTE, (r, kind, q, donor))
+
+    def _plan_supply(self, r, t):
+        """V2-SIM-13: a wear-planned change known at notice triggers supply BEFORE need when the hub will not
+        have a serviceable unit by the due date: a transfer from another station, else a pre-arranged exchange/
+        loan (same fleet-type availability/response draws), ordered at notice and fitted at the planned change."""
+        p, H, q, need = self.r_pn[r], self.H, self.r_qty[r], self.r_need[r]
+        incoming = self.routine_in[p][H] + sum(1 for x in self.ret_due[p] if x <= need)
+        projected = (self.on_hand[p][H] - self.reserved[p][H] - self.bo_unc[p][H] + incoming
+                     - len(self.loan_q[p]) - len(self.donor_q[p]))
+        if projected >= 0:
+            self.r_route_res[r] = "planned_covered"
+            return
+        self.r_route_t[r] = t
+        for k in sorted((k for k in range(self.J) if k != H), key=lambda k: self.aog_h[k][H]):
+            if self.on_hand[p][k] - self.reserved[p][k] > 0:
+                d = self.rt_h[self.rt_i % len(self.rt_h)]
+                kind = "routine" if t + max(1, d) <= need - self.margin else "emergency"
+                self._ship(p, k, H, 1, t, kind)
+                self._check(p, k, t)
+                self.r_route_res[r] = "planned_transfer"
+                return
+        u = self.ru[r]
+        arch = self.tail_arch[self.r_tail[r]]
+        if u[0] < self.ex["availability"][arch]:
+            lo, hi = self.ex["response_hours"][arch]
+            arrive = t + max(1, int(round(lo + (hi - lo) * u[1])))
+            self.r_pre[r] = 1
+            self.reserved[p][H] -= q
+            self.r_resv[r] = 0
+            self.r_route_res[r] = "planned_loan"
+            self._push(max(arrive, need), EV_PREFIT, (r, "exchange_loan", q, None))
+            return
+        self.r_route_res[r] = "planned_none"
 
     def _fill_external(self, r, q, t, src):
         """Fill (part of) a request with a unit that never passes through owned stores."""
@@ -707,6 +753,10 @@ class _Engine:
         if self.r_src[r] in (SRC_REM, SRC_PLAN) and self.is_rot[p]:
             self._core_removal(r, p, t)
         self.open_unf[p][j] += q
+        if self.r_pre[r]:                 # covered at notice by a pre-arranged exchange/loan (fitted by EV_PREFIT)
+            self.r_unc[r] = 0
+            self.r_imm[r] = 0
+            return
         # D0 needs may break kit reservations; a scheduled need (kit / planned removal) at its own need time is not
         # blocked by other reservations either, because every reservation still open is for a LATER need (V2-SIM-12).
         blocked = 0 if (self.r_dlh[r] == 0 or self.r_src[r] in (SRC_KIT, SRC_PLAN)) else self.reserved[p][j]
@@ -818,6 +868,9 @@ class _Engine:
         self.r_imm = [0] * R
         self.r_resv = [0] * R
         self.r_route = [0] * R
+        self.r_route_t = [None] * R          # when the AOG routes were tried (trace)
+        self.r_route_res = [None] * R        # robbery | local_borrow | exchange_loan | local_buy | none | planned_*
+        self.r_pre = [0] * R                 # planned removal covered at notice by a pre-arranged exchange/loan
         self.r_flag = [None] * R
         ru = sc.request_u
         if ru is None or len(ru) != R:
@@ -906,11 +959,15 @@ class _Engine:
                 p, j = self.r_pn[r], self.r_st[r]
                 self.reserved[p][j] += self.r_qty[r]
                 self.r_resv[r] = 1
+                if self.r_src[r] == SRC_PLAN and self.is_rot[p] and self.routes_on:
+                    self._plan_supply(r, t)
                 self._check(p, j, t)
             elif et == EV_DEADLINE:
                 if self.r_unf[a] > 0 and self.r_unc[a] > 0:
                     self._aog_route(a, t)
             elif et == EV_ROUTE:
+                self._route_done(a, t)
+            elif et == EV_PREFIT:
                 self._route_done(a, t)
             elif et == EV_AOG:
                 if self.r_unc[a] > 0:
@@ -1192,6 +1249,9 @@ class _Engine:
         req["immediate_fill"] = pd.array((imm == qty).tolist(), dtype="boolean")
         req["approval_flag"] = pd.array(self.r_flag, dtype="string")
         req["fitting_h"] = fit
+        req["aog_route_h"] = pd.array(self.r_route_t, dtype="Int64")
+        req["aog_route_result"] = pd.array(self.r_route_res, dtype="string")
+        req["aog_route_attempts"] = np.array(self.r_route, dtype=np.int64)
 
         tx = pd.DataFrame(self.txns, columns=["t_h", "p", "j", "txn_type", "qty_delta", "ref_id", "s"])
         txns = pd.DataFrame({

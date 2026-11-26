@@ -162,3 +162,138 @@ To hit that band, one of these is needed:
 
 Events per year (66–133) are already within 30–120 once the quotes are tightened.
 
+
+## 6. User decisions A–C (data/realism corrections, band recorded; raw P0 rerun)
+
+### A. Changes (old → new). Nothing is tuned to the band and nothing is locked.
+
+| Item | Old | New | Type |
+|---|---|---|---|
+| `generator.families.wheel_tyre.repair_shop` | EU_VENDOR (ATA 32 mapping, 4 d transit each way) | AUH_INHOUSE (hub wheel & tyre shop) | data correction (A.a) |
+| `wheel_tyre.repair_tat_days` | 15–90 d (generic rotable range) | 2–7 d (realised quoted 4.6 / 5.8 / 5.6 d) | data correction (A.a) |
+| `wheel_tyre.repair_tat_cv` | 0.20–0.50 | 0.20–0.40 | data correction (A.a) |
+| `wheel_tyre.repair_cost_pct_of_unit` | 0.08–0.25 | 0.15–0.35 (new or retreaded tyre + inspection per rebuild) | data correction (A.a) |
+| `wheel_tyre.condemnation_prob` | 0.01–0.08 | 0.01–0.03 (wheel-half scrap; tyre scrap is inside the rebuild cost) | data correction (A.a) |
+| `wheel_tyre` cost / QPA / MTBUR | AED 15–45k; NB main 4, NB nose 2, WB main 8; 3,000–8,000 FC | unchanged | — |
+| Engine: wear-planned brake supply (V2-SIM-13) | 5–10 d notice used only for a reservation | At notice, if the hub will be short by the due date: transfer from another station (routine if it arrives by due − 24 h, else emergency), else a pre-arranged exchange/loan (same fleet-type availability and response draws), fitted at the planned change | non-calibration engine fix (A.b) |
+| Engine: AOG route retries (V2-SIM-14); new `aog_sourcing.retry_hours` | a failed route was never retried | retried with fresh paired draws while the need is open: C/E every 24 h, R every 72 h | non-calibration engine fix (A.c) |
+| `calibration_targets` | PENDING | rotable fill 0.78–0.85, AOG 1,200–2,700 h/yr, 60–100 events/yr; stress worlds at the band ends (scalars not set); P0 line-station rule unchanged | band recorded (B) |
+
+### A.c Why deferred (D3/D10) needs expired
+
+Before the retry fix (but after A.a and A.b): deadline expiry was 1,802 AOG h/yr (pooled history + 5 selection seeds).
+
+| Reason | h/yr | Verdict |
+|---|---|---|
+| Expendable: local buy unavailable on its single 5% draw → waited for the PO (PS4 battery pack alone 930 h/yr, at a 73-day post-change lead time) | 1,281 | ENGINE GAP (no retry) → fixed (V2-SIM-14) |
+| Rotable at AUH: robbery and exchange unavailable on their single draws → waited for the repair return | 446 | ENGINE GAP (no retry) → fixed |
+| Rotable at an outstation: local borrow and exchange unavailable → waited for the repair return | 36 | ENGINE GAP → fixed |
+| Exchange succeeded, but its response time (WB 48–120 h) exceeds a 72 h window triggered at need | 31 | realistic |
+| Robbery/exchange unavailable → waited for a PO | 9 | ENGINE GAP → fixed |
+
+After the fix: 123.3 h/yr in total.
+
+| Reason (after the fix) | Requests | h/yr | Verdict |
+|---|---|---|---|
+| route exchange_loan succeeded only on a retry (earlier draw unavailable), after the deadline | 9 | 63.9 | realistic |
+| route exchange_loan succeeded but its response time exceeds the window (triggered at need) | 9 | 31.3 | realistic |
+| route robbery succeeded only on a retry (earlier draw unavailable), after the deadline | 10 | 16.3 | realistic |
+| route local_buy succeeded only on a retry (earlier draw unavailable), after the deadline | 2 | 6.1 | realistic |
+| robbery/exchange unavailable on draw (AUH) -> waited for repair return | 2 | 3.9 | realistic |
+| route local_borrow succeeded only on a retry (earlier draw unavailable), after the deadline | 1 | 1.9 | realistic |
+
+Every residual case is realistic:
+
+* the first market check found nothing, and the retry 72 h later landed after the window; or
+* the response time is longer than the window (WB exchange 48–120 h against D3's 72 h).
+
+The largest residual parts are all WB or avionics D3 LRUs: WB electric motor pump 26 h/yr, WB EDP 17, WB fuel boost pump 16, NB ADIRU 16, NB spoiler servo 15.
+
+### C. Raw P0 after A (history + 5 selection seeds)
+
+| Metric | History before A | History after A | Year 1 / Year 2 after A | Selection mean after A | Band |
+|---|---|---|---|---|---|
+| Immediate fill (all) | 0.983 | 0.984 | 0.986 / 0.981 | 0.981 |  |
+| Rotable fill (network) | 0.672 | 0.678 | 0.690 / 0.667 | 0.673 | 0.78–0.85 |
+| Rotable fill (hub pool) | None | 0.760 | 0.772 / 0.748 | 0.750 |  |
+| Expendable fill | 0.928 | 0.928 | 0.973 / 0.887 | 0.896 |  |
+| Consumable fill | 1.0 | 1.000 | 1.000 / 1.000 | 1.000 |  |
+| Material AOG h/yr | 4708.5 | 1,712.000 | 1,699.000 / 1,725.000 | 1,907.200 | 1,200–2,700 |
+| AOG events/yr | 136.0 | 97.000 | 90.000 / 104.000 | 90.400 | 60–100 |
+
+* **Scale:** AOG h per aircraft-year 42.8. Capital AED 44.9 M (selection mean 45.2 M).
+* **By trigger:** D0_no_stock 1,621 h (95%); deadline_expired 91 h (5%)
+* **By station:** AUH 542 h (32%); BOM 306 h (18%); JED 292 h (17%); CAI 283 h (17%); LHR 116 h (7%); SIN 94 h (5%); FRA 80 h (5%)
+* **By class:** R 1,625 h (95%); E 87 h (5%)
+* **By archetype:** narrowbody 1,132 h (66%); widebody 580 h (34%)
+
+| Top AOG PN | Description | Class | Deadline | Removal mode | Unit cost AED | AOG h/yr |
+|---|---|---|---|---|---|---|
+| GN-32-R015 | Main wheel and tyre assembly (NB) | R | D0 | unscheduled | 15,574 | 381 |
+| GN-32-R014 | Nose wheel steering actuator (NB) | R | D0 | unscheduled | 104,446 | 327 |
+| GN-32-R036 | Carbon brake assembly (WB) | R | D0 | wear_planned | 270,041 | 184 |
+| GN-27-R032 | Aileron power control unit (WB) | R | D0 | unscheduled | 169,624 | 121 |
+| GN-27-R007 | Aileron servo control (NB) | R | D0 | unscheduled | 196,170 | 115 |
+| GN-27-R006 | Elevator servo control (NB) | R | D0 | unscheduled | 138,105 | 102 |
+| GN-27-R031 | Elevator power control unit (WB) | R | D0 | unscheduled | 231,228 | 100 |
+| GN-35-E032 | Crew quick-donning oxygen mask | E | D0 | unscheduled | 11,307 | 87 |
+| GN-32-R016 | Nose wheel and tyre assembly (NB) | R | D0 | unscheduled | 21,664 | 86 |
+| GN-32-R037 | Main wheel and tyre assembly (WB) | R | D0 | unscheduled | 20,357 | 71 |
+
+| Route | Requests | Mean wait h | Median wait h |
+|---|---|---|---|
+| local stock | 35,488 | 0.0 | 0.0 |
+| AUH/network transfer | 162 | 17.9 | 11.0 |
+| AOG exchange/loan | 154 | 50.3 | 29.0 |
+| robbery (AUH) | 118 | 55.4 | 7.5 |
+| backorder -> repair return | 110 | 71.8 | 69.5 |
+| AOG local buy | 107 | 135.9 | 209.0 |
+| backorder -> PO receipt | 35 | 76.9 | 63.0 |
+| local borrow | 9 | 43.1 | 6.0 |
+| unfilled at end | 1 | None | None |
+
+* **Analytic vs sim rotable fill:** 0.497 (quoted split) / 0.852 (simulated split) vs simulated 0.678.
+
+**Against the band:** AOG hours and events are already inside it. Network rotable fill (0.678 / 0.673) is below 0.78–0.85.
+
+### A.d Plausibility flags on the new top 10 (explained, not fixed)
+
+| Driver | Flag | Explanation |
+|---|---|---|
+| NB main wheel & tyre (AED 15.6k, 381 h/yr); NB nose wheel (86); WB main wheel (71) | Implausible to a materials manager under P0 | Cheap, high-volume assemblies. About half the NB main-wheel demand is D0 at outstations, where P0 holds none: the legacy line-station rule needs ≥ 4 quoted removals/yr per station, and the quoted BOM/JED/CAI rates are about 3.5/yr. Every outstation removal waits for an emergency transfer of 9–16 h + fitting. A real airline keeps a wheel or two at every daily outstation. This is the P0 rule weakness that P2 should fix, not a data error. Also: tyre-wear changes (every few hundred landings, planned) are not modelled; wheels here are unscheduled damage removals only (a scope limit). |
+| PS1 NWS actuator (327 h/yr) | Planted | Designed: optimistic quote (2.5×) and no BOM unit. |
+| WB carbon brake (wear-planned, 184 h/yr) | Questionable | Residual after notice-time sourcing: the hub is short and the pre-arranged WB exchange is unavailable (WB availability 0.50), so the planned change waits. Brakes are also often on OEM cost-per-landing contracts with an OEM-held float (not modelled). |
+| Flight-control servo controls / PCUs (D0, AED 138–231k, 100–121 h/yr each) | Plausible | Expensive D0 LRUs with outstation exposure and no line-station unit under P0. |
+| Crew quick-donning oxygen mask (E, D0, AED 11k, 87 h/yr) | Mildly implausible | An outstation stock-out of a cheap expendable, filled by local buy (4–12 h) + fitting. D0 is defensible for a required crew mask, but airlines stock these at every outstation. P0's C/E min/max does hold them at stations with quoted demand, so the AOG comes from local stock-outs between replenishments. |
+| PS4 emergency light battery pack | Resolved | It was a top driver only because a failed local buy was never retried (V2-SIM-14). The planted lead-time jump stays visible in POs (reorders 23 → 76 d) but no longer drives AOG. |
+
+### In-memory estimate (NOT applied, not in config): raw P0 after A + quote and AOG-market settings
+
+Settings, exactly as applied in memory:
+
+| Setting | Old → new |
+|---|---|
+| `parts.quoted_mtbur_optimism` | 1.25 -> 1.10 |
+| `parts.quoted_mtbur_noise_sd_log` | 0.35 -> 0.20 |
+| `generator.quoted_tat_optimism` | 0.90 -> 0.95 |
+| `generator.quoted_tat_noise_sd_log` | 0.15 -> 0.10 |
+| `aog_sourcing.robbery.availability` | 0.60 -> 0.75 |
+| `aog_sourcing.exchange_loan.availability` | NB 0.85 -> 0.90, WB 0.50 -> 0.65 |
+| `aog_sourcing.exchange_loan.response_hours` | NB [24,48] -> [18,36], WB [48,120] -> [36,96] |
+| `aog_sourcing.local_buy.availability` | 0.95 -> 0.99 |
+
+Not applied in this estimate: the MTBUR ×1.5 range change and the local-borrow changes.
+
+| Metric | History | Selection mean | Band |
+|---|---|---|---|
+| Rotable fill (network) | 0.814 | 0.808 | 0.78–0.85 |
+| Rotable fill (hub pool) | 0.895 | 0.889 |  |
+| Overall fill | 0.990 | 0.990 |  |
+| Expendable fill | 0.957 | 0.953 |  |
+| Material AOG h/yr | 1,137.500 | 1,264.600 | 1,200–2,700 |
+| AOG events/yr | 72.000 | 70.600 | 60–100 |
+
+Capital AED 48.3 M. Top drivers: Nose wheel steering actuator (NB) 340; Aileron power control unit (WB) 121; Elevator servo control (NB) 102; Aileron servo control (NB) 102; Elevator power control unit (WB) 100.
+
+With these settings the estimate lands inside the band on rotable fill and events. AOG hours sit at the lower edge (1,138 history / 1,265 selection against 1,200–2,700).
+
