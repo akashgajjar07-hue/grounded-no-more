@@ -96,11 +96,11 @@ FRAME_JS = """async () => {
 }"""
 
 CHIPS_JS = """() => {
-  const boxes = [...document.querySelectorAll('[data-story="rotable-lifecycle"] .rr-flow-chip rect')].map((r) => r.getBBox());
+  const boxes = [...document.querySelectorAll('[data-story="rotable-lifecycle"] .rr-flow-chip rect')].map((r) => { const b = r.getBoundingClientRect(); return { x: b.x, y: b.y, width: b.width, height: b.height }; });
   const inter = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
   let overlaps = 0;
   boxes.forEach((a, i) => boxes.slice(i + 1).forEach((b) => { if (inter(a, b)) overlaps += 1; }));
-  const backColours = [...document.querySelectorAll('[data-story="rotable-lifecycle"] .rr-arc--back path')].map((p) => (p.getAttribute('stroke') || '').toLowerCase());
+  const backColours = [...document.querySelectorAll('[data-story="rotable-lifecycle"] .rr-arc--back line, [data-story="rotable-lifecycle"] .rr-arc--back rect:not([fill="transparent"])')].map((p) => (p.getAttribute('stroke') || p.getAttribute('fill') || '').toLowerCase());
   return { n: boxes.length, overlaps, backColours };
 }"""
 
@@ -129,6 +129,38 @@ def test_wave2_design_fixes(site, viewport):
             out_y = page.locator(".fc-outs").bounding_box()["y"]
             in_y = page.locator(".fc-inputs").bounding_box()["y"]
             assert out_y < in_y
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+TEAL = ("#22c7b8", "34, 199, 184", "34,199,184")
+
+
+@pytest.mark.parametrize("viewport", list(VIEWPORTS))
+def test_wave3_rotables(site, viewport):
+    """Design wave 3: state ladder (one connector per row), chase list sorted by days late, no teal shop
+    category, condemned is not red, thousands separators in the unit-cost input, slider aria-valuetext."""
+    b, base = site
+    ctx, page, problems = open_route(b, base, "#/rotables", viewport)
+    try:
+        res = page.evaluate("""() => {
+          const lc = document.querySelector('[data-story="rotable-lifecycle"]');
+          const rows = [...lc.querySelectorAll('.rr-arc')].map((g) => Math.round(g.getBoundingClientRect().top));
+          const late = [...document.querySelectorAll('.rr-chase .rr-alert-late')].map((e) => parseFloat(e.textContent.replace(/[^0-9.]/g, '')));
+          const condemned = [...lc.querySelectorAll('.rr-node.is-bad')].map((n) => getComputedStyle(n).stroke);
+          const tat = [...document.querySelectorAll('[data-story="rotable-tat"] svg circle, [data-story="rotable-tat"] svg rect')].map((n) => `${n.getAttribute('fill')} ${n.getAttribute('stroke')}`.toLowerCase());
+          const cost = document.querySelector('[data-input="cost"]').value;
+          const vt = [...document.querySelectorAll('[data-range]')].map((r) => r.getAttribute('aria-valuetext'));
+          return { rows, late, condemned, tat, cost, vt, rule: document.querySelector('.rr-chase-rule')?.textContent || '' };
+        }""")
+        assert len(res["rows"]) == len(set(res["rows"])), "two lifecycle connectors share a row"
+        assert res["late"] == sorted(res["late"], reverse=True), res["late"]
+        assert "days past" in res["rule"]
+        assert all("231, 107, 100" not in s for s in res["condemned"]), res["condemned"]
+        assert not [t for t in res["tat"] if "#22c7b8" in t], "teal used as a shop category"
+        assert "," in res["cost"], res["cost"]
+        assert res["vt"] and all(v for v in res["vt"])
         assert not problems, problems
     finally:
         ctx.close()

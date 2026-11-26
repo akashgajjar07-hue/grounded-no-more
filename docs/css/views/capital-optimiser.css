@@ -80,3 +80,14 @@
 }
 .dts-metric .co-two, .dts-secondary .co-two { flex-direction: row; align-items: baseline; gap: 4px; }
 .dts-metric .co-two small { display: none; }
+
+/* wave 3: rule card under the frontier (no dead space under "View data"); controls stay beside the chart */
+.co-hero-grid { align-items: start; }
+.co-main { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
+@media (max-width: 1199px) {
+  .co-main { display: contents; }
+  .co-main > .co-hero { grid-column: span 12; order: 1; }
+  .co-hero-grid > .co-side { order: 2; }
+  .co-main > .card:not(.co-hero) { grid-column: span 12; order: 3; }
+}
+.co-hero svg .co-unstable { fill: var(--text-faint); font-family: var(--font-mono); font-size: 11px; }

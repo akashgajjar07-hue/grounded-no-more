@@ -131,3 +131,31 @@ def test_capital_wave2_design(site, browser, vp):  # noqa: F811
         assert not problems, problems
     finally:
         ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_wave3_capital(site, browser, vp):  # noqa: F811
+    """Design wave 3: slider aria-valuetext (F5), neutral tornado bars with × settings, the unstable
+    whisker is annotated from data, and the frontier card is not stretched by the side column."""
+    F = _frontier()
+    ctx, page, problems = open_page(browser, site + "#/capital", vp)
+    try:
+        vt = page.locator('[data-role="budget-slider"]').get_attribute("aria-valuetext") or ""
+        assert "AED" in vt and F["recommended"] in vt, vt
+        tor = page.evaluate("""() => {
+          const t = document.querySelector('[data-story="tornado"]');
+          return { teal: [...t.querySelectorAll('svg rect')].filter((r) => (r.getAttribute('fill') || '').toLowerCase() === '#22c7b8').length,
+                   text: t.querySelector('svg').textContent };
+        }""")
+        assert tor["teal"] == 0
+        assert "x0" not in tor["text"] and "×" in tor["text"]
+        unstable = [p["id"] for p in F["points"] if p.get("aog_ci") and p["aog_ci"][0] is not None and p["aog_ci"][0] <= 0 and p.get("kind") != "policy"]
+        if unstable:
+            ann = page.evaluate("() => [...document.querySelectorAll('[data-story=\"frontier-chart\"] .co-unstable')].map((t) => t.textContent)")
+            assert any(unstable[0] in a for a in ann), ann
+        if vp == "1440":
+            gap = page.evaluate("""() => { const c = document.querySelector('[data-story="frontier-chart"]'); const det = c.querySelector('details'); return c.getBoundingClientRect().bottom - det.getBoundingClientRect().bottom; }""")
+            assert gap < 80, gap
+        assert not problems, problems
+    finally:
+        ctx.close()

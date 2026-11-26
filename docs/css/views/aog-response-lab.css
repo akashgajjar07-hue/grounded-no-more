@@ -95,3 +95,9 @@
 .aog-sl-step { cursor: default; outline: none; }
 .aog-sl-step:focus-visible circle { stroke: var(--primary); stroke-width: 2; }
 @media (max-width: 767px) { .aog-tl-row { grid-template-columns: 24px minmax(0, 1fr); } }
+
+/* wave 3: deadline chips are neutral mono (amber = review, red = AOG only); D0 is bold */
+.aog-dl--d0, .aog-dl--d3, .aog-dl--d10 { border-color: var(--line-strong); color: var(--text-muted); }
+.aog-dl--d0 { color: var(--text); font-weight: 700; border-color: var(--text-faint); }
+.aog-cf th[scope='row'] { white-space: nowrap; }
+.aog-cf-foot { color: var(--text-muted); margin-top: var(--s-1); }

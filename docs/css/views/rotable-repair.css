@@ -122,3 +122,29 @@
   .rr-stat { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'top top' 'val sub'; gap: 6px 16px; align-items: center; }
   .rr-stat-top { grid-area: top; } .rr-stat-value { grid-area: val; } .rr-stat-sub { grid-area: sub; }
 }
+
+/* wave 3: state ladder, neutral overdue, critical-only red */
+.rr-flow .rr-guide { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 4; }
+.rr-flow .rr-node.is-bad { stroke: var(--line-strong); stroke-dasharray: 4 3; fill: transparent; }
+.rr-flow .rr-node-count.is-bad { fill: var(--text-muted); }
+.rr-flow .rr-node-count--sm { font-size: 20px; }
+.rr-flow .rr-ladder-name { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; fill: var(--text-muted); }
+.rr-flow .rr-arc { outline: none; }
+.rr-flow .rr-arc:focus-visible .gnm-chip rect, .rr-flow .rr-arc:hover .gnm-chip rect { stroke: var(--primary); }
+.rr-gantt .rr-bar-late { fill: url(#rr-hatch); fill-opacity: 1; }
+.rr-gantt .rr-bar-late.is-crit { fill: var(--c-red); fill-opacity: 0.8; }
+.rr-gantt .rr-late-label { fill: var(--text-muted); }
+.rr-gantt .rr-late-label.is-crit { fill: var(--c-red); font-weight: 600; }
+.rr-key i.rr-key-late { background: repeating-linear-gradient(45deg, rgba(185,200,214,0.75) 0 2px, rgba(185,200,214,0.18) 2px 5px); }
+.rr-chase-rule { letter-spacing: 0.02em; text-transform: none; color: var(--text-faint); }
+.rr-alert-late { color: var(--text); display: inline-flex; align-items: center; gap: 4px; }
+.rr-alert.is-crit .rr-alert-late { color: var(--c-red); }
+.rr-alert-late .icon { width: 13px; height: 13px; color: var(--c-red); }
+.rr-stat-crit { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); }
+.rr-stat-crit .icon { width: 14px; height: 14px; color: var(--c-red); flex: none; }
+@media (max-width: 559px) { .rr-alert { grid-template-columns: 64px minmax(0, 1fr) auto; } }
+.rr-flow .rr-node.is-active { stroke: var(--text-muted); fill: rgba(185, 200, 214, 0.06); }
+.rr-flow .gnm-chip-text { font-size: 12px; }
+.rr-alert { grid-template-columns: 84px minmax(0, max-content) minmax(0, 1fr) auto; }
+.rr-alert-late { white-space: nowrap; }
+@media (max-width: 559px) { .rr-alert { grid-template-columns: 76px minmax(0, 1fr) auto; } }

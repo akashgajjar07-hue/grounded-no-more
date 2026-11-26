@@ -129,3 +129,30 @@ def test_ci_clamp_note(site):
         assert not problems, problems
     finally:
         ctx.close()
+
+
+@pytest.mark.parametrize("viewport", list(VIEWPORTS))
+def test_wave3_network(site, viewport):
+    """Design wave 3: replay ticks read "200 h", the riskiest outstation never wears an OK pill,
+    the lowest-AOG policy row and the hub bars are not teal."""
+    b, base = site
+    ctx, page, problems = open_route(b, base, "#/network?station=BOM", viewport)
+    try:
+        res = page.evaluate("""async () => {
+          const n = await (await fetch('./data/network.json')).json();
+          const outs = n.stations.filter((s) => s.role !== 'hub').sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0));
+          const ticks = [...document.querySelectorAll('[data-story="network-replay"] .tick text')].map((t) => t.textContent.trim());
+          const drillPill = document.querySelector('[data-story^="network-"] .np-drill-head .pill');
+          const best = document.querySelector('.np-pol tr.is-best td');
+          const shareTeal = [...document.querySelectorAll('[data-story="network-hub-finding"] svg rect')].filter((r) => (r.getAttribute('fill') || '').toLowerCase() === '#22c7b8').length;
+          return { top: outs[0]?.station, ticks, pillCls: drillPill?.className || '', pillTxt: drillPill?.textContent || '', bestColor: best ? getComputedStyle(best).color : '', shareTeal };
+        }""")
+        assert res["ticks"] and not any(t.startswith("h ") for t in res["ticks"]), res["ticks"]
+        if res["top"] == "BOM":
+            assert "pill--ok" not in res["pillCls"], res
+            assert "LOW" not in res["pillTxt"]
+        assert res["bestColor"] and "34, 199, 184" not in res["bestColor"] and "127, 243, 230" not in res["bestColor"]
+        assert res["shareTeal"] == 0
+        assert not problems, problems
+    finally:
+        ctx.close()

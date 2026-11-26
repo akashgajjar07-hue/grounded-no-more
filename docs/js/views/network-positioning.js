@@ -42,8 +42,29 @@ function loadCSS() {
 const num = (v) => (v == null || v === '' || Number.isNaN(+v) ? null : +v);
 const prov = (o, f = 'SIMULATED') => o?.provenance || f;
 
-/** Risk band for a station: exporter's risk_level if present, else thresholds on the 0–1 score. */
+/**
+ * Outstation risk is rated against the riskiest OUTSTATION (exporter: outstation_risk_level / risk_vs_outstations),
+ * not against the hub, so the riskiest outstation never wears a LOW pill while it has urgent shortfalls.
+ * Fallback when the exporter field is missing: derive the same ratio from `risk`.
+ */
+let OUT_MAX = null;
+function setOutstationScale(stations) { OUT_MAX = Math.max(0, ...stations.filter((s) => s.role !== 'hub').map((s) => num(s.risk) ?? 0)) || null; }
+function riskVsOut(s) {
+  if (s.role === 'hub') return null;
+  const v = num(s.risk_vs_outstations);
+  if (v != null) return v;
+  return OUT_MAX && num(s.risk) != null ? num(s.risk) / OUT_MAX : null;
+}
 function riskBand(s) {
+  if (s.role !== 'hub') {
+    const lv = String(s.outstation_risk_level || '').toLowerCase();
+    if (['urgent', 'high'].includes(lv)) return 'urgent';
+    // below the top band, outstations are compared in neutral (no amber/teal status: the map already carries teal + red)
+    if (['review', 'medium', 'elevated', 'watch'].includes(lv)) return 'watch';
+    if (['ok', 'low'].includes(lv)) return 'low';
+    const rv = riskVsOut(s);
+    if (rv != null) return rv >= 0.8 ? 'urgent' : rv >= 0.5 ? 'watch' : 'low';
+  }
   const lvl = String(s.risk_level || '').toLowerCase();
   if (['urgent', 'high'].includes(lvl)) return 'urgent';
   if (['review', 'medium', 'elevated'].includes(lvl)) return 'review';
@@ -56,8 +77,20 @@ const RISK = {
   urgent: { word: 'HIGH', glyph: '▲', color: C.urgent, pill: 'urgent' },
   review: { word: 'WATCH', glyph: '◆', color: C.review, pill: 'review' },
   ok: { word: 'LOW', glyph: '●', color: C.ok, pill: 'ok' },
+  watch: { word: 'WATCH', glyph: '◆', color: SR.neutral, pill: 'unknown' },
+  low: { word: 'LOWER', glyph: '●', color: SR.context, pill: 'unknown' },
   unknown: { word: 'N/A', glyph: '○', color: C.unknown, pill: 'unknown' },
 };
+
+/** Risk pill text: outstations relative to the riskiest outstation, the hub on its own scale. */
+function riskText(s, stations) {
+  const b = RISK[riskBand(s)];
+  if (s.role === 'hub') return `${b.word} · hub`;
+  const rv = riskVsOut(s);
+  if (rv != null && rv >= 0.999) return `${b.word} · top outstation`;
+  const top = stations.filter((x) => x.role !== 'hub').sort((a, c) => (c.risk ?? 0) - (a.risk ?? 0))[0];
+  return rv != null ? `${b.word} · ${fmtPct(rv, 0)} of ${top?.station || 'top'}` : b.word;
+}
 
 /** {mean, lo, hi} for a metric on a policy_compare row, tolerant of several export shapes. */
 function metric(row, key) {
@@ -93,6 +126,7 @@ export async function render(el, ctx) {
   loadCSS();
   const { network: n, policies: p } = ctx.data;
   const stations = n.stations || [];
+  setOutstationScale(stations);
   const hub = stations.find((s) => s.role === 'hub') || stations[0];
   const byId = Object.fromEntries(stations.map((s) => [s.station, s]));
   const arcs = n.arcs || [];
@@ -131,12 +165,12 @@ export async function render(el, ctx) {
         ? `The ${topAll.station} hub carries the most projected AOG risk; ${topRisk.station} leads outstations at ${fmtPct(topRisk.risk, 0)} of it`
         : `${topAll.station} carries the highest projected risk (${fmtPct(topAll.risk, 0)}); ${fmtInt(totalEmerg)} of ${fmtInt(totalTransfers)} transfers were emergencies`)
       : 'Hub-and-spoke network',
-    subtitle: `Node size = serviceable units (recommended plan) · ring = projected risk (P0 holdout AOG h ÷ worst station) · line width = ${fmtInt(totalTransfers)} history transfers`,
+    subtitle: `Node size = serviceable units (recommended plan) · ring = projected risk (hub on its own; outstations vs the riskiest outstation) · line width = ${fmtInt(totalTransfers)} history transfers`,
     provenance: prov(n.meta), source: 'network.json → stations, arcs',
     table: { columns: [{ key: 'from', label: 'From' }, { key: 'to', label: 'To' }, { key: 'transfers', label: 'Transfers', num: true, format: fmtInt }, { key: 'emergency', label: 'Emergency', num: true, format: fmtInt }, { key: 'aog_transport_h', label: 'AOG transport', num: true, format: fmtHours }], rows: arcs },
   });
   // one legend row, two groups: ring = risk (only the bands present), line = transfer kind
-  const bandsPresent = ['ok', 'review', 'urgent'].filter((b) => stations.some((s) => riskBand(s) === b));
+  const bandsPresent = ['low', 'watch', 'ok', 'review', 'urgent'].filter((b) => stations.some((s) => riskBand(s) === b));
   mapF.body.append(mapHost, h('div', { class: 'np-map-foot' }, picker,
     h('div', { class: 'np-legend', 'aria-hidden': 'true' },
       h('span', { class: 'np-legend-k' }, 'Risk ring'),
@@ -151,11 +185,11 @@ export async function render(el, ctx) {
     stations, arcs, selected,
     onSelect: (id) => choose(id, false),
     // sub-label sits directly under the IATA code: units, plus the risk word only when it is not low (no glyph, so it never reads as another airport)
-    labelSub: (s) => { const b = riskBand(s); const risk = b === 'ok' ? '' : ` · ${RISK[b].word}`; return `${fmtInt(s.serviceable_units)} u${risk}`; },
+    labelSub: (s) => { const b = riskBand(s); const risk = b === 'ok' || b === 'low' ? '' : ` · ${RISK[b].word}`; return `${fmtInt(s.serviceable_units)} u${risk}`; },
     nodeRadius: (s) => 4 + 10 * Math.sqrt((num(s.serviceable_units) ?? 0) / maxUnits),
     nodeColor: (s) => RISK[riskBand(s)].color,
     nodeAria: (s) => `${s.station} ${s.name || ''}: ${fmtInt(s.serviceable_units)} serviceable units, projected risk ${RISK[riskBand(s)].word}`,
-    tooltipRows: (s) => [['Role', s.role], ['Serviceable units', fmtInt(s.serviceable_units)], ['Stock value', fmtAED(s.stock_value)], ['Requests', fmtInt(s.requests)], ['Projected risk', `${RISK[riskBand(s)].glyph} ${RISK[riskBand(s)].word} · ${fmtPct(s.risk, 0)}`]],
+    tooltipRows: (s) => [['Role', s.role], ['Serviceable units', fmtInt(s.serviceable_units)], ['Stock value', fmtAED(s.stock_value)], ['Requests', fmtInt(s.requests)], ['Projected risk', `${RISK[riskBand(s)].glyph} ${riskText(s, stations)}`], ...(s.role !== 'hub' ? [['Risk vs hub', fmtPct(s.risk, 0)]] : [])],
     label: 'Network map of Falcon Hub Airways (fictional) stations',
     // the hub's arcs leave to the west and east; its label block sits above-right, clear of them and of the Gulf outstations
     labelOffsets: hub ? { [hub.station]: [12, -30, 'start'] } : {},
@@ -181,7 +215,7 @@ export async function render(el, ctx) {
         h('p', { class: 'muted t-14' }, 'Each station shows its serviceable units, request volume, projected risk, transfer traffic and how P0, P1 and P2 perform there.'),
         h('div', { class: 'np-sub' }, 'Highest projected risk first'),
         h('div', { class: 'np-rank' }, ranked.map((x) => h('button', { type: 'button', class: 'np-rank-item', onclick: () => choose(x.station, true) },
-          h('span', { class: 'np-rank-name' }, h('span', { class: 'mono' }, x.station), h('span', { class: 'faint t-12' }, x.name || '')), pill(RISK[riskBand(x)].pill, `${RISK[riskBand(x)].word} ${fmtPct(x.risk, 0)}`)))));
+          h('span', { class: 'np-rank-name' }, h('span', { class: 'mono' }, x.station), h('span', { class: 'faint t-12' }, x.name || '')), pill(RISK[riskBand(x)].pill, riskText(x, stations))))));
       return;
     }
     const rb = RISK[riskBand(s)];
@@ -197,7 +231,7 @@ export async function render(el, ctx) {
     drill.append(
       h('div', { class: 'np-drill-head' },
         h('div', {}, h('div', { class: 'card-kicker' }, s.role === 'hub' ? 'Hub station' : 'Outstation'), h('div', { class: 'np-drill-code' }, s.station), h('div', { class: 'np-drill-name' }, s.name || '')),
-        h('div', { class: 'row', style: { flexWrap: 'wrap' } }, pill(rb.pill, `${rb.word} risk · ${fmtPct(s.risk, 0)}`), provChip(prov(n.meta)))),
+        h('div', { class: 'row', style: { flexWrap: 'wrap' } }, pill(rb.pill, `${riskText(s, stations)}`), provChip(prov(n.meta)))),
       h('div', { class: 'np-facts' },
         fact('Serviceable units', fmtInt(s.serviceable_units)),
         fact('Stock value', fmtAED(s.stock_value)),
@@ -214,7 +248,7 @@ export async function render(el, ctx) {
           h('caption', { class: 'sr-only' }, `Policy comparison at ${s.station}`),
           h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, 'Policy'), h('th', { scope: 'col' }, 'AOG h/yr'), h('th', { scope: 'col' }, 'Fill'), hasR ? h('th', { scope: 'col' }, 'Rot. fill') : null)),
           h('tbody', {}, polRows.map((r) => h('tr', { class: bestAog && r.pol === bestAog.pol ? 'is-best' : '' },
-            h('td', {}, bestAog && r.pol === bestAog.pol ? `${r.pol} ✓` : r.pol),
+            h('td', {}, r.pol, bestAog && r.pol === bestAog.pol ? h('span', { class: 'np-best' }, ' · lowest AOG') : null),
             h('td', {}, r.aog ? fmtHours(r.aog.mean) : 'not run', ci(r.aog, fmtHours)),
             h('td', {}, r.fill ? fmtPct(r.fill.mean) : 'not run', ci(r.fill, (v) => fmtPct(v))),
             hasR ? h('td', {}, r.rfill ? fmtPct(r.rfill.mean) : '—', ci(r.rfill, (v) => fmtPct(v))) : null))))
@@ -250,7 +284,7 @@ export async function render(el, ctx) {
         { key: 'serviceable_units', label: 'Serviceable', short: 'Units', num: true, format: fmtInt },
         { key: 'stock_value', label: 'Stock value', short: 'Stock', num: true, format: (v) => fmtAED(v) },
         { key: 'requests', label: 'Requests', num: true, format: fmtInt },
-        { key: 'risk', label: 'Projected risk', short: 'Risk', render: (s) => pill(RISK[riskBand(s)].pill, `${RISK[riskBand(s)].word} · ${fmtPct(s.risk, 0)}`) },
+        { key: 'risk', label: 'Projected risk', short: 'Risk', render: (s) => pill(RISK[riskBand(s)].pill, riskText(s, stations)) },
       ],
       rows: stations, sort: { key: 'risk', dir: 'desc' }, onRowClick: (s) => choose(s.station, true),
       mobileColumns: ['station', 'risk', 'stock_value', 'serviceable_units'], stickyFirst: true,
@@ -278,7 +312,7 @@ function renderReplay(host, n, map, byId, isAlive) {
     headline: featured
       ? `${featured.planted ? `${featured.planted}: ` : ''}${featured.from}→${featured.to} ${featured.kind === 'emergency' ? 'emergency' : 'routine'} transfer${featured.aog_transport_h != null ? ` took ${fmtHours(featured.aog_transport_h)}` : ''}; ${fmtInt(nEm)} of ${fmtInt(events.length)} replayed transfers were emergencies`
       : 'No transfers exported for replay',
-    subtitle: `Simulated history transfers${win.length === 2 ? ` h ${fmtInt(win[0])}–${fmtInt(win[1])}` : ''}${featured?.pn ? ` · featured part ${featured.pn}` : ''} · one dot per transfer, row = destination · red = emergency${reducedMotion() ? ' · reduced motion: arcs flash' : ''}`,
+    subtitle: `Simulated history transfers${win.length === 2 ? ` ${fmtWeek(Math.floor(win[0] / HPW))}–${fmtWeek(Math.floor(win[1] / HPW))} (sim h ${fmtInt(win[0])}–${fmtInt(win[1])})` : ''}${featured?.pn ? ` · featured part ${featured.pn}` : ''} · one dot per transfer, row = destination · red = emergency${reducedMotion() ? ' · reduced motion: arcs flash' : ''}`,
     provenance: prov(tr, prov(n.meta)), source: 'network.json → transfer_replay',
     table: { columns: [{ key: 't_h', label: 'Week', format: (v) => fmtWeek(Math.floor(v / HPW)) }, { key: 'pn', label: 'PN' }, { key: 'from', label: 'From' }, { key: 'to', label: 'To' }, { key: 'kind', label: 'Kind' }, { key: 'planted', label: 'Planted', format: (v) => v || '' }], rows: events },
   });
@@ -336,7 +370,7 @@ function renderReplay(host, n, map, byId, isAlive) {
     const y = d3().scaleBand().domain(dests).range([0, dests.length * rowH]).padding(0.2);
     g.append('g').selectAll('line').data(dests).join('line').attr('x1', 0).attr('x2', iw).attr('y1', (d) => y(d) + y.bandwidth() / 2).attr('y2', (d) => y(d) + y.bandwidth() / 2).attr('stroke', C.line);
     g.append('g').selectAll('text').data(dests).join('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', -10).attr('y', (d) => y(d) + y.bandwidth() / 2).attr('dy', '0.32em').attr('text-anchor', 'end').text((d) => d);
-    axisBottom(g.append('g'), x, { ticks: w < 480 ? 3 : 6, format: (v) => (t1 - t0 < 4 * HPW ? `h ${fmtInt(v)}` : fmtWeek(Math.floor(v / HPW))), height: dests.length * rowH });
+    axisBottom(g.append('g'), x, { ticks: w < 480 ? 3 : 6, format: (v) => (t1 - t0 < 4 * HPW ? fmtHours(v) : fmtWeek(Math.floor(v / HPW))), height: dests.length * rowH });
     const ev = g.append('g').selectAll('g').data(events).join('g').attr('class', 'np-ev').attr('transform', (e) => `translate(${x(e.t_h)},${y(e.to) + y.bandwidth() / 2})`)
       .attr('tabindex', 0).attr('role', 'button').attr('aria-label', (e) => `Replay ${e.kind} transfer of ${e.pn} from ${e.from} to ${e.to} in ${fmtWeek(Math.floor(e.t_h / HPW))}`);
     ev.append('circle').attr('r', 12).attr('fill', 'transparent');
@@ -415,7 +449,15 @@ function drawCompare(el, rows, order, mk, w) {
   g.append('g').selectAll('rect').data(sts).join('rect').attr('x', -m.left + 4).attr('width', iw + m.left - 4).attr('y', (s) => y(s)).attr('height', y.bandwidth()).attr('rx', 6).attr('fill', (s, i) => (i % 2 ? 'transparent' : 'rgba(185,200,214,0.035)'));
   const ticks = mk.key === 'aog_hours' ? x.ticks(narrow ? 3 : 5) : x.ticks(narrow ? 3 : 5);
   g.append('g').selectAll('line').data(ticks).join('line').attr('class', 'gnm-grid').attr('x1', (t) => x(t)).attr('x2', (t) => x(t)).attr('y1', 0).attr('y2', sts.length * rowH).attr('stroke', C.line).attr('stroke-dasharray', '2 4');
-  axisBottom(g.append('g'), x, { ticks: narrow ? 3 : 5, format: mk.fmt, height: sts.length * rowH });
+  const axG = g.append('g');
+  axisBottom(axG, x, { ticks: narrow ? 3 : 5, format: mk.fmt, height: sts.length * rowH });
+  // a square-root scale bunches the top ticks: drop any tick label (and its grid line) that would sit within 56 px of the previous one
+  if (mk.key === 'aog_hours') {
+    let last = -1e9;
+    const keep = new Set();
+    axG.selectAll('.tick').each(function (t) { const px = x(t); if (px - last < 64 && t !== 0) d3().select(this).remove(); else { last = px; keep.add(t); } });
+    g.selectAll('line.gnm-grid').filter((t) => !keep.has(t)).remove();
+  }
   g.append('g').selectAll('text').data(sts).join('text').attr('class', 'gnm-label gnm-label--strong').attr('font-family', theme.font.mono).attr('x', -10).attr('y', (s) => y(s) + y.bandwidth() / 2).attr('dy', '0.32em').attr('text-anchor', 'end').text((s) => s);
   const pts = g.append('g').selectAll('g').data(rows).join('g').attr('transform', (r) => `translate(0,${y(r.station) + y.bandwidth() / 2 + off[r.pol]})`);
   pts.filter((r) => r.m.lo != null && r.m.hi != null).append('line').attr('x1', (r) => x(Math.max(x.domain()[0], r.m.lo))).attr('x2', (r) => x(r.m.hi)).attr('stroke', (r) => POL_COLOR[r.pol]).attr('stroke-width', 1.5).attr('stroke-opacity', 0.7);
@@ -472,8 +514,8 @@ function renderShare(host, n, p, stations, pcBy, hub) {
     rows.forEach((r, i) => {
       const yy = i * rowH;
       dl(g, { x: -8, y: yy + 22, text: r.pol, anchor: 'end', color: r.pol === 'P2' ? C.accent : C.muted, strong: r.pol === 'P2' });
-      g.append('rect').attr('x', 0).attr('y', yy + 14).attr('width', Math.max(1, x(r.hub))).attr('height', 16).attr('rx', 2).attr('fill', C.accent).attr('fill-opacity', r.pol === 'P2' ? 0.9 : 0.5);
-      g.append('rect').attr('x', x(r.hub) + 1).attr('y', yy + 14).attr('width', Math.max(1, x(r.out))).attr('height', 16).attr('rx', 2).attr('fill', C.neutral).attr('fill-opacity', 0.7);
+      g.append('rect').attr('x', 0).attr('y', yy + 14).attr('width', Math.max(1, x(r.hub))).attr('height', 16).attr('rx', 2).attr('fill', SR.neutral).attr('fill-opacity', r.pol === 'P2' ? 0.85 : 0.6);
+      g.append('rect').attr('x', x(r.hub) + 1).attr('y', yy + 14).attr('width', Math.max(1, x(r.out))).attr('height', 16).attr('rx', 2).attr('fill', SR.context).attr('fill-opacity', 0.55);
       const txt = `hub ${fmtHours(r.hub)} · out ${fmtHours(r.out)}`;
       const tx = x(r.hub + r.out) + 6;
       if (tx + txt.length * 6.4 < iw) dl(g, { x: tx, y: yy + 22, text: txt, color: C.muted });

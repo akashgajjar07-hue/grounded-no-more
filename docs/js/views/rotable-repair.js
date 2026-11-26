@@ -12,8 +12,8 @@
  *  6. Palm vs simulation
  * Every number comes from the JSON or from floatcalc.js applied to user inputs.
  */
-import { h, icon, pageHead, card, provChip, pill, dataTable } from '../ui.js';
-import { chartFrame, responsive, svgIn, axisBottom, axisLeft, gridY, directLabel, annotate, withTooltip, truncate, theme, chipLabel, refLine, fmtAED, fmtPct, fmtDays, fmtInt, fmtNum, fmtWeek } from '../charts/theme.js';
+import { h, icon, pageHead, card, provChip, pill, dataTable, bindValueText } from '../ui.js';
+import { chartFrame, responsive, svgIn, axisBottom, axisLeft, gridY, directLabel, annotate, withTooltip, truncate, theme, chipLabel, refLine, fmtAED, fmtPct, fmtDays, fmtInt, fmtNum, fmtWeek, fmtEnum, fmtCount, plural } from '../charts/theme.js';
 import { floatCalc, compareLevers, pmfSeries } from '../lib/floatcalc.js';
 
 export const data = ['rotables', 'method', 'network'];
@@ -39,7 +39,10 @@ function loadCSS() {
 // ----------------------------------------------------------------------------- data helpers
 const num = (v) => (v == null || v === '' || Number.isNaN(+v) ? null : +v);
 const pick = (o, ...keys) => { for (const k of keys) { const v = o?.[k]; if (v != null && v !== '') return v; } return null; };
-const shopLabel = (s) => (s ? String(s).replace(/_/g, ' ') : '—');
+const shopLabel = (s) => (s ? fmtEnum(s) : '—');
+/** An overdue RO is critical (urgent red + alert icon) only when it is more than this many days past quoted due. */
+const CRITICAL_LATE_D = 28;
+const isCritical = (o) => !!(o.open && o.overdue && (o.late_d ?? 0) > CRITICAL_LATE_D);
 const prov = (obj, fallback = 'SIMULATED') => obj?.provenance || fallback;
 const median = (a) => { const s = a.filter((x) => x != null).sort((x, y) => x - y); if (!s.length) return null; const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 
@@ -104,7 +107,7 @@ export async function render(el, ctx) {
   el.append(h('div', { class: 'rr-stats mt-3', dataset: { story: 'rotable-stats' } },
     stat({ label: 'Units in repair loop', value: fmtInt(loop), unit: 'serials', sub: fleet ? `${fmtPct(loop / fleet)} of ${fmtInt(fleet)} active serials are removed (U/S) or in a shop` : 'Lifecycle counts not exported', chip: prov(r.lifecycle, prov(r.meta)) }),
     stat({ label: 'Open repair orders', value: fmtInt(r.repair_summary?.open ?? openROs.length), unit: 'ROs', sub: `${fmtInt(new Set(openROs.map((o) => o.shop)).size)} shops · ${fmtInt(r.repair_summary?.returned_last_8w ?? ros.length - openROs.length)} returned in the last 8 weeks`, chip: prov(r.meta) }),
-    stat({ label: 'Overdue vs quoted due', value: fmtInt(r.repair_summary?.overdue ?? overdueROs.length), unit: 'ROs', sub: overdueROs.length ? h('span', {}, pill('urgent', 'Chase vendor')) : h('span', {}, pill('ok', 'None overdue')), chip: prov(r.meta), alert: overdueROs.length > 0 }),
+    stat({ label: 'Overdue vs quoted due', value: fmtInt(r.repair_summary?.overdue ?? overdueROs.length), unit: 'ROs', sub: overdueROs.length ? h('span', { class: 'rr-stat-crit' }, overdueROs.some(isCritical) ? icon('alert') : null, `${plural(overdueROs.filter(isCritical).length, 'RO')} more than ${Math.round(CRITICAL_LATE_D / 7)} weeks late`) : 'None overdue', chip: prov(r.meta) }),
     stat({ label: 'Actual / quoted TAT', value: tatRatio != null ? `${fmtNum(tatRatio, 2)}×` : 'not run', sub: lateShare != null ? `Median over ${fmtInt(tatRows.length)} PN–shop pairs · ${fmtPct(lateShare, 0)} run late` : 'TAT table not exported', chip: prov(r.tat?.[0], prov(r.meta)) }),
   ));
 
@@ -121,9 +124,9 @@ export async function render(el, ctx) {
     : `${fmtInt(loop)} serials are removed (U/S) or in repair right now`;
   const lcF = chartFrame(lcCard, {
     headline: lcHead,
-    subtitle: `Box = serials in each state at ${now != null ? fmtWeek(Math.floor(now / HPW)) : 'end of window'} (${fmtInt(r.lifecycle?.n_serials ?? fleet)} serials) · line width = transitions${flowWindow ? ` over ${flowWindow}` : ''} · forward above, returns below`,
+    subtitle: `Box = serials in each state at ${now != null ? fmtWeek(Math.floor(now / HPW)) : 'end of window'} (${fmtInt(r.lifecycle?.n_serials ?? fleet)} serials) · one row per transition, dot = from, arrow = to, width = count${flowWindow ? ` over ${flowWindow}` : ''}`,
     provenance: prov(r.lifecycle, prov(r.meta)), source: 'rotables.json → lifecycle',
-    table: { columns: [{ key: 'item', label: 'State / transition' }, { key: 'count', label: 'Serials', num: true, format: fmtInt }], rows: [...Object.entries(counts).map(([k, v]) => ({ item: k, count: v })), ...flows.map((f) => ({ item: `${f.from} → ${f.to}`, count: f.count }))] },
+    table: { columns: [{ key: 'item', label: 'State / transition' }, { key: 'count', label: 'Serials', num: true, format: fmtInt }], rows: [...Object.entries(counts).map(([k, v]) => ({ item: stateName(k), count: v })), ...flows.map((f) => ({ item: `${stateName(f.from)} → ${stateName(f.to)}`, count: f.count }))] },
   });
   const lcHost = h('div', { class: 'rr-flow' });
   lcF.body.append(lcHost, h('p', { class: 'rr-lc-note' }, 'Each serial is in exactly one state. Outstation removals travel to AUH as unserviceable cores before induction; hub removals go straight to the shop. BER units are condemned and replaced by purchase order.'));
@@ -154,7 +157,7 @@ export async function render(el, ctx) {
   // ---------------------------------------------------------------- open ROs table
   const tableRows = ros.filter((o) => o.open).sort((a, b) => (b.overdue - a.overdue) || ((b.late_d ?? -1e9) - (a.late_d ?? -1e9)));
   el.append(h('div', { class: 'mt-3' }, card({
-    kicker: 'Repair orders', title: `${fmtInt(tableRows.length)} open repair orders, overdue first`, prov: prov(r.meta),
+    kicker: 'Repair orders', title: `${fmtInt(tableRows.length)} open repair orders, most days past due first`, prov: prov(r.meta),
     body: dataTable({
       caption: 'Open repair orders', maxHeight: 360, dense: true,
       mobileColumns: ['serial', 'late_d', 'shop', 'ro_id', 'overdue'], stickyFirst: true,
@@ -165,7 +168,7 @@ export async function render(el, ctx) {
         { key: 'inH', label: 'Inducted', num: true, format: (v) => (v == null ? '—' : fmtWeek(Math.floor(v / HPW))) },
         { key: 'due', label: 'Quoted due', num: true, format: (v) => (v == null ? '—' : fmtWeek(Math.floor(v / HPW))) },
         { key: 'late_d', label: 'vs due', short: 'vs due', num: true, format: (v) => (v == null ? '—' : v > 0 ? `+${fmtDays(v)}` : `−${fmtDays(-v)}`) },
-        { key: 'overdue', label: 'Status', render: (o) => (o.overdue ? pill('urgent', o.planted ? `Overdue · ${o.planted}` : 'Overdue') : pill('ok', 'In quote')) },
+        { key: 'overdue', label: 'Status', render: (o) => (isCritical(o) ? pill('urgent', o.planted ? `Critical · ${o.planted}` : 'Critical') : o.overdue ? h('span', { class: 'pill pill--unknown rr-pill-late' }, o.planted ? `Overdue · ${o.planted}` : 'Overdue') : h('span', { class: 'pill pill--unknown rr-pill-quote' }, 'In quote')) },
       ],
       rows: tableRows,
     }),
@@ -175,143 +178,122 @@ export async function render(el, ctx) {
   return () => cleanups.forEach((fn) => { try { fn?.(); } catch { /* ignore */ } });
 }
 
-// ============================================================================= lifecycle arc flow
+// ============================================================================= lifecycle state ladder
 const STATE_META = {
-  SERVICEABLE: { label: 'SERVICEABLE', sub: 'In stores · stations' },
-  INSTALLED: { label: 'INSTALLED', sub: 'Fitted on aircraft' },
-  REMOVED: { label: 'REMOVED (U/S)', sub: 'Core returning to AUH' },
-  IN_REPAIR: { label: 'IN REPAIR', sub: 'Queue + shop work' },
-  IN_TRANSIT: { label: 'IN TRANSIT', sub: 'Shop return · positioning' },
-  CONDEMNED: { label: 'CONDEMNED', sub: 'BER · replace by PO' },
+  SERVICEABLE: { label: 'SERVICEABLE', short: 'Serviceable', sub: 'In stores' },
+  INSTALLED: { label: 'INSTALLED', short: 'Installed', sub: 'On aircraft' },
+  REMOVED: { label: 'REMOVED (U/S)', short: 'Removed', sub: 'Core to AUH' },
+  IN_REPAIR: { label: 'IN REPAIR', short: 'In repair', sub: 'Queue + shop' },
+  IN_TRANSIT: { label: 'IN TRANSIT', short: 'In transit', sub: 'Return · position' },
+  CONDEMNED: { label: 'CONDEMNED', short: 'Condemned', sub: 'BER · PO' },
 };
+const stateName = (s) => STATE_META[s]?.short || shopLabel(s);
 /**
- * Arc lifecycle. Forward transitions (teal) arc above the boxes, returns (neutral titanium, 40%) below,
- * condemnation (red) is the only status colour. Each arc gets its own lane (interval-graph colouring),
- * so overlapping arcs never share an apex height; the value sits in a filled chip on its own arc and
- * slides along it until it clears every other arc and chip.
+ * State ladder. Boxes sit left → right in lifecycle order. Under them, every transition gets its OWN row:
+ * a straight connector from the source column to the target column, with its count in a chip at the row's
+ * midpoint. One connector per row means no two strokes cross and no chip can sit on another flow.
+ * Forward flows (teal, the primary series) come first, then returns (titanium), then condemnation
+ * (dashed titanium: BER is a cost, not an AOG risk). Phones get the same ladder as a list.
  */
 function drawFlow(el, states, counts, flows, w) {
   const order = ['SERVICEABLE', 'INSTALLED', 'REMOVED', 'IN_REPAIR', 'IN_TRANSIT', 'CONDEMNED'].filter((s) => states.includes(s) || counts[s] != null);
   states.forEach((s) => { if (!order.includes(s)) order.push(s); });
-  const vertical = w < 640;
   const n = order.length;
   const idx = (s) => order.indexOf(s);
-  const fl = flows.filter((f) => f.from !== f.to && order.includes(f.from) && order.includes(f.to) && num(f.count));
+  const kindOf = (f) => (f.to === 'CONDEMNED' ? 'bad' : idx(f.to) > idx(f.from) ? 'fwd' : 'back');
+  const RANK = { fwd: 0, back: 1, bad: 2 };
+  const fl = flows.filter((f) => f.from !== f.to && order.includes(f.from) && order.includes(f.to) && num(f.count))
+    .slice().sort((a, b) => RANK[kindOf(a)] - RANK[kindOf(b)] || idx(a.from) - idx(b.from) || idx(a.to) - idx(b.to));
   const maxC = d3().max(fl, (f) => f.count) || 1;
-  const sw = d3().scaleSqrt().domain([0, maxC]).range([1.5, vertical ? 9 : 12]);
-  const side = (f) => (idx(f.to) > idx(f.from) ? 'fwd' : 'back');
-  // lanes: shortest spans first; an arc sits one lane above every arc whose span overlaps it
-  const lane = new Map();
-  const maxLane = { fwd: 0, back: 0 };
-  ['fwd', 'back'].forEach((sd) => {
-    const placed = [];
-    fl.filter((f) => side(f) === sd)
-      .map((f) => ({ f, lo: Math.min(idx(f.from), idx(f.to)), hi: Math.max(idx(f.from), idx(f.to)) }))
-      .sort((a, b) => (a.hi - a.lo) - (b.hi - b.lo) || a.lo - b.lo)
-      .forEach((a) => {
-        const k = 1 + Math.max(0, ...placed.filter((p) => p.lo < a.hi && p.hi > a.lo).map((p) => p.k));
-        placed.push({ ...a, k }); lane.set(a.f, k); maxLane[sd] = Math.max(maxLane[sd], k);
-      });
-  });
-  const boxW = vertical ? Math.min(168, Math.round(w * 0.42)) : Math.min(170, (w - 24) / n - 18);
-  const boxH = vertical ? 60 : 92;
-  const gap = vertical ? 40 : (w - n * boxW) / (n - 1);
-  const BASE = 10, CHIP = 18;
-  let L, LB, liftF, liftB, hgt, midY = 0, midX = 0;
-  if (!vertical) {
-    L = 28; LB = 28;
-    liftF = BASE + maxLane.fwd * L; liftB = BASE + maxLane.back * LB;
-    midY = 30 + 0.75 * liftF + CHIP / 2 + boxH / 2;
-    hgt = Math.round(midY + boxH / 2 + 0.75 * liftB + CHIP / 2 + 30);
-  } else {
-    const room = (w - boxW) / 2 - 18; // horizontal room either side of the box column
-    L = Math.min(26, Math.max(10, (room / 0.75 - BASE) / Math.max(1, maxLane.fwd)));
-    LB = Math.min(26, Math.max(10, (room / 0.75 - BASE) / Math.max(1, maxLane.back)));
-    midX = w / 2;
-    hgt = 30 + n * boxH + (n - 1) * gap + 12;
-  }
-  const pos = (i) => (vertical ? { x: midX - boxW / 2, y: 30 + i * (boxH + gap) } : { x: i * (boxW + gap), y: midY - boxH / 2 });
-  const center = (s) => { const i = idx(s), p = pos(i); return { x: p.x + boxW / 2, y: p.y + boxH / 2, i }; };
-  const svg = svgIn(el, w, hgt, `Rotable lifecycle flow: ${order.map((s) => `${s} ${counts[s] ?? 0}`).join(', ')}`);
-  const defs = svg.append('defs');
   const KIND = {
-    fwd: { color: SR.recommended, op: 0.42, id: 'rr-arr-fwd' },
-    back: { color: SR.neutral, op: 0.4, id: 'rr-arr-back' },
-    bad: { color: SR.urgent, op: 0.55, id: 'rr-arr-bad' },
+    fwd: { color: SR.recommended, op: 0.55, label: 'FORWARD · fit → removal → shop → transit' },
+    back: { color: SR.neutral, op: 0.5, label: 'RETURNS · back to stock or onto aircraft' },
+    bad: { color: SR.context, op: 0.9, dash: '5 4', label: 'CONDEMNED · beyond economic repair' },
   };
-  Object.values(KIND).forEach((k) => defs.append('marker').attr('id', k.id).attr('viewBox', '0 0 10 10').attr('refX', 8).attr('refY', 5).attr('markerWidth', 7).attr('markerHeight', 7).attr('orient', 'auto-start-reverse').attr('markerUnits', 'userSpaceOnUse')
-    .append('path').attr('d', 'M0,1.5L10,5L0,8.5L2.5,5Z').attr('fill', k.color));
-  const arcG = svg.append('g').attr('class', 'rr-arcs');
-  // distribute arc ports along each box side so arcs do not share an endpoint
-  const ports = new Map();
-  order.forEach((st) => ['fwd', 'back'].forEach((sd) => {
-    const ends = [];
-    fl.forEach((f) => { if (side(f) !== sd) return; if (f.from === st) ends.push({ f, end: 'from', other: idx(f.to) }); if (f.to === st) ends.push({ f, end: 'to', other: idx(f.from) }); });
-    const me = idx(st);
-    ends.sort((p, q) => (p.other - me) - (q.other - me) || (p.end === 'from' ? -1 : 1));
-    const span = (vertical ? boxH : boxW) * 0.7;
-    ends.forEach((e, k) => ports.set(`${e.f.from}>${e.f.to}:${e.end}`, (ends.length === 1 ? 0 : -span / 2 + (span * k) / (ends.length - 1))));
-  }));
-  const drawn = [];
-  fl.slice().sort((a, b) => b.count - a.count).forEach((f) => {
-    const A0 = center(f.from), B0 = center(f.to);
-    const pf = ports.get(`${f.from}>${f.to}:from`) || 0, pt = ports.get(`${f.from}>${f.to}:to`) || 0;
-    const A = vertical ? { ...A0, y: A0.y + pf } : { ...A0, x: A0.x + pf };
-    const B = vertical ? { ...B0, y: B0.y + pt } : { ...B0, x: B0.x + pt };
-    const fwd = side(f) === 'fwd';
-    const kind = f.to === 'CONDEMNED' ? KIND.bad : fwd ? KIND.fwd : KIND.back;
-    const lift = BASE + lane.get(f) * (fwd ? L : LB);
-    let d;
-    if (!vertical) {
-      const y0 = fwd ? midY - boxH / 2 : midY + boxH / 2;
-      const s = fwd ? -1 : 1;
-      d = `M${A.x},${y0} C${A.x},${y0 + s * lift} ${B.x},${y0 + s * lift} ${B.x},${y0 + s * 2}`;
-    } else {
-      const x0 = fwd ? midX + boxW / 2 : midX - boxW / 2;
-      const s = fwd ? 1 : -1;
-      d = `M${x0},${A.y} C${x0 + s * lift},${A.y} ${x0 + s * lift},${B.y} ${x0 + s * 2},${B.y}`;
-    }
-    const g = arcG.append('g').attr('class', `rr-arc rr-arc--${kind === KIND.bad ? 'bad' : fwd ? 'fwd' : 'back'}`);
-    const wide = g.append('path').attr('d', d).attr('fill', 'none').attr('stroke', kind.color).attr('stroke-opacity', kind.op).attr('stroke-width', sw(f.count)).attr('stroke-linecap', 'round');
-    g.append('path').attr('d', d).attr('fill', 'none').attr('stroke', kind.color).attr('stroke-width', 1).attr('marker-end', `url(#${kind.id})`).attr('stroke-opacity', 0.9);
-    withTooltip(wide, () => ({ title: `${STATE_META[f.from]?.label || f.from} → ${STATE_META[f.to]?.label || f.to}`, rows: [['Transitions', fmtInt(f.count)]] }));
-    drawn.push({ f, node: wide.node(), half: sw(f.count) / 2, kind });
+  const tip = (f) => ({ title: `${STATE_META[f.from]?.label || f.from} → ${STATE_META[f.to]?.label || f.to}`, rows: [['Transitions', fmtInt(f.count)], ['Share of largest flow', fmtPct(f.count / maxC, 0)]] });
+  if (w < 640) return drawFlowList(el, order, counts, fl, w, { kindOf, KIND, maxC, tip });
+
+  const boxW = Math.min(176, (w - (n - 1) * 16) / n);
+  const gap = (w - n * boxW) / (n - 1);
+  const boxH = 84, rowH = 28, headH = 24, top = 2;
+  const cx = (s) => idx(s) * (boxW + gap) + boxW / 2;
+  // layout rows: a group header before each kind, then one row per flow
+  let y = top + boxH + 14;
+  const rows = [];
+  let prevKind = null;
+  fl.forEach((f) => {
+    const k = kindOf(f);
+    if (k !== prevKind) { rows.push({ header: k, y: y + 14 }); y += headH; prevKind = k; }
+    rows.push({ f, k, y: y + rowH / 2 }); y += rowH;
   });
-  // sample every arc once (for chip placement)
-  const samples = drawn.map((a) => { const out = []; try { const len = a.node.getTotalLength(); for (let t = 0; t <= len; t += 5) { const p = a.node.getPointAtLength(t); out.push(p); } } catch { /* ignore */ } return out; });
-  const hit = (box, pad, pts, half) => pts.some((p) => p.x > box.x - half - pad && p.x < box.x + box.width + half + pad && p.y > box.y - half - pad && p.y < box.y + box.height + half + pad);
-  const inter = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
-  const chipG = svg.append('g').attr('class', 'rr-chips');
-  const chips = [];
-  const nodeBoxes = order.map((s) => { const p = pos(idx(s)); return { x: p.x - 2, y: p.y - 2, width: boxW + 4, height: boxH + 4 }; });
-  drawn.forEach((a, i) => {
-    let len = 0; try { len = a.node.getTotalLength(); } catch { /* ignore */ }
-    const text = fmtInt(a.f.count);
-    const wTxt = text.length * 6.9 + 12, hTxt = CHIP;
-    let best = null;
-    for (const t of [0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74]) {
-      const p = len ? a.node.getPointAtLength(len * t) : { x: 0, y: 0 };
-      const box = { x: p.x - wTxt / 2, y: p.y - hTxt / 2, width: wTxt, height: hTxt };
-      const bad = drawn.some((o, j) => j !== i && hit(box, 1, samples[j], o.half)) || chips.some((c) => inter(c, box)) || nodeBoxes.some((b) => inter(b, box));
-      if (!bad) { best = p; break; }
-      if (!best) best = p;
-    }
-    const chip = chipLabel(chipG, { x: best.x, y: best.y, text, color: a.kind === KIND.bad ? SR.urgent : C.text, cls: 'rr-flow-chip' });
-    chips.push(chip.datum().box);
+  const hgt = Math.round(y + 6);
+  const svg = svgIn(el, w, hgt, `Rotable lifecycle: ${order.map((s) => `${stateName(s)} ${counts[s] ?? 0}`).join(', ')}`);
+  const defs = svg.append('defs');
+  Object.entries(KIND).forEach(([k, o]) => defs.append('marker').attr('id', `rr-arr-${k}`).attr('viewBox', '0 0 10 10').attr('refX', 9).attr('refY', 5).attr('markerWidth', 8).attr('markerHeight', 8).attr('orient', 'auto').attr('markerUnits', 'userSpaceOnUse')
+    .append('path').attr('d', 'M0,1L10,5L0,9L2.5,5Z').attr('fill', o.color));
+  // column guides: hairlines from each box down through the ladder
+  svg.append('g').selectAll('line').data(order).join('line').attr('class', 'rr-guide')
+    .attr('x1', (s) => cx(s)).attr('x2', (s) => cx(s)).attr('y1', top + boxH).attr('y2', hgt - 4);
+  const sw = d3().scaleSqrt().domain([0, maxC]).range([2, 10]);
+  const rowG = svg.append('g').attr('class', 'rr-arcs');
+  rows.forEach((r) => {
+    if (r.header) { dl(rowG, { x: 0, y: r.y, text: KIND[r.header].label, color: KIND[r.header].color, mono: true }); return; }
+    const { f, k } = r;
+    const o = KIND[k];
+    const x1 = cx(f.from), x2 = cx(f.to);
+    const dir = x2 > x1 ? 1 : -1;
+    const g = rowG.append('g').attr('class', `rr-arc rr-arc--${k}`).attr('tabindex', 0).attr('role', 'img')
+      .attr('aria-label', `${stateName(f.from)} to ${stateName(f.to)}: ${fmtInt(f.count)} transitions`);
+    g.append('rect').attr('x', Math.min(x1, x2) - 8).attr('y', r.y - rowH / 2).attr('width', Math.abs(x2 - x1) + 16).attr('height', rowH).attr('fill', 'transparent');
+    g.append('circle').attr('cx', x1).attr('cy', r.y).attr('r', 3.5).attr('fill', o.color);
+    g.append('line').attr('x1', x1).attr('x2', x2 - dir * 10).attr('y1', r.y).attr('y2', r.y)
+      .attr('stroke', o.color).attr('stroke-opacity', o.op).attr('stroke-width', sw(f.count)).attr('stroke-dasharray', o.dash || null);
+    g.append('line').attr('x1', x1).attr('x2', x2).attr('y1', r.y).attr('y2', r.y).attr('stroke', o.color).attr('stroke-width', 1).attr('marker-end', `url(#rr-arr-${k})`);
+    chipLabel(g, { x: (x1 + x2) / 2, y: r.y, text: fmtInt(f.count), color: C.text, cls: 'rr-flow-chip' });
+    withTooltip(g, () => tip(f));
   });
-  const nodes = svg.append('g').selectAll('g').data(order).join('g').attr('class', 'rr-node-g').attr('transform', (s) => { const p = pos(idx(s)); return `translate(${p.x},${p.y})`; });
+  const nodes = svg.append('g').selectAll('g').data(order).join('g').attr('class', 'rr-node-g').attr('transform', (s) => `translate(${idx(s) * (boxW + gap)},${top})`);
   nodes.append('rect').attr('width', boxW).attr('height', boxH).attr('rx', 10).attr('class', (s) => `rr-node ${s === 'CONDEMNED' ? 'is-bad' : ''} ${s === 'IN_REPAIR' ? 'is-active' : ''}`);
-  nodes.append('text').attr('x', 12).attr('y', vertical ? 20 : 24).attr('class', 'rr-node-state').text((s) => STATE_META[s]?.label || s);
-  nodes.append('text').attr('x', 12).attr('y', vertical ? 48 : 62).attr('class', (s) => `rr-node-count ${s === 'CONDEMNED' ? 'is-bad' : ''}`).text((s) => fmtInt(counts[s] ?? 0));
-  if (!vertical) nodes.append('text').attr('x', 12).attr('y', 80).attr('class', 'rr-node-sub').text((s) => truncate(STATE_META[s]?.sub || '', boxW - 20, 6.2));
-  if (!vertical) {
-    dl(svg, { x: 0, y: 12, text: 'FORWARD · fit → removal → shop → transit', color: SR.recommended, mono: true });
-    dl(svg, { x: 0, y: hgt - 10, text: 'RETURNS · back to stock or straight onto aircraft', color: SR.neutral, mono: true });
-    dl(svg, { x: w, y: hgt - 10, text: 'CONDEMNED · beyond economic repair', anchor: 'end', color: SR.urgent, mono: true });
-  } else {
-    dl(svg, { x: midX - boxW / 2 - 6, y: 12, text: '← RETURNS', anchor: 'end', color: SR.neutral, mono: true });
-    dl(svg, { x: midX + boxW / 2 + 6, y: 12, text: 'FORWARD →', color: SR.recommended, mono: true });
-  }
+  nodes.append('text').attr('x', 12).attr('y', 22).attr('class', 'rr-node-state').text((s) => truncate(STATE_META[s]?.label || s, boxW - 20, 7));
+  nodes.append('text').attr('x', 12).attr('y', 56).attr('class', 'rr-node-count').text((s) => fmtInt(counts[s] ?? 0));
+  nodes.append('text').attr('x', 12).attr('y', 74).attr('class', 'rr-node-sub').text((s) => truncate(STATE_META[s]?.sub || '', boxW - 20, 6.2));
+}
+
+/** Phone ladder: state tiles in a 3-column grid, then one row per transition (name, count, bar). */
+function drawFlowList(el, order, counts, fl, w, { kindOf, KIND, maxC, tip }) {
+  const cols = 3, tileGap = 8;
+  const tileW = (w - (cols - 1) * tileGap) / cols, tileH = 56;
+  const tilesH = Math.ceil(order.length / cols) * (tileH + tileGap);
+  const rowH = 34, headH = 22;
+  let y = tilesH + 8;
+  const rows = [];
+  let prevKind = null;
+  fl.forEach((f) => {
+    const k = kindOf(f);
+    if (k !== prevKind) { rows.push({ header: k, y: y + 14 }); y += headH; prevKind = k; }
+    rows.push({ f, k, y }); y += rowH;
+  });
+  const svg = svgIn(el, w, Math.round(y + 4), `Rotable lifecycle: ${order.map((s) => `${stateName(s)} ${counts[s] ?? 0}`).join(', ')}`);
+  const tiles = svg.append('g').selectAll('g').data(order).join('g').attr('class', 'rr-node-g')
+    .attr('transform', (s, i) => `translate(${(i % cols) * (tileW + tileGap)},${Math.floor(i / cols) * (tileH + tileGap)})`);
+  tiles.append('rect').attr('width', tileW).attr('height', tileH).attr('rx', 8).attr('class', (s) => `rr-node ${s === 'CONDEMNED' ? 'is-bad' : ''} ${s === 'IN_REPAIR' ? 'is-active' : ''}`);
+  tiles.append('text').attr('x', 8).attr('y', 17).attr('class', 'rr-node-state').text((s) => truncate(stateName(s).toUpperCase(), tileW - 12, 6.8));
+  tiles.append('text').attr('x', 8).attr('y', 44).attr('class', 'rr-node-count rr-node-count--sm').text((s) => fmtInt(counts[s] ?? 0));
+  const valW = 44;
+  const barX = 0, barW = w - valW - 8;
+  rows.forEach((r) => {
+    if (r.header) { dl(svg, { x: 0, y: r.y, text: r.header === 'fwd' ? 'FORWARD' : r.header === 'back' ? 'RETURNS' : 'CONDEMNED (BER)', color: KIND[r.header].color, mono: true }); return; }
+    const { f, k } = r; const o = KIND[k];
+    const g = svg.append('g').attr('class', `rr-arc rr-arc--${k}`).attr('transform', `translate(0,${r.y})`).attr('tabindex', 0).attr('role', 'img')
+      .attr('aria-label', `${stateName(f.from)} to ${stateName(f.to)}: ${fmtInt(f.count)} transitions`);
+    g.append('rect').attr('width', w).attr('height', rowH).attr('fill', 'transparent');
+    g.append('text').attr('class', 'rr-ladder-name').attr('x', 0).attr('y', 12).text(`${stateName(f.from)} → ${stateName(f.to)}`);
+    g.append('rect').attr('x', barX).attr('y', 20).attr('height', 6).attr('rx', 2).attr('width', barW).attr('fill', C.line);
+    g.append('rect').attr('x', barX).attr('y', 20).attr('height', 6).attr('rx', 2).attr('width', Math.max(2, (barW * f.count) / maxC))
+      .attr('fill', o.color).attr('fill-opacity', k === 'fwd' ? 0.75 : 0.6).attr('stroke', k === 'bad' ? o.color : null).attr('stroke-dasharray', o.dash || null);
+    chipLabel(g, { x: w, y: 18, text: fmtInt(f.count), anchor: 'end', color: C.text, cls: 'rr-flow-chip' });
+    withTooltip(g, () => tip(f));
+  });
 }
 
 // ============================================================================= Gantt
@@ -327,7 +309,7 @@ function renderGantt(host, ros, now, r, ctx) {
     : `${fmtInt(overdue.length)} repair orders are past quoted due${worst ? `; the worst is ${fmtDays(worst.late_d)} late at ${shopLabel(worst.shop)}` : ''}`;
   const f = chartFrame(host, {
     headline: head,
-    subtitle: `Bar = induction → return (or now) · tick = quoted due · red = days past due · shops ordered by worst delay${now != null ? ` · now ${fmtWeek(Math.floor(now / HPW))}` : ''}`,
+    subtitle: `Bar = induction → return (or now) · tick = quoted due · hatched = days past due, red only beyond ${fmtInt(CRITICAL_LATE_D)} d · shops by worst delay${now != null ? ` · now ${fmtWeek(Math.floor(now / HPW))}` : ''}`,
     provenance: prov(r.meta), source: 'rotables.json → repair_queue',
     table: { columns: [{ key: 'ro_id', label: 'RO' }, { key: 'serial', label: 'Serial' }, { key: 'shop', label: 'Shop', format: shopLabel }, { key: 'quoted_tat_d', label: 'Quoted TAT', num: true, format: fmtDays }, { key: 'elapsed_d', label: 'Elapsed / actual', num: true, format: fmtDays }, { key: 'late_d', label: 'Days vs due', num: true, format: (v) => (v == null ? '—' : fmtNum(v, 0)) }, { key: 'open', label: 'Open', format: (v) => (v ? 'yes' : 'no') }], rows: ros },
   });
@@ -340,14 +322,15 @@ function renderGantt(host, ros, now, r, ctx) {
   f.body.append(scroll, h('div', { class: 'rr-key', 'aria-hidden': 'true' },
     h('span', {}, h('i', { style: { background: 'rgba(34,199,184,0.45)' } }), 'Open, inside quote'),
     h('span', {}, h('i', { style: { background: 'rgba(185,200,214,0.22)' } }), 'Returned'),
-    h('span', {}, h('i', { style: { background: C.urgent } }), 'Past quoted due'),
+    h('span', {}, h('i', { class: 'rr-key-late' }), 'Past quoted due'),
+    h('span', {}, h('i', { style: { background: C.urgent } }), `Critical: > ${fmtInt(CRITICAL_LATE_D)} d past due`),
     h('span', {}, h('i', { style: { background: C.text, width: '2px', height: '12px' } }), 'Quoted due date')));
-  const topOverdue = overdue.slice().sort((a, b) => (!!b.planted - !!a.planted) || ((b.late_d ?? 0) - (a.late_d ?? 0))).slice(0, 3);
+  const topOverdue = overdue.slice().sort((a, b) => ((b.late_d ?? 0) - (a.late_d ?? 0)) || (!!b.planted - !!a.planted)).slice(0, 3);
   if (topOverdue.length) {
     const chase = h('div', { class: 'rr-chase', role: 'list', 'aria-label': 'Overdue repair orders to chase first' },
-      h('div', { class: 'rr-chase-head' }, icon('alert'), h('span', {}, 'Chase first'), overdue.length > topOverdue.length ? h('span', { class: 'rr-chase-more' }, `+ ${fmtInt(overdue.length - topOverdue.length)} more overdue in the table below`) : null),
-      ...topOverdue.map((o) => h('div', { class: 'rr-alert', role: 'listitem' },
-        h('span', { class: 'rr-alert-late' }, `+${fmtDays(o.late_d)}`),
+      h('div', { class: 'rr-chase-head' }, h('span', {}, 'Chase first'), h('span', { class: 'rr-chase-rule' }, '· most days past quoted due'), overdue.length > topOverdue.length ? h('span', { class: 'rr-chase-more' }, `+ ${fmtInt(overdue.length - topOverdue.length)} more overdue in the table below`) : null),
+      ...topOverdue.map((o) => h('div', { class: `rr-alert ${isCritical(o) ? 'is-crit' : ''}`, role: 'listitem' },
+        h('span', { class: 'rr-alert-late' }, isCritical(o) ? icon('alert', { label: 'critical' }) : null, `+${fmtDays(o.late_d)}`),
         h('span', { class: 'rr-alert-id mono' }, o.serial),
         h('span', { class: 'rr-alert-shop' }, `${shopLabel(o.shop)} · ${o.ro_id} · due ${o.due != null ? fmtWeek(Math.floor(o.due / HPW)) : '—'}`),
         o.planted ? h('span', { class: 'chip chip-mono rr-alert-ps' }, o.planted) : h('span'))));
@@ -390,6 +373,8 @@ function drawGantt(el, rows, now, w) {
   const hgt = m.top + m.bottom + rows.length * rowH + shops.length * shopH;
   const iw = Math.max(60, w - m.left - m.right);
   const svg = svgIn(el, w, hgt, 'Repair order Gantt chart');
+  svg.append('defs').append('pattern').attr('id', 'rr-hatch').attr('width', 5).attr('height', 5).attr('patternUnits', 'userSpaceOnUse').attr('patternTransform', 'rotate(45)')
+    .call((pt) => { pt.append('rect').attr('width', 5).attr('height', 5).attr('fill', 'rgba(185,200,214,0.18)'); pt.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 5).attr('stroke', 'rgba(185,200,214,0.75)').attr('stroke-width', 2); });
   const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
   const lo = d3().min(rows, (o) => o.inH ?? o.start);
   const hi = d3().max(rows, (o) => Math.max(o.end ?? 0, o.due ?? 0, now ?? 0));
@@ -424,17 +409,17 @@ function drawGantt(el, rows, now, w) {
   const ex = (o) => x(o.end ?? o.inH);
   rowG.append('rect').attr('class', (o) => `rr-bar ${o.open ? 'is-open' : ''}`).attr('x', bx).attr('y', 5).attr('height', rowH - 10).attr('rx', 2)
     .attr('width', (o) => Math.max(2, (o.overdue && o.due != null ? x(Math.max(o.due, o.inH ?? o.due)) : ex(o)) - bx(o)));
-  rowG.filter((o) => o.due != null && o.end != null && o.end > o.due).append('rect').attr('class', 'rr-bar-late').attr('x', (o) => x(Math.max(o.due, o.inH ?? o.due))).attr('y', 5).attr('height', rowH - 10).attr('rx', 2)
+  rowG.filter((o) => o.due != null && o.end != null && o.end > o.due).append('rect').attr('class', (o) => `rr-bar-late ${isCritical(o) ? 'is-crit' : ''}`).attr('x', (o) => x(Math.max(o.due, o.inH ?? o.due))).attr('y', 5).attr('height', rowH - 10).attr('rx', 2)
     .attr('width', (o) => Math.max(1.5, ex(o) - x(Math.max(o.due, o.inH ?? o.due))));
   rowG.filter((o) => o.due != null).append('line').attr('class', 'rr-due').attr('x1', (o) => x(o.due)).attr('x2', (o) => x(o.due)).attr('y1', 2).attr('y2', rowH - 2);
   const late = rowG.filter((o) => o.open && o.overdue);
-  late.append('use').attr('href', '#i-alert').attr('x', (o) => Math.min(iw + 4, ex(o) + 4)).attr('y', 3).attr('width', 13).attr('height', 13).attr('color', C.urgent).style('color', C.urgent);
-  late.append('text').attr('class', 'rr-late-label').attr('x', (o) => Math.min(iw + 4, ex(o) + 4) + 16).attr('y', rowH / 2).attr('dy', '0.32em').text((o) => `+${Math.round(o.late_d)}d`)
+  late.filter(isCritical).append('use').attr('href', '#i-alert').attr('x', (o) => Math.min(iw + 4, ex(o) + 4)).attr('y', 3).attr('width', 13).attr('height', 13).attr('color', C.urgent).style('color', C.urgent);
+  late.append('text').attr('class', (o) => `rr-late-label ${isCritical(o) ? 'is-crit' : ''}`).attr('x', (o) => Math.min(iw + 4, ex(o) + 4) + (isCritical(o) ? 16 : 2)).attr('y', rowH / 2).attr('dy', '0.32em').text((o) => `+${Math.round(o.late_d)}d`)
     .append('tspan').attr('class', 'rr-late-ps').text((o) => (o.planted && !narrow ? ` · ${o.planted}` : ''));
   withTooltip(rowG, (o) => ({
     title: `${o.ro_id} · ${o.serial}`,
     rows: [['Shop', shopLabel(o.shop)], ['Inducted', o.inH != null ? fmtWeek(Math.floor(o.inH / HPW)) : '—'], ['Quoted TAT', fmtDays(o.quoted_tat_d)], [o.open ? 'Elapsed' : 'Actual TAT', fmtDays(o.open ? o.elapsed_d : o.actual_tat_d)], ['vs quoted due', o.late_d == null ? '—' : o.late_d > 0 ? `+${fmtDays(o.late_d)} late` : `${fmtDays(-o.late_d)} early`]],
-    note: o.planted ? `Planted situation ${o.planted}` : o.open ? (o.overdue ? 'Overdue — chase the vendor' : 'Open, inside quote') : 'Returned',
+    note: `${o.planted ? `Planted situation ${o.planted} · ` : ''}${o.open ? (isCritical(o) ? `Critical: more than ${fmtInt(CRITICAL_LATE_D)} d past due, chase the vendor` : o.overdue ? 'Overdue, chase the vendor' : 'Open, inside quote') : 'Returned'}`,
   }));
 }
 
@@ -466,14 +451,14 @@ function renderTatDist(host, r) {
       const pg = g.append('g').attr('transform', `translate(0,${gy})`);
       const share = d.counts.slice(0, lastNZ + 1).map((c, k) => ({ x0: d.bins_d[k], c, p: c / d.n }));
       const y = d3().scaleLinear().domain([0, d3().max(dists, (dd) => d3().max(dd.counts) / dd.n)]).range([panelH, 18]);
-      // the slowest shop is the finding (teal); the others are context (titanium)
-      const color = d === slow ? SR.recommended : SR.neutral;
-      const bars = pg.selectAll('rect').data(share).join('rect').attr('x', (b) => x(b.x0) + 0.5).attr('width', Math.max(1, x(bw) - x(0) - 1.5)).attr('y', (b) => y(b.p)).attr('height', (b) => panelH - y(b.p)).attr('fill', color).attr('fill-opacity', d === slow ? 0.6 : 0.35);
+      // shops are categories, not a recommendation: the slowest shop is solid titanium, the others slate
+      const color = d === slow ? SR.neutral : SR.context;
+      const bars = pg.selectAll('rect').data(share).join('rect').attr('x', (b) => x(b.x0) + 0.5).attr('width', Math.max(1, x(bw) - x(0) - 1.5)).attr('y', (b) => y(b.p)).attr('height', (b) => panelH - y(b.p)).attr('fill', color).attr('fill-opacity', d === slow ? 0.55 : 0.5);
       withTooltip(bars, (b) => ({ title: `${shopLabel(d.shop)} · ${b.x0}–${b.x0 + bw} d`, rows: [['ROs', fmtInt(b.c)], ['Share', fmtPct(b.p)]] }));
       pg.append('line').attr('x1', 0).attr('x2', iw).attr('y1', panelH).attr('y2', panelH).attr('stroke', C.lineStrong);
       refLine(pg, { x1: x(d.quoted_mean_d), x2: x(d.quoted_mean_d), y1: 14, y2: panelH });
       pg.append('line').attr('x1', x(d.mean_d)).attr('x2', x(d.mean_d)).attr('y1', 14).attr('y2', panelH).attr('stroke', C.text).attr('stroke-width', 1.25);
-      dl(pg, { x: 0, y: 6, text: `${shopLabel(d.shop)} · mean ${fmtDays(d.mean_d)} vs quoted ${fmtDays(d.quoted_mean_d)}`, color: d === slow ? SR.recommended : C.muted, strong: d === slow });
+      dl(pg, { x: 0, y: 6, text: `${shopLabel(d.shop)} · mean ${fmtDays(d.mean_d)} vs quoted ${fmtDays(d.quoted_mean_d)}`, color: d === slow ? C.text : C.muted, strong: d === slow });
       if (d === slow && w >= 360) annotate(pg, { x: x(d.p90_d), y: panelH - 4, dx: x(d.p90_d) > iw * 0.6 ? -24 : 24, dy: -34, title: `p90 ${fmtDays(d.p90_d)}`, sub: 'long tail' });
     });
     axisBottom(g.append('g'), x, { ticks: w < 480 ? 4 : 6, format: (v) => `${v} d`, height: hgt - m.top - m.bottom });
@@ -497,9 +482,9 @@ function renderTat(host, r) {
     table: { columns: [{ key: 'pn', label: 'PN' }, { key: 'shop', label: 'Shop', format: shopLabel }, { key: 'quoted_d', label: 'Quoted', num: true, format: fmtDays }, { key: 'actual_mean_d', label: 'Actual mean', num: true, format: fmtDays }, { key: 'p90_d', label: 'p90', num: true, format: fmtDays }, { key: 'n', label: 'ROs', num: true, format: fmtInt }], rows },
   });
   if (!rows.length) { f.body.append(h('div', { class: 'state' }, 'not run')); return null; }
-  // the slowest shop (highest median ratio) is the finding in teal; every other shop is titanium context
+  // shops are categories (no accent): the slowest shop (highest median ratio) is solid titanium, others hollow slate
   const slowShop = byShop.slice().sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))[0]?.shop;
-  const colorOf = (s) => (s === slowShop ? SR.recommended : SR.neutral);
+  const colorOf = (s) => (s === slowShop ? SR.neutral : SR.context);
   return responsive(f.body, (w) => {
     const hgt = Math.max(300, Math.min(420, Math.round(w * 0.82)));
     const m = { top: 16, right: 20, bottom: 40, left: 48 };
@@ -520,11 +505,11 @@ function renderTat(host, r) {
     const r0 = d3().scaleSqrt().domain([0, d3().max(rows, (t) => t.n || 1)]).range([2.5, 7]);
     const pts = g.append('g').selectAll('g').data(rows).join('g').attr('transform', (t) => `translate(${x(t.quoted_d)},0)`);
     pts.filter((t) => t.p90_d != null).append('line').attr('y1', (t) => y(t.actual_mean_d)).attr('y2', (t) => y(t.p90_d)).attr('stroke', (t) => colorOf(t.shop)).attr('stroke-opacity', 0.45);
-    pts.append('circle').attr('cy', (t) => y(t.actual_mean_d)).attr('r', (t) => r0(t.n || 1)).attr('fill', C.bg).attr('stroke', (t) => colorOf(t.shop)).attr('stroke-width', 1.75);
+    pts.append('circle').attr('cy', (t) => y(t.actual_mean_d)).attr('r', (t) => r0(t.n || 1)).attr('fill', (t) => (t.shop === slowShop ? SR.neutral : C.bg)).attr('fill-opacity', (t) => (t.shop === slowShop ? 0.7 : 1)).attr('stroke', (t) => colorOf(t.shop)).attr('stroke-width', 1.5);
     withTooltip(pts, (t) => ({ title: `${t.pn} · ${shopLabel(t.shop)}`, rows: [['Quoted', fmtDays(t.quoted_d)], ['Actual mean', fmtDays(t.actual_mean_d)], ['p90', fmtDays(t.p90_d)], ['ROs', fmtInt(t.n)]] }));
     // direct shop labels (legend-free): top-right stack
     const legendShops = [slowShop, ...shops.filter((s) => s !== slowShop)].slice(0, 3);
-    legendShops.forEach((s, i) => dl(g, { x: iw, y: ih - 12 - i * 16, text: `● ${shopLabel(s)}`, anchor: 'end', color: s === slowShop ? SR.recommended : C.muted }));
+    legendShops.forEach((s, i) => dl(g, { x: iw, y: ih - 12 - i * 16, text: `${s === slowShop ? '●' : '○'} ${shopLabel(s)}`, anchor: 'end', color: s === slowShop ? C.text : C.muted }));
     if (worst) {
       // annotate into the empty lower-left / upper-left space, away from the point cloud
       const wx = x(worst.quoted_d), wy = y(worst.actual_mean_d);
@@ -551,7 +536,9 @@ function exampleInputs(ex, r) {
     tat: num(pick(ex, 'tat_days', 'tat_d', 'pipeline_days')) ?? num(tatRow?.actual_mean_d),
     spares: num(pick(ex, 'spares', 'total_spares')) ?? (num(ex.current) != null ? num(ex.current) + (num(ex.loop_units) ?? 0) : null),
     loop: num(ex.loop_units) ?? 0,
-    presets: [['P0', ex.p0_units], ['P1', ex.p1_units], ['P2', ex.p2_units], ['Recommended', ex.rec_units ?? ex.recommended]].filter(([, v]) => num(v) != null).map(([k, v]) => [k, num(v) + (num(ex.loop_units) ?? 0)]),
+    // S = shelf + units already in the repair loop (exporter spares_total when present, else derived)
+    presets: [['P0', ex.p0_units, 'P0'], ['P1', ex.p1_units, 'P1'], ['P2', ex.p2_units, 'P2'], ['Recommended', ex.rec_units ?? ex.recommended, 'recommended']].filter(([, v]) => num(v) != null)
+      .map(([k, v, sk]) => [k, num(ex.spares_total?.[sk]) ?? num(v) + (num(ex.loop_units) ?? 0)]),
     desc: ex.desc || '', deadline: ex.deadline || '', planted: ex.planted || null,
     cost: num(pick(ex, 'unit_cost_aed', 'unit_cost')),
     recommended: num(ex.recommended),
@@ -570,11 +557,15 @@ function renderFloatCalc(host, r, method, ctx) {
     h('div', {}, h('div', { class: 'card-kicker' }, 'Float calculator · METRIC-inspired (Palm’s theorem), not full METRIC'), h('h3', { class: 'card-title' }, 'How many spares does a rotable need to cover its repair pipeline?')),
     h('div', { class: 'row' }, ...[...new Set(['DERIVED', cur.provenance || 'SIMULATED'])].map((x) => provChip(x)))));
 
-  const mkNum = (key, label, { min = 0, step = 1, hint } = {}) => {
+  const VT = { rate: (v) => `${fmtNum(v, 2)} removals per 30 days`, tat: (v) => `${fmtNum(v, 1)} days`, spares: (v) => `${fmtInt(v)} spares`, cost: (v) => fmtAED(v), extra: (v) => `${fmtInt(v)} more spares`, cut: (v) => `${fmtInt(v)} days shorter TAT` };
+  const mkNum = (key, label, { min = 0, step = 1, hint, grouped = false } = {}) => {
     const id = `fc-${key}`;
-    const input = h('input', { class: 'input', type: 'number', id, min, step, inputmode: 'decimal', dataset: { input: key } });
+    // grouped inputs show thousands separators ("47,977"), so they are text inputs parsed by num(stripCommas)
+    const input = grouped ? h('input', { class: 'input', type: 'text', id, inputmode: 'numeric', autocomplete: 'off', dataset: { input: key, grouped: '1' } })
+      : h('input', { class: 'input', type: 'number', id, min, step, inputmode: 'decimal', dataset: { input: key } });
     const range = h('input', { class: 'slider', type: 'range', min, step, 'aria-label': `${label} slider`, dataset: { range: key } });
-    return { key, input, range, el: h('div', { class: 'fc-field' }, h('label', { for: id }, label), input, range, hint ? h('div', { class: 'fc-hint' }, hint) : null) };
+    const vt = bindValueText(range, VT[key] || String);
+    return { key, input, range, vt, el: h('div', { class: 'fc-field' }, h('label', { for: id }, label), input, range, hint ? h('div', { class: 'fc-hint' }, hint) : null) };
   };
   const sel = h('select', { class: 'select', id: 'fc-pn', 'aria-label': 'Prefill from rotable' },
     examples.map((e) => h('option', { value: e.pn }, `${e.pn}${e.desc ? ` · ${e.desc}` : ''}${e.planted ? ` · ${e.planted}` : ''}`)));
@@ -582,12 +573,12 @@ function renderFloatCalc(host, r, method, ctx) {
   const fRate = mkNum('rate', 'Removals per 30 d', { step: 0.01, hint: 'Unscheduled removals (U/S) at this stocking point' });
   const fTat = mkNum('tat', 'Pipeline TAT, days', { step: 0.1, hint: 'Removal → serviceable again (transport + shop + return)' });
   const fSp = mkNum('spares', 'Spares (S)', { step: 1, hint: 'Total spares: shelf + pipeline' });
-  const fCost = mkNum('cost', 'Unit cost, AED', { step: 1000, hint: 'Exchange / purchase price per serial' });
+  const fCost = mkNum('cost', 'Unit cost, AED', { step: 1000, hint: 'Exchange / purchase price per serial', grouped: true });
   const fields = [fRate, fTat, fSp, fCost];
   const reason = h('div', { class: 'fc-hint fc-wide' });
   const presetBox = h('div', { class: 'fc-presets fc-wide', role: 'group', 'aria-label': 'Set spares to a policy level' });
   const inputs = h('div', { class: 'fc-inputs' },
-    h('div', { class: 'fc-field fc-wide' }, h('label', { for: 'fc-pn' }, 'Prefill from a rotable'), sel), reason, ...fields.map((f) => f.el), h('div', { class: 'fc-field fc-wide' }, h('span', { class: 'fc-label' }, 'Set S to a policy level'), presetBox));
+    h('div', { class: 'fc-field fc-wide' }, h('label', { for: 'fc-pn' }, 'Prefill from a rotable'), sel), reason, ...fields.map((f) => f.el), h('div', { class: 'fc-field fc-wide' }, h('span', { class: 'fc-label' }, 'Set S to a policy level · shelf + in loop = S'), presetBox));
 
   // outputs
   const out = (key, label, isKey) => { const v = h('div', { class: 'fc-out-value', dataset: { out: key } }, '—'); return { v, el: h('div', { class: `fc-out ${isKey ? 'is-key' : ''}` }, h('div', { class: 'fc-out-label' }, label), v) }; };
@@ -627,7 +618,7 @@ function renderFloatCalc(host, r, method, ctx) {
   };
   const sync = (key) => {
     const all = { rate: fRate, tat: fTat, spares: fSp, cost: fCost, extra: lN, cut: lD };
-    Object.entries(all).forEach(([k, f]) => { if (k === key) return; f.input.value = state[k] ?? ''; f.range.value = state[k] ?? 0; });
+    Object.entries(all).forEach(([k, f]) => { if (k === key) return; f.input.value = f.input.dataset.grouped ? (state[k] == null ? '' : fmtCount(state[k])) : state[k] ?? ''; f.range.value = state[k] ?? 0; f.vt?.(); });
   };
   const load = (ex) => {
     cur = ex;
@@ -635,18 +626,19 @@ function renderFloatCalc(host, r, method, ctx) {
     lD.range.max = Math.max(10, Math.floor(ex.tat ?? 10));
     if (state.tat != null && state.cut > state.tat) state.cut = Math.floor(state.tat / 2);
     reason.replaceChildren(`${ex.deadline ? `${ex.deadline} (hypothetical deadline class) · ` : ''}${ex.station && ex.station !== 'network' ? `${ex.station} · ` : 'network float · '}spares include ${fmtInt(ex.loop ?? 0)} units already in the repair loop. `, ex.reason ? h('details', { class: 'fc-why' }, h('summary', {}, `Why the model recommends ${ex.recommended != null ? fmtInt(ex.recommended) : 'this'} base-stock units`), h('p', {}, ex.reason)) : '');
-    presetBox.replaceChildren(...(ex.presets || []).map(([k, v]) => h('button', { type: 'button', class: 'btn btn--sm', dataset: { preset: k }, onclick: () => { state.spares = v; sync(null); compute(); } }, `${k} · S = ${fmtInt(v)}`)));
+    presetBox.replaceChildren(...(ex.presets || []).map(([k, v]) => h('button', { type: 'button', class: 'btn btn--sm', dataset: { preset: k }, onclick: () => { state.spares = v; sync(null); compute(); } }, (ex.loop ? `${k} · ${fmtInt(v - ex.loop)} + ${fmtInt(ex.loop)} = ${fmtInt(v)}` : `${k} · S = ${fmtInt(v)}`))));
     setRanges(); sync(null); compute();
   };
   [...fields, lN, lD].forEach((f) => {
     const onIn = (src) => () => {
-      const v = num(src.value);
+      const v = num(String(src.value).replace(/[,\s]/g, ''));
       state[f.key] = v;
-      if (src === f.input) f.range.value = v ?? 0; else f.input.value = v ?? '';
+      if (src === f.input) { f.range.value = v ?? 0; f.vt?.(); } else f.input.value = f.input.dataset.grouped ? (v == null ? '' : fmtCount(v)) : v ?? '';
       compute();
     };
     f.input.addEventListener('input', onIn(f.input));
     f.range.addEventListener('input', onIn(f.range));
+    if (f.input.dataset.grouped) f.input.addEventListener('change', () => { if (state[f.key] != null) f.input.value = fmtCount(state[f.key]); });
   });
   sel.addEventListener('change', () => { const ex = examples.find((e) => e.pn === sel.value); if (ex) { ctx.setParams({ pn: ex.pn }); load(ex); } });
 
@@ -799,10 +791,10 @@ function renderPalmVsSim(host, r, hubId) {
     dl(g, { x: iw * 0.18 + 8, y: ih - ih * 0.18 + 6, text: 'sim = Palm', color: C.faint, mono: true });
     const rr = d3().scaleSqrt().domain([0, d3().max(rows, (d) => d.n)]).range([2, 8]);
     const pts = g.append('g').selectAll('circle').data(rows.slice().sort((a, b) => a.hub - b.hub)).join('circle').attr('cx', (d) => x(d.palm)).attr('cy', (d) => y(d.sim)).attr('r', (d) => rr(d.n))
-      .attr('fill', (d) => (d.hub ? C.accent : C.neutral)).attr('fill-opacity', (d) => (d.hub ? 0.55 : 0.35)).attr('stroke', (d) => (d.hub ? C.accent : C.muted)).attr('stroke-width', 1);
+      .attr('fill', (d) => (d.hub ? SR.neutral : 'none')).attr('fill-opacity', (d) => (d.hub ? 0.6 : 0)).attr('stroke', (d) => (d.hub ? SR.neutral : SR.context)).attr('stroke-width', 1.25);
     withTooltip(pts, (d) => ({ title: `${d.pn} @ ${d.station}`, rows: [['Palm A', fmtPct(d.palm)], ['Sim fill', fmtPct(d.sim)], ['Gap', `${fmtNum((d.sim - d.palm) * 100, 1)} pts`], ['Requests', fmtInt(d.n)]] }));
-    dl(g, { x: iw, y: ih - 28, text: '● Hub', anchor: 'end', color: C.accent });
-    dl(g, { x: iw, y: ih - 12, text: '● Outstations', anchor: 'end', color: C.muted });
+    dl(g, { x: iw, y: ih - 28, text: '● Hub', anchor: 'end', color: C.text });
+    dl(g, { x: iw, y: ih - 12, text: '○ Outstations', anchor: 'end', color: C.muted });
     if (gap) annotate(g, { x: x(gap.palm), y: y(gap.sim), dx: x(gap.palm) > iw * 0.5 ? -34 : 34, dy: y(gap.sim) > ih * 0.6 ? -30 : 30, title: `${gap.pn} @ ${gap.station}`, sub: `Palm ${fmtPct(gap.palm, 0)} → sim ${fmtPct(gap.sim, 0)}` });
   });
 }

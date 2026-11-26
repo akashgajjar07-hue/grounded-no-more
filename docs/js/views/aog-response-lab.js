@@ -9,7 +9,7 @@
  * includes direct cost, so the two are never added.
  */
 import { h, pageHead, card, provChip, pill, icon } from '../ui.js';
-import { chartFrame, responsive, svgIn, theme, fmtAED, fmtHours, fmtInt, fmtPct, fmtWeek, withTooltip, truncate, refLine, chipLabel, HEADLINE_MAX } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, theme, fmtAED, fmtHours, fmtInt, fmtPct, fmtWeek, withTooltip, truncate, refLine, chipLabel, HEADLINE_MAX, fmtMoney, fmtEnum, plural } from '../charts/theme.js';
 
 export const data = ['aog_lab'];
 
@@ -43,6 +43,15 @@ const fitHeadline = (...cands) => { const c = cands.filter(Boolean); return c.fi
 const simWeek = (absH) => (absH == null ? null : fmtWeek(Math.floor(absH / 168)));
 const tLabel = (t) => `T${t >= 0 ? '+' : '−'}${fmtHours(Math.abs(t))}`;
 const fmtAEDfull = (v) => (v == null ? '—' : `AED ${Math.round(v).toLocaleString('en-GB')}`);
+/** Compact money with one decimal under AED 10k ("AED 1.8k"), else fmtMoney ("AED 138k"). */
+const fmtMoneyFine = (v) => (v != null && Math.abs(v) >= 1000 && Math.abs(v) < 10000 ? `AED ${(v / 1000).toFixed(1).replace(/\.0$/, '')}k` : fmtMoney(v));
+/** Exported prose → house style: "3 feasible option(s)" → "3 feasible options", "AED 137,650" → "AED 138k". */
+export const tidyProse = (t) => String(t || '')
+  .replace(/(\d[\d,]*)\s+((?:[a-z-]+\s+)?)([a-z]+)\(s\)/gi, (m, n, mid, w) => `${n} ${mid}${+n.replace(/,/g, '') === 1 ? w : `${w}s`}`)
+  .replace(/\b([a-z]+)\(s\)/gi, '$1s')
+  .replace(/AED\s?(-?\d{1,3}(?:,\d{3})+|\d{4,})(?:\.\d+)?/g, (m, n) => fmtMoneyFine(+n.replace(/,/g, '')));
+/** Recommendation title without a repeated source: "Emergency transfer from AUH (AUH)" → "Emergency transfer from AUH". */
+export const recTitle = (label, source) => (source && !new RegExp(`\\b${String(source).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(label) ? `${label} (${source})` : label);
 
 function ensureCSS() {
   if (document.querySelector('link[data-view-css="aog-response-lab"]')) return;
@@ -136,8 +145,8 @@ export async function render(el, ctx) {
     // incident header
     const facts = [
       ['Tail', `${inc.tail} (fictional)`], ['Station', inc.station], ['Part', `${inc.pn}`], ['ATA · class', [inc.ata ? `ATA ${inc.ata}` : null, inc.part_class ? { R: 'Rotable', C: 'Consumable', E: 'Expendable' }[inc.part_class] || inc.part_class : null].filter(Boolean).join(' · ') || '—'],
-      ['Deadline', `${inc.deadline}${slack != null ? ` · ${fmtHours(slack)} slack` : ''} (hypothetical)`], ['Trigger', inc.trigger ? inc.trigger.replace(/_/g, ' ') : '—'],
-      ['AOG (history)', inc.aog_hours != null ? fmtHours(inc.aog_hours) : 'not run'], ['AOG penalty', inc.penalty_aed_per_h != null ? `${fmtAEDfull(inc.penalty_aed_per_h)} / h · ${inc.archetype || ''}` : 'not run'],
+      ['Deadline', `${inc.deadline}${slack != null ? ` · ${fmtHours(slack)} slack` : ''} (hypothetical)`], ['Trigger', inc.trigger ? fmtEnum(inc.trigger) : '—'],
+      ['AOG (history)', inc.aog_hours != null ? fmtHours(inc.aog_hours) : 'not run'], ['AOG penalty', inc.penalty_aed_per_h != null ? `${fmtMoneyFine(inc.penalty_aed_per_h)} / h${inc.archetype ? ` · ${inc.archetype}` : ''}` : 'not run'],
     ];
     const head = card({
       cls: 'aog-head', kicker: `${inc.id}${inc.need_h != null ? ` · ${simWeek(inc.need_h)} · simulated hour ${fmtInt(inc.need_h)}` : ''}`,
@@ -175,13 +184,19 @@ export async function render(el, ctx) {
     const feas = opts.filter((o) => o.feasible && o.exposure_aed != null && !o.human_decision);
     const runner = feas.filter((o) => o !== rec).sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))[0];
     const exCard = h('section', { class: 'card span-12' });
+    const allMeet = rec && runner && rec.deadline_met && feas.filter((o) => o !== rec).every((o) => o.deadline_met) && slack > 0;
     const ef = chartFrame(exCard, {
-      headline: rec
-        ? fitHeadline(`${optLabel(rec)} has the lowest exposure: ${fmtAED(rec.exposure_aed)}${runner ? ` against ${fmtAED(runner.exposure_aed)} for ${optLabel(runner).toLowerCase()}` : ''}`,
-          runner ? `${optLabel(rec)} has the lowest exposure: ${fmtAED(rec.exposure_aed)} vs ${fmtAED(runner.exposure_aed)} next best` : null,
-          `${optLabel(rec)} has the lowest exposure: ${fmtAED(rec.exposure_aed)}`)
+      headline: allMeet
+        // every feasible option lands inside the slack, so none is AOG: exposure (= direct cost) is the tie-breaker
+        ? fitHeadline(`${feas.length === 2 ? 'Both' : `All ${fmtInt(feas.length)}`} feasible options land inside the ${fmtHours(slack)} ${inc.deadline} slack; ${optLabel(rec).toLowerCase()} costs ${fmtMoneyFine(runner.exposure_aed - rec.exposure_aed)} less`,
+          `${feas.length === 2 ? 'Both' : `All ${fmtInt(feas.length)}`} feasible options beat the ${fmtHours(slack)} ${inc.deadline} slack; ${optLabel(rec).toLowerCase()} is ${fmtMoneyFine(runner.exposure_aed - rec.exposure_aed)} cheaper`,
+          `All feasible options beat the ${fmtHours(slack)} slack; the cheapest wins`)
+        : rec
+        ? fitHeadline(`${optLabel(rec)} has the lowest exposure: ${fmtMoneyFine(rec.exposure_aed)}${runner ? ` against ${fmtMoneyFine(runner.exposure_aed)} for ${optLabel(runner).toLowerCase()}` : ''}`,
+          runner ? `${optLabel(rec)} has the lowest exposure: ${fmtMoneyFine(rec.exposure_aed)} vs ${fmtMoneyFine(runner.exposure_aed)} next best` : null,
+          `${optLabel(rec)} has the lowest exposure: ${fmtMoneyFine(rec.exposure_aed)}`)
         : 'No feasible option at the time of the request',
-      subtitle: `Exposure = hours beyond the ${slack != null ? `${fmtHours(slack)} ` : ''}deadline slack × AOG penalty + direct cost (AED) · ex-ante estimate at request time · dashed = not available`,
+      subtitle: `${allMeet ? 'No feasible option is AOG, so exposure is the direct cost alone · ' : ''}Exposure = hours beyond the ${slack != null ? `${fmtHours(slack)} ` : ''}deadline slack × AOG penalty + direct cost (AED) · ex-ante estimate at request time · dashed = not available`,
       provenance: prov, source: 'aog_lab.json',
       table: { columns: [{ key: 'key', label: 'Key', mono: true }, { key: 'option', label: 'Option' }, { key: 'feasible', label: 'Feasible', format: (v) => (v ? 'yes' : 'no') }, { key: 'wait_h', label: 'Wait', num: true, format: fmtHours }, { key: 'direct_cost', label: 'Direct cost', num: true, format: (v) => fmtAEDfull(v) }, { key: 'exposure_aed', label: 'Exposure', num: true, format: (v) => fmtAEDfull(v) }, { key: 'rank', label: 'Rank', num: true, format: (v) => (v == null ? '—' : v) }], rows: opts },
     });
@@ -191,9 +206,9 @@ export async function render(el, ctx) {
     const d = inc.decision || {};
     const robbery = opts.find((o) => o.human_decision);
     const human = card({
-      cls: 'span-7 aog-human', bp: true, kicker: 'Human decision required', title: rec ? `Recommend: ${d.recommended_label || optLabel(rec)}${d.source || rec.source ? ` (${d.source || rec.source})` : ''}` : 'No feasible option to recommend', prov, story: 'aog-decision',
+      cls: 'span-7 aog-human', bp: true, kicker: 'Human decision required', title: rec ? `Recommend: ${recTitle(d.recommended_label || optLabel(rec), d.source || rec.source)}` : 'No feasible option to recommend', prov, story: 'aog-decision',
       body: h('div', { class: 'stack-3' },
-        h('p', { class: 'aog-why m-0' }, d.why || 'No reasoning exported.'),
+        h('p', { class: 'aog-why m-0' }, d.why ? tidyProse(d.why) : 'No reasoning exported.'),
         h('div', {}, h('div', { class: 'card-kicker mb-1' }, 'What a human must check before acting'),
           h('ul', { class: 'aog-checks list-reset' }, (d.checks || []).map((c) => h('li', {}, icon('check'), h('span', {}, c))))),
         h('div', { class: 'aog-robbery' }, h('div', { class: 'row' }, icon('alert'), h('b', {}, 'Robbery / cannibalisation')),
@@ -253,20 +268,18 @@ export async function render(el, ctx) {
     });
     stops2.push(responsive(fr.body, (w) => {
       const d3 = window.d3;
-      const narrow = w < 520, lw = narrow ? 0 : 210, rowH = narrow ? 46 : 38, H = rows.length * rowH + 30;
+      const narrow = w < 520, lw = narrow ? 0 : 210, rowH = narrow ? 46 : 38, H = rows.length * rowH + 8;
       const svg = svgIn(fr.body, w, H, 'Counterfactual AOG hours');
       const x = d3.scaleLinear().domain([0, d3.max(rows, (r) => r.value) * 1.05]).range([0, Math.max(40, w - lw - 150)]);
       rows.forEach((r, i) => {
         const y = i * rowH + (narrow ? 16 : 8);
         svg.append('text').attr('class', r.hi ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 0).attr('y', narrow ? y - 4 : y + 11).text(r.label);
         svg.append('rect').attr('x', lw).attr('y', y + (narrow ? 2 : 2)).attr('height', 14).attr('rx', 2).attr('width', Math.max(1, x(r.value))).attr('fill', r.hi ? theme.color.accent : theme.color.neutral).attr('fill-opacity', r.key === 'ante' ? 0.6 : 0.95);
-        svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', lw + x(r.value) + 8).attr('y', y + 13).text(`${fmtHours(r.value)} · ${fmtAED(r.ex)}`);
+        svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', lw + x(r.value) + 8).attr('y', y + 13).text(`${fmtHours(r.value)} · ${fmtMoney(r.ex)}`);
       });
-      if (saved > 0) {
-        const y0 = (rows.length) * rowH + 18;
-        svg.append('text').attr('class', 'gnm-annot-sub').attr('x', lw).attr('y', y0).text(`${fmtHours(saved)} fewer AOG hours over two simulated years, ex post`);
-      }
     }));
+    // the footnote is HTML under the chart (it wraps at 390 px instead of running off the SVG)
+    if (saved > 0) fr.body.after(h('p', { class: 'aog-cf-foot t-12 m-0' }, `${fmtHours(saved)} fewer AOG hours over two simulated years, scored ex post.`));
     const n = C.requests_compared;
     const cav = card({
       cls: 'span-5', kicker: 'Honest caveats', title: 'How to read this counterfactual', prov,
@@ -274,7 +287,7 @@ export async function render(el, ctx) {
         h('dl', { class: 'meta-list' },
           h('dt', {}, 'Best option taken'), h('dd', {}, C.history_took_best_option != null ? `${fmtInt(C.history_took_best_option)} of ${fmtInt(n)} requests (${fmtPct(C.history_took_best_option / n, 0)})` : 'not run'),
           h('dt', {}, 'History did better'), h('dd', {}, C.requests_where_history_beat_estimate != null ? `${fmtInt(C.requests_where_history_beat_estimate)} requests` : 'not run'),
-          h('dt', {}, 'Scoring basis'), h('dd', {}, C.realised_basis_counts ? Object.entries(C.realised_basis_counts).map(([k, v]) => `${fmtInt(v)} ${k.replace(/_/g, ' ')}`).join(' · ') : 'not run')),
+          h('dt', {}, 'Scoring basis'), h('dd', {}, C.realised_basis_counts ? Object.entries(C.realised_basis_counts).map(([k, v]) => `${fmtInt(v)} ${fmtEnum(k).toLowerCase()}`).join(' · ') : 'not run')),
         h('ul', { class: 'aog-caveats' },
           h('li', {}, 'Options are ex-ante estimates built on quoted figures. Quoted repair and purchase dates are unreliable in this world, and expedite lead times are a cap, not a supplier quote.'),
           h('li', {}, 'Accelerated repair, expedite and pool were not taken in history, so they keep their estimate; they cannot be realised from the record.'),
@@ -294,18 +307,18 @@ function optionCard(o, rec, inc, codes, optLabel, slack, note) {
   const st = optState(o, rec);
   const metric = (k, v, extra) => h('div', { class: 'aog-m' }, h('dt', {}, k), h('dd', { class: 'num' }, v, extra || null));
   const met = o.human_decision ? h('span', { class: 'faint' }, 'n/a') : o.wait_h == null ? h('span', { class: 'faint' }, '—') : o.deadline_met ? pill('ok', 'Met') : pill('urgent', 'Missed');
-  const rc = (o.reason_codes || []).map((c) => h('li', { title: c, dataset: { code: c } }, h('span', { class: 'aog-code' }, reasonLabel(c)), codes[c] ? h('span', { class: 'aog-code-txt' }, codes[c]) : null));
+  const rc = (o.reason_codes || []).map((c) => h('li', { title: c, dataset: { code: c } }, h('span', { class: 'aog-code' }, reasonLabel(c)), codes[c] ? h('span', { class: 'aog-code-txt' }, tidyProse(codes[c])) : null));
   return h('article', { class: `aog-opt aog-opt--${st.cls}`, dataset: { key: o.key, state: st.cls }, 'aria-label': `Option ${o.key}: ${optLabel(o)}` },
     h('div', { class: 'aog-opt-head' }, h('span', { class: 'aog-key mono' }, o.key), h('h4', { class: 'aog-opt-title' }, optLabel(o)), st.pill),
     o.human_decision ? h('p', { class: 'aog-human-note m-0' }, icon('alert'), 'Requires engineering/quality approval — human decision') : null,
     st.cls === 'greyed' ? h('p', { class: 'aog-human-note aog-human-note--grey m-0' }, icon('info'), 'Not contracted: indicative P3 terms shown for reference') : null,
     h('dl', { class: 'aog-metrics' },
       metric('Wait', o.wait_h == null ? '—' : fmtHours(o.wait_h)),
-      metric('Cost', o.human_decision && !o.feasible ? '—' : fmtAEDfull(o.direct_cost)),
-      metric('Exposure', o.exposure_aed == null ? '—' : fmtAED(o.exposure_aed)),
+      metric('Cost', o.human_decision && !o.feasible ? '—' : fmtMoneyFine(o.direct_cost)),
+      metric('Exposure', o.exposure_aed == null ? '—' : fmtMoneyFine(o.exposure_aed)),
       h('div', { class: 'aog-m' }, h('dt', {}, 'Deadline'), h('dd', {}, met))),
     note ? h('p', { class: 'aog-missed-note m-0', dataset: { role: 'missed-note' } }, icon('info'), h('span', {}, note)) : null,
-    o.source ? h('div', { class: 'aog-src mono t-12 faint' }, `Source: ${o.source}${o.mode ? ` · ${o.mode.replace(/_/g, ' ')}` : ''}`) : null,
+    o.source ? h('div', { class: 'aog-src mono t-12 faint' }, `Source: ${o.source}${o.mode ? ` · ${fmtEnum(o.mode).toLowerCase()}` : ''}`) : null,
     rc.length ? h('ul', { class: 'aog-codes list-reset' }, rc) : null);
 }
 
@@ -317,8 +330,8 @@ function counterfactualCard(inc, cf, prov, optLabel) {
     ['', 'History', 'Best option'],
     ['Route', cf.actual_route_label || cf.actual_route || '—', `${cf.best_option || ''} · ${cf.best_option_label || '—'}`],
     ['AOG hours', fmtHours(cf.actual_aog_h), fmtHours(cf.best_realised_aog_h ?? cf.best_aog_h)],
-    ['Direct cost', fmtAEDfull(cf.actual_direct_cost_aed), fmtAEDfull(cf.best_realised_direct_cost_aed ?? cf.best_direct_cost_aed)],
-    ['Exposure', fmtAED(cf.actual_exposure_aed), fmtAED(cf.best_realised_exposure_aed ?? cf.best_exposure_aed)],
+    ['Direct cost', fmtMoneyFine(cf.actual_direct_cost_aed), fmtMoneyFine(cf.best_realised_direct_cost_aed ?? cf.best_direct_cost_aed)],
+    ['Exposure', fmtMoneyFine(cf.actual_exposure_aed), fmtMoneyFine(cf.best_realised_exposure_aed ?? cf.best_exposure_aed)],
   ];
   const verdict = better ? `The best option would have saved ${fmtHours(cf.aog_h_saving)} AOG and ${fmtAED(cf.exposure_saving_aed)} of exposure.`
     : worse ? `History did better than the estimate here, by ${fmtHours(-cf.aog_h_saving)}.`
@@ -330,7 +343,7 @@ function counterfactualCard(inc, cf, prov, optLabel) {
         h('thead', {}, h('tr', {}, rows[0].map((c, i) => h('th', { scope: 'col', class: i ? 'is-num' : '' }, c)))),
         h('tbody', {}, rows.slice(1).map((r) => h('tr', {}, h('th', { scope: 'row' }, r[0]), h('td', { class: 'is-num' }, r[1]), h('td', { class: 'is-num' }, r[2]))))),
       h('p', { class: 'm-0' }, verdict),
-      h('p', { class: 't-12 faint m-0' }, `Scoring basis: ${BASIS[cf.realised_basis] || (cf.realised_basis ? cf.realised_basis.replace(/_/g, ' ') : 'not recorded')}`)),
+      h('p', { class: 't-12 faint m-0' }, `Scoring basis: ${BASIS[cf.realised_basis] || (cf.realised_basis ? fmtEnum(cf.realised_basis) : 'not recorded')}`)),
   });
 }
 
@@ -462,7 +475,16 @@ function drawExposure(body, w, opts, rec, optLabel) {
   const d3 = window.d3;
   const rows = opts.filter((o) => !o.human_decision);
   const narrow = w < 560;
-  const lw = narrow ? 0 : Math.min(300, w * 0.34), rowH = narrow ? 44 : 32;
+  // label column sized to the longest label (cap 360 px at >= 900 px); labels longer than the cap wrap to two lines
+  const CW = 6.9;
+  const labOf = (o) => `${o.key} · ${optLabel(o)}`;
+  const longest = d3.max(rows, (o) => labOf(o).length) * CW + 16;
+  const cap = w >= 900 ? 360 : Math.min(300, w * 0.4);
+  const lw = narrow ? 0 : Math.min(cap, longest);
+  const wrapAt = Math.floor((lw - 16) / CW);
+  const split = (t) => { if (narrow || t.length <= wrapAt) return [t]; const cut = t.lastIndexOf(' ', wrapAt); const k = cut > 8 ? cut : wrapAt; return [t.slice(0, k), truncate(t.slice(k).trim(), lw - 24, CW)]; };
+  const twoLine = !narrow && rows.some((o) => split(labOf(o)).length > 1);
+  const rowH = narrow ? 44 : twoLine ? 40 : 32;
   const H = rows.length * rowH + 8;
   const svg = svgIn(body, w, H, 'Exposure by option');
   const vals = rows.map((o) => o.exposure_aed).filter((v) => v != null);
@@ -470,8 +492,10 @@ function drawExposure(body, w, opts, rec, optLabel) {
   rows.forEach((o, i) => {
     const y = i * rowH + (narrow ? 16 : 6);
     const isRec = o === rec, grey = o.indicative || o.greyed;
-    const lab = `${o.key} · ${optLabel(o)}`;
-    svg.append('text').attr('class', isRec ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 0).attr('y', narrow ? y - 4 : y + 11).style('fill', o.feasible || grey ? null : theme.color.faint).text(truncate(lab, narrow ? w : lw - 12));
+    const lab = labOf(o);
+    const parts = narrow ? [truncate(lab, w, CW)] : split(lab);
+    const tx = svg.append('text').attr('class', isRec ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 0).attr('y', narrow ? y - 4 : y + 11 - (parts.length > 1 ? 7 : 0)).style('fill', o.feasible || grey ? null : theme.color.faint);
+    parts.forEach((t, k) => tx.append('tspan').attr('x', 0).attr('dy', k ? '1.2em' : 0).text(t));
     if (o.exposure_aed == null) {
       svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).style('fill', theme.color.faint).attr('x', lw).attr('y', y + 12).text(`Not available · ${reasonLabel((o.reason_codes || [])[0])}`);
       return;
@@ -481,6 +505,6 @@ function drawExposure(body, w, opts, rec, optLabel) {
       .attr('stroke', o.feasible || isRec ? null : theme.color.neutral).attr('stroke-dasharray', o.feasible ? null : '3 2');
     withTooltip(bar, () => ({ title: optLabel(o), rows: [['Wait', o.wait_h == null ? '—' : fmtHours(o.wait_h)], ['Direct cost', fmtAEDfull(o.direct_cost)], ['Exposure', fmtAEDfull(o.exposure_aed)]], note: o.feasible ? (isRec ? 'Recommended (rank 1)' : `Rank ${o.rank ?? '—'}`) : grey ? 'Not contracted (indicative)' : 'Infeasible: estimate shown with its reason' }));
     svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', lw + Math.max(2, x(o.exposure_aed)) + 8).attr('y', y + 13)
-      .text(`${fmtAED(o.exposure_aed)} · ${o.wait_h == null ? '—' : fmtHours(o.wait_h)}${o.feasible ? '' : narrow ? ' · n/a' : grey ? ' · not contracted' : ' · infeasible'}`);
+      .text(`${fmtMoneyFine(o.exposure_aed)} · ${o.wait_h == null ? '—' : fmtHours(o.wait_h)}${o.feasible ? '' : narrow ? ' · n/a' : grey ? ' · not contracted' : ' · infeasible'}`);
   });
 }

@@ -112,3 +112,38 @@ def test_aog_wave2_design(site, browser, vp, inc_id):  # noqa: F811
         assert not problems, problems
     finally:
         ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_wave3_aog_copy(site, browser, vp):  # noqa: F811
+    """Design wave 3: no "(s)" or duplicated source, compact money, neutral deadline chips, the
+    counterfactual footnote is HTML (F2), and AOG-0177 explains the slack tie-break."""
+    lab = _lab()
+    ctx, page, problems = open_page(browser, site + "#/aog?incident=AOG-0001", vp)
+    try:
+        txt = page.locator("#view").inner_text()
+        assert "(s)" not in txt
+        title = page.locator('[data-story="aog-decision"] .card-title').inner_text()
+        src = next((i for i in lab["incidents"] if i["id"] == "AOG-0001"), {}).get("decision", {}).get("source")
+        if src:
+            assert title.count(src) <= 1, title
+        import re
+        assert not re.search(r"AED \d{1,3}(,\d{3}){1,}", page.locator('[data-story="aog-decision"]').inner_text())
+        colors = page.evaluate("""() => [...document.querySelectorAll('.aog-dl')].map((e) => getComputedStyle(e).color)""")
+        assert all("245, 185, 66" not in c and "231, 107, 100" not in c for c in colors), colors
+        assert page.locator(".aog-cf-foot").count() <= 1
+        edge = page.evaluate("""() => [...document.querySelectorAll('#view svg text')].filter((t) => t.getBoundingClientRect().right > innerWidth + 1).length""")
+        assert edge == 0
+        assert not problems, problems
+    finally:
+        ctx.close()
+    inc = next((i for i in lab["incidents"] if i["id"] == "AOG-0177"), None)
+    if inc:
+        feas = [o for o in inc["options"] if o.get("feasible") and not o.get("human_decision")]
+        if len(feas) >= 2 and all(o.get("deadline_met") for o in feas):
+            ctx, page, problems = open_page(browser, site + "#/aog?incident=AOG-0177", vp)
+            try:
+                heads = page.locator(".chart-headline").all_inner_texts()
+                assert any("slack" in hd for hd in heads), heads
+            finally:
+                ctx.close()

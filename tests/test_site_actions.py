@@ -121,3 +121,29 @@ def test_actions_wave2_grid(site, browser, vp):  # noqa: F811
         assert not problems, problems
     finally:
         ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_wave3_actions(site, browser, vp):  # noqa: F811
+    """Design wave 3: the action column shows whole first sentences, no raw enums or "(s)" in the drawer,
+    and the group AOG metric is the exporter's worst-station 52-week value (as on Mission)."""
+    import re
+    parts = json.loads((DOCS / "data" / "parts.json").read_text())
+    by = {p["pn"]: p for p in parts.get("parts", [])}
+    ctx, page, problems = open_page(browser, site + "#/actions", vp)
+    try:
+        acts = page.locator(".pac-c-action").all_inner_texts()
+        assert acts and all(not a.rstrip().endswith((",", " or", " an", " a", " the")) for a in acts), acts[:5]
+        heads = page.evaluate("""() => [...document.querySelectorAll('.pac-group')].map((g) => ({ pn: g.dataset.pn, t: g.querySelector('.pac-ghead-meta').textContent }))""")
+        for g in heads:
+            v = by.get(g["pn"], {}).get("aog_h_52w_max_station")
+            if v:
+                assert f"max {round(v):,} AOG h at one station" in g["t"], g
+        page.locator(".pac-row").first.click()
+        page.wait_for_timeout(400)
+        dr = page.locator(".drawer").inner_text()
+        assert not re.search(r"\b[A-Z]+_[A-Z_]+\b", dr), re.findall(r"\b[A-Z]+_[A-Z_]+\b", dr)
+        assert "(s)" not in dr
+        assert not problems, problems
+    finally:
+        ctx.close()

@@ -7,9 +7,9 @@
  * week) and a client-side CSV export of the current filtered list.
  */
 import { h, pageHead, card, provChip, pill, drawer, icon, segmented } from '../ui.js';
-import { chartFrame, responsive, svgIn, theme, fmtAED, fmtInt, fmtNum, fmtWeek, withTooltip } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, theme, fmtAED, fmtInt, fmtNum, fmtWeek, withTooltip, fmtEnum, plural } from '../charts/theme.js';
 
-export const data = ['actions'];
+export const data = ['actions', 'parts'];
 
 const SEV = ['urgent', 'review', 'info'];
 const SEV_LABEL = { urgent: 'Urgent', review: 'Review', info: 'Info' };
@@ -30,6 +30,19 @@ const sevPill = (s) => pill(s === 'info' ? 'info' : s, SEV_LABEL[s] || s);
 const NETWORK = 'Network';
 const nOr = (v) => (v === null || v === undefined || Number.isNaN(+v) ? null : +v);
 const wk1 = (v) => fmtNum(v, Number.isInteger(+v) ? 0 : 1);
+/** Raw enum tokens inside exported prose → readable labels: "at EU_VENDOR" → "at EU vendor". */
+export const tidyEnums = (t) => String(t ?? '').replace(/\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b/g, (m) => fmtEnum(m))
+  .replace(/(\d[\d,.]*)\s+([a-z]+)\(s\)/gi, (m, n, w) => `${n} ${+String(n).replace(/,/g, '') === 1 ? w : `${w}s`}`);
+/**
+ * Row text for the action column: the whole first sentence (never cut mid-sentence); the rest lives in the drawer.
+ * Splits on ". " / "; " so "Chase the shop…; escalate, consider…" shows "Chase the shop for a committed release date".
+ */
+export function firstSentence(t) {
+  const s = tidyEnums(t).trim();
+  const m = s.match(/^(.+?)(?:[.;!?](?=\s|$))/);
+  const head = m ? m[1].trim() : s;
+  return { head, more: head.length < s.replace(/[.;!?]\s*$/, '').trim().length };
+}
 
 /** The scannable numbers of an exception (all optional; only depletion rows carry a target). */
 export function rowMetrics(a) {
@@ -89,7 +102,7 @@ function fmtEv(k, v) {
   if (Array.isArray(v)) return v.map((x) => (typeof x === 'number' ? fmtInt(x) : String(x))).join(' · ');
   if (typeof v === 'boolean') return v ? 'Yes' : 'No';
   if (typeof v === 'object') return Object.entries(v).map(([a, b]) => `${a} ${b}`).join(' · ');
-  if (typeof v !== 'number') return String(v);
+  if (typeof v !== 'number') return /^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$/.test(String(v)) ? fmtEnum(v) : tidyEnums(v);
   if (/_aed$/.test(k)) return fmtAED(v);
   if (/(^|_)week$|_week$/.test(k)) return fmtWeek(v);
   if (/_weeks$|^weeks_/.test(k) || k === 'cover_weeks_at_recent_rate' || k === 'shelf_life_weeks' || k === 'lookback_weeks') return `${fmtNum(v, Number.isInteger(v) ? 0 : 1)} wk`;
@@ -158,7 +171,7 @@ function evidenceChart(a) {
     const steps = [{ k: 'Removed', w: e.removed_week }, e.shop_in_week != null ? { k: 'At shop', w: e.shop_in_week } : null, { k: 'Quoted due', w: e.quoted_due_week }, { k: 'This week', w: asOf, hi: true }].filter(Boolean);
     const fr = chartFrame(host, {
       headline: `${fmtNum(e.weeks_overdue, 1)} weeks past the quoted due date`,
-      subtitle: `Simulated weeks · RO ${e.ro_id ?? e.po_id ?? ''} · ${e.shop || 'supplier'}`,
+      subtitle: `Simulated weeks · ${e.ro_id != null ? `RO ${e.ro_id}` : e.po_id != null ? `PO ${e.po_id}` : 'order'} · ${e.shop ? fmtEnum(e.shop) : 'supplier'}`,
       provenance: 'DERIVED', source: 'actions.json',
       table: { columns: [{ key: 'k', label: 'Milestone' }, { key: 'w', label: 'Week', num: true, format: fmtWeek }], rows: steps },
     });
@@ -207,7 +220,12 @@ export function toCSV(rows) {
 // ----------------------------------------------------------------------------- view
 export async function render(el, ctx) {
   ensureCSS();
-  const { actions: A } = ctx.data;
+  const { actions: A, parts: PT } = ctx.data;
+  // one AOG-hour metric per PN across screens: the exporter's worst-station 52-week total, with its label (as on Mission)
+  const partBy = Object.fromEntries((PT?.parts || []).map((p) => [p.pn, p]));
+  const aogMeta = PT?.aog_metric_labels?.aog_h_52w_max_station;
+  const aogShort = (typeof aogMeta === 'object' && aogMeta?.short) || 'max AOG h at one station';
+  const aogLabel = (typeof aogMeta === 'string' ? aogMeta : aogMeta?.label) || 'AOG h · last 52 wk · worst station';
   const all = (A.actions || []).slice().sort((a, b) => (SEV_RANK[a.severity] ?? 9) - (SEV_RANK[b.severity] ?? 9) || (a.due_week ?? 0) - (b.due_week ?? 0) || String(a.exception_id).localeCompare(String(b.exception_id)));
   const asOf = A.as_of_week ?? (all.length ? Math.max(...all.map((a) => a.week ?? 0)) : null);
   const metaProv = A.meta?.provenance || A.provenance || 'DERIVED';
@@ -247,7 +265,7 @@ export async function render(el, ctx) {
   const summaryCard = card({
     cls: 'span-4', kicker: 'This week', title: 'Who owns the work', prov: metaProv,
     body: h('div', { class: 'stack-3' }, ownerList,
-      h('p', { class: 't-12 faint m-0' }, 'Click an owner to filter the inbox. Rules live in config/aog_lab.yaml; QUARANTINE_DOCS rows are a SIMULATED workflow illustration, not document data.')),
+      h('p', { class: 't-12 faint m-0' }, 'Click an owner to filter the inbox. Rules live in config/aog_lab.yaml; quarantine (documents) rows are a simulated workflow illustration, not document data.')),
   });
   const chartCard = h('section', { class: 'card span-8', dataset: { story: 'action-types' } });
   const byType = types.map((t) => ({ t, label: typeLabel(t), ...Object.fromEntries(SEV.map((s) => [s, count((a) => a.type === t && a.severity === s)])), n: count((a) => a.type === t) }));
@@ -337,21 +355,21 @@ export async function render(el, ctx) {
     const m = rowMetrics(a);
     const stn = stationOf(a);
     return h('li', { class: 'pac-li' },
-      h('button', { type: 'button', class: `pac-row pac-grid pac-row--${a.severity}${inGroup ? ' is-grouped' : ''}`, dataset: { id: a.exception_id, sev: a.severity }, 'aria-label': `${SEV_LABEL[a.severity] || a.severity}: ${shortTitle(a)}. ${a.recommended_action || ''}. Due ${a.due_week != null ? fmtWeek(a.due_week) : 'not set'}. Open evidence.`, onclick: () => open(a) },
+      h('button', { type: 'button', class: `pac-row pac-grid pac-row--${a.severity}${inGroup ? ' is-grouped' : ''}`, dataset: { id: a.exception_id, sev: a.severity }, 'aria-label': `${SEV_LABEL[a.severity] || a.severity}: ${shortTitle(a)}. ${tidyEnums(a.recommended_action || '')}. Due ${a.due_week != null ? fmtWeek(a.due_week) : 'not set'}. Open evidence.`, onclick: () => open(a) },
         h('span', { class: 'pac-c-sev' }, sevPill(a.severity)),
         h('span', { class: 'pac-c-part mono' }, inGroup ? h('span', { class: 'pac-stn' }, h('span', { class: 'faint' }, '↳ '), stn) : h('span', {}, h('b', {}, a.pn || '—'), h('span', { class: 'faint' }, ' · '), stn)),
         h('span', { class: 'pac-c-issue', title: typeLabel(a.type) }, icon(a.type_icon || TYPE_ICON[a.type] || 'info'), h('span', { class: 'pac-c-issue-t' }, issueText(a)), prov ? provChip(prov) : null),
         h('span', { class: 'pac-c-stock is-num mono', dataset: { k: 'On hand' } }, m.stock ? h('span', { class: m.stock.have < m.stock.target ? 'pac-short' : '' }, `${fmtInt(m.stock.have)} / ${fmtInt(m.stock.target)}`) : num(null)),
         h('span', { class: 'pac-c-aog is-num mono', dataset: { k: 'AOG h' } }, num(m.aogH)),
         h('span', { class: 'pac-c-d0 is-num mono', dataset: { k: 'D0' } }, num(m.d0)),
-        h('span', { class: 'pac-c-action', title: a.recommended_action || '' }, a.recommended_action || 'No action recorded'),
+        (() => { const fs = firstSentence(a.recommended_action || ''); return h('span', { class: 'pac-c-action', title: tidyEnums(a.recommended_action || '') }, a.recommended_action ? `${fs.head}${fs.more ? '\u00a0…' : ''}` : 'No action recorded'); })(),
         h('span', { class: 'pac-c-due is-num mono' }, a.due_week != null ? fmtWeek(a.due_week) : '—', icon('chevron-right'))));
   }
   /** Same-PN exceptions collapse under one header ("GN-… · 6 stations · 63 AOG h max"); singletons stay plain rows. */
   function groupsOf(rows) {
     const map = new Map();
     rows.forEach((a) => { const k = a.pn || a.exception_id; if (!map.has(k)) map.set(k, []); map.get(k).push(a); });
-    const gs = [...map.entries()].map(([pn, rs]) => ({ pn, rows: rs, sev: Math.min(...rs.map((a) => SEV_RANK[a.severity] ?? 9)), aog: Math.max(0, ...rs.map((a) => rowMetrics(a).aogH || 0)), first: rows.indexOf(rs[0]) }));
+    const gs = [...map.entries()].map(([pn, rs]) => { const pv = nOr(partBy[pn]?.aog_h_52w_max_station); return { pn, rows: rs, sev: Math.min(...rs.map((a) => SEV_RANK[a.severity] ?? 9)), aog: pv ?? Math.max(0, ...rs.map((a) => rowMetrics(a).aogH || 0)), first: rows.indexOf(rs[0]) }; });
     return gs.sort((a, b) => a.sev - b.sev || a.first - b.first);
   }
   const peek = (g) => (openGroups.has(g.pn) ? g.rows.length : Math.min(g.rows.length, GROUP_PEEK));
@@ -366,7 +384,7 @@ export async function render(el, ctx) {
     return h('li', { class: `pac-group pac-group--${sevKey}`, dataset: { pn: g.pn } },
       h('div', { class: 'pac-ghead' },
         h('span', { class: 'pac-ghead-pn mono' }, g.pn),
-        h('span', { class: 'pac-ghead-meta' }, `${fmtInt(g.rows.length)} exceptions · ${fmtInt(stations.size)} ${stations.size === 1 ? 'station' : 'stations'}${nU ? ` · ${fmtInt(nU)} urgent` : ''}${g.aog ? ` · ${fmtInt(g.aog)} AOG h max` : ''}`),
+        h('span', { class: 'pac-ghead-meta' }, `${fmtInt(g.rows.length)} exceptions · ${fmtInt(stations.size)} ${stations.size === 1 ? 'station' : 'stations'}${nU ? ` · ${fmtInt(nU)} urgent` : ''}`, g.aog ? h('span', { class: 'pac-nw', title: `${aogLabel} (${aogShort})` }, ` · max ${fmtInt(g.aog)} AOG h at one station`) : null),
         g.rows.length > GROUP_PEEK ? toggle : null),
       h('ul', { class: 'list-reset pac-grows' }, g.rows.map((a, i) => { const li = row(a, { inGroup: true }); if (i >= GROUP_PEEK && !isOpen) li.hidden = true; return li; })));
   }
@@ -384,9 +402,9 @@ export async function render(el, ctx) {
       kicker: `${a.exception_id} · ${typeLabel(a.type)}`, title: shortTitle(a),
       onClose: () => { if (alive) ctx.setParams({ id: '' }); activeDrawer = null; },
       body: h('div', { class: 'stack-3 pac-drawer' },
-        h('div', { class: 'row-wrap' }, sevPill(a.severity), h('span', { class: 'chip chip-mono' }, a.type), provChip(prov)),
-        h('div', { class: 'pac-why' }, h('div', { class: 'card-kicker mb-1' }, 'Why it was raised'), h('p', { class: 'm-0' }, a.summary)),
-        h('div', { class: 'pac-action' }, h('div', { class: 'card-kicker' }, 'Recommended action'), h('p', { class: 'm-0' }, a.recommended_action || 'No action recorded'),
+        h('div', { class: 'row-wrap' }, sevPill(a.severity), h('span', { class: 'chip chip-mono' }, typeLabel(a.type)), provChip(prov)),
+        h('div', { class: 'pac-why' }, h('div', { class: 'card-kicker mb-1' }, 'Why it was raised'), h('p', { class: 'm-0' }, tidyEnums(a.summary))),
+        h('div', { class: 'pac-action' }, h('div', { class: 'card-kicker' }, 'Recommended action'), h('p', { class: 'm-0' }, a.recommended_action ? tidyEnums(a.recommended_action) : 'No action recorded'),
           h('dl', { class: 'meta-list mt-2' }, ...[['Owner', a.owner || 'not set'], ['Due', a.due_week != null ? fmtWeek(a.due_week) : 'not set'], ['Raised', a.week != null ? fmtWeek(a.week) : 'not recorded'], ['Part', a.pn || '—'], ['Station', stationOf(a)]].flatMap(([k, v]) => [h('dt', {}, k), h('dd', { class: k === 'Part' || k === 'Station' ? 'mono' : '' }, v)]))),
         chart,
         h('div', {}, h('div', { class: 'card-kicker mb-1' }, 'Evidence · the numbers behind it'),
@@ -409,7 +427,7 @@ export async function render(el, ctx) {
     ownerSel.querySelector('select').value = f.owner;
     ownerList.querySelectorAll('.pac-own').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.owner === f.owner)));
     const nU = rows.filter((a) => a.severity === 'urgent').length;
-    shown.textContent = `Showing ${fmtInt(rows.length)} of ${fmtInt(all.length)} · ${fmtInt(nU)} urgent`;
+    shown.replaceChildren(h('span', { class: 'pac-nw' }, `Showing ${fmtInt(rows.length)} of ${fmtInt(all.length)}`), ' · ', h('span', { class: 'pac-nw' }, `${fmtInt(nU)} urgent`));
     resetBtn.disabled = f.severity === 'all' && !f.type && !f.station && !f.owner;
     // Page by whole groups: show groups until about PAGE visible rows, then "Show all".
     const gs = groupsOf(rows);

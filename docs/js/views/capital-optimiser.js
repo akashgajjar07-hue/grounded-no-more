@@ -9,7 +9,7 @@
  * sensitivity tornado, the lever panel, the stress-variant table and the method limitations.
  */
 import { h, pageHead, card, provChip, slider, dataTable, segmented, kpiTile, icon } from '../ui.js';
-import { chartFrame, responsive, svgIn, axisBottom, withTooltip, theme, fmtAED, fmtHours, fmtInt, fmtNum, reducedMotion, truncate, HEADLINE_MAX, markerRect, labelAround } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, axisBottom, withTooltip, theme, fmtAED, fmtHours, fmtInt, fmtNum, reducedMotion, truncate, HEADLINE_MAX, markerRect, labelAround, fmtMult } from '../charts/theme.js';
 
 export const data = ['frontier', 'policies'];
 
@@ -28,6 +28,8 @@ const num = (v) => (v === null || v === undefined || v === '' || Number.isNaN(+v
 const ciTxt = (lo, hi, f) => (lo == null || hi == null ? '' : ` [${f(lo)}, ${f(hi)}]`);
 const signH = (v) => (v == null ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmtHours(Math.abs(v))}`);
 const signAED = (v) => fmtAED(v, { sign: true });
+/** Tornado setting: "x0.5" → "×0.5"; a bare rate "0.15" → "15%"; anything else as exported. */
+const settingTxt = (st) => { const t = String(st ?? '').trim(); const m = t.match(/^[x×]\s*([\d.]+)$/i); if (m) return fmtMult(+m[1], m[1].includes('.') ? (m[1].split('.')[1].length) : 1); if (/^0?\.\d+$/.test(t)) return `${Math.round(+t * 100)}%`; return t; };
 /** First candidate headline that fits the 90-character rule (data-driven copy can vary in length). */
 export const fitHeadline = (...cands) => { const c = cands.filter(Boolean); return c.find((t) => t.length <= (HEADLINE_MAX || 90)) || c.at(-1); };
 const SER = theme.series;
@@ -139,9 +141,11 @@ export async function render(el, ctx) {
   }
 
   // ---- hero: frontier chart + control panel
-  const chartCard = h('section', { class: 'card card--bp span-8 co-hero', dataset: { story: 'frontier-chart' } });
+  const chartCard = h('section', { class: 'card card--bp co-hero', dataset: { story: 'frontier-chart' } });
   const side = h('div', { class: 'span-4 co-side' });
-  el.append(h('div', { class: 'grid-12 mt-3' }, chartCard, side));
+  // the rule card sits under the frontier (left column), so the chart card never stretches to the side column's height
+  const mainCol = h('div', { class: 'span-8 co-main' }, chartCard);
+  el.append(h('div', { class: 'grid-12 mt-3 co-hero-grid' }, mainCol, side));
   const recVsP2 = rec?.dBaseAog;
   const headline = rec && P2 && P0
     ? fitHeadline(`${rec.id} holds material AOG to ${fmtHours(rec.aog)} a year, ${fmtHours(Math.abs(P2.aog - rec.aog))} ${rec.aog <= P2.aog ? 'below' : 'above'} ${baseId} for ${capWords(rec.cap - P2.cap)}`,
@@ -171,7 +175,7 @@ export async function render(el, ctx) {
   function drawFrontier(body, w) {
     const narrow = w < 560;
     const hgt = narrow ? 340 : 440;
-    const m = { top: 28, right: narrow ? 20 : 36, bottom: 44, left: narrow ? 44 : 56 };
+    const m = { top: 28, right: narrow ? 30 : 36, bottom: 44, left: narrow ? 44 : 56 };
     const iw = Math.max(60, w - m.left - m.right), ih = hgt - m.top - m.bottom;
     const svg = svgIn(body, w, hgt, 'Readiness frontier: spare capital versus material AOG hours');
     const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
@@ -273,6 +277,19 @@ export async function render(el, ctx) {
       T(ring).attr('cx', x(sp.cap)).attr('cy', y(sp.aog));
       const rl = gSel.selectAll('text').data([sel]).join('text').attr('class', 'gnm-label gnm-label--strong').attr('font-family', theme.font.mono).attr('text-anchor', 'middle');
       T(rl).attr('x', x(sp.cap)).attr('y', y(sp.aog) + 26).text(sel === rec ? '' : sel.id);
+      // unstable plans: a CI that crosses zero on a log axis draws a full-height whisker. Say why, from the data.
+      gAnn.selectAll('.co-unstable').remove();
+      if (md !== 'selection') {
+        pts.filter((p) => p.ci[0] != null && p.ci[0] <= 0 && !isPolicy(p)).forEach((p) => {
+          const px = x(p.cap), py = y(p.aog);
+          const right = px < iw * 0.7;
+          // phones: the empty lower-right corner under the frontier tail; desktop: beside the point
+          const lx = px + (right ? 10 : -10), ly = narrow ? ih - 26 : Math.max(12, py - 14);
+          const t = gAnn.append('text').attr('class', 'co-unstable').attr('x', lx).attr('y', ly).attr('text-anchor', right ? 'start' : 'end');
+          t.append('tspan').attr('x', lx).text(narrow ? `${p.id} · unstable (CI crosses 0)` : `${p.id} · unstable: CI ${fmtInt(p.ci[0]).replace('-', '−')} to ${fmtInt(p.ci[1])} h`);
+          t.append('tspan').attr('x', lx).attr('dy', '1.25em').text(p.sel?.aog != null ? `selection seeds ${fmtHours(p.sel.aog)} · see Method` : 'outlier seed · see Method');
+        });
+      }
     }
     update(false);
     return { update };
@@ -282,8 +299,14 @@ export async function render(el, ctx) {
   const readout = h('dl', { class: 'meta-list co-readout' });
   const minB = front[0]?.cap ?? 0, maxB = front.at(-1)?.cap ?? 1;
   const step = Math.max(50000, Math.round((maxB - minB) / 200 / 50000) * 50000);
-  const sl = slider({ label: 'Capital budget', min: Math.floor(minB / step) * step, max: Math.ceil(maxB / step) * step, step, value: Math.round(sel.cap / step) * step, format: (v) => fmtAED(v), onInput: (v) => { const p = front.filter((q) => q.cap <= v + step / 2).at(-1) || front[0]; if (p !== sel) choose(p, false); } });
-  const slInput = sl.querySelector('input');
+  const planFor = (v) => front.filter((q) => q.cap <= v + step / 2).at(-1) || front[0];
+  const sl = slider({
+    label: 'Capital budget', min: Math.floor(minB / step) * step, max: Math.ceil(maxB / step) * step, step, value: Math.round(sel.cap / step) * step, format: (v) => fmtAED(v),
+    // screen readers hear the budget and the plan it selects, not "41850000" (F5)
+    valueText: (v) => { const p = planFor(v); return `Budget ${fmtAED(v)}: plan ${p.id}, ${fmtAED(p.cap)} capital, ${fmtHours(p.aog)} AOG a year`; },
+    onInput: (v) => { const p = planFor(v); if (p !== sel) choose(p, false); },
+  });
+  const slInput = sl.input || sl.querySelector('input');
   slInput.dataset.role = 'budget-slider';
   const modeSeg = segmented({ label: 'Seed set', value: mode, options: [{ value: 'holdout', label: 'Holdout' }, { value: 'selection', label: 'Selection' }, { value: 'overlay', label: 'Overlay' }], onChange: (v) => { mode = v; ctx.setParams({ view: v === 'holdout' ? '' : v }); chart?.update(true); } });
   if (!hasSel) modeSeg.querySelectorAll('button').forEach((b) => { if (b.dataset.value !== 'holdout') { b.disabled = true; b.title = 'Selection-seed values not exported'; } });
@@ -316,8 +339,8 @@ export async function render(el, ctx) {
         h('p', { class: 't-12 faint m-0' }, 'The slider walks the non-dominated plans: it picks the lowest-AOG plan whose capital fits the budget (holdout means).'),
         readout),
     }),
-    rule,
   );
+  mainCol.append(rule);
   showSel();
 
   // ---- allocation table
@@ -417,7 +440,7 @@ export async function render(el, ctx) {
     const shade = { aog_penalty: SER.neutral, holding_cost: 'rgba(185,200,214,0.55)', repair_cost: 'rgba(185,200,214,0.36)', expedite_cost: 'rgba(185,200,214,0.22)', logistics_cost: 'rgba(185,200,214,0.14)', other: 'rgba(185,200,214,0.09)' };
     stops.push(responsive(fr.body, (w) => {
       const narrow = w < 520;
-      const lw = 40, capW = narrow ? 84 : 124, rowH = narrow ? 52 : 58;
+      const lw = 40, capW = narrow ? 100 : 140, rowH = narrow ? 52 : 58;
       const Hh = rows.length * rowH + 24;
       const svg = svgIn(fr.body, w, Hh, 'Annual cost breakdown');
       // Reserve room for the longest total label so it always sits clear of its bar end.
@@ -468,7 +491,7 @@ export async function render(el, ctx) {
         : fitHeadline(`${rec.id}'s advantage over ${baseId} is not robust everywhere: the lowest bound reaches ${fmtAED(minLo)} a year`, `${rec.id}'s edge over ${baseId} is not robust: the lowest bound reaches ${fmtAED(minLo)} a year`),
       subtitle: `Net annual benefit of ${rec.id} vs ${baseId} (AED/yr) · paired · selection seeds 100–119 · base case ${fmtAED(base)} · 95% CI whiskers`,
       provenance: prov, source: 'frontier.json',
-      table: { columns: [{ key: 'label', label: 'Factor' }, { key: 'setting', label: 'Setting' }, { key: 'v', label: 'Net benefit', num: true, format: (v) => fmtAED(v) }, { key: 'lo', label: 'CI lo', num: true, format: (v) => fmtAED(v) }, { key: 'hi', label: 'CI hi', num: true, format: (v) => fmtAED(v) }, { key: 'saved', label: 'AOG h saved', num: true, format: fmtHours }],
+      table: { columns: [{ key: 'label', label: 'Factor' }, { key: 'setting', label: 'Setting', format: settingTxt }, { key: 'v', label: 'Net benefit', num: true, format: (v) => fmtAED(v) }, { key: 'lo', label: 'CI lo', num: true, format: (v) => fmtAED(v) }, { key: 'hi', label: 'CI hi', num: true, format: (v) => fmtAED(v) }, { key: 'saved', label: 'AOG h saved', num: true, format: fmtHours }],
         rows: rows.flatMap((r) => r.settings.map((s) => ({ label: r.label, setting: s.setting, v: s.v, lo: num(s.ci?.[0]), hi: num(s.ci?.[1]), saved: s.saved }))) },
     });
     stops.push(responsive(fr.body, (w) => {
@@ -480,20 +503,21 @@ export async function render(el, ctx) {
       const x = d3.scaleLinear().domain(d3.extent(vals)).nice().range([lw + (narrow ? 34 : 0), w - (narrow ? 36 : 44)]);
       axisBottom(svg.append('g'), x, { height: Hh - 22, ticks: narrow ? 3 : 5, format: (v) => fmtAED(v, { digits: 0 }) });
       svg.append('line').attr('x1', x(0)).attr('x2', x(0)).attr('y1', 14).attr('y2', Hh - 22).attr('stroke', theme.color.lineStrong);
-      svg.append('line').attr('x1', x(base)).attr('x2', x(base)).attr('y1', 14).attr('y2', Hh - 22).attr('stroke', theme.color.text).attr('stroke-dasharray', '3 3');
-      svg.append('text').attr('class', 'gnm-label').attr('x', x(base)).attr('y', 9).attr('text-anchor', 'middle').text(`base ${fmtAED(base)}`);
+      // the base case is the recommendation's own result: the one teal mark on this chart
+      svg.append('line').attr('x1', x(base)).attr('x2', x(base)).attr('y1', 14).attr('y2', Hh - 22).attr('stroke', SER.recommended).attr('stroke-width', 1.5);
+      svg.append('text').attr('class', 'gnm-label gnm-label--strong').attr('x', x(base)).attr('y', 9).attr('text-anchor', 'middle').style('fill', SER.recommended).text(`base ${fmtAED(base)}`);
       rows.forEach((r, i) => {
         const yc = (narrow ? 46 : 34) + i * rowH;
         svg.append('text').attr('class', 'gnm-label gnm-label--strong').attr('x', 0).attr('y', narrow ? yc - 16 : yc + 4).text(r.label);
         r.settings.forEach((s, j) => {
           const yy = yc - 10 + j * 13;
-          const bar = svg.append('rect').attr('x', Math.min(x(base), x(s.v))).attr('width', Math.max(1.5, Math.abs(x(s.v) - x(base)))).attr('y', yy).attr('height', 10).attr('rx', 2).attr('fill', s.v >= base ? theme.color.accent : theme.color.neutral);
+          const bar = svg.append('rect').attr('x', Math.min(x(base), x(s.v))).attr('width', Math.max(1.5, Math.abs(x(s.v) - x(base)))).attr('y', yy).attr('height', 10).attr('rx', 2).attr('fill', s.v >= base ? SER.neutral : SER.context).attr('fill-opacity', s.v >= base ? 0.85 : 0.9);
           const lo = num(s.ci?.[0]), hi = num(s.ci?.[1]);
           if (lo != null && hi != null) svg.append('line').attr('x1', x(lo)).attr('x2', x(hi)).attr('y1', yy + 5).attr('y2', yy + 5).attr('stroke', theme.color.muted).attr('stroke-width', 1);
           withTooltip(bar, () => ({ title: `${r.label} · ${s.setting}`, rows: [['Net benefit / yr', `${fmtAED(s.v)}${ciTxt(lo, hi, (q) => fmtAED(q))}`], ['AOG h saved / yr', fmtHours(s.saved)]] }));
           const right = s.v >= base;
           const lx = right ? x(Math.max(s.v, hi ?? s.v)) + 4 : x(Math.min(s.v, lo ?? s.v)) - 4;
-          svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('font-size', 10).attr('x', lx).attr('y', yy + 9).attr('text-anchor', right ? 'start' : 'end').text(s.setting);
+          svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('font-size', 10).attr('x', lx).attr('y', yy + 9).attr('text-anchor', right ? 'start' : 'end').text(settingTxt(s.setting));
         });
       });
     }));

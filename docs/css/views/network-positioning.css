@@ -74,3 +74,7 @@
 .np-tl-t, .np-tl-st { font-size: var(--fs-12); color: var(--text-faint); padding-top: 2px; }
 .np-tl-ev { color: var(--text); }
 @media (max-width: 767px) { .np-timeline li { grid-template-columns: 52px minmax(0, 1fr); } .np-tl-st { display: none; } }
+
+/* wave 3: the lowest-AOG policy row is emphasised in neutral (teal = the recommended plan only) */
+.np-pol tr.is-best td { color: var(--text); font-weight: 600; }
+.np-pol .np-best { color: var(--text-faint); font-weight: 400; font-family: var(--font-ui); font-size: 11px; }
