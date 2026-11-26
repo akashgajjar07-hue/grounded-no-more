@@ -14,5 +14,5 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["slow: long-running simulation tests", "browser: Playwright tests"]
+markers = ["slow: long-running simulation tests", "browser: Playwright tests", "v1_outputs: depends on v1 outputs/exports (skipped until v2 regeneration)"]
 addopts = "-q"

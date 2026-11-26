@@ -144,6 +144,10 @@ def build_history(out_dir: Path | None = None, duckdb_path: Path | None = None, 
     for name, df in tables.items():
         df.to_parquet(out_dir / f"{name}.parquet", index=False)
     res.stock_snapshots.to_parquet(out_dir / "stock_snapshots.parquet", index=False)
+    res.loans.to_parquet(out_dir / "aog_loans.parquet", index=False)              # v2: borrowed units (never owned)
+    res.robberies.to_parquet(out_dir / "aog_robberies.parquet", index=False)      # v2: AUH robberies + reinstatement
+    from gnm.sim.baseline import p0_rotable_plan
+    p0_rotable_plan(world).to_parquet(out_dir / "policy_p0_rotable_plan.parquet", index=False)
     # s/S renamed: DuckDB identifiers are case-insensitive
     p0.stock_params.rename(columns={"s": "reorder_point_s", "S": "order_up_to_S"}).to_parquet(
         out_dir / "policy_p0_stock_params.parquet", index=False)

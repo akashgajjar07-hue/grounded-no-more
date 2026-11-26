@@ -12,7 +12,7 @@ from gnm.sim import api
 from gnm.sim.baseline import build_p0
 from gnm.sim.engine import merge_intervals, run_policy, run_many
 
-from _simfx import WEEKS, full_world, small_run, small_scenario, small_world
+from _simfx import FULL_WEEKS, WEEKS, full_run, full_world, small_run, small_scenario, small_world
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "gnm"
 
@@ -72,12 +72,21 @@ def test_serial_one_state_at_a_time():
     assert not sh.duplicated(["serial", "since_h"]).any()
 
 
-def test_serial_conservation_per_pn():
-    res = small_run()
+@pytest.mark.parametrize("which", ["small", "full"])
+def test_serial_conservation_per_pn(which):
+    res = small_run() if which == "small" else full_run()[2]
     sh, tx = res.serial_history, res.inventory_transactions
-    t0 = WEEKS[0] * 168
+    loans = sh[~sh.owned]
+    sh = sh[sh.owned]                                   # owned pool only: loan units never join it
+    t0 = (WEEKS if which == "small" else FULL_WEEKS)[0] * 168
     first = sh.sort_values("since_h").groupby("serial").first()
     cur = sh[sh.until_h.isna()].set_index("serial")
+    # borrowed units: one serial per loan, never serviceable stock, ends returned (or fitted if still open)
+    assert loans.serial.nunique() == len(res.loans)
+    assert not (loans.state == "SERVICEABLE").any()
+    lcur = loans[loans.until_h.isna()].set_index("serial").state
+    assert set(lcur.unique()) <= {"RETURNED_TO_LENDER", "INSTALLED"}
+    assert int((lcur == "INSTALLED").sum()) == int(res.loans.returned_h.isna().sum())
     purchased = tx[(tx.txn_type == "RECEIPT_PO") & tx.serial.notna()]
     for pn, g in first.groupby("pn"):
         opening = int((g.since_h == t0).sum() - purchased[(purchased.pn == pn) & (purchased.t_h == t0)].shape[0])
@@ -88,7 +97,7 @@ def test_serial_conservation_per_pn():
     # condemnations match repair orders; repairs never create units
     ro = res.repair_orders
     assert int(ro.condemned.sum()) == int((cur.state == "CONDEMNED").sum())
-    rr = tx[tx.txn_type == "RECEIPT_REPAIR"]
+    rr = tx[(tx.txn_type == "RECEIPT_REPAIR")]
     # (a zero-length REMOVED state at AUH collapses into IN_REPAIR, so check shop visits)
     assert set(rr.serial) <= set(sh[sh.state == "IN_REPAIR"].serial)
     visits = ro.groupby("serial").size()
@@ -172,9 +181,9 @@ def test_aog_interval_merging():
 def test_aog_events_match_requests():
     res = small_run()
     rq = res.requests
-    dl = rq.deadline_class.map(schemas.DEADLINE_HOURS)
-    end = rq.filled_h.fillna((WEEKS[1] + 1) * 168).astype(int)
-    late = rq[end > rq.need_h + dl]
+    dl = rq.deadline_class.map(lambda d: schemas.DEADLINE_HOURS[d] if schemas.DEADLINE_HOURS[d] is not None else 10**9)
+    filled = rq.filled_h.astype("float")
+    late = rq[(filled.isna() | (filled > rq.need_h + dl)) & (rq.deadline_class != "NONE")]
     ids = set(";".join(res.aog_events.request_ids).split(";")) if len(res.aog_events) else set()
     assert set(late.request_id.astype(str)) == ids
     for tail, g in res.aog_events.groupby("tail"):
@@ -279,35 +288,137 @@ def test_pipeline_seeded_from_quoted_figures_and_paired():
     assert s2.equals(seeded)
 
 
-def test_p0_legacy_rule():
-    import math
-    from gnm.sim.quoted import quoted_weekly_demand
+def test_p0_oem_provisioning_rule():
+    from scipy.stats import poisson
+    from gnm.sim.baseline import build_p0_naive, p0_rotable_plan
+    from gnm.sim.quoted import pipeline_days, quoted_weekly_demand
     w, _ = full_world()
-    p0 = build_p0(w)
-    sp = p0.stock_params
+    sp = build_p0(w).stock_params
     dem = quoted_weekly_demand(w)
     net = dem.groupby("pn").weekly_demand.sum()
     dmap = dem.set_index(["pn", "station"]).weekly_demand
+    plan = p0_rotable_plan(w).set_index("pn")
     for p in w.parts[w.parts.part_class == "R"].itertuples():
+        m = net[p.pn] * 52 * pipeline_days(w, p.pn) / 365
+        prot = 0.95 if p.deadline_class == "D0" else 0.90
+        S = plan.loc[p.pn, "S_total"]
+        assert poisson.cdf(S, m) >= prot and (S == 0 or poisson.cdf(S - 1, m) < prot)
         g = sp[sp.pn == p.pn].set_index("station").base_stock
-        assert g.sum() == math.ceil(net[p.pn] * 52 * p.repair_tat_mean_d / 365)
+        assert g["AUH"] == max(0, S - plan.loc[p.pn, "loop_units"])
         for st, bs in g.items():
-            if st != "AUH" and bs > 0:
-                assert p.deadline_class == "D0" and dmap[(p.pn, st)] * 52 >= 4
-    ce = sp[sp.s >= 0]
+            if st != "AUH":
+                assert bs == (1 if p.deadline_class == "D0" and dmap.get((p.pn, st), 0) * 52 >= 4 else 0)
+    ce = sp[sp.s >= 0].merge(w.parts[["pn", "part_class"]])
     assert (ce.S >= 2 * ce.s).all()
+    auh = ce[ce.station == "AUH"].set_index("pn")
+    for p in auh.index:
+        weeks = 26 if auh.loc[p, "part_class"] == "C" else 13
+        assert auh.loc[p, "s"] == int(np.ceil(weeks * net[p]))
+    assert build_p0_naive(w).policy_id == "P0-naive"
 
 
 def test_ps1_understocked_at_bom():
     from gnm.sim.quoted import quoted_weekly_demand
     w, gt = full_world()
-    pn = gt.planted["PS1"]["pn"]
-    assert pn == "GN-32-R014"
+    pn = gt.planted["PS1"]["pn"]                      # never hard-code the PS1 PN
     row = w.parts.set_index("pn").loc[pn]
-    assert row.ata == "32" and row.deadline_class == "D0" and row.description == "Carbon brake assembly"
-    assert set(w.applicability[w.applicability.pn == pn].archetype) == {"narrowbody", "widebody"}
+    assert row.part_class == "R" and row.deadline_class == "D0" and row.removal_mode == "unscheduled"
+    assert row.family in ("servo_actuator", "valve", "avionics_lru", "flight_computer")
+    assert w.applicability[w.applicability.pn == pn].archetype.nunique() == 1   # type-specific
     sp = build_p0(w).stock_params
     assert int(sp[(sp.pn == pn) & (sp.station == "BOM")].base_stock.iloc[0]) == 0
     q_bom = float(quoted_weekly_demand(w).set_index(["pn", "station"]).weekly_demand[(pn, "BOM")] * 52)
     m_true = float(gt.parts.set_index("pn").loc[pn, "mtbur_true"])
     assert q_bom < 4 and q_bom * row.mtbur_quoted / m_true > 4   # true BOM rate well above the threshold
+
+
+# ---------------------------------------------------------------- v2 sourcing invariants (full-scale run)
+def test_v2_routes_by_class_and_station():
+    w, sc, res = full_run()
+    rq = res.requests.merge(w.parts[["pn", "part_class"]], on="pn")
+    src = rq.fill_source.fillna("none")
+    assert set(rq.part_class[src.isin(["exchange_loan", "local_borrow", "robbery"])]) <= {"R"}
+    assert set(rq.part_class[src == "local_buy"]) <= {"C", "E"}
+    assert (rq.station[src == "robbery"] == "AUH").all()
+    assert (rq.station[src == "local_borrow"] != "AUH").all()
+    assert (rq.approval_flag[src == "robbery"] == "engineering/quality approval required").all()
+    assert (src == "robbery").sum() > 0 and (src == "exchange_loan").sum() > 0 and (src == "local_buy").sum() > 0
+    assert "expedite" not in set(res.purchase_orders.reason)          # no outright AOG buy in v2
+
+
+def test_v2_loans_returned_and_never_owned():
+    w, sc, res = full_run()
+    sh = res.serial_history
+    ln = res.loans
+    closed = ln[ln.returned_h.notna()]
+    assert len(closed) > 0
+    assert sh[~sh.owned].serial.str.startswith("LOAN-").all()
+    for r in closed.itertuples():
+        rec = sh[(sh.serial == r.serial) & (sh.state == "RETURNED_TO_LENDER")]
+        assert len(rec) == 1 and int(rec.since_h.iloc[0]) == int(r.returned_h)
+        own = sh[sh.owned & (sh.state == "INSTALLED") & (sh.location == r.tail) & (sh.since_h == r.returned_h)
+                 & (sh.pn == r.pn)]
+        removed_us = not (sh[(sh.serial == r.serial)].state == "INSTALLED").iloc[-1:].empty and len(own) == 0
+        assert len(own) >= 1 or removed_us
+
+
+def test_v2_loans_do_not_change_capital():
+    """Borrowed units are never owned capital: the owned pool (and its value) is identical whether or not
+    AOG routes fill requests, apart from condemnation-replacement purchases."""
+    w, sc, res = full_run()
+    sh = res.serial_history
+    owned_open = sh[sh.owned].groupby("serial").since_h.min()
+    t0 = FULL_WEEKS[0] * 168
+    bought = res.inventory_transactions
+    bought = bought[(bought.txn_type == "RECEIPT_PO") & bought.serial.notna()].serial
+    assert set(owned_open.index) == set(owned_open[owned_open == t0].index) | set(bought)
+
+
+def test_v2_robbed_donors_reinstated():
+    w, sc, res = full_run()
+    rb, sh = res.robberies, res.serial_history
+    assert len(rb) > 0
+    arch = w.aircraft.set_index("tail").archetype
+    for r in rb[rb.reinstated_h.notna()].itertuples():
+        fit = sh[sh.owned & (sh.state == "INSTALLED") & (sh.location == r.donor_tail) & (sh.pn == r.pn)
+                 & (sh.since_h == r.reinstated_h)]
+        assert len(fit) >= 1
+        assert arch[r.donor_tail] == arch[r.aog_tail] and r.donor_tail != r.aog_tail
+    assert res.kpis_extra["donors_open_at_end"] == int(rb.reinstated_h.isna().sum())
+
+
+def test_v2_nff_never_condemned_and_cheap():
+    w, sc, res = full_run()
+    ro = res.repair_orders
+    assert ro.nff.sum() > 0 and not (ro.nff & ro.condemned).any()
+    full = ro[~ro.nff & ro.return_h.notna() & ro.removal_id.notna()].repair_cost_aed.mean()
+    assert ro[ro.nff & ro.return_h.notna()].repair_cost_aed.mean() < 0.5 * full
+
+
+def test_v2_wear_planned_and_deferred_shipping():
+    w, sc, res = full_run()
+    rq = res.requests.merge(w.parts[["pn", "removal_mode"]], on="pn")
+    pl = rq[rq.source == "planned_removal"]
+    assert len(pl) > 0 and (pl.removal_mode == "wear_planned").all() and (pl.station == "AUH").all()
+    assert ((pl.need_h - pl.known_h) >= 5 * 24 - 1).all() or (pl.known_h == 0).any()
+    # AV-07: an earmarked routine shipment always meets deadline - margin
+    tr = res.transfers.merge(res.requests[["request_id", "need_h", "deadline_class"]], on="request_id")
+    margin = w.cfg["engine"]["deferred_margin_h"]
+    rt = tr[tr.kind == "routine"]
+    early = rt[rt.ship_h <= rt.need_h]
+    assert (early.arrive_h <= early.need_h + early.deadline_class.map(schemas.DEADLINE_HOURS).astype(float) - margin).all()
+
+
+def test_v2_fluids_never_aog_and_aog_includes_fitting():
+    w, sc, res = full_run()
+    none = set(w.parts.pn[w.parts.deadline_class == "NONE"])
+    ids = [i for i in ";".join(res.aog_events.request_ids).split(";") if i]
+    rq = res.requests.set_index(res.requests.request_id.astype(str))
+    assert not (set(rq.loc[ids].pn) & none)
+    late = rq.loc[ids]
+    late = late[late.filled_h.notna()]
+    for rid, one in late.head(20).iterrows():
+        ev = res.aog_events[res.aog_events.request_ids.str.split(";").map(lambda x: rid in x)].iloc[0]
+        assert ev.end_h >= int(one.filled_h) + int(one.fitting_h)
+    assert (res.requests.fitting_h[res.requests.pn.isin(set(w.parts.pn[w.parts.part_class == "R"]))]
+            .between(2, 6)).all()

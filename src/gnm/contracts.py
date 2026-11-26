@@ -52,6 +52,11 @@ class Scenario:
     # (sim-engine ext.) time-indexed lead-time regimes: pn -> [(start_h, np.ndarray), ...]; a PO ordered at
     # order_h consumes the next draw of the last regime with start_h <= order_h. PNs absent use lead_time_days.
     lead_time_regimes: dict = field(default_factory=dict)
+    # (v2) removal_id -> bool no-fault-found (short test-and-release, never condemned); request CRNs aligned with
+    # `requests` rows: columns = exchange/loan availability, exchange/loan response, borrow/robbery availability,
+    # borrow/robbery response, local-buy availability, local-buy response, fitting time (all U(0,1)).
+    nff_flag: dict = field(default_factory=dict)
+    request_u: Optional[object] = None
 
 
 @dataclass

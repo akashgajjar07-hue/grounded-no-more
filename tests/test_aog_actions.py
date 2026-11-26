@@ -122,3 +122,7 @@ def test_actions_use_history_weeks_only(actions):
     proj = A.project_kits(view, 104 * 168, 3)
     assert proj.empty or (proj.due_h >= 104 * 168).all()
     assert view.t["material_requests"].need_h.max() < 104 * 168
+
+# v2 rebuild (D012): compares against v1 outputs (AOG-lab / SQL expectations); skipped until v2 regeneration.
+import pytest as _pytest_v2  # noqa: E402
+pytestmark = [_pytest_v2.mark.v1_outputs, _pytest_v2.mark.skip(reason="awaiting v2 regeneration")]

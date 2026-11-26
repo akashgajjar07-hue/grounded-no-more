@@ -39,9 +39,11 @@ class DeadlineClass(str, Enum):
     D0 = "D0"    # needed before next departure -> aircraft grounded until fitted
     D3 = "D3"    # ~72 h deferral window
     D10 = "D10"  # ~10 day deferral window
+    NONE = "NONE"  # (v2) servicing fluids: no deadline class, never an AOG driver (line usage only)
 
 
-DEADLINE_HOURS = {"D0": 0, "D3": 72, "D10": 240}
+DEADLINE_HOURS = {"D0": 0, "D3": 72, "D10": 240, "NONE": None}   # NONE = no rectification window
+DEADLINE_VALUES = ("D0", "D3", "D10", "NONE")
 
 
 class SerialState(str, Enum):
@@ -51,6 +53,7 @@ class SerialState(str, Enum):
     IN_REPAIR = "IN_REPAIR"       # at a repair shop (queue or work)
     IN_TRANSIT = "IN_TRANSIT"     # serviceable unit moving between stations
     CONDEMNED = "CONDEMNED"       # beyond economic repair; terminal state
+    RETURNED_TO_LENDER = "RETURNED_TO_LENDER"   # (v2) non-owned exchange/loan/borrow unit handed back; terminal
 
 
 class Archetype(str, Enum):
@@ -71,6 +74,7 @@ class RequestSource(str, Enum):
     UNSCHEDULED = "unscheduled_removal"
     SCHEDULED_KIT = "scheduled_kit"
     LINE_USAGE = "line_usage"
+    PLANNED_REMOVAL = "planned_removal"   # (v2) wear-planned rotable change known ahead (brakes)
 
 
 class TxnType(str, Enum):
@@ -119,7 +123,7 @@ def _t(name, desc, prov, cols, pk, fks=(), hidden=False) -> Table:
 
 
 STATIONS = ["AUH", "LHR", "FRA", "CAI", "JED", "BOM", "SIN"]
-ATA = ["21", "24", "27", "28", "29", "30", "32", "33", "34", "35", "36", "38", "49"]
+ATA = ["20", "21", "24", "27", "28", "29", "30", "32", "33", "34", "35", "36", "38", "49"]
 
 TABLES: dict[str, Table] = {}
 
@@ -151,7 +155,8 @@ _reg(_t("part_master", "120 fictional part numbers. Public attributes only (no t
     Col("description", "string", "Fictional nomenclature"),
     Col("ata", "string", "ATA chapter (2-digit)", allowed=tuple(ATA)),
     Col("part_class", "string", "C consumable | E expendable | R rotable", allowed=("C", "E", "R")),
-    Col("deadline_class", "string", "Hypothetical requirement deadline class", allowed=("D0", "D3", "D10")),
+    Col("deadline_class", "string", "Hypothetical rectification-window class (NONE = servicing fluid)",
+        allowed=("D0", "D3", "D10", "NONE")),
     Col("unit_cost_aed", "float64", "Unit cost (new)", "AED", nonneg=True),
     Col("lead_time_mean_d", "float64", "Quoted purchase lead time mean", "days", nonneg=True),
     Col("lead_time_cv", "float64", "Quoted lead time coefficient of variation", nonneg=True),
@@ -163,6 +168,7 @@ _reg(_t("part_master", "120 fictional part numbers. Public attributes only (no t
     Col("condemnation_prob_quoted", "float64", "Historical condemnation rate quoted", nullable=True, nonneg=True),
     Col("shelf_life_months", "float64", "Shelf life if limited", "months", nullable=True, nonneg=True),
     Col("planted", "string", "Planted demo situation id (PS1..PS4) or empty", nullable=True),
+    Col("removal_mode", "string", "unscheduled | wear_planned (v2: brakes, known ahead)", allowed=("unscheduled", "wear_planned")),
 ], pk=["pn"]))
 
 _reg(_t("part_applicability", "Which archetype uses which PN and installed qty per aircraft.", Provenance.SIMULATED, [
@@ -212,14 +218,14 @@ _reg(_t("material_requests", "All material demand (unscheduled, kit, line usage)
     Col("need_h", "int64", "Need time", "h", nonneg=True),
     Col("known_h", "int64", "Time requirement became known (== need_h for unscheduled)", "h", nonneg=True),
     Col("qty", "int64", "Quantity", nonneg=True),
-    Col("source", "string", "unscheduled_removal | scheduled_kit | line_usage",
-        allowed=("unscheduled_removal", "scheduled_kit", "line_usage")),
-    Col("deadline_class", "string", "Deadline class", allowed=("D0", "D3", "D10")),
+    Col("source", "string", "unscheduled_removal | planned_removal | scheduled_kit | line_usage",
+        allowed=("unscheduled_removal", "planned_removal", "scheduled_kit", "line_usage")),
+    Col("deadline_class", "string", "Deadline class", allowed=("D0", "D3", "D10", "NONE")),
     Col("removal_id", "int64", "Linked removal (unscheduled)", nullable=True),
     Col("week", "int64", "Week of need", "week", nonneg=True),
     # policy-run outcome columns (filled by engine; null in pure scenario tables)
     Col("filled_h", "int64", "Time fitted/issued", "h", nullable=True),
-    Col("fill_source", "string", "local | transfer | lateral | purchase | repair | pool", nullable=True),
+    Col("fill_source", "string", "local | transfer | lateral | purchase | repair | pool | exchange_loan | local_borrow | robbery | local_buy | loan_or_donor_return", nullable=True),
     Col("immediate_fill", "bool", "Filled from local serviceable stock at need time", nullable=True),
 ], pk=["request_id"], fks=[("pn", "part_master", "pn")]))
 

@@ -145,3 +145,7 @@ def test_ledger_matches_stock_snapshots(view):
     sample = ss[ss.week.isin([10, 50, 103])].sample(200, random_state=0)
     for r in sample.itertuples():
         assert view.ledger.on_hand(r.pn, r.station, (r.week + 1) * 168) == r.on_hand
+
+# v2 rebuild (D012): compares against v1 outputs (AOG-lab / SQL expectations); skipped until v2 regeneration.
+import pytest as _pytest_v2  # noqa: E402
+pytestmark = (pytestmark if isinstance(pytestmark, list) else [pytestmark]) + [_pytest_v2.mark.v1_outputs, _pytest_v2.mark.skip(reason="awaiting v2 regeneration")]

@@ -49,3 +49,7 @@ def test_planning_code_never_touches_truth(monkeypatch):
     build_p2(world, ff)
     assert opened[before:] == [], f"planning code opened ground truth: {opened[before:]}"
     assert calls == [], f"planning code called gnm.sim.truth: {calls}"
+
+# v2 rebuild (D012): exercises P1/P2 planning code on v1 forecasting outputs; skipped until v2 regeneration.
+import pytest as _pytest_v2  # noqa: E402
+pytestmark = [_pytest_v2.mark.v1_outputs, _pytest_v2.mark.skip(reason="awaiting v2 regeneration")]

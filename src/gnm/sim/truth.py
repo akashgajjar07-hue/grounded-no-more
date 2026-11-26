@@ -5,8 +5,8 @@ The event engine, forecasting, policy, optimiser, AOG and export code must never
 (``tests/test_leakage.py`` and ``tests/test_sim_engine.py`` scan the source).
 
 The table written to ``data/ground_truth/gt_part_truth.parquet`` follows the
-``gt_part_truth`` schema in :mod:`gnm.schemas`, plus two compatible extra columns
-(``repair_tat_cv_true``, ``lead_time_cv_true``).
+``gt_part_truth`` schema in :mod:`gnm.schemas`, plus compatible extra columns
+(``repair_tat_cv_true``, ``lead_time_cv_true``, ``nff_prob_true``).
 """
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ class GroundTruth:
         return self.parts.set_index("pn")
 
     def table(self) -> pd.DataFrame:
-        cols = schemas.TABLES["gt_part_truth"].colnames + ["repair_tat_cv_true", "lead_time_cv_true"]
+        cols = schemas.TABLES["gt_part_truth"].colnames + ["repair_tat_cv_true", "lead_time_cv_true", "nff_prob_true"]
         df = self.parts[cols].copy()
         df["lead_time_change_week"] = df["lead_time_change_week"].astype("Int64")
         return df

@@ -97,7 +97,9 @@ network:
 parts:
   counts: {consumable: 45, expendable: 35, rotable: 40}
   pn_format: "GN-<ATA>-<C|E|R><nnn>"
+  catalogue: config/part_catalogue.csv   # (v2) hand-curated PN list: class, ATA, description, family, type applicability, QPA, deadline class, removal mode, driver
   ata_chapters:
+    "20": "Standard practices – airframe"
     "21": "Air conditioning & pressurisation"
     "24": "Electrical power"
     "27": "Flight controls"
@@ -111,8 +113,7 @@ parts:
     "33": "Lights"
     "35": "Oxygen"
     "38": "Water & waste"
-  ata_weights: {"21": 0.11, "24": 0.10, "27": 0.10, "29": 0.10, "32": 0.13, "34": 0.11, "36": 0.09, "49": 0.08, "28": 0.04, "30": 0.04, "33": 0.04, "35": 0.03, "38": 0.03}
-  unit_cost_aed:                     # log-uniform within range *
+  unit_cost_aed:                     # (v1 envelope; v2 draws unit cost by description family, see generator.families) *
     consumable: [20, 500]
     expendable: [500, 15000]
     rotable: [15000, 500000]
@@ -125,10 +126,9 @@ parts:
   repair_tat_cv: [0.20, 0.50]
   repair_cost_pct_of_unit: [0.08, 0.25]
   condemnation_prob: [0.01, 0.08]
-  qty_per_aircraft: {consumable: [1, 1], expendable: [1, 6], rotable: [1, 4]}
+  # (v2) qty per aircraft is hand-set per PN in config/part_catalogue.csv (AV-17)
   mtbur_fh: [4000, 40000]            # rotables & expendables driven by FH (true value hidden; see ground truth)
   mtbur_fc: [2500, 25000]            # for cycle-driven parts (landing gear, brakes, doors, APU starts)
-  fc_driven_share: 0.35
   quoted_mtbur_noise_sd_log: 0.35    # OEM/vendor-quoted MTBUR in part master deviates from truth (lognormal)
   quoted_mtbur_optimism: 1.25        # quoted figures are on average 25% optimistic (higher MTBUR)
   overdispersion:                    # negative-binomial clustering for some parts (k = shape; var = mu + mu^2/k)
@@ -139,19 +139,20 @@ parts:
   shelf_life:
     share_of_consumables: 0.25
     months: [12, 36]
-  deadline_class_mix:                # hypothetical requirement deadline classes (NOT MEL categories)
-    rotable: {D0: 0.10, D3: 0.45, D10: 0.45}      # calibrated (sim-engine, SIM-CAL): was 0.45/0.35/0.20
-    expendable: {D0: 0.08, D3: 0.42, D10: 0.50}   # calibrated: was 0.25/0.40/0.35
-    consumable: {D0: 0.02, D3: 0.28, D10: 0.70}   # calibrated: was 0.05/0.35/0.60
+  # (v2) deadline classes are assigned per PN AFTER the description, in config/part_catalogue.csv (AV-05):
+  #   D0 only where no plausible MEL relief exists (wheels/tyres, brakes, flight-control servo controls/PCUs,
+  #   nose wheel steering, flight deck windshield, crew oxygen mask); D3/D10 for APU items, single bleed valve,
+  #   single fuel boost pump, single pack/ACM, IDG, weather radar, etc.; no D0 on consumables; NONE for servicing fluids.
   provenance: ASSUMED
   rationale: "Ranges reflect order-of-magnitude aviation materials practice (consumables cheap and fast, rotables expensive and repairable with long lead times). Values are illustrative and configurable; no OEM or operator data is used."
 
 deadline_classes:
-  D0: {hours: 0, label: "Needed before next departure", note: "Aircraft grounded until fitted"}
-  D3: {hours: 72, label: "Deferral window ~72 h"}
-  D10: {hours: 240, label: "Deferral window ~10 days"}
+  D0: {hours: 0, label: "Rectification window (hypothetical): none – needed before next departure", note: "Aircraft grounded until fitted"}
+  D3: {hours: 72, label: "Rectification window (hypothetical): 72 h"}
+  D10: {hours: 240, label: "Rectification window (hypothetical): 240 h"}
+  NONE: {hours: null, label: "No rectification window (servicing fluid; line usage only, never an AOG driver)"}
   provenance: ASSUMED
-  disclaimer: "Hypothetical deadline classes for simulation. Real MEL/CDL relief is operator-, type- and configuration-specific; these are NOT MEL categories."
+  disclaimer: "D3/D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions. They are applied generically per PN (elapsed hours, not calendar days excluding the day of discovery) and do not represent an approved MEL; the real go/no-go depends on the MEL item and the redundancy remaining."
 
 maintenance:
   scheduled_checks:                  # scheduled task demand known in advance -> kits
@@ -173,12 +174,17 @@ economics:
   carrying_cost_range: [0.15, 0.25]
   emergency_logistics_aed: [2000, 15000]     # per AOG shipment, scaled by distance
   routine_shipment_aed_per_line: 150
-  expedite_purchase_premium_pct: 0.15
+  expedite_purchase_premium_pct: 0.15   # (v1 only; the v2 engine has no outright AOG buy — kept until downstream v2 rebuild)
   repair_acceleration_cost_aed_per_day_per_unit: 400   # paying a vendor to cut TAT
   aog_penalty_aed_per_hour:          # * scenario value for decision-making, sensitivity-tested
     narrowbody: 15000
     widebody: 30000
-  aog_penalty_sensitivity: [0.5, 1.0, 2.0]
+  aog_penalty_sensitivity: [0.5, 1.0, 2.0]   # applies to the per-hour rate
+  aog_event_cost_aed:                # (v2, AV-10) fixed disruption cost per merged AOG event (tail swap / delay handling / re-accommodation)
+    narrowbody: 40000
+    widebody: 100000
+  aog_hour_definition: "Material AOG hour = clock hours from need (or end of the rectification window) to release to service, including fitting/RTS time, counted only when the part was not available in time."
+  fitting_labour_aed_per_hour: 400   # (v2) technician labour for fitting/robbery
   provenance: ASSUMED
   rationale: "AOG cost per hour is a planning scenario (lost revenue, re-accommodation, crew, sub-charter) — highly operator-specific, hence sensitivity tested. Capital tied up in spares is reported separately from annual operating costs."
 
@@ -188,14 +194,17 @@ service_targets:                     # target cycle service level by deadline cl
   D10: 0.85
   provenance: ASSUMED
 
-policy_baseline_P0:                  # "legacy" static rules
-  consumable_min_weeks_of_avg_demand: 6
-  consumable_max_multiple_of_min: 2.0
-  rotable_float_rule: "network float = ceil(quoted annual removals x quoted shop TAT / 365): no transport, no queueing, no allowance for quoted-MTBUR optimism or variability, no safety stock. All at AUH, except 1 unit (taken from the float) at an outstation when the PN is D0 and quoted annual removals at that station >= 4"
+policy_baseline_P0:                  # (v2, AV-04) "OEM-recommended provisioning on quoted data"
+  rotable_protection_level: {D0: 0.95, D3: 0.90, D10: 0.90}
+  rotable_float_rule: "total spares S = smallest S with P(Poisson(quoted annual removals x quoted pipeline days / 365) <= S) >= protection level (95% D0, 90% D3/D10); quoted pipeline = quoted shop TAT + quoted vendor transit both ways + quoted core return (50% outstation share). Held at AUH (serviceable target = S minus the repair-loop units the run starts with), plus 1 outstation unit (line-station kit) for a D0 PN where the quoted station rate >= 4/yr."
   rotable_outstation_min_quoted_removals_per_year: 4
-  cs_rule: "C/E: min = 6 weeks of average quoted demand, max = 2 x min, at every station that sees quoted demand (AUH sized on network demand); no deadline-class differentiation"
+  consumable_min_weeks_of_avg_demand: {C: 26, E: 13}
+  consumable_max_multiple_of_min: 2.0
+  cs_rule: "C/E: generous static min/max from quoted rates: min = 26 weeks (C) / 13 weeks (E) of average quoted demand, max = 2 x min, at every station that sees quoted demand (AUH sized on network demand); no deadline-class differentiation"
+  naive_rule: "P0-naive (illustration only, not a policy in the comparison): v1 rule, rotable float = ceil(quoted annual removals x quoted shop TAT / 365), C/E min = 6 weeks"
+  naive_consumable_min_weeks_of_avg_demand: 6
   provenance: ASSUMED
-  rationale: "What an unsophisticated but real planning team does: size the rotable float to cover the quoted shop turnaround at the quoted removal rate, and run static min/max on count parts. It is mediocre (no safety stock, trusts vendor quotes, ignores transport and queues) rather than absurd."
+  rationale: "Even an unsophisticated airline sizes rotables with a Poisson protection level on OEM/vendor quoted reliability (Spec 2000-style initial provisioning at 90-95%) and keeps generous min/max on C-class. P0 is therefore competent-but-static: it trusts quoted MTBUR/TAT, ignores variability beyond Poisson and never re-plans from history."
 
 pool_exchange_P3:                    # Tier 3 stretch
   response_hours: 24
@@ -209,7 +218,7 @@ planted_situations:                  # documented demo situations (generator imp
   provenance: SIMULATED
   items:
     - id: PS1
-      description: "Understocked D0 rotable at BOM (widebody + narrowbody exposure, baseline float held only at AUH)"
+      description: "Understocked unscheduled D0 LRU at BOM (type-specific; legacy provisioning holds no line-station unit there because the optimistic quoted rate at BOM is < 4/yr)"
     - id: PS2
       description: "Long-TAT rotable with an overdue repair order at the EU vendor"
     - id: PS3
@@ -226,21 +235,54 @@ generator:                           # parameters of the synthetic generator not
   ground_time_jitter: 0.20           # +/- uniform share on turnaround time
   a_check_downtime_h: 12             # A-check performed overnight at AUH
   kit_line_qty: [1, 4]               # quantity per kit line (consumables)
-  applicability_mix: {both: 0.50, narrowbody: 0.30, widebody: 0.20}
-  fc_driven_atas: ["32", "49"]       # landing gear & APU components always cycle-driven
+  families:                          # (v2, AV-16/19) unit cost (log-uniform AED) and no-fault-found share by description family; optional MTBUR range overrides for high-QPA items
+    avionics_lru: {cost_aed: [80000, 450000], nff_share: 0.35}
+    flight_computer: {cost_aed: [150000, 500000], nff_share: 0.40}
+    servo_actuator: {cost_aed: [60000, 300000], nff_share: 0.10, mtbur_fh: [15000, 60000]}
+    valve: {cost_aed: [25000, 150000], nff_share: 0.15}
+    pump: {cost_aed: [50000, 300000], nff_share: 0.10}
+    rotating_machine: {cost_aed: [120000, 450000], nff_share: 0.10}
+    power_generation: {cost_aed: [200000, 500000], nff_share: 0.15}
+    power_conversion: {cost_aed: [40000, 150000], nff_share: 0.25}
+    brake_nb: {cost_aed: [80000, 180000], nff_share: 0.0, mtbur_fc: [1800, 3000]}
+    brake_wb: {cost_aed: [150000, 350000], nff_share: 0.0, mtbur_fc: [1800, 3000]}
+    wheel_tyre: {cost_aed: [15000, 45000], nff_share: 0.0, mtbur_fc: [3000, 8000]}
+    probe: {cost_aed: [8000, 35000], nff_share: 0.25}
+    sensor: {cost_aed: [800, 9000]}
+    valve_small: {cost_aed: [1500, 8000]}
+    relay_contactor: {cost_aed: [1500, 12000], mtbur_fh: [40000, 150000]}
+    fuel_probe: {cost_aed: [3000, 12000], mtbur_fh: [60000, 200000]}
+    electric_motor: {cost_aed: [3000, 15000]}
+    windshield: {cost_aed: [60000, 150000], mtbur_fh: [30000, 80000]}
+    probe_small: {cost_aed: [8000, 25000]}
+    ignition: {cost_aed: [2000, 12000]}
+    oxygen_mask: {cost_aed: [800, 3000], mtbur_fh: [400000, 1200000]}
+    crew_mask: {cost_aed: [5000, 15000]}
+    battery_pack: {cost_aed: [2000, 6000]}
+    light: {cost_aed: [1000, 10000]}
+    hardware: {cost_aed: [20, 300]}
+    seal_kit: {cost_aed: [30, 500]}
+    filter: {cost_aed: [60, 900]}
+    lamp: {cost_aed: [15, 150]}
+    fluid: {cost_aed: [40, 300]}
+    fuse: {cost_aed: [15, 80]}
+    wiper_blade: {cost_aed: [80, 400]}
+  nff_shop_days: [2, 5]              # (v2, AV-19) test-and-release shop time for a no-fault-found unit
+  nff_cost_pct_of_repair: 0.15       # NFF test-and-release cost vs a full repair; NFF units never condemn
+  wear_planned_notice_days: [5, 10]  # (v2, AV-11) brake changes are known ahead from wear-pin checks and done at the hub
   quoted_tat_noise_sd_log: 0.15      # vendor-quoted shop TAT vs true mean
   quoted_tat_optimism: 0.90          # quotes are ~10% shorter than reality on average
   quoted_condemn_noise_sd_log: 0.30
   quoted_usage_noise_sd_log: 0.30    # consumables: quoted FC-per-unit vs true
   lead_time_true_noise_sd_log: 0.10  # true lead-time mean vs quoted
-  deadline_class_alt_prob: 0.05      # per-event chance the requirement deadline differs from the PN default
+  deadline_class_alt_prob: 0.05      # per-event chance a D3 requirement is D10 or vice versa (D0/NONE never change)
   deferred_to_hub_share: 0.92        # D3/D10 removals found at an outstation are mostly deferred and rectified at AUH on the tail's next hub arrival
   variants:                          # calibration sensitivity worlds (scale TRUE MTBUR of R/E only; quoted data unchanged)
     central: {true_mtbur_scale: 1.00}
-    low_stress: {true_mtbur_scale: 1.90}
-    high_stress: {true_mtbur_scale: 0.85}
+    low_stress: {true_mtbur_scale: 1.00}    # v2: PENDING user-approved calibration band (mechanism ready, value not set)
+    high_stress: {true_mtbur_scale: 1.00}   # v2: PENDING
   planted:
-    PS1: {pn_seq: 14, ata: "32", description: "Carbon brake assembly", driver: FC, mtbur_fc: 4200, quoted_multiple: 2.5, deadline_class: D0, qty_per_aircraft: 4, tat_days: 20, quoted_tat_days: 90}
+    PS1: {mtbur_fc: 1300, quoted_multiple: 2.5}   # (v2, AV-11) the catalogue row flagged PS1 (an unscheduled D0 LRU); true vs quoted MTBUR
     PS2: {tat_days: 88, quoted_tat_days: 60, stuck_repair_days: 200, weeks: [84, 92], seed: history}   # the first PS2 removal in the window (history seed only) gets 200 shop work days
     PS3: {trend_per_year: 0.45, quoted_usage_multiple: 1.10}
     PS4: {change_week: 70, lead_time_factor: 2.6}
@@ -250,21 +292,51 @@ generator:                           # parameters of the synthetic generator not
 engine:                              # event-engine settings (policy-agnostic)
   shop_bench_time_share: 0.05        # share of shop work time a unit occupies a capacity slot (bench/test stand)
   condemn_inspection_days: 3         # BER decided after teardown/inspection; slot released then
-  expedite_lead_time_factor: 0.5     # an expedited PO arrives in 50% of the drawn lead time (premium charged) ...
-  expedite_max_days: {C: 2, E: 3, R: 5}   # ... capped by class: AOG-desk buys from distributors / surplus market
-  expedite_margin_h: 24              # a backordered D3/D10 need is expedited when (deadline - expedite time - margin) is reached and it is still uncovered
+  expedite_lead_time_factor: 0.5     # (v1 only, UNUSED by the v2 engine; kept until downstream v2 rebuild)
+  expedite_max_days: {C: 2, E: 3, R: 5}   # (v1 only, UNUSED by the v2 engine)
   routine_transport_min_days: 1.0    # floor on sampled routine/core-return transit
-  earmark_routine_if_slack_sd: 2.0   # a backordered D10 need ships routine if deadline >= mean + 2 sd routine transit, else emergency
+  deferred_margin_h: 24              # (v2, AV-07) a deferred need ships emergency whenever routine ETA > deadline - margin; AOG routes are triggered by deadline - route time - margin
+  fitting_hours: {R: [2, 6], E: 1, C: 1}   # (v2, AV-10) fitting / ops check / release-to-service time added to AOG duration
   provenance: ASSUMED
-  rationale: "Shop capacity slots are interpreted as bench/test-stand positions: a unit holds a slot only for its touch/test time (share of work time); awaiting-parts and paperwork time runs outside the slot. Without this, 14 slots could not process ~1,000 rotable removals a year at 15–90 day TATs. 0.05 was chosen so the hub shop runs at ~0.8 bench utilisation in the P0 history (EU vendor ~0.4)."
+  rationale: "Shop capacity slots are interpreted as bench/test-stand positions: a unit holds a slot only for its touch/test time (share of work time); awaiting-parts and paperwork time runs outside the slot. Without this, 14 slots could not process ~1,000 rotable removals a year at 15–90 day TATs. 0.05 was chosen in v1 for ~0.8 hub bench utilisation; queueing is light by construction (capacity slots are bench positions)."
 
-calibration_targets:                 # SIM-CAL: P0 history (weeks 0–103, history_seed) of the central world must land inside these bands
-  immediate_fill_rate: [0.93, 0.97]
-  rotable_immediate_fill_rate: [0.80, 0.88]
-  aog_hours_per_year: [1500, 3500]   # material AOG, fleet-wide, merged per aircraft (~40–90 h per aircraft-year)
-  aog_events_per_year: [60, 250]
-  sensitivity_variants:              # selected via generator.variants (true-MTBUR scalar); P0 history should land near
-    low_stress: {aog_hours_per_year: 1500, rotable_immediate_fill_rate: 0.88}
-    high_stress: {aog_hours_per_year: 3500, rotable_immediate_fill_rate: 0.80}
+calibration_targets:                 # v2: PENDING user approval of a new band (status below). The v1 band is kept under v1_band for reference only.
+  status: "PENDING v2 recalibration (user approval of the band); not enforced"
+  v1_band:                           # SIM-CAL (v1): P0 history (weeks 0–103, history_seed) of the central world must land inside these bands
+    immediate_fill_rate: [0.93, 0.97]
+    rotable_immediate_fill_rate: [0.80, 0.88]
+    aog_hours_per_year: [1500, 3500]   # material AOG, fleet-wide, merged per aircraft (~40–90 h per aircraft-year)
+    aog_events_per_year: [60, 250]
+    sensitivity_variants:              # selected via generator.variants (true-MTBUR scalar); P0 history should land near
+      low_stress: {aog_hours_per_year: 1500, rotable_immediate_fill_rate: 0.88}
+      high_stress: {aog_hours_per_year: 3500, rotable_immediate_fill_rate: 0.80}
   provenance: ASSUMED
   rationale: "Order-of-magnitude plausibility band for a 40-aircraft hub carrier run on static legacy rules (quoted reliability, no safety stock, hub-centric float): mediocre but not broken, leaving realistic headroom for data-driven policies. Not operator data; chosen before any policy comparison; sensitivity-tested at the band's low and high ends."
+
+aog_sourcing:                        # (v2) AOG recovery routes, all ASSUMED; availability/response drawn from paired per-request CRNs
+  exchange_loan:                     # AV-03: AOG exchange/loan for rotables (replaces the v1 guaranteed outright buy)
+    availability: {narrowbody: 0.85, widebody: 0.50}
+    response_hours: {narrowbody: [24, 48], widebody: [48, 120]}
+    fee_pct_of_list: {narrowbody: 0.20, widebody: 0.30}     # exchange/AOG handling fee at activation
+    loan_fee_pct_of_list_per_day: 0.003                     # while the borrowed unit is fitted (until our own unit replaces it)
+  local_borrow:                      # AV-15: outstation third-party loan / inter-airline borrow for rotables
+    availability:
+      narrowbody: {LHR: 0.60, FRA: 0.60, SIN: 0.55, BOM: 0.35, CAI: 0.30, JED: 0.30}
+      widebody: {LHR: 0.35, FRA: 0.35, SIN: 0.30, BOM: 0.15, CAI: 0.10, JED: 0.10}
+    response_hours: [4, 8]
+    fee_aed_fixed: 2500
+    loan_fee_pct_of_list_per_day: 0.004
+  robbery:                           # AV-08: cannibalisation at AUH only (donor in check or parked with the PN fitted)
+    enabled: true
+    availability: 0.60
+    response_hours: [6, 8]
+    labour_multiplier: 2.0           # remove from donor + fit (and later reinstate): double fitting labour
+    flag: "engineering/quality approval required"
+    assumption: "the donor is not scheduled to fly before it is reinstated from the next serviceable unit at AUH"
+  local_buy:                         # AV-02: AOG local buy/borrow for consumables & expendables at every station
+    availability: 0.95
+    response_hours: [4, 12]
+    premium_pct: 0.50                # over list, incl. AOG handling
+  provenance: ASSUMED
+  rationale: "AOG desks recover rotables by exchange or loan (not outright purchase), faster and more available for A320-family LRUs than for 787 LRUs where the surplus market is thin; outstations borrow from local MROs/other operators where they exist; hubs rob check/parked aircraft with engineering approval; consumables/expendables are bought or borrowed locally within hours. None of these units join the owned pool."
+

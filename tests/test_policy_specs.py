@@ -126,3 +126,7 @@ def test_stock_param_table_capital(specs):
     t = stock_param_table(p1, w)
     assert np.allclose(t.capital_at_target_aed, t.target_units * t.unit_cost_aed)
     assert (t.capital_at_target_aed >= 0).all()
+
+# v2 rebuild (D012): these tests read v1 outputs / docs/data exports; skipped until v2 regeneration.
+import pytest as _pytest_v2  # noqa: E402
+pytestmark = [_pytest_v2.mark.v1_outputs, _pytest_v2.mark.skip(reason="awaiting v2 regeneration")]

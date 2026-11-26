@@ -36,77 +36,19 @@ import pandas as pd
 from gnm import schemas
 from gnm.config import CONFIG_PATH, DATA, HOURS_PER_WEEK, load_config
 from gnm.contracts import Scenario, World
+from gnm.sim.crn import N_REQUEST_U, request_uniforms
 from gnm.sim.truth import GroundTruth
 
 SALT_WORLD, SALT_SCHED, SALT_WEEK, SALT_LT, SALT_JIT, SALT_KITS = 11, 12, 13, 14, 15, 16
 ARCHS = ("narrowbody", "widebody")
 CLASS_KEY = {"C": "consumable", "E": "expendable", "R": "rotable"}
 LT_STREAM_LEN = 400
-GEN_VERSION = "3"                 # bump when sampling logic changes (invalidates scenario caches)
+GEN_VERSION = "v2.1"                 # bump when sampling logic changes (invalidates scenario caches)
 JITTER_LEN = 20000
 
 
 def _rng(*keys) -> np.random.Generator:
     return np.random.default_rng(np.random.SeedSequence([int(k) for k in keys]))
-
-
-# --------------------------------------------------------------------------------------
-# Fictional nomenclature per ATA chapter and part class
-# --------------------------------------------------------------------------------------
-NAMES = {
-    "21": {"R": ["Pack flow control valve", "Air cycle machine", "Cabin pressure controller", "Outflow valve actuator",
-                 "Trim air pressure regulating valve", "Zone temperature controller", "Recirculation fan"],
-           "E": ["Duct temperature sensor", "Pack outlet check valve", "Cabin pressure switch", "Ram air inlet actuator rod end",
-                 "Mixer unit temperature sensor"],
-           "C": ["Recirculation air filter element", "Water extractor coalescer bag", "Duct clamp seal kit",
-                 "O-ring kit (pack valves)", "Duct gasket set"]},
-    "24": {"R": ["Integrated drive generator", "Generator control unit", "Transformer rectifier unit", "Static inverter",
-                 "Battery charger", "Bus power control unit", "Main ship's battery"],
-           "E": ["Current transformer", "Power contactor", "Power relay", "Circuit breaker (3-phase)",
-                 "External power receptacle"],
-           "C": ["Fuse (5 A)", "Indicator lamp", "Cable tie kit", "Terminal lug kit", "Connector sealing plug kit"]},
-    "27": {"R": ["Elevator servo control", "Aileron servo actuator", "Spoiler servo actuator", "Flap power control unit",
-                 "Rudder trim actuator", "Flight control computer", "Trimmable horizontal stabiliser actuator"],
-           "E": ["Flap position sensor", "Control rod end bearing", "Slat proximity sensor", "Cable tension regulator"],
-           "C": ["Flight control bushing kit", "Grease cartridge (flight controls)", "Self-locking nut kit", "Cotter pin kit"]},
-    "28": {"R": ["Fuel boost pump", "Fuel quantity indicating computer", "Fuel crossfeed valve actuator"],
-           "E": ["Fuel quantity probe", "Fuel level sensor", "Refuel valve"],
-           "C": ["Fuel filter element", "Fuel pump seal kit", "O-ring kit (fuel system)"]},
-    "29": {"R": ["Engine-driven hydraulic pump", "Electric motor pump", "Power transfer unit", "Priority valve module",
-                 "Hydraulic accumulator"],
-           "E": ["Hydraulic pressure transducer", "Hydraulic fuse", "Hydraulic check valve", "Quick-disconnect coupling"],
-           "C": ["Hydraulic filter element", "Hydraulic O-ring kit", "Backup ring kit", "Hydraulic fluid (1 US gal)"]},
-    "30": {"R": ["Wing anti-ice valve", "Windshield heat controller", "Probe heat computer"],
-           "E": ["Windshield wiper motor", "Anti-ice pressure switch", "Drain mast heater"],
-           "C": ["Wiper blade", "Rain repellent cartridge", "Heater element gasket"]},
-    "32": {"R": ["Brake temperature monitoring unit", "Main wheel assembly", "Nose wheel assembly", "Brake control unit",
-                 "Nose wheel steering actuator", "Main gear retraction actuator", "Nose gear shock strut"],
-           "E": ["Brake temperature sensor", "Wheel speed transducer", "Main wheel tyre", "Nose wheel tyre",
-                 "Gear proximity switch"],
-           "C": ["Wheel bearing grease", "Brake wear indicator pin", "Tyre valve core kit", "Axle nut lock kit",
-                 "Wheel bearing seal"]},
-    "33": {"R": ["Strobe light power supply", "Emergency lighting control unit"],
-           "E": ["Landing light module", "Navigation light assembly", "Logo light assembly", "Emergency light battery pack"],
-           "C": ["Reading light lamp", "Cabin lighting lamp", "Light lens gasket"]},
-    "34": {"R": ["Air data module", "Inertial reference unit", "Weather radar transceiver", "Radio altimeter transceiver",
-                 "Multi-mode receiver", "Air data computer", "Angle-of-attack sensor"],
-           "E": ["Pitot probe", "Static port heater", "Total air temperature probe", "ADF antenna"],
-           "C": ["Pitot probe cover seal", "Antenna gasket", "Connector backshell kit"]},
-    "35": {"R": ["Crew oxygen regulator", "Crew oxygen cylinder"],
-           "E": ["Passenger oxygen mask assembly", "Oxygen pressure transducer", "Chemical oxygen generator"],
-           "C": ["Crew mask hose seal", "Oxygen mask cleaning kit", "Oxygen valve seal kit"]},
-    "36": {"R": ["Bleed air valve", "High-pressure shutoff valve", "Fan air valve", "Bleed monitoring computer",
-                 "Pressure regulating and shutoff valve"],
-           "E": ["Bleed temperature sensor", "Duct overheat detection sensor", "Bleed pressure transducer"],
-           "C": ["V-band clamp", "Pneumatic duct seal ring", "Pneumatic gasket kit"]},
-    "38": {"R": ["Vacuum generator", "Potable water heater", "Waste control unit"],
-           "E": ["Toilet flush valve", "Water quantity transmitter", "Water drain valve"],
-           "C": ["Potable water filter cartridge", "Toilet seal kit", "Faucet aerator"]},
-    "49": {"R": ["APU starter generator", "APU electronic control box", "APU fuel control unit", "APU inlet door actuator",
-                 "APU bleed valve"],
-           "E": ["APU ignition exciter", "APU igniter plug", "APU oil level sensor"],
-           "C": ["APU oil filter element", "APU igniter lead seal", "APU turbine oil (1 qt)"]},
-}
 
 
 # --------------------------------------------------------------------------------------
@@ -224,28 +166,14 @@ def generate_world(cfg: dict | None = None, variant: str = "central") -> tuple[W
         sel = aircraft.archetype == arch
         aircraft.loc[sel, "fc_per_day_mean"] = (aircraft.loc[sel, "fh_per_day_mean"] / mean_leg).round(2)
 
-    # ---- parts ----
-    counts = pc["counts"]
-    classes = ["C"] * counts["consumable"] + ["E"] * counts["expendable"] + ["R"] * counts["rotable"]
-    n = len(classes)
-    atas = list(pc["ata_weights"].keys())
-    w = np.array([pc["ata_weights"][a] for a in atas], float)
-    w /= w.sum()
-    ata_draw = rng.choice(len(atas), size=n, p=w)
-    U = {k: rng.random(n) for k in ["cost", "lt", "ltcv", "dl", "drv", "mtbur", "nb", "nbk", "use", "tat", "tatcv",
-                                     "rcost", "cond", "shelf", "shelfm", "app", "qtyn", "qtyw", "kit"]}
+    # ---- parts (v2: hand-curated catalogue; random attributes drawn within family/class ranges) ----
+    cat = load_catalogue(cfg)
+    n = len(cat)
+    U = {k: rng.random(n) for k in ["cost", "lt", "ltcv", "mtbur", "nb", "nbk", "use", "tat", "tatcv", "rcost", "cond",
+                                     "shelf", "shelfm", "kit", "nff"]}
     Z = {k: rng.standard_normal(n) for k in ["qmtbur", "qtat", "qcond", "quse", "ltt"]}
-
-    shop_of_ata = {}
-    for shop, body in cfg["repair_shops"].items():
-        if isinstance(body, dict) and "atas" in body:
-            for a in body["atas"]:
-                shop_of_ata[str(a)] = shop
-
-    fc_atas = set(gc["fc_driven_atas"])
-    n_re = sum(1 for c in classes if c != "C")
-    n_forced = sum(1 for i, c in enumerate(classes) if c != "C" and atas[ata_draw[i]] in fc_atas)
-    p_fc = max(0.0, (pc["fc_driven_share"] * n_re - n_forced) / max(1, n_re - n_forced))
+    shops = shop_of_ata(cfg)
+    fams = gc["families"]
 
     def logu(u, lo, hi):
         return float(np.exp(np.log(lo) + u * (np.log(hi) - np.log(lo))))
@@ -253,73 +181,57 @@ def generate_world(cfg: dict | None = None, variant: str = "central") -> tuple[W
     def lin(u, lo, hi):
         return float(lo + u * (hi - lo))
 
-    def pick(u, mix: dict):
-        keys = list(mix.keys())
-        cdf = np.cumsum([mix[k] for k in keys])
-        return keys[int(np.searchsorted(cdf / cdf[-1], u, side="right"))]
-
-    seq = {"C": 0, "E": 0, "R": 0}
-    used_names: dict[str, int] = {}
     prow, trow, arow = [], [], []
     kit_eligible = []
-    for i, cls in enumerate(classes):
-        ata = atas[ata_draw[i]]
+    for i, c in enumerate(cat.itertuples(index=False)):
+        cls, ata = c.part_class, str(c.ata)
         ck = CLASS_KEY[cls]
-        seq[cls] += 1
-        pn = f"GN-{ata}-{cls}{seq[cls]:03d}"
-        names = NAMES[ata][cls]
-        k = used_names.get(ata + cls, 0)
-        used_names[ata + cls] = k + 1
-        desc = names[k % len(names)] + ("" if k < len(names) else f" – variant {chr(ord('A') + k // len(names))}")
-        unit_cost = logu(U["cost"][i], *pc["unit_cost_aed"][ck])
+        pn = c.pn
+        fam = fams[c.family]
+        unit_cost = logu(U["cost"][i], *fam["cost_aed"])
         lt_q = lin(U["lt"][i], *pc["lead_time_days"][ck])
         lt_cv = lin(U["ltcv"][i], *pc["lead_time_days"]["cv"])
         lt_true = lt_q * float(np.exp(gc["lead_time_true_noise_sd_log"] * Z["ltt"][i]))
-        dl = pick(U["dl"][i], pc["deadline_class_mix"][ck])
         nb_k = lin(U["nbk"][i], *pc["overdispersion"]["k_range"]) if U["nb"][i] < pc["overdispersion"]["share_of_parts"] else np.nan
-        row = {"pn": pn, "description": desc, "ata": ata, "part_class": cls, "deadline_class": dl,
+        row = {"pn": pn, "description": c.description, "ata": ata, "part_class": cls, "deadline_class": c.deadline_class,
                "unit_cost_aed": round(unit_cost, 2), "lead_time_mean_d": round(lt_q, 1), "lead_time_cv": round(lt_cv, 3),
-               "driver": None, "mtbur_quoted": np.nan, "repair_shop": None, "repair_tat_mean_d": np.nan,
-               "repair_cost_aed": np.nan, "condemnation_prob_quoted": np.nan, "shelf_life_months": np.nan, "planted": None}
+               "driver": c.driver, "mtbur_quoted": np.nan, "repair_shop": None, "repair_tat_mean_d": np.nan,
+               "repair_cost_aed": np.nan, "condemnation_prob_quoted": np.nan, "shelf_life_months": np.nan,
+               "planted": (c.planted or None), "removal_mode": c.removal_mode, "family": c.family}
         t = {"pn": pn, "mtbur_true": np.nan, "nb_k": nb_k, "usage_per_1000_fc_true": np.nan,
              "condemnation_prob_true": np.nan, "repair_tat_mean_true_d": np.nan, "lead_time_mean_true_d": lt_true,
              "lead_time_change_week": pd.NA, "lead_time_after_d": np.nan, "trend_per_year": np.nan,
-             "repair_tat_cv_true": np.nan, "lead_time_cv_true": lt_cv}
+             "repair_tat_cv_true": np.nan, "lead_time_cv_true": lt_cv, "nff_prob_true": 0.0}
         if cls == "C":
-            row["driver"] = "FC_usage"
             use = logu(U["use"][i], *pc["consumable_usage_per_1000_fc"])
             t["usage_per_1000_fc_true"] = use
             q_use = use * float(np.exp(gc["quoted_usage_noise_sd_log"] * Z["quse"][i]))
             row["mtbur_quoted"] = round(1000.0 / q_use, 1)          # quoted FC per unit consumed (per aircraft)
-            if U["shelf"][i] < pc["shelf_life"]["share_of_consumables"]:
+            if U["shelf"][i] < pc["shelf_life"]["share_of_consumables"] and c.family not in ("hardware",):
                 row["shelf_life_months"] = float(round(lin(U["shelfm"][i], *pc["shelf_life"]["months"])))
             if U["kit"][i] < pc["scheduled_kit_share_consumable"]:
                 kit_eligible.append(pn)
         else:
-            drv = "FC" if (ata in fc_atas or U["drv"][i] < p_fc) else "FH"
-            row["driver"] = drv
-            m = logu(U["mtbur"][i], *(pc["mtbur_fc"] if drv == "FC" else pc["mtbur_fh"]))
+            rng_key = "mtbur_fc" if c.driver == "FC" else "mtbur_fh"
+            m = logu(U["mtbur"][i], *(fam.get(rng_key) or pc[rng_key]))
             t["mtbur_true"] = m
             row["mtbur_quoted"] = round(m * float(np.exp(pc["quoted_mtbur_noise_sd_log"] * Z["qmtbur"][i]))
                                         * pc["quoted_mtbur_optimism"], 0)
         if cls == "R":
-            shop = shop_of_ata[ata]
             tat = lin(U["tat"][i], *pc["repair_tat_days"])
             t["repair_tat_mean_true_d"] = tat
             t["repair_tat_cv_true"] = lin(U["tatcv"][i], *pc["repair_tat_cv"])
             cond = lin(U["cond"][i], *pc["condemnation_prob"])
             t["condemnation_prob_true"] = cond
-            row["repair_shop"] = shop
+            t["nff_prob_true"] = float(fam.get("nff_share", 0.0)) * lin(U["nff"][i], 0.8, 1.2)
+            row["repair_shop"] = shops[ata]
             row["repair_tat_mean_d"] = round(tat * float(np.exp(gc["quoted_tat_noise_sd_log"] * Z["qtat"][i]))
                                              * gc["quoted_tat_optimism"], 1)
             row["repair_cost_aed"] = round(unit_cost * lin(U["rcost"][i], *pc["repair_cost_pct_of_unit"]), 2)
             row["condemnation_prob_quoted"] = round(min(0.5, cond * float(np.exp(gc["quoted_condemn_noise_sd_log"] * Z["qcond"][i]))), 4)
-        # applicability
-        app = pick(U["app"][i], gc["applicability_mix"])
-        qr = pc["qty_per_aircraft"][ck]
-        for arch, u in (("narrowbody", U["qtyn"][i]), ("widebody", U["qtyw"][i])):
-            if app in ("both", arch):
-                arow.append({"pn": pn, "archetype": arch, "qty_per_aircraft": int(qr[0] + math.floor(u * (qr[1] - qr[0] + 1)))})
+        for arch, q in (("narrowbody", int(c.qty_nb)), ("widebody", int(c.qty_wb))):
+            if q > 0:
+                arow.append({"pn": pn, "archetype": arch, "qty_per_aircraft": q})
         prow.append(row)
         trow.append(t)
 
@@ -330,13 +242,42 @@ def generate_world(cfg: dict | None = None, variant: str = "central") -> tuple[W
     planted = _plant(cfg, parts, gt, appl, aircraft, legfh)
     gt["mtbur_true"] = gt["mtbur_true"] * float(vcfg.get("true_mtbur_scale", 1.0))
 
-    parts = parts.astype({"driver": "string", "repair_shop": "string", "planted": "string"})
+    parts = parts.astype({"driver": "string", "repair_shop": "string", "planted": "string", "removal_mode": "string",
+                          "family": "string"})
     world = World(aircraft=aircraft, stations=stations, parts=parts, applicability=appl,
                   aog_hours=_aog_matrix(cfg, st_codes), repair_shops=_shops(cfg), cfg=cfg,
                   kit_eligible=kit_eligible)
     truth = GroundTruth(parts=gt, world_seed=ws, planted=planted)
     truth.variant = variant
     return world, truth
+
+
+def load_catalogue(cfg: dict) -> pd.DataFrame:
+    """Hand-curated part catalogue (config/part_catalogue.csv) with PNs assigned GN-<ATA>-<C|E|R><nnn>.
+
+    If ``parts.counts`` asks for fewer PNs than the catalogue holds (dev/CI small world), an evenly spaced
+    subset per class is taken (the PS1 row is always kept)."""
+    from gnm.config import ROOT
+    path = ROOT / cfg["parts"].get("catalogue", "config/part_catalogue.csv")
+    cat = pd.read_csv(path, dtype={"ata": str}, keep_default_na=False)
+    cat["planted"] = cat["planted"].replace("", None)
+    order = {"C": 0, "E": 1, "R": 2}
+    out = []
+    for cls in ("C", "E", "R"):
+        g = cat[cat.part_class == cls].reset_index(drop=True)
+        g["pn"] = [f"GN-{a}-{cls}{k + 1:03d}" for k, a in enumerate(g.ata)]
+        want = int(cfg["parts"]["counts"][CLASS_KEY[cls]])
+        if want < len(g):
+            idx = list(np.unique(np.linspace(0, len(g) - 1, want).round().astype(int)))
+            ps = g.index[g.planted.notna()].tolist()
+            for k in ps:
+                if k not in idx:
+                    idx[-1] = k
+            g = g.loc[sorted(set(idx))]
+        out.append(g)
+    cat = pd.concat(out, ignore_index=True)
+    cat = cat.sort_values("part_class", key=lambda s: s.map(order), kind="mergesort").reset_index(drop=True)
+    return cat
 
 
 def shop_of_ata(cfg) -> dict:
@@ -403,41 +344,25 @@ def _plant(cfg, parts, gt, appl, aircraft, legfh) -> dict:
     outs = cfg["network"]["outstations"]
     focus = "BOM" if "BOM" in outs else outs[0]
 
-    # PS1: understocked D0 rotable with high BOM exposure on both fleets (relabelled to the configured PN)
+    # PS1 (v2, AV-11): the catalogue row flagged PS1 — an unscheduled, type-specific D0 LRU with BOM exposure
     c1 = pl["PS1"]
     rot = parts.index[parts.part_class == "R"].tolist()
-    target_seq = int(c1.get("pn_seq", 14))
-    cand = [i for i in rot if int(parts.loc[i, "pn"][-3:]) == target_seq] or rot
-    i1 = cand[0]
-    ata = str(c1.get("ata", parts.loc[i1, "ata"]))
-    if ata not in shop_of_ata(cfg):
-        raise ValueError(f"PS1 ATA {ata} has no repair shop")
-    old_p = parts.loc[i1, "pn"]
-    p1 = f"GN-{ata}-R{int(old_p[-3:]):03d}"
-    parts.loc[i1, ["pn", "ata", "description", "repair_shop"]] = [p1, ata, c1.get("description", parts.loc[i1, "description"]),
-                                                                  shop_of_ata(cfg)[ata]]
-    gt.loc[i1, "pn"] = p1
-    appl.drop(appl.index[appl.pn == old_p], inplace=True)
-    for arch in ARCHS:
-        appl.loc[len(appl) + 1000] = {"pn": p1, "archetype": arch, "qty_per_aircraft": int(c1.get("qty_per_aircraft", 1))}
-    appl.reset_index(drop=True, inplace=True)
-    drv = c1.get("driver", "FC")
+    i1 = parts.index[parts.planted == "PS1"][0]
+    p1 = parts.loc[i1, "pn"]
+    drv = parts.loc[i1, "driver"]
     m_true = float(c1["mtbur_fc"] if drv == "FC" else c1["mtbur_fh"])
-    parts.loc[i1, ["driver", "deadline_class", "planted"]] = [drv, c1["deadline_class"], "PS1"]
     gt.loc[i1, "mtbur_true"] = m_true
     parts.loc[i1, "mtbur_quoted"] = round(m_true * c1["quoted_multiple"], 0)
-    if "tat_days" in c1:
-        gt.loc[i1, "repair_tat_mean_true_d"] = float(c1["tat_days"])
-        parts.loc[i1, "repair_tat_mean_d"] = float(c1["quoted_tat_days"])
     taken.add(i1)
     planted["PS1"] = {"pn": p1, "station": focus, "weeks": "all history",
-                      "note": "D0 rotable on both fleets; true MTBUR %.0f %s vs quoted %.0f, so P0 sees < 4 removals/yr at %s "
-                              "and holds no unit there while the true %s rate is well above that"
-                              % (m_true, drv, parts.loc[i1, "mtbur_quoted"], focus, focus)}
+                      "note": "unscheduled D0 LRU (%s); true MTBUR %.0f %s vs quoted %.0f, so legacy provisioning sees < 4 "
+                              "removals/yr at %s and holds no line-station unit there while the true %s rate is well above that"
+                              % (parts.loc[i1, "description"], m_true, drv, parts.loc[i1, "mtbur_quoted"], focus, focus)}
 
     rate = _weekly_rate(cfg, parts, gt, appl, aircraft, legfh)
     # PS2: long-TAT rotable at the EU vendor with an overdue repair order (history seed)
-    eu = [i for i in rot if i not in taken and parts.loc[i, "repair_shop"] == "EU_VENDOR"] or [i for i in rot if i not in taken]
+    cand = [i for i in rot if i not in taken and parts.loc[i, "removal_mode"] == "unscheduled"]
+    eu = [i for i in cand if parts.loc[i, "repair_shop"] == "EU_VENDOR"] or cand
     i2 = max(eu, key=lambda i: rate[i])
     gt.loc[i2, "repair_tat_mean_true_d"] = float(pl["PS2"]["tat_days"])
     parts.loc[i2, "repair_tat_mean_d"] = float(pl["PS2"]["quoted_tat_days"])
@@ -448,7 +373,7 @@ def _plant(cfg, parts, gt, appl, aircraft, legfh) -> dict:
                               % (pl["PS2"]["tat_days"], pl["PS2"]["quoted_tat_days"], pl["PS2"]["weeks"], pl["PS2"]["stuck_repair_days"])}
 
     # PS3: declining-demand consumable
-    cons = [i for i in parts.index[parts.part_class == "C"] if i not in taken]
+    cons = [i for i in parts.index[parts.part_class == "C"] if i not in taken and parts.loc[i, "deadline_class"] != "NONE"]
     i3 = max(cons, key=lambda i: rate[i])
     gt.loc[i3, "trend_per_year"] = float(pl["PS3"]["trend_per_year"])
     parts.loc[i3, "mtbur_quoted"] = round(1000.0 / (gt.loc[i3, "usage_per_1000_fc_true"] * pl["PS3"]["quoted_usage_multiple"]), 1)
@@ -459,7 +384,7 @@ def _plant(cfg, parts, gt, appl, aircraft, legfh) -> dict:
                               % pl["PS3"]["trend_per_year"]}
 
     # PS4: lead-time jump on an expendable
-    exps = [i for i in parts.index[parts.part_class == "E"] if i not in taken]
+    exps = [i for i in parts.index[parts.part_class == "E"] if i not in taken and parts.loc[i, "deadline_class"] != "D0"]
     i4 = max(exps, key=lambda i: rate[i])
     gt.loc[i4, "lead_time_change_week"] = int(pl["PS4"]["change_week"])
     gt.loc[i4, "lead_time_after_d"] = float(gt.loc[i4, "lead_time_mean_true_d"] * pl["PS4"]["lead_time_factor"])
@@ -601,8 +526,8 @@ class _Static:
         self.lt_cv = gt.lead_time_cv_true.to_numpy()
         self.lt_change = gt.lead_time_change_week.to_numpy()
         self.lt_after = gt.lead_time_after_d.to_numpy()
-        mix = world.cfg["parts"]["deadline_class_mix"]
-        self.mix = {c: (list(mix[CLASS_KEY[c]].keys()), np.cumsum(list(mix[CLASS_KEY[c]].values()))) for c in "CER"}
+        self.wear = (p.removal_mode.to_numpy() == "wear_planned")[self.re]
+        self.nff = gt.nff_prob_true.fillna(0).to_numpy()
         st = world.stations.station.tolist()
         self.st = np.array(st)
         self.ps2_pn = truth.planted.get("PS2", {}).get("pn")
@@ -617,6 +542,14 @@ def _static(world, truth) -> _Static:
         _STATIC_CACHE.clear()
         _STATIC_CACHE[key] = _Static(world, truth)
     return _STATIC_CACHE[key]
+
+
+def _alt_class(dl: np.ndarray, flip: np.ndarray) -> np.ndarray:
+    """Per-event deadline variation (v2): D3 <-> D10 only; D0 and NONE never change."""
+    dl = dl.copy()
+    d3, d10 = flip & (dl == "D3"), flip & (dl == "D10")
+    dl[d3], dl[d10] = "D10", "D3"
+    return dl
 
 
 def _sample_week(S: _Static, flights_w: pd.DataFrame, seed: int, w: int, cfg: dict):
@@ -652,30 +585,33 @@ def _sample_week(S: _Static, flights_w: pd.DataFrame, seed: int, w: int, cfg: di
     ne = len(pi)
     u_alt, u_cls, z_rep, u_con = rng.random(ne), rng.random(ne), rng.standard_normal(ne), rng.random(ne)
     gidx = S.re[pi]
-    dl = S.dl[gidx].copy()
-    alt = u_alt < cfg["generator"]["deadline_class_alt_prob"]
-    for e in np.where(alt)[0]:
-        keys, cdf = S.mix[S.cls[gidx[e]]]
-        dl[e] = keys[int(np.searchsorted(cdf / cdf[-1], u_cls[e], side="right"))]
+    dl = _alt_class(S.dl[gidx], u_alt < cfg["generator"]["deadline_class_alt_prob"])
     rep_days = np.exp(S.tat_mu[gidx] + S.tat_sig[gidx] * z_rep)
     condemn = u_con < S.cond[gidx]
     u_def = rng.random(ne)
+    u_nff, u_nffd, u_notice = rng.random(ne), rng.random(ne), rng.random(ne)
+    nff = (u_nff < S.nff[gidx]) & (S.cls[gidx] == "R")
+    nd = cfg["generator"]["nff_shop_days"]
+    rep_days = np.where(nff, nd[0] + u_nffd * (nd[1] - nd[0]), rep_days)
+    condemn = condemn & ~nff                                   # NFF units never condemn
     st_e, nh_e = arr_st[li].copy(), arr_h[li].copy()
+    wear = S.wear[pi]
     defer = (st_e != hub) & (dl != "D0") & (u_def < cfg["generator"]["deferred_to_hub_share"]) & (nxt[li] >= 0)
-    st_e[defer] = hub
-    nh_e[defer] = nxt[li][defer]
+    to_hub = (defer | (wear & (st_e != hub))) & (nxt[li] >= 0)  # wear-planned changes are done at the hub
+    st_e[to_hub] = hub
+    nh_e[to_hub] = nxt[li][to_hub]
+    wn = cfg["generator"]["wear_planned_notice_days"]
+    notice_h = np.where(wear, np.round((wn[0] + u_notice * (wn[1] - wn[0])) * 24), 0).astype(np.int64)
     rem = pd.DataFrame({"pidx": gidx, "tidx": ti[li], "station": st_e, "need_h": nh_e,
-                        "deadline_class": dl, "repair_days": rep_days, "condemn": condemn,
+                        "deadline_class": dl, "repair_days": rep_days, "condemn": condemn, "nff": nff,
+                        "planned": wear, "known_h": np.maximum(0, nh_e - notice_h),
                         "dep_week": w, "gen": np.arange(ne)})
     # line usage events (qty = count per leg)
     ci, cl = np.nonzero(cnt_c)
     nu = len(ci)
     u_alt2, u_cls2 = rng.random(nu), rng.random(nu)
     gidx2 = S.c[ci]
-    dl2 = S.dl[gidx2].copy()
-    for e in np.where(u_alt2 < cfg["generator"]["deadline_class_alt_prob"])[0]:
-        keys, cdf = S.mix["C"]
-        dl2[e] = keys[int(np.searchsorted(cdf / cdf[-1], u_cls2[e], side="right"))]
+    dl2 = _alt_class(S.dl[gidx2], u_alt2 < cfg["generator"]["deadline_class_alt_prob"])
     use = pd.DataFrame({"pidx": gidx2, "tidx": ti[cl], "station": arr_st[cl], "need_h": arr_h[cl],
                         "qty": cnt_c[ci, cl].astype(np.int64), "deadline_class": dl2, "dep_week": w, "gen": np.arange(nu)})
     return rem, use
@@ -730,7 +666,8 @@ def generate_scenario(world: World, truth: GroundTruth, seed: int, week_from: in
 
     # material requests: removals + line usage + scheduled kits
     rq_r = pd.DataFrame({"pidx": rem.pidx, "tidx": rem.tidx, "station": rem.station, "need_h": rem.need_h,
-                         "known_h": rem.need_h, "qty": np.int64(1), "source": "unscheduled_removal",
+                         "known_h": rem.known_h, "qty": np.int64(1),
+                         "source": np.where(rem.planned, "planned_removal", "unscheduled_removal"),
                          "deadline_class": rem.deadline_class, "removal_id": rem.removal_id, "src_rank": 0,
                          "dep_week": rem.dep_week, "gen": rem.gen})
     rq_u = pd.DataFrame({"pidx": use.pidx, "tidx": use.tidx, "station": use.station, "need_h": use.need_h,
@@ -762,6 +699,8 @@ def generate_scenario(world: World, truth: GroundTruth, seed: int, week_from: in
     is_rot = S.cls[rem.pidx.to_numpy()] == "R"
     repair_days = dict(zip(rem.removal_id[is_rot].tolist(), rem.repair_days[is_rot].astype(float).tolist()))
     condemn_flag = dict(zip(rem.removal_id[is_rot].tolist(), rem.condemn[is_rot].astype(bool).tolist()))
+    nff_flag = dict(zip(rem.removal_id[is_rot].tolist(), rem.nff[is_rot].astype(bool).tolist()))
+    request_u = request_uniforms(seed, requests.request_id.to_numpy(), N_REQUEST_U)
     lead, regimes = {}, {}
     for i, pn in enumerate(S.pn):
         mu, sg = _lognormal_params(S.lt_mean[i], S.lt_cv[i])
@@ -779,7 +718,7 @@ def generate_scenario(world: World, truth: GroundTruth, seed: int, week_from: in
     sc = Scenario(seed=seed, week_from=week_from, week_to=week_to, flights=flights, maintenance=ms,
                   removals=removals.reset_index(drop=True), requests=requests, repair_days=repair_days,
                   condemn_flag=condemn_flag, lead_time_days=lead, transport_jitter=jitter,
-                  lead_time_regimes=regimes)
+                  lead_time_regimes=regimes, nff_flag=nff_flag, request_u=request_u)
     return sc
 
 

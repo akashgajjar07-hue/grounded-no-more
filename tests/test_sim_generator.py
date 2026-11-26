@@ -31,9 +31,39 @@ def test_full_world_master_data():
     re_ = w.parts.part_class != "C"
     ratio = (w.parts.loc[re_, "mtbur_quoted"].to_numpy() / gt.parts.loc[re_, "mtbur_true"].to_numpy())
     assert np.median(ratio) > 1.0
-    # some PNs both archetypes, some only one
+    # v2 (AV-01): type-exclusive by default, 'both' only for common items (<= 10%)
     n_arch = w.applicability.groupby("pn").size()
-    assert (n_arch == 2).any() and (n_arch == 1).any()
+    assert (n_arch == 2).mean() <= 0.10 + 1e-9
+    both = set(n_arch[n_arch == 2].index)
+    fam = w.parts.set_index("pn").family
+    assert set(fam[list(both)]) <= {"oxygen_mask", "crew_mask", "battery_pack", "light", "valve_small", "hardware", "lamp",
+                                    "fluid", "fuse"}
+    assert not (w.parts.part_class.eq("R") & w.parts.pn.isin(both)).any()
+    wb = set(w.applicability.pn[w.applicability.archetype == "widebody"])
+    assert not (w.parts.pn.isin(wb) & w.parts.ata.eq("36")).any()           # bleedless widebody
+    # brakes: type-specific, NB qty 4 / WB qty 8, wear-planned
+    br = w.parts[w.parts.family.str.startswith("brake")]
+    q = w.applicability.set_index("pn").qty_per_aircraft
+    assert len(br) == 2 and (br.removal_mode == "wear_planned").all()
+    assert sorted(q[br.pn].tolist()) == [4, 8]
+    assert (w.parts.removal_mode[~w.parts.family.str.startswith("brake")] == "unscheduled").all()
+    # AV-02/05: no D0 consumables; fluids NONE; backshell kit is ATA 20
+    assert not ((w.parts.part_class == "C") & (w.parts.deadline_class == "D0")).any()
+    assert set(w.parts.deadline_class[w.parts.family == "fluid"]) == {"NONE"}
+    assert (w.parts.ata[w.parts.description.str.contains("backshell")] == "20").all()
+    d = w.parts.set_index("description").deadline_class
+    for k in ["Carbon brake assembly (NB)", "Main wheel and tyre assembly (NB)", "Nose wheel steering actuator (NB)",
+              "Elevator servo control (NB)", "Flight deck windshield (NB)"]:
+        assert d[k] == "D0", k
+    for k in ["APU fuel control unit (NB)", "Bleed air valve (NB)", "Fuel boost pump (NB)", "Integrated drive generator (NB)",
+              "Weather radar transceiver (NB)", "Air cycle machine (NB)"]:
+        assert d[k] in ("D3", "D10"), k
+    # AV-16/17: family cost ordering and hand-set QPA
+    cost = w.parts.groupby("family").unit_cost_aed.median()
+    assert cost["hardware"] < cost["sensor"] < cost["valve"] < cost["power_generation"]
+    assert w.parts.set_index("description").loc["Pitot probe (NB)", "part_class"] == "R"
+    qd = w.applicability.merge(w.parts[["pn", "description"]]).set_index("description").qty_per_aircraft
+    assert qd["APU fuel control unit (NB)"] == 1 and qd["Air cycle machine (NB)"] == 2
 
 
 def test_scenario_same_seed_identical_different_seed_differs():

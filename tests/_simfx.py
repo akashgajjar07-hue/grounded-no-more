@@ -34,6 +34,17 @@ def full_world():
     return generate_world()
 
 
+FULL_WEEKS = (0, 51)
+
+
+@lru_cache(maxsize=None)
+def full_run():
+    """Full-scale P0 run, history seed, weeks 0-51 (exercises loans, robbery, local buy, NFF)."""
+    w, gt = full_world()
+    sc = generate_scenario(w, gt, 7, *FULL_WEEKS)
+    return w, sc, run_policy(w, sc, build_p0(w), *FULL_WEEKS)
+
+
 def expected_removals(world, truth, scenario):
     """Expected removals per R/E PN from true MTBUR and the scenario's exposure (no frailty)."""
     gt = truth.parts.set_index("pn")
