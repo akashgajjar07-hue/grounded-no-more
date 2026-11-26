@@ -187,13 +187,21 @@ async function render({ force = false, keepScroll = false } = {}) {
     };
     current = { id, mod, ctx, seq };
     resetTermUses();
-    cleanup = (await mod.render(view, ctx)) || null;
+    // v2.1 CLS: a new page is laid out but not painted while its async render runs (charts and SVGs arrive late),
+    // then revealed in one step; same-page re-renders (mode switch) stay visible
+    if (!keepScroll) view.style.visibility = 'hidden';
+    try {
+      cleanup = (await mod.render(view, ctx)) || null;
+    } finally {
+      if (seq === renderSeq) view.style.removeProperty('visibility');   // a stale render leaves it to the latest one
+    }
     if (!keepScroll && seq === renderSeq) staggerIn(view); // v2.1 motion: first 6 cards rise in, 40 ms apart
   } catch (err) {
     console.error(err);
     if (seq === renderSeq) view.replaceChildren(stateBlock('error', `This workspace could not load (${err.message}).`));
   }
   if (seq === renderSeq) {
+    view.style.removeProperty('visibility');   // the latest render always ends visible (also after an error)
     if (keepScroll) window.scrollTo({ top: scrollY0 });
     else if (window.__gnmNavigated) { view.focus({ preventScroll: true }); window.scrollTo({ top: 0 }); }
     window.__gnmNavigated = true;

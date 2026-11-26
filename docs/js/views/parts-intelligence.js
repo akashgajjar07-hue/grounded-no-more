@@ -622,7 +622,7 @@ export async function render(el, ctx) {
       const tf = (p) => `translate(${px(p)},${py(p)}) scale(${sel(p) ? 5 / 3.5 : 1})`;
       const dots = L.dots.selectAll('circle.pi-dot').data(pts, (p) => p.pn).join(
         (enter) => enter.append('circle').attr('class', 'pi-dot').attr('r', 3.5).attr('vector-effect', 'non-scaling-stroke').attr('transform', tf).style('opacity', 0)
-          .style('cursor', 'pointer').on('click', (e, p) => openPart(p.pn)).on('keydown', (e, p) => { if (e.key === 'Enter') openPart(p.pn); })
+          .style('cursor', 'pointer').on('click', (e, p) => openPart(p.pn)).on('keydown', (e, p) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPart(p.pn); } })
           .call((en) => (animate ? txSel(en).style('opacity', 1) : en.style('opacity', 1))),
         (update) => update,
         (exit) => (animate ? txSel(exit, { ease: 'exit' }).style('opacity', 0).remove() : exit.remove()));
