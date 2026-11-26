@@ -1,58 +1,90 @@
 # Validation report
 
-What was checked, how, and what came out. Rendered by `scripts/render_docs.py` from `reports/junit.xml`, `outputs/`, `docs/data/` and `git log`; template `docs/templates/VALIDATION_REPORT.md.tmpl`. Everything here concerns a **simulated** airline (Falcon Hub Airways, fictional). The section "Phase 5 reviewer findings and fixes" at the end is written by hand and is preserved when the report is re-rendered.
+What was checked, how, and what came out. Rendered by `scripts/render_docs.py` from `reports/junit.xml`, `outputs/`, `docs/data/` and `git log`; template `docs/templates/VALIDATION_REPORT.md.tmpl`. Everything here concerns a **simulated** airline (Falcon Hub Airways, fictional). Headline results are the v2 holdout (seeds {{RESULT:seeds.holdout}}, central world). The subsection "v2 reviews" at the end is written by hand and is preserved when the report is re-rendered.
 
 ---
 
 ## 1. Tests
 
-{{RESULT:val.tests_suite}} (`reports/junit.xml`; summary in `reports/test_results.txt`).
+{{RESULT:val.tests_suite}} (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast, slow and browser suites in one serial run).
 
 {{RESULT:val.tests_table}}
 
-Doc rendering is checked by `tests/test_docs_rendered.py`: no result placeholder survives in the rendered docs, and the headline KPI numbers in the README match `docs/data/kpis.json`.
+{{RESULT:val.failed_list}}
 
-## 2. Calibration (P0 only, locked before any P1/P2 run)
+Doc rendering is checked by `tests/test_docs_rendered.py`: no result placeholder survives, the README results table and headline match `docs/data/kpis.json`, the P2 headline and the baseline sentence ({{RESULT:network.P0.outstation_rotables}} vs {{RESULT:network.P2.outstation_rotables}} outstation rotables) are present, and the README never claims a result "at every tested setting".
 
-The generator was calibrated against ASSUMED bands using the legacy policy P0 only, then locked (`outputs/freeze/calibration_lock.json`, enforced by `tests/test_calibration_lock.py`) before any data-driven policy was built.
+## 2. Calibration (P0 only, locked before any P1/P2/optimiser run)
 
-{{RESULT:val.calibration_table}}
+Band (ASSUMED, chosen by the user after the P0 gap diagnosis and before any policy result): {{RESULT:cal.band}}.
+
+How P0 got there, central world, history weeks 0–103:
+
+{{RESULT:cal.history_table}}
+
+Diagnosis: {{RESULT:cal.diagnosis}}. Variants measured in memory before anything was applied:
+
+{{RESULT:cal.variants_table}}
+
+Applied (V1, fewest changes): {{RESULT:cal.settings}}. Not applied: the {{RESULT:cal.not_applied}}. Targets vs achieved per world (history / 5-seed selection mean):
+
+{{RESULT:cal.worlds_table}}
+
+Band ends: {{RESULT:honest.band_ends}}. The lock (`outputs/freeze/calibration_lock.json`, {{RESULT:freeze.cal_lock_files}} hashed files, enforced by `tests/test_calibration_lock.py`) was written at {{RESULT:freeze.cal_commit}} and re-written only after the non-calibration fixes V2-SIM-17/18 at {{RESULT:freeze.fix_commit}}.
 
 ## 3. Freeze and holdout chain
 
-Frozen at {{RESULT:val.frozen_at}}: {{RESULT:freeze.n_artefacts}} artefacts (forecast champions, P0/P1/P2 parameter tables for all variants, frontier candidates, configs), {{RESULT:val.freeze_verified}}. Manifest SHA-256 `{{RESULT:freeze.manifest_sha256}}`.
+Frozen at {{RESULT:freeze.frozen_at}}: {{RESULT:freeze.n_artefacts}} artefacts (forecast champions, P0/P1/P2 parameter tables for all worlds, frontier candidates {{RESULT:freeze.candidates_sha}}, configs), {{RESULT:freeze.verified}}. Manifest SHA-256 `{{RESULT:freeze.manifest_sha256}}`.
 
-Commit chain (`git log --oneline`, oldest first; the freeze commit precedes the holdout-results commit):
+v2 commit chain (`git log --oneline`, oldest first). The calibration lock precedes every P1/P2/optimiser commit, the freeze precedes the holdout-results commit, and the post-plan check comes after both:
 
-{{RESULT:val.git_chain}}
+{{RESULT:val.git_chain_v2}}
 
-Holdout runs logged in `outputs/freeze/holdout_log.json`, all after the freeze:
+Holdout runs logged in `outputs/freeze/holdout_log.json` (the archived v1 entries are kept):
 
 {{RESULT:val.holdout_log_table}}
 
-### Holdout incident (D010)
+### Post-plan check (D015)
 
-{{RESULT:freeze.holdout_incident}}
+Added after the main v2 holdout at the user's request: the frozen central-built P0, P2 and I125 on the holdout seeds in the low- and high-stress worlds, paired against P2, no re-selection, logged once. P2 here is the central-built allocation, not the world-re-planned P2 of the policy holdout.
 
-### Reporting note (D011)
+{{RESULT:val.postplan_table}}
 
-{{RESULT:val.reporting_note}}
+## 4. The v1 archive and why
 
-## 4. Selection versus holdout
+v1 is archived, not a finding. Tag {{RESULT:v1.tag}}; see [archive/v1/README.md](../archive/v1/README.md). The archive gives these {{RESULT:v1.n_reasons}} reasons, all from the aviation domain review (`reports/review_aviation.md`):
 
-Selection seeds 100–119 were used for every choice; holdout seeds 1000–1019 were run once. Central variant, KPIs over weeks 104–155, annualised.
+{{RESULT:v1.reasons}}
+
+Most of them overstated P0's downtime and the size of the improvement. For transparency only, the v1 holdout (seeds {{RESULT:seeds.v1_holdout}}) read:
+
+{{RESULT:v1.headline_table}}
+
+v1 commit chain:
+
+{{RESULT:val.git_chain_v1}}
+
+v2 fixed the problems as domain corrections chosen before any v2 result, recalibrated P0 only, locked, and ran on fresh holdout seeds ({{RESULT:seeds.holdout}}), because the v1 seeds had been seen.
+
+### v1 holdout incident (D010)
+
+{{RESULT:freeze.v1_incident}} The root cause (a non-atomic scenario-cache write) was fixed in V2-SIM-18 before the v2 freeze; the v2 holdout had {{RESULT:freeze.v2_forced}} forced reruns.
+
+## 5. Selection versus holdout
+
+Selection seeds {{RESULT:seeds.selection}} were used for every choice; holdout seeds {{RESULT:seeds.holdout}} were run once. Central world, KPIs over weeks {{RESULT:seeds.kpi_weeks}}, annualised.
 
 {{RESULT:val.consistency_table}}
 
-Reading: the legacy baseline replicated closely. The recommended plan I125 was optimistic on selection: {{RESULT:frontier.recommended.selection_aog_hours}} on selection against {{RESULT:frontier.recommended.aog_hours}} {{RESULT:frontier.recommended.aog_hours_ci}} on holdout ({{RESULT:frontier.recommended.selection_shift_pct}}), while P2 moved {{RESULT:policies.P2.selection_shift_pct}}. The paired improvement of I125 over P2 replicated: {{RESULT:frontier.recommended_vs_P2.selection_delta}} on selection, {{RESULT:frontier.recommended_vs_P2.delta_aog_hours}} {{RESULT:frontier.recommended_vs_P2.delta_aog_hours_ci}} on holdout.
+Reading: {{RESULT:honest.consistency}}.
 
 Forecasting: frozen champions re-scored on the holdout (12 origins, weeks 104–148):
 
 {{RESULT:val.champion_check_table}}
 
-The intermittent-rotable champion (naive) ranked last. The policies size rotables on the reliability-exposure rate, not on the MASE champion, so policy results do not depend on it. Reliability vs best Croston-family method on removal-driven parts (holdout): {{RESULT:forecast.reliability_vs_croston.delta_mase}} {{RESULT:forecast.reliability_vs_croston.delta_mase_ci}}; {{RESULT:forecast.reliability_vs_croston.verdict}}.
+The frozen champion was best in {{RESULT:honest.champions_best}} cells. Rotable policies size floats on the reliability-exposure rate, not on the MASE champion. Reliability vs the best Croston-family method on removal-driven parts (holdout): {{RESULT:forecast.reliability_vs_croston.delta_mase}} {{RESULT:forecast.reliability_vs_croston.delta_mase_ci}}; {{RESULT:forecast.reliability_vs_croston.verdict}}.
 
-## 5. Truth recovery (evaluation only)
+## 6. Truth recovery (evaluation only)
 
 `gnm.eval.truth_recovery` is the only code that reads the hidden truth. Metric: median absolute log error |ln(estimate / truth)|.
 
@@ -60,29 +92,38 @@ The intermittent-rotable champion (naive) ranked last. The policies size rotable
 
 {{RESULT:val.truth_ps4}}.
 
-## 6. Analytic models versus the simulator
+## 7. Analytic models versus the simulator
 
 Palm vs simulation for rotable floats (P1, central, selection seeds; `outputs/policies/palm_vs_sim.csv`):
 
 {{RESULT:val.palm_table}}
 
-Optimiser proxy vs simulation: {{RESULT:policy.calibration.predicted_vs_simulated}}.
+{{RESULT:policy.palm_vs_sim.summary}}.
+
+Optimiser proxy vs simulation: {{RESULT:frontier.model_vs_sim}}.
 
 Greedy optimality: {{RESULT:optim.greedy_gap_small_case_pct}}.
 
-AOG reconstruction: {{RESULT:val.aog_reconcile}}.
+AOG reconstruction: {{RESULT:aog.reconcile}}. Counterfactual: {{RESULT:aog.counterfactual}}.
 
-## 7. Known limitations that bear on validity
+## 8. Known limitations that bear on validity
 
-- The world, the methods and the evaluation were designed by the same author; the reliability model has a structural home advantage (removals are generated from exposure ÷ MTBUR).
-- Every policy depends on the AOG-desk emergency purchase: {{RESULT:frontier.aog_desk.summary}}.
-- In the low-stress variant {{RESULT:frontier.low_stress.summary}}
+- The world, the methods and the evaluation were designed by the same author; the reliability model has a structural home advantage.
+- Every policy depends on the AOG recovery routes: {{RESULT:honest.routes_off}}.
+- The P0 calibration lever was quote accuracy, and the legacy line-station rule is a deliberate weakness of P0.
 - Confidence intervals reflect seed-to-seed noise in one simulated world, not parameter uncertainty.
-- The rolling-origin forecast scoring gives the reliability model the realised flying programme of the forecast weeks.
 - Full list: [LIMITATIONS.md](../LIMITATIONS.md).
 
 ---
 
 ## Phase 5 reviewer findings and fixes
 
-*To be completed by the lead.*
+### v1-era reviews (archived world)
+
+These reviews were run on the v1 world before it was archived. The aviation review is the reason v1 was archived; the correctness and design findings were fixed in v1 and the fixes carried into v2 where the code survived.
+
+{{RESULT:val.v1_reviews}}
+
+### v2 reviews
+
+*To be completed by the lead after the v2 reviews.*

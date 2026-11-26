@@ -1,63 +1,75 @@
 # Limitations
 
-What this project does not do, and where its numbers would mislead if read too literally. Each item says what was simplified, why, and which way it is likely to bias the results.
+What this project does not do, and where its numbers would mislead if read too literally. Each item says what was simplified, why, and which way it is likely to bias the results. Numbers are computed by `scripts/render_docs.py` from `outputs/` and `docs/data/`; headline numbers are the v2 holdout (seeds {{RESULT:seeds.holdout}}, central world) unless labelled "selection".
 
 ---
 
 ## Data
 
-**1. The data is synthetic.** The airline, fleet, part numbers, removals, repair orders and AOG events are generated. Only station coordinates are REAL. Every parameter is ASSUMED, chosen to be order-of-magnitude plausible, and listed in the [assumption register](docs/assumption_register.md). Results show how the methods behave under those assumptions; they are not a measurement of any airline.
+**1. The data is synthetic.** The airline, fleet, part numbers, removals, repair orders and AOG events are generated. Only station coordinates are REAL. Every parameter is ASSUMED, chosen to be order-of-magnitude plausible, and listed in the [assumption register](docs/assumption_register.md). Results show how the methods behave under those assumptions; they are not a measurement of any airline. A v1 world was archived after a domain review; see [archive/v1](archive/v1/README.md).
 
-**2. Simulated rates are not reliability data.** MTBUR, condemnation rates and repair TATs are drawn from configured ranges. They must never be quoted as measured component reliability.
+**2. Simulated rates are not reliability data.** MTBUR, NFF shares, condemnation rates and repair TATs are drawn from configured ranges. They must never be quoted as measured component reliability.
 
-**3. The models are tested on a world the author designed.** The generator draws removals from exposure ÷ MTBUR, which is exactly the structure the reliability-exposure forecast assumes. That gives it a home advantage. Real removals include no-fault-found, maintenance-induced and fleet-campaign effects that this generator does not produce.
+**3. The models are tested on a world the author designed.** The generator draws removals from exposure ÷ MTBUR, which is exactly the structure the reliability-exposure forecast assumes. That gives it a home advantage. NFF is generated, but maintenance-induced removals and fleet campaigns are not.
 
-**4. Vendor-quoted MTBUR noise is assumed.** The quoted figure is truth × lognormal noise (σ_log 0.35) and 25% optimistic on average. The real gap between quoted and achieved MTBUR differs by component, operator and environment, and can be much larger.
+**4. The vendor-quote error is assumed, and was set by the calibration.** The quoted MTBUR is {{RESULT:config.quote_noise}}. These settings were the calibration lever (V2-SIM-CAL), so P0's performance, and the size of P2's improvement, depend on them.
 
-**5. Demand is unconstrained and uncensored.** Every requirement is recorded whether or not stock existed. Real consumable issue histories are often censored by stockouts, which biases forecasts low.
+**5. Demand is unconstrained and uncensored.** Every requirement is recorded whether or not stock existed. Real consumable issue histories are often censored by stockouts.
 
 **6. Two years of history.** Parts with very few removals cannot be forecast from their own history; they rely on the quoted MTBUR.
 
 ## Operations
 
-**7. No exposure feedback from groundings.** A grounded aircraft keeps accruing its scheduled flying (protection by spare aircraft or sub-charter is assumed). In reality a grounded aircraft does not fly, so removals on that tail pause. This keeps demand identical across policies for a fair paired comparison, and the lost flying is costed through the AOG penalty instead.
+**7. No exposure feedback from groundings.** A grounded aircraft keeps accruing its scheduled flying (protection by spare aircraft or sub-charter is assumed). In reality a grounded aircraft does not fly, so removals on that tail pause. This keeps demand identical across policies for a fair paired comparison, and the lost flying is costed through the AOG cost instead.
 
-**8. Deadline classes are hypothetical, not MEL.** D0, D3 and D10 are simple requirement windows (0, 72, 240 h). Real MEL/CDL relief depends on the operator's approved MEL, aircraft type and configuration, the specific item, operational restrictions and repair intervals. A real deferral can also carry operational penalties (for example a payload or route restriction) that this model does not cost.
+**8. Rectification windows are simplified, not MEL.** D3 and D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions. They are elapsed-hour windows applied generically per part number. Real relief depends on the operator's approved MEL, the specific item, the redundancy remaining, and operational restrictions that this model does not cost.
 
-**9. No cannibalisation (robbery) modelled.** A real operator facing an AOG may remove a serviceable part from another aircraft in heavy maintenance. This model does not, so it likely overstates AOG hours for all policies, and somewhat more for leaner ones.
+**9. The legacy line-station rule is a deliberate weakness of P0.** P0 puts a rotable at an outstation only where a D0 part has at least {{RESULT:config.p0_line_min}} quoted removals a year at that station, so low-volume D0 rotables (the nose wheel steering actuator, wheel-and-tyre assemblies) are not held where they fail. The D0 parts below account for {{RESULT:limits.line_station_share}} of P0's history downtime:
 
-**10. Simplified repair shop.** Two shops with fixed parallel slots, first-come first-served queues, no priority for AOG cores, no beyond-economic-repair quote cycle, no warranty claims, no partial repairs or part-out, and no shop-capacity shocks. Pre-sampled repair durations are independent across units.
+{{RESULT:limits.line_station_table}}
 
-**11. Close to single-echelon.** Repairs happen only through the hub. Outstations are resupplied only from AUH (laterals only where a policy allows them). There is no regional warehouse, no consignment stock at outstations, and no supplier-held stock. The analytic positioning model is METRIC-inspired, not full METRIC or VARI-METRIC.
+Crew oxygen masks are expendables, so the line-station rule does not apply to them: P0's min/max rule holds them at every station that sees quoted demand, and {{RESULT:limits.mask_out_share}} of the mask's history downtime was at outstations. The rule was kept on purpose (V2-SIM-16) because it is how a legacy OEM-quote operation provisions, and P2 is the remedy. A more careful legacy operator would narrow the P2 − P0 gap: {{RESULT:limits.linekit}}.
 
-**12. Transport times are fixed planning values.** AOG transport hours per station pair are ASSUMED constants. Real next-flight-out times vary with schedule, time of day, customs, dangerous-goods rules and weight limits.
+**10. Brakes: cost-per-landing contracts are not modelled.** Brakes are owned, type-specific, wear-planned rotables. Brake changes are planned at notice ({{RESULT:config.wear_notice}} ahead); residual brake downtime only occurs when AUH is short and the exchange fails. Many operators buy brakes on a cost-per-landing contract with the supplier holding the pool, which would remove brakes from the airline's capital and from this trade-off. History downtime on the brake part numbers under P0: {{RESULT:limits.brake_history}}.
 
-**13. Simplified scheduled maintenance.** Only A-checks at AUH generate kits, with fixed notice. No C-checks, no heavy-maintenance demand, no modification programmes, no airworthiness directives creating sudden fleet-wide demand.
+**11. The shop queue is light by construction.** A unit occupies a bench slot for only {{RESULT:limits.bench_share}} of its work time (SIM-4), so shops almost never queue. The AOG Response Lab's repair queue-jump option was infeasible for lack of a queue in {{RESULT:limits.queue_jump}}. Real shops queue, prioritise AOG cores and send beyond-economic-repair quotes; none of that is modelled, so TAT variability is understated.
 
-**14. Parts are independent.** No interchangeability, no alternate part numbers, no next-higher-assembly logic, no kits containing rotables, no common-cause failures across parts.
+**12. Close to single-echelon.** Repairs happen only through the hub. Outstations are resupplied only from AUH (laterals only where a policy allows them). There is no regional warehouse, consignment stock or supplier-held pool. The analytic positioning model is METRIC-inspired, not full METRIC.
 
-**15. Single currency, static prices.** All AED, no exchange-rate movement, no price escalation, no minimum order quantities or price breaks.
+**13. Transport times are fixed planning values.** AOG transport hours per station pair are ASSUMED constants. Real next-flight-out times vary with schedule, customs, dangerous-goods rules and weight limits.
+
+**14. Simplified scheduled maintenance.** Only A-checks at AUH generate kits. No C-checks, no modification programmes, no airworthiness directives creating sudden fleet-wide demand.
+
+**15. Parts are independent.** No interchangeability, no alternate part numbers, no next-higher-assembly logic, no common-cause failures.
+
+**16. Swaps and donors are simplified.** A borrowed or robbed unit is fitted at the requirement's station, and a robbed donor is assumed not to fly until it is reinstated from the next AUH unit.
 
 ## Economics and decisions
 
-**16. The AOG penalty is a scenario.** AED 15,000/h (narrowbody) and 30,000/h (widebody) are planning values. Real AOG cost depends on the route, time of day, passenger load, crew legality and recovery options. Recommendations move with this number, which is why it is sensitivity-tested at ×0.5, ×1 and ×2.
+**17. Results depend heavily on the AOG recovery routes.** Every policy, P0 included, relies on robbery at AUH (which needs engineering/quality approval), local borrow at outstations, exchange/loan by fleet type (failed attempts retried {{RESULT:config.retry}}) and local buy for consumables and expendables. In practice this means access to an AOG exchange/loan market and to borrow agreements at the assumed availability and response times. Borrowed units never join the owned pool. Switching them off shows the dependence: {{RESULT:honest.routes_off}}. The frontier and the P2 − P0 gap are conditional on those markets existing.
 
-**17. Carrying cost is a single rate.** 20% per year (range 15–25%) covers capital cost, storage, insurance and obsolescence together. Real rates vary by part class and company.
+**18. The AOG cost is a scenario.** {{RESULT:config.aog_cost}} are planning values. Real AOG cost depends on route, time of day, passenger load, crew legality and recovery options. P2's lead over P0 holds across ×0.5–×2 the hourly rate, but the frontier pick moves: {{RESULT:frontier.sensitivity.penalty_half_vs_double}}.
 
-**18. The optimiser is a greedy heuristic.** Marginal analysis is optimal only for separable, convex objectives, and then only at the budgets where greedy steps land. Hub-station coupling and per-aircraft AOG merging make the real objective non-separable. A small exact comparison: {{RESULT:optim.greedy_gap_small_case_pct}}.
+**19. Carrying cost is a single rate.** 20% per year (range 15–25%) covers capital cost, storage, insurance and obsolescence together.
 
-**19. The optimiser works on an analytic proxy.** The frontier is built from deadline-weighted EBO, then each candidate is checked in the event engine. Where the proxy and the simulation disagree, the simulation is reported.
+**20. The optimiser is a greedy heuristic on an analytic proxy.** Marginal analysis is optimal only for separable, convex objectives at its breakpoints. Check: {{RESULT:optim.greedy_gap_small_case_pct}}. The proxy ranks candidates but is not a forecast: {{RESULT:frontier.model_vs_sim}}. The guardrails are planner policy, not optimisation results; they cost {{RESULT:frontier.guard_cost}} of material AOG a year at P2's capital (selection seeds).
 
-**20. Pool exchange (P3) is not implemented.** The engine has no pool mechanics (the hook raises `NotImplementedError`); the AOG Response Lab shows a pool option only as a greyed, indicative estimate with ASSUMED terms. Instead, every policy relies on an AOG-desk emergency purchase (rotables within 5 days at a 15% premium), which in practice means access to an exchange or loan market. Switching it off shows how much: {{RESULT:frontier.aog_desk.summary}}. All results are conditional on that market existing for every part.
+**21. The I125 frontier option is sensitive.** Its cost lead over P2 is not significant if repair is 25% faster ({{RESULT:fo.tat075_net}} a year, selection seeds). Its post-plan stress check (D015) was added after the main holdout: {{RESULT:fo.postplan_summary}}.
+
+**22. Pool exchange (P3) is not implemented.** The AOG Response Lab shows a pool option only as "not contracted".
 
 ## Evaluation
 
-**21. Paired seeds narrow intervals within this world only.** Confidence intervals reflect simulation noise across 20 seeds, not uncertainty in the assumed parameters. Parameter uncertainty is explored only through the sensitivity (tornado) analysis. Even within this world, selection-seed results did not fully carry over to the holdout: {{RESULT:limitations.selection_drift}}
+**23. Paired seeds narrow intervals within this world only.** Confidence intervals reflect simulation noise across {{RESULT:seeds.n}} seeds, not uncertainty in the assumed parameters. Parameter uncertainty is explored only through the one-at-a-time tornado, the stress worlds and the routes-off stress. Selection to holdout: {{RESULT:honest.consistency}}.
 
-**22. One fleet, one network.** Results are for a 40-aircraft, seven-station network. They are not evidence about other fleet sizes or network shapes.
+**24. The stress worlds do not span the whole band.** In short, {{RESULT:honest.band_ends}}. A world at 2,700 h with in-band fill was not reachable by scaling true MTBUR alone.
+
+**25. Lower immediate fill is a real cost of the lean plans.** P2 changes immediate fill by {{RESULT:policies.P2_vs_P0.delta_fill_pts}} {{RESULT:policies.P2_vs_P0.delta_fill_pts_ci}} against P0 ({{RESULT:policies.fill_by_class}}). Consumable and expendable shortages rarely cause downtime here, but they mean more chasing on the shop floor.
+
+**26. One fleet, one network.** Results are for a 40-aircraft, seven-station network. They are not evidence about other fleet sizes or network shapes.
 
 ## Scope
 
-**23. Not an approved maintenance, airworthiness or dispatch tool.** It does not replace an approved MEL, an MRO/ERP system, an AOG desk, or certification paperwork (such as an authorised release certificate).
+**27. Not an approved maintenance, airworthiness or dispatch tool.** It does not replace an approved MEL, an MRO/ERP system, an AOG desk, or certification paperwork (such as an authorised release certificate).
 
-**24. Independent project.** Not affiliated with any airline, OEM, vendor or MRO organisation, and uses none of their data or systems.
+**28. Independent project.** Not affiliated with any airline, OEM, vendor or MRO organisation, and uses none of their data or systems.
