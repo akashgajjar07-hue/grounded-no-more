@@ -2,7 +2,7 @@
 
 # Data dictionary
 
-Every table written to `data/processed/` (Parquet, plus DuckDB views) is defined in [`src/gnm/schemas.py`](../src/gnm/schemas.py) and validated by `validate_table()`. All data describe **Falcon Hub Airways (fictional)**. Nothing here is operator data or measured aviation reliability.
+Every table written to `data/processed/` (Parquet, plus DuckDB views) is defined in [`src/gnm/schemas.py`](../src/gnm/schemas.py) and checked by `validate_table()`. All data describe **Falcon Hub Airways (fictional)**. Nothing here is operator data or measured aviation reliability.
 
 ## Conventions
 
@@ -20,14 +20,14 @@ Every table written to `data/processed/` (Parquet, plus DuckDB views) is defined
 |---|---|
 | `Provenance` | `REAL`, `DERIVED`, `ASSUMED`, `SIMULATED` |
 | `PartClass` | `C`, `E`, `R` |
-| `DeadlineClass` | `D0`, `D3`, `D10` |
-| `SerialState` | `SERVICEABLE`, `INSTALLED`, `REMOVED`, `IN_REPAIR`, `IN_TRANSIT`, `CONDEMNED` |
+| `DeadlineClass` | `D0`, `D3`, `D10`, `NONE` |
+| `SerialState` | `SERVICEABLE`, `INSTALLED`, `REMOVED`, `IN_REPAIR`, `IN_TRANSIT`, `CONDEMNED`, `RETURNED_TO_LENDER` |
 | `Archetype` | `narrowbody`, `widebody` |
 | `DemandClass` | `smooth`, `erratic`, `intermittent`, `lumpy`, `insufficient_data` |
-| `RequestSource` | `unscheduled_removal`, `scheduled_kit`, `line_usage` |
+| `RequestSource` | `unscheduled_removal`, `scheduled_kit`, `line_usage`, `planned_removal` |
 | `TxnType` | `RECEIPT_PO`, `RECEIPT_REPAIR`, `ISSUE`, `TRANSFER_OUT`, `TRANSFER_IN`, `CONDEMN`, `EXPIRE`, `UNSERVICEABLE_IN`, `INITIAL` |
 
-Deadline classes `D0`/`D3`/`D10` are **hypothetical requirement deadlines** (D0 = 0 h, D3 = 72 h, D10 = 240 h). They are not MEL categories.
+Deadline classes `D0`/`D3`/`D10` are **hypothetical requirement deadlines** (D0 = 0 h, D3 = 72 h, D10 = 240 h, NONE = None h). They are not MEL categories.
 
 ## Tables
 
@@ -97,9 +97,9 @@ Hub + outstations. Coordinates REAL (OurAirports).
 |---|---|---|---|---|---|
 | `pn` (PK) | string |  | no | Fictional PN GN-<ATA>-<C\|E\|R><nnn> |  |
 | `description` | string |  | no | Fictional nomenclature |  |
-| `ata` | string |  | no | ATA chapter (2-digit) | one of `21`, `24`, `27`, `28`, `29`, `30`, `32`, `33`, `34`, `35`, `36`, `38`, `49` |
+| `ata` | string |  | no | ATA chapter (2-digit) | one of `20`, `21`, `24`, `27`, `28`, `29`, `30`, `32`, `33`, `34`, `35`, `36`, `38`, `49` |
 | `part_class` | string |  | no | C consumable \| E expendable \| R rotable | one of `C`, `E`, `R` |
-| `deadline_class` | string |  | no | Hypothetical requirement deadline class | one of `D0`, `D3`, `D10` |
+| `deadline_class` | string |  | no | Hypothetical rectification-window class (NONE = servicing fluid) | one of `D0`, `D3`, `D10`, `NONE` |
 | `unit_cost_aed` | float64 | AED | no | Unit cost (new) | ≥ 0 |
 | `lead_time_mean_d` | float64 | days | no | Quoted purchase lead time mean | ≥ 0 |
 | `lead_time_cv` | float64 |  | no | Quoted lead time coefficient of variation | ≥ 0 |
@@ -111,6 +111,7 @@ Hub + outstations. Coordinates REAL (OurAirports).
 | `condemnation_prob_quoted` | float64 |  | yes | Historical condemnation rate quoted | ≥ 0 |
 | `shelf_life_months` | float64 | months | yes | Shelf life if limited | ≥ 0 |
 | `planted` | string |  | yes | Planted demo situation id (PS1..PS4) or empty |  |
+| `removal_mode` | string |  | no | unscheduled \| wear_planned (v2: brakes, known ahead) | one of `unscheduled`, `wear_planned` |
 
 ### part_applicability
 
@@ -200,12 +201,12 @@ All material demand (unscheduled, kit, line usage). Unconstrained demand.
 | `need_h` | int64 | h | no | Need time | ≥ 0 |
 | `known_h` | int64 | h | no | Time requirement became known (== need_h for unscheduled) | ≥ 0 |
 | `qty` | int64 |  | no | Quantity | ≥ 0 |
-| `source` | string |  | no | unscheduled_removal \| scheduled_kit \| line_usage | one of `unscheduled_removal`, `scheduled_kit`, `line_usage` |
-| `deadline_class` | string |  | no | Deadline class | one of `D0`, `D3`, `D10` |
+| `source` | string |  | no | unscheduled_removal \| planned_removal \| scheduled_kit \| line_usage | one of `unscheduled_removal`, `planned_removal`, `scheduled_kit`, `line_usage` |
+| `deadline_class` | string |  | no | Deadline class | one of `D0`, `D3`, `D10`, `NONE` |
 | `removal_id` | int64 |  | yes | Linked removal (unscheduled) |  |
 | `week` | int64 | week | no | Week of need | ≥ 0 |
 | `filled_h` | int64 | h | yes | Time fitted/issued |  |
-| `fill_source` | string |  | yes | local \| transfer \| lateral \| purchase \| repair \| pool |  |
+| `fill_source` | string |  | yes | local \| transfer \| lateral \| purchase \| repair \| pool \| exchange_loan \| local_borrow \| robbery \| local_buy \| loan_or_donor_return |  |
 | `immediate_fill` | bool |  | yes | Filled from local serviceable stock at need time |  |
 
 ### serialised_components
@@ -220,7 +221,7 @@ Serial-number register for rotables at end of run + full state history.
 |---|---|---|---|---|---|
 | `serial` (PK) | string |  | no | Serial number, e.g. GN-32-R014-S0007 |  |
 | `pn` | string |  | no | Part number |  |
-| `state` | string |  | no | Serial state | one of `SERVICEABLE`, `INSTALLED`, `REMOVED`, `IN_REPAIR`, `IN_TRANSIT`, `CONDEMNED` |
+| `state` | string |  | no | Serial state | one of `SERVICEABLE`, `INSTALLED`, `REMOVED`, `IN_REPAIR`, `IN_TRANSIT`, `CONDEMNED`, `RETURNED_TO_LENDER` |
 | `location` | string |  | no | Station, tail, or shop id |  |
 | `since_h` (PK) | int64 | h | no | In this state since | ≥ 0 |
 | `until_h` | int64 | h | yes | Left this state (null if current) |  |

@@ -4,6 +4,8 @@ How GROUNDED NO MORE turns a simulated airline into planning decisions, and how 
 
 Parameter values quoted below come from the config and are **ASSUMED** unless marked otherwise. Result values are computed from `outputs/` and `docs/data/` by `scripts/render_docs.py`, which renders this file from `docs/templates/METHODOLOGY.md.tmpl`. Headline results are from the v2 holdout (seeds {{RESULT:seeds.holdout}}, central world) unless labelled "selection" (seeds {{RESULT:seeds.selection}}). A v1 world was archived after a domain review; see [archive/v1](archive/v1/README.md).
 
+Plan names used throughout: {{RESULT:v21.name.P0}}, {{RESULT:v21.name.P1}}, {{RESULT:v21.name.P2}}, {{RESULT:v21.name.I125}}, and {{RESULT:v21.name.P2_GUARD}}; other frontier points are "Frontier point B150" and so on. Every headline number is {{RESULT:v21.scope}}.
+
 **Contents**
 
 1. [Design principles](#1-design-principles)
@@ -30,7 +32,7 @@ Parameter values quoted below come from the config and are **ASSUMED** unless ma
 | Planning models never see the truth | True rates live in `data/ground_truth/`. `tests/test_leakage.py` statically scans `gnm.forecasting`, `gnm.policy`, `gnm.optim`, `gnm.aog` and `gnm.export` for imports of the truth or the generator internals, and a runtime test makes reads of the hidden-truth folder raise while the planning pipeline runs. These are checks, not a proof. |
 | One set of mechanics for every policy | A policy is a parameter table (`PolicySpec`). One event engine runs them all ([D002](docs/DECISIONS.md)). |
 | Same world for every policy | Exogenous demand and the random draws for repair time, condemnation, no-fault-found, lead time and AOG route availability are pre-sampled or counter-based (common random numbers, [D003](docs/DECISIONS.md), V2-SIM-5). |
-| Calibrate the baseline only, then lock | P0 alone was calibrated against an ASSUMED plausibility band chosen before any policy comparison and locked before any P1, P2 or optimiser run ([section 6](#6-calibration-p0-only-and-the-lock)). |
+| Calibrate the baseline only, then lock | P0 alone was calibrated, and the world was locked before any P1, P2 or optimiser run ([section 6](#6-calibration-p0-only-and-the-lock)). The target range itself was an exploratory assumption chosen after diagnosing the model. |
 | Test once, on data nobody tuned against | Parameters are hashed before the holdout runs ([section 12](#12-holdout-freeze-discipline)). |
 | Every number traceable | Each table and JSON object carries a provenance tag. `tests/test_reconciliation.py` recomputes the headline shown in the app from `outputs/`. |
 
@@ -40,11 +42,11 @@ Parameter values quoted below come from the config and are **ASSUMED** unless ma
 
 `gnm.sim.generator` builds the world from `world_seed = 2023`.
 
-**Fleet.** 24 narrowbody (A320-family archetype) and 16 widebody (787-family archetype) aircraft with fictional registrations (`A6-FH?`, `A6-FW?`). Daily utilisation is drawn per aircraft: {{RESULT:config.utilisation}} (ASSUMED). Weekly, monthly and holiday seasonality factors scale utilisation.
+**Fleet.** 24 narrowbody and 16 widebody aircraft (generic narrowbody and widebody archetypes) with fictional registrations (`A6-FH?`, `A6-FW?`). Daily utilisation is drawn per aircraft: {{RESULT:config.utilisation}} (ASSUMED). Weekly, monthly and holiday seasonality factors scale utilisation.
 
 **Network.** Hub AUH and six outstations (LHR, FRA, CAI, JED, BOM, SIN). Station coordinates are REAL (OurAirports). Narrowbodies fly to CAI, JED and BOM; widebodies to LHR, FRA, BOM and SIN. BOM is the only outstation both fleets serve.
 
-**Parts: a curated, type-exclusive catalogue** (V2-SIM-1). The 120 fictional part numbers (`GN-<ATA>-<C|E|R><nnn>`: 45 consumables, 35 expendables, 40 rotables) come from a hand-curated catalogue that fixes, per row, the ATA chapter, description, family, type applicability, quantity per aircraft, rectification window, removal mode and driver. Applicability is type-exclusive: only 12 common items (masks, lamps, battery packs, hardware, fluids and similar) fit both archetypes. The 787-family archetype has no ATA 36 bleed parts and gets electrical analogues instead. Unit cost is drawn log-uniform by family, and MTBUR, repair TAT and lead time are still drawn from the world seed within ASSUMED ranges.
+**Parts: a curated, type-exclusive catalogue** (V2-SIM-1). The 120 fictional part numbers (`GN-<ATA>-<C|E|R><nnn>`: 45 consumables, 35 expendables, 40 rotables) come from a hand-curated catalogue that fixes, per row, the ATA chapter, description, family, type applicability, quantity per aircraft, rectification window, removal mode and driver. Applicability is type-exclusive: only 12 common items (masks, lamps, battery packs, hardware, fluids and similar) fit both archetypes. The widebody archetype has no ATA 36 bleed parts and gets electrical analogues instead. Unit cost is drawn log-uniform by family, and MTBUR, repair TAT and lead time are still drawn from the world seed within ASSUMED ranges.
 
 **Reliability.** Removal-driven parts have a true MTBUR ({{RESULT:config.mtbur_ranges}}). The part master publishes a **vendor-quoted** MTBUR: {{RESULT:config.quote_noise}} ([D005](docs/DECISIONS.md), calibrated in V2-SIM-CAL). About 30% of parts have overdispersed, clustered demand. All of this is ASSUMED and SIMULATED. None of it is measured reliability.
 
@@ -112,7 +114,7 @@ Deferrable (D3/D10) removals found at an outstation are rectified at AUH on the 
 
 Rotables try local borrow (outstations) or robbery (AUH) first, then exchange/loan in the same attempt; consumables and expendables use local buy. A failed attempt is retried {{RESULT:config.retry}} with fresh paired draws (V2-SIM-14). There is **no outright AOG purchase and no pool growth**: a borrowed unit is a serial with `owned = False`, never serviceable stock and never capital; the first own serviceable unit at AUH replaces it and the loan is returned. A robbed donor is reinstated from the next AUH unit, and the donor is assumed not to fly until then. Outright POs are only reorders (C/E) and condemnation replacements. AUH allocates each new serviceable unit in the order: backorders, donors, loan hand-backs, stock transfers.
 
-**Material-related downtime** (V2-SIM-7). {{RESULT:config.aog_hour_definition}} The interval is [need + window, fill + fitting/RTS], with fitting/RTS 2–6 h for rotables and 1 h for consumables and expendables. Intervals are merged per aircraft: two missing parts on one aircraft at the same time count once.
+**Material-related downtime** (V2-SIM-7). {{RESULT:config.aog_hour_definition}} The interval is [need + window, fill + fitting/RTS], with fitting/RTS 2–6 h for rotables and 1 h for consumables and expendables. Intervals are merged per aircraft: two missing parts on one aircraft at the same time count once. In plain terms: {{RESULT:v21.aog_clock}}
 
 **Rotables are serialised.** Every serial is in exactly one state and location:
 
@@ -132,7 +134,9 @@ A removed core travels to AUH, then to its shop (the AUH in-house shop, the whee
 
 ## 6. Calibration (P0 only) and the lock
 
-**Band (V2-SIM-16): An ASSUMED plausibility band chosen before any policy comparison, set by the author after the P0 gap diagnosis; author judgement, not an external benchmark:** {{RESULT:cal.band}}. It describes a legacy OEM-quote operation with no line-station units for low-volume D0 parts; the v1 band ({{RESULT:cal.v1_band}}) is kept in the config for reference only.
+> {{RESULT:v21.calibration}}
+
+**Band (V2-SIM-16): an ASSUMED target range set by the author after the P0 gap diagnosis and before any policy comparison; author judgement, not an external benchmark:** {{RESULT:cal.band}}. It describes a legacy OEM-quote operation with no line-station units for low-volume D0 parts; the v1 band ({{RESULT:cal.v1_band}}) is kept in the config for reference only.
 
 **History of the P0 numbers.** Each step below is a domain or engine correction made before calibration, then the calibration itself. None was chosen by looking at P1, P2 or the optimiser, which did not exist yet:
 
@@ -146,7 +150,7 @@ A removed core travels to AUH, then to its shop (the AUH in-house shop, the whee
 
 Only {{RESULT:cal.variants_in_band}} lands inside the band, and it is also the fewest-changes option (the rule chosen before calibration), so it was applied: {{RESULT:cal.settings}}. The {{RESULT:cal.not_applied}} were not applied, and the P0 rule is unchanged.
 
-**Stress worlds.** Only the true MTBUR is scaled: ×{{RESULT:cal.low_scale}} (low stress) and ×{{RESULT:cal.high_scale}} (high stress), aiming each at one end of the band:
+**Stress worlds.** Only the true MTBUR is scaled: ×{{RESULT:cal.low_scale}} (low stress) and ×{{RESULT:cal.high_scale}} (high stress), aiming each at one end of the band. Read together that is {{RESULT:v21.stress_worlds}}. {{RESULT:v21.ranges}}
 
 {{RESULT:cal.worlds_table}}
 
@@ -231,10 +235,10 @@ Lead-time demand (LTD) comes from the champion forecast over the planner's estim
 
 | Policy | Description |
 |---|---|
-| **P0 Legacy OEM-quote** (V2-SIM-8) | A competent static baseline on quoted data only. Rotables: total spares S = smallest S with P(Poisson(quoted annual removals × quoted pipeline days ÷ 365) ≤ S − 1) ≥ {{RESULT:config.p0_protection}}, held at AUH, plus 1 line-station unit only for a D0 part with at least {{RESULT:config.p0_line_min}} quoted removals a year at that station. Consumables and expendables: {{RESULT:config.p0_ce}}, at every station that sees quoted demand. It holds {{RESULT:network.P0.outstation_rotables}} rotables at the outstations. |
-| **P1 Local optimised** | Every stocking point sized on its own forecast demand (single-echelon): (s, S) for C/E, and a Palm float at each station for rotables. It holds {{RESULT:network.P1.outstation_rotables}} outstation rotables. A deliberate "every station for itself" comparator. |
-| **P2 Network** | Hub float sized on the network pipeline; outstation *j* gets its *k*-th rotable unit only while the expected annual cost of a local miss avoided per AED of unit cost is at least the 20% carrying rate. The miss cost uses the v2 AOG routes (hub transfer with the hub's fill probability, otherwise local borrow then exchange/loan, or local buy), the hourly rate and the fixed cost per event (V2-POL-4). Laterals and rebalancing on. It holds {{RESULT:network.P2.outstation_rotables}} outstation rotables. |
-| **I125** (frontier option) | P2 within the stocking guardrails, plus greedy additions up to 1.25 × P2's allocation capital ([section 10](#10-greedy-marginal-allocation-and-the-readiness-frontier)). |
+| {{RESULT:v21.name.P0}} (V2-SIM-8) | A deliberately simplified static starting point on quoted data only, not a model of a competent airline. Rotables: total spares S = smallest S with P(Poisson(quoted annual removals × quoted pipeline days ÷ 365) ≤ S − 1) ≥ {{RESULT:config.p0_protection}}, held at AUH, plus 1 line-station unit only for a D0 part with at least {{RESULT:config.p0_line_min}} quoted removals a year at that station. Consumables and expendables: {{RESULT:config.p0_ce}}, at every station that sees quoted demand. It holds {{RESULT:network.P0.outstation_rotables}} rotables at the outstations. |
+| {{RESULT:v21.name.P1}} | Every stocking point sized on its own forecast demand (single-echelon): (s, S) for C/E, and a Palm float at each station for rotables. It holds {{RESULT:network.P1.outstation_rotables}} outstation rotables. A deliberate "every station for itself" comparator. |
+| {{RESULT:v21.name.P2}} | Hub float sized on the network pipeline; outstation *j* gets its *k*-th rotable unit only while the expected annual cost of a local miss avoided per AED of unit cost is at least the 20% carrying rate. The miss cost uses the v2 AOG routes (hub transfer with the hub's fill probability, otherwise local borrow then exchange/loan, or local buy), the hourly rate and the fixed cost per event (V2-POL-4). Laterals and rebalancing on. It holds {{RESULT:network.P2.outstation_rotables}} outstation rotables. |
+| {{RESULT:v21.name.I125}} (frontier option) | P2 within the stocking guardrails, plus greedy additions up to 1.25 × P2's allocation capital ([section 10](#10-greedy-marginal-allocation-and-the-readiness-frontier)). |
 
 All policies keep the AOG desk routes on. P0, P1 and P2 share one definition of total spares: the engine seeds each repair loop with units from P0's own plan ({{RESULT:policy.loop_units}} in total), and P1/P2 hand the engine Palm's S minus those loop units at the hub (V2-POL-3), so capital is comparable. Total rotable spares: P0 {{RESULT:policy.P0.rotable_total_spares}}, P1 {{RESULT:policy.P1.rotable_total_spares}}, P2 {{RESULT:policy.P2.rotable_total_spares}}, I125 {{RESULT:policy.I125.rotable_total_spares}}.
 
@@ -262,7 +266,7 @@ Under P0, {{RESULT:network.P0.outstation_share}} of material AOG is at the outst
 
 **Objective.** Minimise expected material-related downtime, weighted by the archetype's AOG cost and the rectification window, for a given spares capital.
 
-**Algorithm.** The analytic model (`gnm.optim.model`) gives expected downtime per part from a hub + outstation (METRIC-lite) model. When AUH is out of stock, a need waits for own supply or the v2 AOG route, whichever comes first; downtime counts only when late and includes fitting/RTS; cost = hours × hourly rate + events × fixed cost + route fees (V2-OPT-1). Starting from P2 within guardrails, the greedy repeatedly adds the (PN, station) unit with the largest reduction in weighted downtime per AED of capital. Greedy is optimal only for separable, convex objectives at its breakpoints; hub-station coupling and per-aircraft merging break separability, so it is a heuristic here. Check: {{RESULT:optim.greedy_gap_small_case_pct}}.
+**Algorithm.** The analytic model (`gnm.optim.model`) gives expected downtime per part from a hub + outstation (METRIC-lite) model. When AUH is out of stock, a need waits for own supply or the v2 AOG route, whichever comes first; downtime counts only when late and includes fitting/RTS; cost = hours × hourly rate + events × fixed cost + route fees (V2-OPT-1). Starting from P2 within guardrails, the greedy repeatedly adds the (PN, station) unit with the largest reduction in weighted downtime per AED of capital. Greedy gives the best allocation only for separable, convex objectives at its breakpoints; hub-station coupling and per-aircraft merging break separability, so it is a heuristic here. Check: {{RESULT:optim.greedy_gap_small_case_pct}}.
 
 **Guardrails, stated before computing** (V2-OPT-2). G1: at each stocking point the total spares may not exceed the 99.5% fill quantile of that point's own pipeline. G2: a station with at most 6 requests a year for the part holds at most 1 unit. Above those levels the tail is cheaper to cover with the AOG routes than with idle stock. They cost {{RESULT:frontier.guard_cost}} of material AOG a year at P2's capital (selection seeds).
 
@@ -278,7 +282,11 @@ With P2's realised {{RESULT:frontier.aed_per_aog_hour}} per downtime hour (the f
 
 {{RESULT:frontier.tornado_table}}
 
-The AOG penalty and carrying cost re-cost the simulated KPIs; repair TAT and lead time re-simulate. A separate structural stress switches the AOG routes off: {{RESULT:honest.routes_off}}. Same-plan stress worlds (selection): {{RESULT:frontier.sel_worlds}}.
+The AOG penalty and carrying cost re-cost the simulated KPIs; repair TAT and lead time re-simulate. A separate structural stress switches the AOG routes off: {{RESULT:honest.routes_off}}. Same-plan stress worlds (selection): {{RESULT:frontier.sel_worlds}}. {{RESULT:v21.ranges}}
+
+**Insight.** {{RESULT:v21.insight}} Levers compared: {{RESULT:v21.levers}}. The capital behind the core finding is never shown as a net figure alone:
+
+{{RESULT:v21.capital_table}}
 
 ---
 

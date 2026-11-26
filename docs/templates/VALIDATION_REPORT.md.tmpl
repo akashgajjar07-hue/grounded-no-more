@@ -1,6 +1,6 @@
 # Validation report
 
-What was checked, how, and what came out. Rendered by `scripts/render_docs.py` from `reports/junit.xml`, `outputs/`, `docs/data/` and `git log`; template `docs/templates/VALIDATION_REPORT.md.tmpl`. Everything here concerns a **simulated** airline (Falcon Hub Airways, fictional). Headline results are the v2 holdout (seeds {{RESULT:seeds.holdout}}, central world). The subsection "v2 reviews" at the end is written by hand and is preserved when the report is re-rendered.
+What was checked, how, and what came out. Rendered by `scripts/render_docs.py` from `reports/junit.xml`, `outputs/`, `docs/data/` and `git log`; template `docs/templates/VALIDATION_REPORT.md.tmpl`. Everything here concerns a **simulated** airline (Falcon Hub Airways, fictional). Headline results are the v2 holdout (seeds {{RESULT:seeds.holdout}}, central world), {{RESULT:v21.scope}}. Plan names: {{RESULT:v21.name.P0}}, {{RESULT:v21.name.P1}}, {{RESULT:v21.name.P2}}, {{RESULT:v21.name.I125}}. The subsection "v2 reviews" at the end is written by hand and is preserved when the report is re-rendered.
 
 ---
 
@@ -12,9 +12,11 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 
 {{RESULT:val.failed_list}}
 
-Doc rendering is checked by `tests/test_docs_rendered.py`: no result placeholder survives, the README results table and headline match `docs/data/kpis.json`, the P2 headline and the baseline sentence ({{RESULT:network.P0.outstation_rotables}} vs {{RESULT:network.P2.outstation_rotables}} outstation rotables) are present, and the README never claims a result "at every tested setting".
+Doc rendering is verified by `tests/test_docs_rendered.py`: no result placeholder survives, the README results table and headline match `docs/data/kpis.json`, the outstation sentence ({{RESULT:network.P0.outstation_rotables}} vs {{RESULT:network.P2.outstation_rotables}} outstation rotables) is present, the scope line sits beside the headline numbers, the capital table shows the gross lines, the README opening makes no percentage or paired-difference claim, the calibration wording is present here and in METHODOLOGY, the rendered docs contain no forbidden wording or manufacturer names, and the README never claims a result "at every tested setting".
 
 ## 2. Calibration (P0 only, locked before any P1/P2/optimiser run)
+
+> {{RESULT:v21.calibration}}
 
 Band (ASSUMED, chosen by the user after the P0 gap diagnosis and before any policy result): {{RESULT:cal.band}}.
 
@@ -30,7 +32,7 @@ Applied (V1, fewest changes): {{RESULT:cal.settings}}. Not applied: the {{RESULT
 
 {{RESULT:cal.worlds_table}}
 
-Band ends: {{RESULT:honest.band_ends}}. The lock (`outputs/freeze/calibration_lock.json`, {{RESULT:freeze.cal_lock_files}} hashed files, enforced by `tests/test_calibration_lock.py`) was written at {{RESULT:freeze.cal_commit}} and re-written only after the non-calibration fixes V2-SIM-17/18 at {{RESULT:freeze.fix_commit}}.
+Stress worlds: {{RESULT:v21.stress_worlds}}. Band ends: {{RESULT:honest.band_ends}}. The lock (`outputs/freeze/calibration_lock.json`, {{RESULT:freeze.cal_lock_files}} hashed files, enforced by `tests/test_calibration_lock.py`) was written at {{RESULT:freeze.cal_commit}} and re-written only after the non-calibration fixes V2-SIM-17/18 at {{RESULT:freeze.fix_commit}}.
 
 ## 3. Freeze and holdout chain
 
@@ -102,7 +104,7 @@ Palm vs simulation for rotable floats (P1, central, selection seeds; `outputs/po
 
 Optimiser proxy vs simulation: {{RESULT:frontier.model_vs_sim}}.
 
-Greedy optimality: {{RESULT:optim.greedy_gap_small_case_pct}}.
+Greedy check: {{RESULT:optim.greedy_gap_small_case_pct}}.
 
 AOG reconstruction: {{RESULT:aog.reconcile}}. Counterfactual: {{RESULT:aog.counterfactual}}.
 
@@ -111,8 +113,11 @@ AOG reconstruction: {{RESULT:aog.reconcile}}. Counterfactual: {{RESULT:aog.count
 - The world, the methods and the evaluation were designed by the same author; the reliability model has a structural home advantage.
 - Every policy depends on the AOG recovery routes: {{RESULT:honest.routes_off}}.
 - The P0 calibration lever was quote accuracy, and the legacy line-station rule is a deliberate weakness of P0.
-- Confidence intervals reflect seed-to-seed noise in one simulated world, not parameter uncertainty.
+- Confidence intervals reflect seed-to-seed noise in one simulated world, not parameter uncertainty. {{RESULT:v21.ranges}}
+- {{RESULT:v21.aog_clock}}
 - Full list: [LIMITATIONS.md](../LIMITATIONS.md).
+
+{{RESULT:v21.donor}}
 
 ---
 

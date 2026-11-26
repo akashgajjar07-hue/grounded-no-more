@@ -1,6 +1,6 @@
 # Validation report
 
-What was checked, how, and what came out. Rendered by `scripts/render_docs.py` from `reports/junit.xml`, `outputs/`, `docs/data/` and `git log`; template `docs/templates/VALIDATION_REPORT.md.tmpl`. Everything here concerns a **simulated** airline (Falcon Hub Airways, fictional). Headline results are the v2 holdout (seeds 2000–2019, central world). The subsection "v2 reviews" at the end is written by hand and is preserved when the report is re-rendered.
+What was checked, how, and what came out. Rendered by `scripts/render_docs.py` from `reports/junit.xml`, `outputs/`, `docs/data/` and `git log`; template `docs/templates/VALIDATION_REPORT.md.tmpl`. Everything here concerns a **simulated** airline (Falcon Hub Airways, fictional). Headline results are the v2 holdout (seeds 2000–2019, central world), across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part. Plan names: **Simple Rulebook (naive reference)** `P0`, **Each Airport for Itself (simplified local comparator)** `P1`, **Network Plan** `P2`, **Network Plan + Extra Spares** `I125`. The subsection "v2 reviews" at the end is written by hand and is preserved when the report is re-rendered.
 
 ---
 
@@ -23,9 +23,11 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 
 Failing in this run: `test_site_waveA::test_navigation_groups_and_shortcuts`.
 
-Doc rendering is checked by `tests/test_docs_rendered.py`: no result placeholder survives, the README results table and headline match `docs/data/kpis.json`, the P2 headline and the baseline sentence (8 vs 44 outstation rotables) are present, and the README never claims a result "at every tested setting".
+Doc rendering is verified by `tests/test_docs_rendered.py`: no result placeholder survives, the README results table and headline match `docs/data/kpis.json`, the outstation sentence (8 vs 44 outstation rotables) is present, the scope line sits beside the headline numbers, the capital table shows the gross lines, the README opening makes no percentage or paired-difference claim, the calibration wording is present here and in METHODOLOGY, the rendered docs contain no forbidden wording or manufacturer names, and the README never claims a result "at every tested setting".
 
 ## 2. Calibration (P0 only, locked before any P1/P2/optimiser run)
+
+> The target range for the starting-point policy was an exploratory assumption chosen after diagnosing the model, not benchmarked against real airline KPIs. A line-kit variant (≈1,052 h) was measured but not adopted because it fell outside that range. All results are conditional on this choice.
 
 Band (ASSUMED, chosen by the user after the P0 gap diagnosis and before any policy result): P0 network rotable immediate fill 0.78–0.85, material AOG 1,200–2,700 h/yr, AOG events 60–100/yr.
 
@@ -56,7 +58,7 @@ Applied (V1, fewest changes): `quoted_mtbur_optimism` 1.10, `quoted_mtbur_noise_
 | low stress (×1.08) | AOG 1,200, fill 0.85 | 0.846 / 0.836 | 1,123 / 1,226 | 66 / 63 | no |
 | high stress (×0.96) | AOG 2,700, fill 0.78 | 0.780 / 0.781 | 1,632 / 1,558 | 84 / 76 | yes |
 
-Band ends: the low-stress world reaches the AOG end of the band (pooled history and selection 1,174 h/yr; band end 1,200) at 0.841 rotable fill, and the high-stress world reaches the fill end (0.781; band end 0.78) at about 1,595 h/yr, well short of the 2,700 h end, because fill binds first. The lock (`outputs/freeze/calibration_lock.json`, 12 hashed files, enforced by `tests/test_calibration_lock.py`) was written at `f44493c` and re-written only after the non-calibration fixes V2-SIM-17/18 at `40c25d5`.
+Stress worlds: reliability scaled ×0.96 / ×1.00 / ×1.08 — a narrow range. Band ends: the low-stress world reaches the AOG end of the band (pooled history and selection 1,174 h/yr; band end 1,200) at 0.841 rotable fill, and the high-stress world reaches the fill end (0.781; band end 0.78) at about 1,595 h/yr, well short of the 2,700 h end, because fill binds first. The lock (`outputs/freeze/calibration_lock.json`, 12 hashed files, enforced by `tests/test_calibration_lock.py`) was written at `f44493c` and re-written only after the non-calibration fixes V2-SIM-17/18 at `40c25d5`.
 
 ## 3. Freeze and holdout chain
 
@@ -110,7 +112,7 @@ Added after the main v2 holdout at the user's request: the frozen central-built 
 
 v1 is archived, not a finding. Tag `v1-archive` (06a6280); see [archive/v1/README.md](../archive/v1/README.md). The archive gives these 11 reasons, all from the aviation domain review (`reports/review_aviation.md`):
 
-- Parts were shared across the A320- and 787-family archetypes (AV-01).
+- Parts were shared across the narrowbody- and widebody archetypes (AV-01).
 - Cheap consumables were rated D0 and drove 29% of AOG (AV-02).
 - An always-available 5-day outright rotable buy grew the float (AV-03).
 - A straw-man P0 stocked to the pipeline mean (AV-04).
@@ -122,7 +124,7 @@ v1 is archived, not a finding. Tag `v1-archive` (06a6280); see [archive/v1/READM
 - A wear-driven brake was used as the hero part (AV-11).
 - No local borrow at outstations (AV-15).
 
-Most of them overstated P0's downtime and the size of the improvement. For transparency only, the v1 holdout (seeds 1000–1019) read:
+Most of them overstated P0's downtime and the size of the improvement. For transparency only, the v1 holdout (seeds retired v1 holdout (archived)) read:
 
 | Policy (v1, archived) | Material AOG h/yr [95% CI] | Spare capital |
 |---|---|---|
@@ -212,7 +214,7 @@ at AUH mean Palm fill 0.951 vs simulated immediate fill 0.901 over 40 rotables (
 
 Optimiser proxy vs simulation: the analytic model predicts 2,507 h a year for P0 against 1,690 h simulated on the holdout, 130 h against 210 h for P2 and 39 h against 76 h for I125. It overstates P0 and understates the network plans, so it is a ranking heuristic, not a forecast of AOG hours; it ranks well (r = 0.97 across the 25 frontier points on the holdout, r = 0.97 on selection seeds).
 
-Greedy optimality: on a small separable, convex toy case the greedy allocation equals the brute-force optimum at every greedy breakpoint (unit test `tests/test_optim_greedy.py::test_greedy_equals_brute_force_at_breakpoints`, passing); no exact comparison exists for the full, non-separable network problem.
+Greedy check: on a small separable, convex toy case the greedy allocation equals the brute-force optimum at every greedy breakpoint (unit test `tests/test_optim_greedy.py::test_greedy_equals_brute_force_at_breakpoints`, passing); no exact comparison exists for the full, non-separable network problem.
 
 AOG reconstruction: 2,564 of 2,564 history material AOG hours reconstructed request by request across 148 incidents (reconciles). Counterfactual: history took the rank-1 option in 117 of 148 requests; excluding the 12 robbery cases (never ranked), the actual route gave 2,353 h against 2,367 h for the ranked option, so the legacy AOG desk already takes about the best per-incident route and the lever is positioning.
 
@@ -221,8 +223,11 @@ AOG reconstruction: 2,564 of 2,564 history material AOG hours reconstructed requ
 - The world, the methods and the evaluation were designed by the same author; the reliability model has a structural home advantage.
 - Every policy depends on the AOG recovery routes: with the routes switched off (selection seeds, a structural stress) material AOG rises from 1,727 h to 42,070 h a year under P0, from 235 h to 18,320 h under P2 and from 92 h to 11,080 h under I125.
 - The P0 calibration lever was quote accuracy, and the legacy line-station rule is a deliberate weakness of P0.
-- Confidence intervals reflect seed-to-seed noise in one simulated world, not parameter uncertainty.
+- Confidence intervals reflect seed-to-seed noise in one simulated world, not parameter uncertainty. Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, suppliers or contracts.
+- The downtime clock starts when the part is removed (for no-go items; for deferrable items, when the rectification window runs out), not at the next scheduled departure, and overnight and other non-flying hours count in full. Fitting and release-to-service time is included. A departure-based count would be lower for every plan.
 - Full list: [LIMITATIONS.md](../LIMITATIONS.md).
+
+**Donor downtime.** Hours that donor aircraft (aircraft that gave up a part to another) spend waiting for a replacement are not reconstructible from current logs for the frozen test runs, so no per-plan figure is given. What the logs do allow (post-plan, exploratory): parts borrowed from another of our aircraft per year in the test runs, Simple Rulebook (naive reference) `P0` 33.2 [28.5–37.9]; Each Airport for Itself (simplified local comparator) `P1` 31.2 [27.1–35.4]; Network Plan `P2` 22.4 [18.4–26.6]; for the Network Plan + Extra Spares `I125` this is not reconstructible either. For scale only, in the historical record of the Simple Rulebook (naive reference) `P0` (history weeks 0–103, one simulated history, not the test runs), donor aircraft were held about 5,285 h a year, beside 1,282 h a year of counted waiting-for-part downtime in that same history. Gross donor hours are an upper bound: a donor may already be in maintenance or not scheduled to fly.
 
 ---
 

@@ -983,7 +983,237 @@ def compute() -> dict[str, str]:  # noqa: C901, PLR0915 - one flat list of keys 
     V["tests.summary"] = (f"{tot_n - tot_bad - tot_skip}/{tot_n} passing, {tot_bad} failing, {tot_skip} skipped (fast, "
                           f"slow and browser suites, `GNM_RELEASE=1`; `reports/junit.xml`, run at "
                           f"{suite['timestamp'][:16].replace('T', ' ')})")
+    V.update(v21_keys(V, kpis=kpis, pol=pol, fo=fo, var=var, sp=sp, pm=pm, cal=cal))
     return V
+
+
+# ----------------------------------------------------------------------------- v2.1 release wording
+# Verbatim texts from docs/agent_notes/v21_brief.md. Numbers inside them are computed, never typed.
+SCOPE_LINE = "across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part"
+NAMES = {"P0": "Simple Rulebook (naive reference)", "P1": "Each Airport for Itself (simplified local comparator)",
+         "P2": "Network Plan", "I125": "Network Plan + Extra Spares", "P2_GUARD": "Network Plan held to guardrails"}
+# Locked config strings -> release labels (V21-0: frozen artefacts keep their strings, every surface relabels).
+RELABEL = [("A320- and 787-family archetypes", "narrowbody and widebody archetypes"),
+           ("A320-family and 787-family archetypes", "narrowbody and widebody archetypes"),
+           ("A320-family archetype", "narrowbody archetype"), ("787-family archetype", "widebody archetype"),
+           ("A320-family", "narrowbody"), ("787-family", "widebody")]
+RELABELLED_DOCS = {"README.md", "METHODOLOGY.md", "MODEL_CARD.md", "LIMITATIONS.md", "VALIDATION_REPORT.md"}
+POSTPLAN = ROOT / "outputs" / "postplan"
+
+
+def relabel(text: str) -> str:
+    for a, b in RELABEL:
+        text = text.replace(a, b)
+    return text
+
+
+def display_name(pid: str) -> str:
+    """'**Network Plan** `P2`' (frontier ids: 'Frontier point B150 `B150`')."""
+    return f"**{NAMES.get(pid, f'Frontier point {pid}')}** `{pid}`"
+
+
+def _first_json(*names: str):
+    for n in names:
+        p = POSTPLAN / n
+        if p.exists():
+            return jload(p)
+    return None
+
+
+def _donor_recount(kpis: dict) -> dict | None:
+    """Post-plan donor recount exported by the DATA agent, if any (docs/agent_notes/v21_data.md)."""
+    for src in (kpis.get("headline", {}).get("donor_recount"), kpis.get("donor_recount"),
+                _first_json("donor_recount.json")):
+        if src:
+            return src
+    return None
+
+
+def v21_keys(V: dict[str, str], *, kpis, pol, fo, var, sp, pm, cal) -> dict[str, str]:  # noqa: PLR0915
+    import yaml
+    cfg = yaml.safe_load((ROOT / "config" / "assumptions.yaml").read_text())
+    W: dict[str, str] = {}
+    W["v21.scope"] = SCOPE_LINE
+    W["v21.scope_line"] = f"*{SCOPE_LINE}*"
+    for pid in ("P0", "P1", "P2", "I125", "P2_GUARD"):
+        W[f"v21.name.{pid}"] = display_name(pid)
+        W[f"v21.plain.{pid}"] = NAMES[pid]
+    W["v21.reading_note"] = (
+        "How to read these numbers: simulated downtime of the aircraft waiting for the part, across 120 modelled part "
+        "numbers. Downtime of aircraft that donated a part (cannibalisation) is shown separately, not included. The "
+        "Simple Rulebook is a deliberately simplified starting point, not a model of a competent airline. Part costs, "
+        "reliability and sourcing are assumed. These are not forecasts of achievable airline savings.")
+    if V["scope.pn_count"] != "120":
+        raise SystemExit("the scope line says 120 modelled part numbers; the part master disagrees")
+
+    # ---- A4 capital table (never the net alone)
+    core = kpis["headline"]["core"]
+    rmx = core["remix"]
+    cap_net = pol["paired"]["P2-P0"]["spare_capital_aed"]["mean"]
+    ct = kpis.get("capital_table")
+    if ct:  # DATA agent export (docs/agent_notes/v21_data.md) must agree with the policy tables
+        assert (ct["bought_units"], ct["bought_aed"], ct["removed_units"], ct["removed_aed"]) == (
+            rmx["buy_units"], rmx["buy_aed"], rmx["shed_units"], rmx["shed_aed"]), "capital_table vs remix"
+        assert abs(ct["net_inventory_change_aed"] - cap_net) < 1, "capital_table net vs paired P2-P0 capital"
+    buy_u, buy_a, shed_u, shed_a = rmx["buy_units"], rmx["buy_aed"], rmx["shed_units"], rmx["shed_aed"]
+    W["v21.capital.bought"] = f"+{fmt_int(buy_u)} units ≈ {fmt_m(buy_a)} assumed value"
+    W["v21.capital.removed"] = f"{MINUS}{fmt_int(shed_u)} units ≈ {fmt_m(shed_a)}"
+    W["v21.capital.net"] = fmt_m(cap_net, signed=True)
+    W["v21.capital.note"] = ("Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a "
+                             "discount.")
+    if ct:
+        txt = {r["id"]: r["text"] for r in ct["rows"]}
+        assert (txt["bought"], txt["removed"], txt["net_inventory"]) == (
+            W["v21.capital.bought"], W["v21.capital.removed"], W["v21.capital.net"]), "capital_table text"
+        assert ct["note"] == W["v21.capital.note"]
+    W["v21.capital_table"] = "\n".join([
+        f"| Capital change, {NAMES['P0']} `P0` → {NAMES['P2']} `P2` | Amount |", "|---|---|",
+        f"| New rotables bought | {W['v21.capital.bought']} |",
+        f"| Rotables removed | {W['v21.capital.removed']} |",
+        f"| Net change in average simulated spare inventory | {W['v21.capital.net']} |",
+        "", f"*{W['v21.capital.note']}* Units and values: target units × assumed unit cost from the policy tables; the "
+            "net is the paired holdout change in time-averaged simulated spare inventory, so it differs slightly from "
+            "bought minus removed."])
+
+    # ---- A5 calibration (verbatim; the line-kit hours come from the variants file)
+    v3 = next(v for k, v in var.items() if k.startswith("V3"))
+    if v3["all_inside"]:
+        raise SystemExit("A5 says the line-kit variant fell outside the band; the variants file disagrees")
+    W["v21.calibration"] = (
+        "The target range for the starting-point policy was an exploratory assumption chosen after diagnosing the model, "
+        f"not benchmarked against real airline KPIs. A line-kit variant (≈{fmt_int(v3['history']['aog_hours_per_year'])} h) "
+        "was measured but not adopted because it fell outside that range. All results are conditional on this choice.")
+
+    # ---- A6 stress worlds
+    sv = cal["settings_used"]["generator.variants"]
+    scales = sorted([sv["low_stress"]["true_mtbur_scale"], 1.0, sv["high_stress"]["true_mtbur_scale"]])
+    W["v21.stress_worlds"] = "reliability scaled " + " / ".join(f"×{s:.2f}" for s in scales) + " — a narrow range"
+    W["v21.ranges"] = ("Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, "
+                       "suppliers or contracts.")
+
+    # ---- A8 frontier insight (the 25% comes from the stored repair-TAT factor)
+    tat_key = next(k for k in fo if k.startswith("repair_tat_x"))
+    factor = float(tat_key.removeprefix("repair_tat_x").replace("_", "."))
+    if fo[tat_key]["net_benefit_significant"]:
+        raise SystemExit("A8 says faster repair removes the clear cost advantage; the export disagrees")
+    W["v21.insight"] = (f"Faster repair can beat buying spares: with {(1 - factor) * 100:.0f}% shorter repair time, the "
+                        "extra-investment option loses its clear cost advantage.")
+    W["v21.levers"] = "faster repair · pool access · better reliability · more spares"
+
+    # ---- A7 hero part
+    for key, path in (("v21.stress_worlds", ("stress_worlds", "text")), ("v21.ranges", ("stress_worlds", "ranges_note")),
+                      ("v21.insight", ("frontier_insight", "text")), ("v21.levers", ("frontier_insight", "levers_text")),
+                      ("v21.reading_note", ("reading_note",)), ("v21.scope", ("scope_line",))):
+        node = kpis
+        for k_ in path:
+            node = node.get(k_) if isinstance(node, dict) else None
+        if node is not None and node != W[key]:
+            raise SystemExit(f"{key} differs from the site export kpis.json {'/'.join(path)}")
+    ps1_mult = cfg["generator"]["planted"]["PS1"]["quoted_multiple"]
+    W["v21.hero_part"] = (f"Removing {ps1_mult:g}× faster than quoted → escalate to reliability engineering and "
+                          "warranty review "
+                          "first. Extra spares are interim cover, compared against faster repair or pool access.")
+
+    # ---- A11 the AOG clock
+    W["v21.aog_clock"] = (
+        "The downtime clock starts when the part is removed (for no-go items; for deferrable items, when the "
+        "rectification window runs out), not at the next scheduled departure, and overnight and other non-flying hours "
+        "count in full. Fitting and release-to-service time is included. A departure-based count would be lower for "
+        "every plan.")
+
+    # ---- donor recount: post-plan if exported, otherwise the historical scale only (never mixed with holdout)
+    dr = _donor_recount(kpis)
+    hp = (dr or {}).get("historical_p0")
+    if hp:  # the export must agree with the history recomputed here
+        assert fmt_int(hp["gross_donor_hours_per_year"]) == V["limits.donor_h_per_yr"]
+        assert fmt_int(hp["counted_material_aog_hours_per_year"]) == V["limits.p0_history_aog_per_yr"]
+    hist = (f"For scale only, in the historical record of the {NAMES['P0']} `P0` (history weeks 0–103, one simulated "
+            f"history, not the test runs), donor aircraft were held about {V['limits.donor_h_per_yr']} h a year, beside "
+            f"{V['limits.p0_history_aog_per_yr']} h a year of counted waiting-for-part downtime in that same history. "
+            f"Gross donor hours are an upper bound: a donor may already be in maintenance or not scheduled to fly.")
+    ho = (dr or {}).get("holdout", {})
+    dh = ho.get("donor_hours")
+    if isinstance(dh, dict) and dh:  # per-plan donor hours exported (post-plan, exploratory)
+        rows = ["| Plan | Donor aircraft hours / yr [likely range] (post-plan, exploratory) |", "|---|---|"]
+        for pid in ("P0", "P1", "P2", "I125"):
+            r = dh.get(pid, {})
+            rows.append(f"| {NAMES[pid]} `{pid}` | "
+                        + (f"{fmt_h(r['mean'])} {ci_int(*r['ci'])}" if "mean" in r else str(r.get("status", "—"))) + " |")
+        W["v21.donor_body"] = ("Hours that donor aircraft (aircraft that gave up a part to another) spent waiting for a "
+                               "replacement, recounted from the frozen test-run logs and kept separate from the "
+                               "headline:\n\n" + "\n".join(rows) + "\n\n" + hist)
+        W["v21.donor"] = "**Donor downtime, recounted (post-plan, exploratory).** " + W["v21.donor_body"]
+    else:
+        rob = ho.get("robberies_per_year", {})
+        rtxt = [f"{NAMES[pid]} `{pid}` {fmt_num(rob[pid]['mean'], 1)} {ci_num(*rob[pid]['ci'], 1)}"
+                for pid in ("P0", "P1", "P2") if "mean" in rob.get(pid, {})]
+        rob_s = (f" What the logs do allow (post-plan, exploratory): parts borrowed from another of our aircraft per "
+                 f"year in the test runs, {'; '.join(rtxt)}; for the {NAMES['I125']} `I125` this is not "
+                 f"reconstructible either." if rtxt else "")
+        W["v21.donor_body"] = ("Hours that donor aircraft (aircraft that gave up a part to another) spend waiting for a "
+                               "replacement are not reconstructible from current logs for the frozen test runs, so no "
+                               "per-plan figure is given." + rob_s + " " + hist)
+        W["v21.donor"] = "**Donor downtime.** " + W["v21.donor_body"]
+
+    # ---- A9 outstation brakes and wheels in the frozen plans
+    cands = {c["id"]: c["policy"]["stock_params"] for c in jload(OUT / "frontier" / "candidates.json")["candidates"]}
+    brakes = set(pm[pm.removal_mode == "wear_planned"].index)
+    wheels = set(pm[pm.description.str.contains("wheel and tyre", case=False)].index)
+
+    def out_units(pid, pns):
+        return sum(int(r[4]) for r in cands[pid] if r[0] in pns and r[1] != HUB and r[4] > 0)
+
+    def out_lines(pid, pns):
+        return [f"{r[0]} at {r[1]}" for r in cands[pid] if r[0] in pns and r[1] != HUB and r[4] > 0]
+    for pid in ("P0", "P2", "I125"):
+        W[f"v21.out_brakes.{pid}"] = fmt_int(out_units(pid, brakes))
+        W[f"v21.out_wheels.{pid}"] = fmt_int(out_units(pid, wheels))
+    assert W["v21.out_brakes.P0"] == V["limits.p0_out_brakes"]
+    W["v21.brakes_invalid"] = (
+        f"Outstation brake allocations in the frozen plans are flagged as an **invalid recommendation — brakes are not "
+        f"changed outside the hub in this model**: {W['v21.out_brakes.P2']} in the {NAMES['P2']} `P2` "
+        f"({', '.join(out_lines('P2', brakes))}), {W['v21.out_brakes.I125']} in the {NAMES['I125']} `I125` and "
+        f"{W['v21.out_brakes.P0']} in the {NAMES['P0']} `P0`. They stay in the frozen results so the numbers are "
+        f"unchanged, but no planner should act on them.")
+    W["v21.wheels_note"] = (
+        f"Wheel-and-tyre assemblies are modelled as rare, unscheduled no-go removals (AV2-04), so the "
+        f"frozen plans hold {W['v21.out_wheels.P0']} wheel assemblies at outstations under the {NAMES['P0']} `P0` "
+        f"(none on the nose wheel or the widebody), {W['v21.out_wheels.P2']} under the {NAMES['P2']} `P2` and "
+        f"{W['v21.out_wheels.I125']} under the {NAMES['I125']} `I125`. A real operator holds wheels at every station "
+        f"and changes most of them on planned tread wear, so these counts follow from the modelling assumption and are "
+        f"not a wheel-sizing recommendation. Most of the gap between the {NAMES['P0']} and the {NAMES['P2']} at "
+        f"outstations comes from no-go actuators and wheels.")
+
+    # ---- headline sentence with display names and the scope line (no percentage claim)
+    red = core["aog_reduction"]
+    hk = {x["policy_id"]: x["kpi"] for x in pol["policies"]}
+    if not (hk["P0"]["aog_hours"]["mean"] > hk["P1"]["aog_hours"]["mean"] > hk["P2"]["aog_hours"]["mean"]
+            > hk["I125"]["aog_hours"]["mean"] and hk["I125"]["spare_capital_aed"]["mean"] > hk["P2"]["spare_capital_aed"]["mean"]):
+        raise SystemExit("the README headline states the plan ordering P0 > P1 > P2 > I125; the data disagrees")
+    W["v21.headline"] = (
+        f"Hours aircraft spent waiting for a part, per year, in the simulation: about {V['policies.P0.aog_hours']} under "
+        f"the {NAMES['P0']} `P0` and {V['policies.P2.aog_hours']} under the {NAMES['P2']} `P2`. The {NAMES['P1']} `P1` "
+        f"sits between them at {V['policies.P1.aog_hours']}, and the {NAMES['I125']} `I125` goes lower, to "
+        f"{V['policies.I125.aog_hours']}, for extra capital.")
+    W["v21.headline_paired"] = (
+        f"**{NAMES['P2']} `P2` vs {NAMES['P0']} `P0`: {fmt_h(-red['mean'], signed=True)} a year "
+        f"{ci_int(-red['ci'][1], -red['ci'][0])}** of material AOG (paired over the {V['seeds.n']} holdout seeds "
+        f"{V['seeds.holdout']}, 95% t-interval), from {V['policies.P0.aog_hours']} to {V['policies.P2.aog_hours']}. "
+        f"The {NAMES['P2']} holds {core['outstation_rotables']['P2']} rotables at the six outstations instead of "
+        f"{core['outstation_rotables']['P0']}, pools the rest at the hub. The lead over the {NAMES['P0']} holds in all three stress worlds "
+        f"and across the ×0.5–×2 range of the hourly AOG cost.")
+    n_ac = cfg["fleet"]["narrowbody"]["count"] + cfg["fleet"]["widebody"]["count"]
+    W["v21.stat_strip"] = (f"{n_ac} aircraft · {V['scope.pn_count']} part numbers · "
+                           f"{len(cfg['network']['stations'])} stations · {V['seeds.n']} fresh test runs")
+    if V["seeds.n"] != "20":
+        raise SystemExit("the wording says 20 fresh test runs; the holdout seed count differs")
+    W["v21.kpi_table"] = "\n".join([
+        f"| Plan | Downtime waiting for parts, h / yr [likely range] | Average spare inventory |", "|---|---|---|",
+        *(f"| {NAMES[p]} `{p}` | {V[f'policies.{p}.aog_hours']} {V[f'policies.{p}.aog_hours_ci']} | "
+          f"{V[f'policies.{p}.spare_capital_aed']} |" for p in ("P0", "P1", "P2", "I125")),
+        "", f"*{SCOPE_LINE}*"])
+    W["v21.fill_abs"] = f"{abs(pol['paired']['P2-P0']['immediate_fill_rate']['mean']) * 100:.2f}"
+    return W
 
 
 # ----------------------------------------------------------------------------- validation report
@@ -1185,12 +1415,13 @@ def render_all(only: list[str] | None = None) -> dict[Path, str]:
             continue
         tmpl = (TEMPLATES / f"{name}.tmpl").read_text()
         values = study_keys(V) if name == "STUDY_GUIDE.md" else V
-        out[ROOT / name] = render_text(tmpl, values, name)
+        txt = render_text(tmpl, values, name)
+        out[ROOT / name] = relabel(txt) if name in RELABELLED_DOCS else txt
     if want("reports/VALIDATION_REPORT.md") or want(VALIDATION[0]):
         W = validation_values(V)
         tmpl = (TEMPLATES / f"{VALIDATION[0]}.tmpl").read_text()
         existing = VALIDATION[1].read_text() if VALIDATION[1].exists() else None
-        out[VALIDATION[1]] = keep_v2_reviews(render_text(tmpl, W, VALIDATION[0]), existing)
+        out[VALIDATION[1]] = keep_v2_reviews(relabel(render_text(tmpl, W, VALIDATION[0])), existing)
     return out
 
 

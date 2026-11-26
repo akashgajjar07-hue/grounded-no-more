@@ -18,6 +18,15 @@ DOCS = ["README.md", "METHODOLOGY.md", "MODEL_CARD.md", "LIMITATIONS.md", "STUDY
 KPIS = ROOT / "docs" / "data" / "kpis.json"
 MINUS = "−"
 BANNED = ["at every tested setting", "aircraft risk score", "aircraft ready", "approved to fly", "live data"]
+# v2.1 release rules (docs/agent_notes/v21_brief.md)
+SCOPE = "across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part"
+NAMES = {"P0": "Simple Rulebook (naive reference)", "P1": "Each Airport for Itself (simplified local comparator)",
+         "P2": "Network Plan", "I125": "Network Plan + Extra Spares"}
+RELEASE_DOCS = ["README.md", "METHODOLOGY.md", "MODEL_CARD.md", "LIMITATIONS.md", "reports/VALIDATION_REPORT.md",
+                "data/data_dictionary.md", "docs/assumption_register.md"]
+FORBIDDEN = [r"\bvalidated\b", r"\boptimal\b", r"representative legacy airline practice", r"panel-proof",
+             r"robust across worlds", r"saves the airline AED", r"\bA320", r"\bAirbus\b", r"\bBoeing\b",
+             r"(?<![\d,.])787(?![\d,.])", r"\bEtihad\b"]
 
 
 def _read(name: str) -> str:
@@ -94,16 +103,19 @@ LABEL = {"immediate_fill_rate": "Immediate fill rate", "aog_hours": "Material AO
          "total_annual_cost_aed": "Total annual cost"}
 
 
+def _col(cols: list[str], code: str) -> int:
+    return next(i for i, c in enumerate(cols) if c.endswith(f"`{code}`"))
+
+
 @pytest.mark.parametrize("kpi_id", HEADLINE)
 def test_readme_results_table_matches_kpis(kpi_id):
     """README results table: P0, P2 and I125 cells equal the Mission Control KPIs (holdout)."""
     k = {x["id"]: x for x in _kpis()["kpis"]}[kpi_id]
     readme = _read("README.md")
-    head = next(ln for ln in readme.splitlines() if ln.startswith("| KPI | P0"))
+    head = next(ln for ln in readme.splitlines() if ln.startswith("| KPI |"))
     cols = [c.strip() for c in head.strip("|").split("|")]
-    i0 = next(i for i, c in enumerate(cols) if c.startswith("P0"))
-    i2 = next(i for i, c in enumerate(cols) if c.startswith("P2"))
-    i125 = next(i for i, c in enumerate(cols) if c.startswith("I125"))
+    assert cols[_col(cols, "P0")] == f"{NAMES['P0']} `P0`"
+    i0, i2, i125 = _col(cols, "P0"), _col(cols, "P2"), _col(cols, "I125")
     row = next(ln for ln in readme.splitlines() if ln.startswith(f"| {LABEL[kpi_id]} |"))
     cells = [c.strip() for c in row.strip("|").split("|")]
     assert cells[i0] == _cell(kpi_id, k["baseline"], *k["baseline_ci"]), (kpi_id, "P0", cells[i0])
@@ -120,23 +132,19 @@ def test_readme_p2_headline_matches_kpis():
     readme = _read("README.md")
     red = core["aog_reduction"]
     lo, hi = red["ci"]
-    cap = core["capital_aed"]["mean"]
-    expect = (f"Network positioning (P2) cuts material AOG by {_h(red['mean'])} a year "
-              f"{_rng(f'{round(lo):,.0f}', f'{round(hi):,.0f}')}")
+    expect = (f"{NAMES['P2']} `P2` vs {NAMES['P0']} `P0`: {_h(-red['mean'])} a year "
+              f"[{_neg(f'{-round(hi):,.0f}')} to {_neg(f'{-round(lo):,.0f}')}]")
     assert expect in readme
-    assert f"for about {'+' if cap > 0 else MINUS}AED {abs(cap) / 1e6:.1f}M of spares capital" in readme
-    assert "holds in all three calibrated worlds" in readme and core["holds_all_worlds"]
+    assert "holds in all three stress worlds" in readme and core["holds_all_worlds"]
     assert "×0.5–×2" in readme and core["holds_penalty_range"]
-    # the P2 headline comes before the frontier option
-    assert readme.index("Network positioning (P2) cuts") < readme.index("Frontier option: if you invest an additional")
+    # the core finding comes before the frontier option
+    assert readme.index(expect) < readme.index("Frontier option: if you invest an additional")
 
 
 def test_readme_baseline_sentence_8_vs_44():
-    kp = _kpis()
-    n = kp["headline"]["core"]["outstation_rotables"]
+    n = _kpis()["headline"]["core"]["outstation_rotables"]
     readme = _read("README.md")
-    assert f"vs a legacy OEM-quote policy holding only {n['P0']} outstation rotables" in readme
-    assert f"P2 holds {n['P2']} rotables at the six outstations instead of {n['P0']}" in readme
+    assert f"holds {n['P2']} rotables at the six outstations instead of {n['P0']}" in readme
 
 
 def test_readme_frontier_option_matches_kpis():
@@ -177,3 +185,96 @@ def test_validation_report_keeps_review_sections():
     assert "## Phase 5 reviewer findings and fixes" in text
     assert "### v1-era reviews (archived world)" in text
     assert "### v2 reviews" in text
+
+
+# ----------------------------------------------------------------------------- v2.1 release wording
+def _opening() -> str:
+    readme = _read("README.md")
+    assert "## For specialists" in readme
+    return readme.split("## For specialists", 1)[0]
+
+
+@pytest.mark.parametrize("name", RELEASE_DOCS)
+def test_no_forbidden_words_or_manufacturer_names(name):
+    text = _read(name)
+    for pat in FORBIDDEN:
+        m = re.search(pat, text, re.I)
+        assert not m, (name, pat, text[max(0, m.start() - 60):m.end() + 60])
+
+
+def test_display_names_used():
+    for name in ("README.md", "METHODOLOGY.md", "MODEL_CARD.md", "LIMITATIONS.md"):
+        text = _read(name)
+        for code, label in NAMES.items():
+            assert f"{label}** `{code}`" in text or f"{label} `{code}`" in text, (name, code)
+
+
+def test_scope_line_beside_headline_kpis():
+    readme = _read("README.md")
+    lines = readme.splitlines()
+    # README opening KPI table and the specialist results table are each followed by the scope line
+    for header in ("| Plan | Downtime waiting for parts", "| KPI |"):
+        i = next(n for n, ln in enumerate(lines) if ln.startswith(header))
+        assert any(SCOPE in ln for ln in lines[i:i + 20]), header
+    # the specialist paired headline
+    i = next(n for n, ln in enumerate(lines) if f"{NAMES['P2']} `P2` vs {NAMES['P0']} `P0`:" in ln)
+    assert any(SCOPE in ln for ln in lines[i:i + 4])
+    assert SCOPE in _read("MODEL_CARD.md")
+
+
+def test_capital_table_has_gross_lines():
+    rmx = _kpis()["headline"]["core"]["remix"]
+    readme = _read("README.md")
+    bought = f"| New rotables bought | +{rmx['buy_units']} units ≈ AED {rmx['buy_aed'] / 1e6:.1f}M assumed value |"
+    removed = f"| Rotables removed | {MINUS}{rmx['shed_units']} units ≈ AED {rmx['shed_aed'] / 1e6:.1f}M |"
+    net = "| Net change in average simulated spare inventory | "
+    note = "Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a discount."
+    for text in (readme, _opening()):
+        assert bought in text and removed in text and net in text and note in text
+    assert readme.count(bought) == readme.count(net)
+
+
+def test_readme_opening_has_no_headline_reduction_claim():
+    core = _kpis()["headline"]["core"]
+    red = core["aog_reduction"]["mean"]
+    p0 = core["aog_reduction"]["mean"] + {k["id"]: k for k in _kpis()["kpis"]}["aog_hours"]["value"]
+    opening = _opening()
+    assert f"{round(red):,.0f}" not in opening
+    assert f"{red / p0 * 100:.0f}%" not in opening
+    assert "88%" not in opening and "1,480" not in opening
+    assert not re.search(r"\d+% (lower|less|fewer|reduction|cut)", opening)
+
+
+def test_readme_opening_plain_sections():
+    opening = _opening()
+    for h in ("## What this is", "## Why it matters", "## What I found", "## How to read it", "## Limits"):
+        assert h in opening, h
+    assert "How to read these numbers: simulated downtime of the aircraft waiting for the part" in opening
+    assert "Likely ranges reflect simulation randomness only" in opening
+    assert "Faster repair can beat buying spares" in opening
+    assert "Relevant to Abu Dhabi hub carriers" in _read("README.md")
+
+
+def _a5() -> str:
+    var = json.loads((ROOT / "outputs" / "calibration" / "v2_p0_variants.json").read_text())
+    v3 = next(v for k, v in var.items() if k.startswith("V3"))
+    return ("The target range for the starting-point policy was an exploratory assumption chosen after diagnosing the "
+            f"model, not benchmarked against real airline KPIs. A line-kit variant (≈{round(v3['history']['aog_hours_per_year']):,.0f} h) "
+            "was measured but not adopted because it fell outside that range. All results are conditional on this choice.")
+
+
+@pytest.mark.parametrize("name", ["METHODOLOGY.md", "reports/VALIDATION_REPORT.md"])
+def test_calibration_wording_present(name):
+    assert _a5() in _read(name)
+
+
+def test_limitations_review_table_and_next_experiments():
+    text = _read("LIMITATIONS.md")
+    for n in range(1, 26):
+        row = next((ln for ln in text.splitlines() if ln.startswith(f"| AV2-{n:02d} |")), None)
+        assert row, n
+        assert re.search(r"\| (Fixed|Disclosed|Next experiment)", row), row
+    assert "## Next experiments" in text
+    for item in ("P0-R", "Incremental donor unavailability", "Combined disruption scenarios", "MRO-side model"):
+        assert item in text, item
+    assert "invalid recommendation — brakes are not changed outside the hub in this model" in text

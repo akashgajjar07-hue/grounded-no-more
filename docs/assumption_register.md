@@ -8,7 +8,7 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 |---|---|
 | REAL | 28 |
 | DERIVED | 0 |
-| ASSUMED | 217 |
+| ASSUMED | 318 |
 | SIMULATED | 4 |
 
 ## meta
@@ -32,7 +32,7 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 | `calendar.train_weeks` | [0, 77] | ASSUMED |
 | `calendar.selection_weeks` | [78, 103] | ASSUMED |
 | `calendar.evaluation_weeks` | [104, 155] | ASSUMED |
-| `calendar.warmup_weeks` | 8 | ASSUMED |
+| `calendar.warmup_weeks` | 26 | ASSUMED |
 | `calendar.rolling_origin_step_weeks` | 4 | ASSUMED |
 | `calendar.forecast_horizon_weeks` | 4 | ASSUMED |
 
@@ -43,7 +43,7 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 | `seeds.world_seed` | 2023 | ASSUMED |
 | `seeds.history_seed` | 7 | ASSUMED |
 | `seeds.selection_seeds` | [100, 119] | ASSUMED |
-| `seeds.holdout_seeds` | [1000, 1019] | ASSUMED |
+| `seeds.holdout_seeds` | [2000, 2019] | ASSUMED |
 
 ## fleet
 
@@ -57,19 +57,19 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 
 | Key | Value | Provenance |
 |---|---|---|
-| `fleet.narrowbody.archetype` | A320-family archetype (generic single-aisle) | ASSUMED |
+| `fleet.narrowbody.archetype` | narrowbody archetype (generic single-aisle) | ASSUMED |
 | `fleet.narrowbody.count` | 24 | ASSUMED |
 | `fleet.narrowbody.tail_prefix` | A6-FH | ASSUMED |
 | `fleet.narrowbody.fh_per_day.mean` | 10.5 | ASSUMED |
 | `fleet.narrowbody.fh_per_day.sd` | 1.0 | ASSUMED |
 | `fleet.narrowbody.fc_per_day.mean` | 4.2 | ASSUMED |
 | `fleet.narrowbody.fc_per_day.sd` | 0.5 | ASSUMED |
-| `fleet.widebody.archetype` | 787-family archetype (generic twin-aisle) | ASSUMED |
+| `fleet.widebody.archetype` | widebody archetype (generic twin-aisle) | ASSUMED |
 | `fleet.widebody.count` | 16 | ASSUMED |
 | `fleet.widebody.tail_prefix` | A6-FW | ASSUMED |
 | `fleet.widebody.fh_per_day.mean` | 14.0 | ASSUMED |
 | `fleet.widebody.fh_per_day.sd` | 1.2 | ASSUMED |
-| `fleet.widebody.fc_per_day.mean` | 1.6 | ASSUMED |
+| `fleet.widebody.fc_per_day.mean` | 2.4 | ASSUMED |
 | `fleet.widebody.fc_per_day.sd` | 0.3 | ASSUMED |
 | `fleet.seasonality.weekly` | [1.0, 0.96, 0.97, 1.02, 1.05, 1.03, 0.97] | ASSUMED |
 | `fleet.seasonality.monthly` | [1.02, 0.95, 0.97, 1.0, 0.98, 1.06, 1.12, 1.12, 0.97, 0.98, 0.99, 1.08] | ASSUMED |
@@ -94,12 +94,12 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 | `network.stations.LHR.lon` | -0.4619 | REAL |
 | `network.stations.LHR.role` | outstation | REAL |
 | `network.stations.FRA.name` | Frankfurt am Main | REAL |
-| `network.stations.FRA.lat` | 50.0333 | REAL |
-| `network.stations.FRA.lon` | 8.5706 | REAL |
+| `network.stations.FRA.lat` | 50.0267 | REAL |
+| `network.stations.FRA.lon` | 8.5584 | REAL |
 | `network.stations.FRA.role` | outstation | REAL |
 | `network.stations.CAI.name` | Cairo International | REAL |
-| `network.stations.CAI.lat` | 30.1219 | REAL |
-| `network.stations.CAI.lon` | 31.4056 | REAL |
+| `network.stations.CAI.lat` | 30.1115 | REAL |
+| `network.stations.CAI.lon` | 31.3967 | REAL |
 | `network.stations.CAI.role` | outstation | REAL |
 | `network.stations.JED.name` | King Abdulaziz International, Jeddah | REAL |
 | `network.stations.JED.lat` | 21.6796 | REAL |
@@ -110,8 +110,8 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 | `network.stations.BOM.lon` | 72.8679 | REAL |
 | `network.stations.BOM.role` | outstation | REAL |
 | `network.stations.SIN.name` | Singapore Changi | REAL |
-| `network.stations.SIN.lat` | 1.3644 | REAL |
-| `network.stations.SIN.lon` | 103.9915 | REAL |
+| `network.stations.SIN.lat` | 1.3502 | REAL |
+| `network.stations.SIN.lon` | 103.994 | REAL |
 | `network.stations.SIN.role` | outstation | REAL |
 | `network.route_mix.narrowbody.CAI` | 0.3 | ASSUMED |
 | `network.route_mix.narrowbody.JED` | 0.35 | ASSUMED |
@@ -163,6 +163,8 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 | `parts.counts.expendable` | 35 | ASSUMED |
 | `parts.counts.rotable` | 40 | ASSUMED |
 | `parts.pn_format` | GN-<ATA>-<C\|E\|R><nnn> | ASSUMED |
+| `parts.catalogue` | config/part_catalogue.csv | ASSUMED |
+| `parts.ata_chapters.20` | Standard practices – airframe | ASSUMED |
 | `parts.ata_chapters.21` | Air conditioning & pressurisation | ASSUMED |
 | `parts.ata_chapters.24` | Electrical power | ASSUMED |
 | `parts.ata_chapters.27` | Flight controls | ASSUMED |
@@ -176,19 +178,6 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 | `parts.ata_chapters.33` | Lights | ASSUMED |
 | `parts.ata_chapters.35` | Oxygen | ASSUMED |
 | `parts.ata_chapters.38` | Water & waste | ASSUMED |
-| `parts.ata_weights.21` | 0.11 | ASSUMED |
-| `parts.ata_weights.24` | 0.1 | ASSUMED |
-| `parts.ata_weights.27` | 0.1 | ASSUMED |
-| `parts.ata_weights.29` | 0.1 | ASSUMED |
-| `parts.ata_weights.32` | 0.13 | ASSUMED |
-| `parts.ata_weights.34` | 0.11 | ASSUMED |
-| `parts.ata_weights.36` | 0.09 | ASSUMED |
-| `parts.ata_weights.49` | 0.08 | ASSUMED |
-| `parts.ata_weights.28` | 0.04 | ASSUMED |
-| `parts.ata_weights.30` | 0.04 | ASSUMED |
-| `parts.ata_weights.33` | 0.04 | ASSUMED |
-| `parts.ata_weights.35` | 0.03 | ASSUMED |
-| `parts.ata_weights.38` | 0.03 | ASSUMED |
 | `parts.unit_cost_aed.consumable` | [20, 500] | ASSUMED |
 | `parts.unit_cost_aed.expendable` | [500, 15000] | ASSUMED |
 | `parts.unit_cost_aed.rotable` | [15000, 500000] | ASSUMED |
@@ -200,42 +189,31 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 | `parts.repair_tat_cv` | [0.2, 0.5] | ASSUMED |
 | `parts.repair_cost_pct_of_unit` | [0.08, 0.25] | ASSUMED |
 | `parts.condemnation_prob` | [0.01, 0.08] | ASSUMED |
-| `parts.qty_per_aircraft.consumable` | [1, 1] | ASSUMED |
-| `parts.qty_per_aircraft.expendable` | [1, 6] | ASSUMED |
-| `parts.qty_per_aircraft.rotable` | [1, 4] | ASSUMED |
-| `parts.mtbur_fh` | [3000, 40000] | ASSUMED |
-| `parts.mtbur_fc` | [2000, 25000] | ASSUMED |
-| `parts.fc_driven_share` | 0.35 | ASSUMED |
-| `parts.quoted_mtbur_noise_sd_log` | 0.35 | ASSUMED |
-| `parts.quoted_mtbur_optimism` | 1.25 | ASSUMED |
+| `parts.mtbur_fh` | [4000, 40000] | ASSUMED |
+| `parts.mtbur_fc` | [2500, 25000] | ASSUMED |
+| `parts.quoted_mtbur_noise_sd_log` | 0.2 | ASSUMED |
+| `parts.quoted_mtbur_optimism` | 1.1 | ASSUMED |
 | `parts.overdispersion.share_of_parts` | 0.3 | ASSUMED |
 | `parts.overdispersion.k_range` | [0.6, 3.0] | ASSUMED |
 | `parts.consumable_usage_per_1000_fc` | [0.5, 40] | ASSUMED |
 | `parts.scheduled_kit_share_consumable` | 0.5 | ASSUMED |
 | `parts.shelf_life.share_of_consumables` | 0.25 | ASSUMED |
 | `parts.shelf_life.months` | [12, 36] | ASSUMED |
-| `parts.deadline_class_mix.rotable.D0` | 0.45 | ASSUMED |
-| `parts.deadline_class_mix.rotable.D3` | 0.35 | ASSUMED |
-| `parts.deadline_class_mix.rotable.D10` | 0.2 | ASSUMED |
-| `parts.deadline_class_mix.expendable.D0` | 0.25 | ASSUMED |
-| `parts.deadline_class_mix.expendable.D3` | 0.4 | ASSUMED |
-| `parts.deadline_class_mix.expendable.D10` | 0.35 | ASSUMED |
-| `parts.deadline_class_mix.consumable.D0` | 0.05 | ASSUMED |
-| `parts.deadline_class_mix.consumable.D3` | 0.35 | ASSUMED |
-| `parts.deadline_class_mix.consumable.D10` | 0.6 | ASSUMED |
 
 ## deadline_classes
 
 | Key | Value | Provenance |
 |---|---|---|
 | `deadline_classes.D0.hours` | 0 | ASSUMED |
-| `deadline_classes.D0.label` | Needed before next departure | ASSUMED |
+| `deadline_classes.D0.label` | Rectification window (hypothetical): none – needed before next departure | ASSUMED |
 | `deadline_classes.D0.note` | Aircraft grounded until fitted | ASSUMED |
 | `deadline_classes.D3.hours` | 72 | ASSUMED |
-| `deadline_classes.D3.label` | Deferral window ~72 h | ASSUMED |
+| `deadline_classes.D3.label` | Rectification window (hypothetical): 72 h | ASSUMED |
 | `deadline_classes.D10.hours` | 240 | ASSUMED |
-| `deadline_classes.D10.label` | Deferral window ~10 days | ASSUMED |
-| `deadline_classes.disclaimer` | Hypothetical deadline classes for simulation. Real MEL/CDL relief is operator-, type- and configuration-specific; these are NOT MEL categories. | ASSUMED |
+| `deadline_classes.D10.label` | Rectification window (hypothetical): 240 h | ASSUMED |
+| `deadline_classes.NONE.hours` | null | ASSUMED |
+| `deadline_classes.NONE.label` | No rectification window (servicing fluid; line usage only, never an AOG driver) | ASSUMED |
+| `deadline_classes.disclaimer` | D3/D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions. They are applied generically per PN (elapsed hours, not calendar days excluding the day of discovery) and do not represent an approved MEL; the real go/no-go depends on the MEL item and the redundancy remaining. | ASSUMED |
 
 ## maintenance
 
@@ -277,6 +255,10 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 | `economics.aog_penalty_aed_per_hour.narrowbody` | 15000 | ASSUMED |
 | `economics.aog_penalty_aed_per_hour.widebody` | 30000 | ASSUMED |
 | `economics.aog_penalty_sensitivity` | [0.5, 1.0, 2.0] | ASSUMED |
+| `economics.aog_event_cost_aed.narrowbody` | 40000 | ASSUMED |
+| `economics.aog_event_cost_aed.widebody` | 100000 | ASSUMED |
+| `economics.aog_hour_definition` | Material AOG hour = clock hours from need (or end of the rectification window) to release to service, including fitting/RTS time, counted only when the part was not available in time. | ASSUMED |
+| `economics.fitting_labour_aed_per_hour` | 400 | ASSUMED |
 
 ## service_targets
 
@@ -288,13 +270,21 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 
 ## policy_baseline_P0
 
-> Static min/max and rule-of-thumb float are common starting points before data-driven planning.
+> Even an unsophisticated airline sizes rotables with a Poisson protection level on OEM/vendor quoted reliability (Spec 2000-style initial provisioning at 90-95%) and keeps generous min/max on C-class. P0 is therefore competent-but-static: it trusts quoted MTBUR/TAT, ignores variability beyond Poisson and never re-plans from history.
 
 | Key | Value | Provenance |
 |---|---|---|
-| `policy_baseline_P0.consumable_min_weeks_of_avg_demand` | 6 | ASSUMED |
+| `policy_baseline_P0.rotable_protection_level.D0` | 0.95 | ASSUMED |
+| `policy_baseline_P0.rotable_protection_level.D3` | 0.9 | ASSUMED |
+| `policy_baseline_P0.rotable_protection_level.D10` | 0.9 | ASSUMED |
+| `policy_baseline_P0.rotable_float_rule` | total spares S = smallest S with P(Poisson(quoted annual removals x quoted pipeline days / 365) <= S - 1) >= protection level (95% D0, 90% D3/D10), i.e. the protection level is the probability that a demand finds a spare on the shelf (V2-SIM-10); quoted pipeline = quoted shop TAT + quoted vendor transit both ways + quoted core return weighted by the share rectified at an outstation (D0 50%, D3/D10 per the hub-deferral practice, wear-planned 0) (V2-SIM-11). Held at AUH (serviceable target = S minus the repair-loop units the run starts with), plus 1 outstation unit (line-station kit) for a D0 PN where the quoted station rate >= 4/yr. | ASSUMED |
+| `policy_baseline_P0.rotable_outstation_min_quoted_removals_per_year` | 4 | ASSUMED |
+| `policy_baseline_P0.consumable_min_weeks_of_avg_demand.C` | 26 | ASSUMED |
+| `policy_baseline_P0.consumable_min_weeks_of_avg_demand.E` | 13 | ASSUMED |
 | `policy_baseline_P0.consumable_max_multiple_of_min` | 2.0 | ASSUMED |
-| `policy_baseline_P0.rotable_float_rule` | ceil(5% of installed fleet quantity), all held at AUH; outstations hold 1 unit only for PNs flagged D0 and fleet qty >= 40 | ASSUMED |
+| `policy_baseline_P0.cs_rule` | C/E: generous static min/max from quoted rates: min = 26 weeks (C) / 13 weeks (E) of average quoted demand, max = 2 x min, at every station that sees quoted demand (AUH sized on network demand); no deadline-class differentiation | ASSUMED |
+| `policy_baseline_P0.naive_rule` | P0-naive (illustration only, not a policy in the comparison): v1 rule, rotable float = ceil(quoted annual removals x quoted shop TAT / 365), C/E min = 6 weeks | ASSUMED |
+| `policy_baseline_P0.naive_consumable_min_weeks_of_avg_demand` | 6 | ASSUMED |
 
 ## pool_exchange_P3
 
@@ -320,22 +310,80 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 | `generator.ground_time_jitter` | 0.2 | ASSUMED |
 | `generator.a_check_downtime_h` | 12 | ASSUMED |
 | `generator.kit_line_qty` | [1, 4] | ASSUMED |
-| `generator.applicability_mix.both` | 0.5 | ASSUMED |
-| `generator.applicability_mix.narrowbody` | 0.3 | ASSUMED |
-| `generator.applicability_mix.widebody` | 0.2 | ASSUMED |
-| `generator.fc_driven_atas` | ["32", "49"] | ASSUMED |
-| `generator.quoted_tat_noise_sd_log` | 0.15 | ASSUMED |
-| `generator.quoted_tat_optimism` | 0.9 | ASSUMED |
+| `generator.families.avionics_lru.cost_aed` | [80000, 450000] | ASSUMED |
+| `generator.families.avionics_lru.nff_share` | 0.35 | ASSUMED |
+| `generator.families.flight_computer.cost_aed` | [150000, 500000] | ASSUMED |
+| `generator.families.flight_computer.nff_share` | 0.4 | ASSUMED |
+| `generator.families.servo_actuator.cost_aed` | [60000, 300000] | ASSUMED |
+| `generator.families.servo_actuator.nff_share` | 0.1 | ASSUMED |
+| `generator.families.servo_actuator.mtbur_fh` | [15000, 60000] | ASSUMED |
+| `generator.families.valve.cost_aed` | [25000, 150000] | ASSUMED |
+| `generator.families.valve.nff_share` | 0.15 | ASSUMED |
+| `generator.families.pump.cost_aed` | [50000, 300000] | ASSUMED |
+| `generator.families.pump.nff_share` | 0.1 | ASSUMED |
+| `generator.families.rotating_machine.cost_aed` | [120000, 450000] | ASSUMED |
+| `generator.families.rotating_machine.nff_share` | 0.1 | ASSUMED |
+| `generator.families.power_generation.cost_aed` | [200000, 500000] | ASSUMED |
+| `generator.families.power_generation.nff_share` | 0.15 | ASSUMED |
+| `generator.families.power_conversion.cost_aed` | [40000, 150000] | ASSUMED |
+| `generator.families.power_conversion.nff_share` | 0.25 | ASSUMED |
+| `generator.families.brake_nb.cost_aed` | [80000, 180000] | ASSUMED |
+| `generator.families.brake_nb.nff_share` | 0.0 | ASSUMED |
+| `generator.families.brake_nb.mtbur_fc` | [1800, 3000] | ASSUMED |
+| `generator.families.brake_wb.cost_aed` | [150000, 350000] | ASSUMED |
+| `generator.families.brake_wb.nff_share` | 0.0 | ASSUMED |
+| `generator.families.brake_wb.mtbur_fc` | [1800, 3000] | ASSUMED |
+| `generator.families.wheel_tyre.cost_aed` | [15000, 45000] | ASSUMED |
+| `generator.families.wheel_tyre.nff_share` | 0.0 | ASSUMED |
+| `generator.families.wheel_tyre.mtbur_fc` | [3000, 8000] | ASSUMED |
+| `generator.families.wheel_tyre.repair_shop` | AUH_INHOUSE | ASSUMED |
+| `generator.families.wheel_tyre.repair_tat_days` | [2, 7] | ASSUMED |
+| `generator.families.wheel_tyre.repair_tat_cv` | [0.2, 0.4] | ASSUMED |
+| `generator.families.wheel_tyre.repair_cost_pct_of_unit` | [0.15, 0.35] | ASSUMED |
+| `generator.families.wheel_tyre.condemnation_prob` | [0.01, 0.03] | ASSUMED |
+| `generator.families.probe.cost_aed` | [8000, 35000] | ASSUMED |
+| `generator.families.probe.nff_share` | 0.25 | ASSUMED |
+| `generator.families.sensor.cost_aed` | [800, 9000] | ASSUMED |
+| `generator.families.valve_small.cost_aed` | [1500, 8000] | ASSUMED |
+| `generator.families.relay_contactor.cost_aed` | [1500, 12000] | ASSUMED |
+| `generator.families.relay_contactor.mtbur_fh` | [40000, 150000] | ASSUMED |
+| `generator.families.fuel_probe.cost_aed` | [3000, 12000] | ASSUMED |
+| `generator.families.fuel_probe.mtbur_fh` | [60000, 200000] | ASSUMED |
+| `generator.families.electric_motor.cost_aed` | [3000, 15000] | ASSUMED |
+| `generator.families.windshield.cost_aed` | [60000, 150000] | ASSUMED |
+| `generator.families.windshield.mtbur_fh` | [30000, 80000] | ASSUMED |
+| `generator.families.probe_small.cost_aed` | [8000, 25000] | ASSUMED |
+| `generator.families.ignition.cost_aed` | [2000, 12000] | ASSUMED |
+| `generator.families.oxygen_mask.cost_aed` | [800, 3000] | ASSUMED |
+| `generator.families.oxygen_mask.mtbur_fh` | [400000, 1200000] | ASSUMED |
+| `generator.families.crew_mask.cost_aed` | [5000, 15000] | ASSUMED |
+| `generator.families.battery_pack.cost_aed` | [2000, 6000] | ASSUMED |
+| `generator.families.light.cost_aed` | [1000, 10000] | ASSUMED |
+| `generator.families.hardware.cost_aed` | [20, 300] | ASSUMED |
+| `generator.families.seal_kit.cost_aed` | [30, 500] | ASSUMED |
+| `generator.families.filter.cost_aed` | [60, 900] | ASSUMED |
+| `generator.families.lamp.cost_aed` | [15, 150] | ASSUMED |
+| `generator.families.fluid.cost_aed` | [40, 300] | ASSUMED |
+| `generator.families.fuse.cost_aed` | [15, 80] | ASSUMED |
+| `generator.families.wiper_blade.cost_aed` | [80, 400] | ASSUMED |
+| `generator.nff_shop_days` | [2, 5] | ASSUMED |
+| `generator.nff_cost_pct_of_repair` | 0.15 | ASSUMED |
+| `generator.wear_planned_notice_days` | [5, 10] | ASSUMED |
+| `generator.quoted_tat_noise_sd_log` | 0.1 | ASSUMED |
+| `generator.quoted_tat_optimism` | 0.95 | ASSUMED |
 | `generator.quoted_condemn_noise_sd_log` | 0.3 | ASSUMED |
 | `generator.quoted_usage_noise_sd_log` | 0.3 | ASSUMED |
 | `generator.lead_time_true_noise_sd_log` | 0.1 | ASSUMED |
-| `generator.deadline_class_alt_prob` | 0.1 | ASSUMED |
-| `generator.planted.PS1.mtbur_fh` | 3000 | ASSUMED |
+| `generator.deadline_class_alt_prob` | 0.05 | ASSUMED |
+| `generator.deferred_to_hub_share` | 0.92 | ASSUMED |
+| `generator.variants.central.true_mtbur_scale` | 1.0 | ASSUMED |
+| `generator.variants.low_stress.true_mtbur_scale` | 1.08 | ASSUMED |
+| `generator.variants.high_stress.true_mtbur_scale` | 0.96 | ASSUMED |
+| `generator.planted.PS1.mtbur_fc` | 1300 | ASSUMED |
 | `generator.planted.PS1.quoted_multiple` | 2.5 | ASSUMED |
-| `generator.planted.PS1.deadline_class` | D0 | ASSUMED |
 | `generator.planted.PS2.tat_days` | 88 | ASSUMED |
-| `generator.planted.PS2.quoted_tat_days` | 45 | ASSUMED |
-| `generator.planted.PS2.repair_days_multiplier` | 2.5 | ASSUMED |
+| `generator.planted.PS2.quoted_tat_days` | 60 | ASSUMED |
+| `generator.planted.PS2.stuck_repair_days` | 200 | ASSUMED |
 | `generator.planted.PS2.weeks` | [84, 92] | ASSUMED |
 | `generator.planted.PS2.seed` | history | ASSUMED |
 | `generator.planted.PS3.trend_per_year` | 0.45 | ASSUMED |
@@ -345,15 +393,82 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 
 ## engine
 
-> Shop capacity slots are interpreted as bench/test-stand positions: a unit holds a slot only for its touch/test time (share of work time); awaiting-parts and paperwork time runs outside the slot. Without this, 14 slots could not process ~1,500 rotable removals a year at 15–90 day TATs.
+> Shop capacity slots are interpreted as bench/test-stand positions: a unit holds a slot only for its touch/test time (share of work time); awaiting-parts and paperwork time runs outside the slot. Without this, 14 slots could not process ~1,000 rotable removals a year at 15–90 day TATs. 0.05 was chosen in v1 for ~0.8 hub bench utilisation; queueing is light by construction (capacity slots are bench positions).
 
 | Key | Value | Provenance |
 |---|---|---|
-| `engine.shop_bench_time_share` | 0.06 | ASSUMED |
+| `engine.shop_bench_time_share` | 0.05 | ASSUMED |
 | `engine.condemn_inspection_days` | 3 | ASSUMED |
 | `engine.expedite_lead_time_factor` | 0.5 | ASSUMED |
+| `engine.expedite_max_days.C` | 2 | ASSUMED |
+| `engine.expedite_max_days.E` | 3 | ASSUMED |
+| `engine.expedite_max_days.R` | 5 | ASSUMED |
 | `engine.routine_transport_min_days` | 1.0 | ASSUMED |
-| `engine.earmark_routine_if_slack_sd` | 2.0 | ASSUMED |
+| `engine.deferred_margin_h` | 24 | ASSUMED |
+| `engine.fitting_hours.R` | [2, 6] | ASSUMED |
+| `engine.fitting_hours.E` | 1 | ASSUMED |
+| `engine.fitting_hours.C` | 1 | ASSUMED |
+
+## calibration_targets
+
+> Legacy OEM-quote provisioning (Poisson 95%/90% on quoted data) with no line-station units for low-volume D0 parts; the legacy line-station rule (>= 4 quoted removals/yr) is kept - P2 is the remedy. Chosen by the user after the v2 P0 gap diagnosis and before any v2 P1/P2/optimiser result.
+
+| Key | Value | Provenance |
+|---|---|---|
+| `calibration_targets.status` | CALIBRATED (v2) with P0 only; V1 chosen by the user's fewest-changes rule (quote accuracy: quoted_mtbur_optimism 1.10, quoted_mtbur_noise_sd_log 0.20, quoted_tat_optimism 0.95, quoted_tat_noise_sd_log 0.10); AOG-market settings and the line-station kit NOT applied; locked in outputs/freeze/calibration_lock.json | ASSUMED |
+| `calibration_targets.rotable_immediate_fill_rate` | [0.78, 0.85] | ASSUMED |
+| `calibration_targets.aog_hours_per_year` | [1200, 2700] | ASSUMED |
+| `calibration_targets.aog_events_per_year` | [60, 100] | ASSUMED |
+| `calibration_targets.sensitivity_variants.low_stress.aog_hours_per_year` | 1200 | ASSUMED |
+| `calibration_targets.sensitivity_variants.low_stress.rotable_immediate_fill_rate` | 0.85 | ASSUMED |
+| `calibration_targets.sensitivity_variants.high_stress.aog_hours_per_year` | 2700 | ASSUMED |
+| `calibration_targets.sensitivity_variants.high_stress.rotable_immediate_fill_rate` | 0.78 | ASSUMED |
+| `calibration_targets.p0_rule` | unchanged: legacy OEM-quote provisioning; line-station unit only for D0 PNs with >= 4 quoted removals/yr at that station | ASSUMED |
+| `calibration_targets.v1_band.immediate_fill_rate` | [0.93, 0.97] | ASSUMED |
+| `calibration_targets.v1_band.rotable_immediate_fill_rate` | [0.8, 0.88] | ASSUMED |
+| `calibration_targets.v1_band.aog_hours_per_year` | [1500, 3500] | ASSUMED |
+| `calibration_targets.v1_band.aog_events_per_year` | [60, 250] | ASSUMED |
+
+## aog_sourcing
+
+> AOG desks recover rotables by exchange or loan (not outright purchase), faster and more available for narrowbody LRUs than for widebody LRUs where the surplus market is thin; outstations borrow from local MROs/other operators where they exist; hubs rob check/parked aircraft with engineering approval; consumables/expendables are bought or borrowed locally within hours. None of these units join the owned pool.
+
+| Key | Value | Provenance |
+|---|---|---|
+| `aog_sourcing.exchange_loan.availability.narrowbody` | 0.85 | ASSUMED |
+| `aog_sourcing.exchange_loan.availability.widebody` | 0.5 | ASSUMED |
+| `aog_sourcing.exchange_loan.response_hours.narrowbody` | [24, 48] | ASSUMED |
+| `aog_sourcing.exchange_loan.response_hours.widebody` | [48, 120] | ASSUMED |
+| `aog_sourcing.exchange_loan.fee_pct_of_list.narrowbody` | 0.2 | ASSUMED |
+| `aog_sourcing.exchange_loan.fee_pct_of_list.widebody` | 0.3 | ASSUMED |
+| `aog_sourcing.exchange_loan.loan_fee_pct_of_list_per_day` | 0.003 | ASSUMED |
+| `aog_sourcing.local_borrow.availability.narrowbody.LHR` | 0.6 | ASSUMED |
+| `aog_sourcing.local_borrow.availability.narrowbody.FRA` | 0.6 | ASSUMED |
+| `aog_sourcing.local_borrow.availability.narrowbody.SIN` | 0.55 | ASSUMED |
+| `aog_sourcing.local_borrow.availability.narrowbody.BOM` | 0.35 | ASSUMED |
+| `aog_sourcing.local_borrow.availability.narrowbody.CAI` | 0.3 | ASSUMED |
+| `aog_sourcing.local_borrow.availability.narrowbody.JED` | 0.3 | ASSUMED |
+| `aog_sourcing.local_borrow.availability.widebody.LHR` | 0.35 | ASSUMED |
+| `aog_sourcing.local_borrow.availability.widebody.FRA` | 0.35 | ASSUMED |
+| `aog_sourcing.local_borrow.availability.widebody.SIN` | 0.3 | ASSUMED |
+| `aog_sourcing.local_borrow.availability.widebody.BOM` | 0.15 | ASSUMED |
+| `aog_sourcing.local_borrow.availability.widebody.CAI` | 0.1 | ASSUMED |
+| `aog_sourcing.local_borrow.availability.widebody.JED` | 0.1 | ASSUMED |
+| `aog_sourcing.local_borrow.response_hours` | [4, 8] | ASSUMED |
+| `aog_sourcing.local_borrow.fee_aed_fixed` | 2500 | ASSUMED |
+| `aog_sourcing.local_borrow.loan_fee_pct_of_list_per_day` | 0.004 | ASSUMED |
+| `aog_sourcing.robbery.enabled` | true | ASSUMED |
+| `aog_sourcing.robbery.availability` | 0.6 | ASSUMED |
+| `aog_sourcing.robbery.response_hours` | [6, 8] | ASSUMED |
+| `aog_sourcing.robbery.labour_multiplier` | 2.0 | ASSUMED |
+| `aog_sourcing.robbery.flag` | engineering/quality approval required | ASSUMED |
+| `aog_sourcing.robbery.assumption` | the donor is not scheduled to fly before it is reinstated from the next serviceable unit at AUH | ASSUMED |
+| `aog_sourcing.local_buy.availability` | 0.95 | ASSUMED |
+| `aog_sourcing.local_buy.response_hours` | [4, 12] | ASSUMED |
+| `aog_sourcing.local_buy.premium_pct` | 0.5 | ASSUMED |
+| `aog_sourcing.retry_hours.C` | 24 | ASSUMED |
+| `aog_sourcing.retry_hours.E` | 24 | ASSUMED |
+| `aog_sourcing.retry_hours.R` | 72 | ASSUMED |
 
 ## planted_situations
 
@@ -361,7 +476,7 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 
 | Key | Value | Provenance |
 |---|---|---|
-| `planted_situations.PS1` | Understocked D0 rotable at BOM (widebody + narrowbody exposure, baseline float held only at AUH) | SIMULATED |
+| `planted_situations.PS1` | Understocked unscheduled D0 LRU at BOM (type-specific; legacy provisioning holds no line-station unit there because the optimistic quoted rate at BOM is < 4/yr) | SIMULATED |
 | `planted_situations.PS2` | Long-TAT rotable with an overdue repair order at the EU vendor | SIMULATED |
 | `planted_situations.PS3` | Declining-demand consumable creating excess stock | SIMULATED |
 | `planted_situations.PS4` | Lead-time jump on one expendable (supplier change) during history week ~70 | SIMULATED |
