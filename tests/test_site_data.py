@@ -73,7 +73,12 @@ def test_shapes_follow_contract():
 def test_story_selectors_and_numbers():
     s = json.load(open(SITE / "story.json"))
     assert 6 <= len(s["steps"]) <= 8
-    assert [st["selector"] for st in s["steps"]] == [f'[data-story="{i}"]' for i in STORY_IDS]
+    # each selector starts at the screen's data-story hook (story_id), optionally narrowed to a child element
+    assert [st["story_id"] for st in s["steps"]] == s["selector_ids"]
+    assert len(s["selector_ids"]) == len(STORY_IDS)
+    for st in s["steps"]:
+        assert st["selector"].startswith(f'[data-story="{st["story_id"]}"]') or st["selector"].startswith("[data-incident="), st
+        assert len(st["body"]) <= 300, (st["story_id"], len(st["body"]))
     for st in s["steps"]:
         assert st["route"].startswith("#/") and st["body"] and "nan" not in st["body"].lower()
 

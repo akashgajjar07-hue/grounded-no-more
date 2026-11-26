@@ -7,7 +7,7 @@
  * Story hooks: method-provenance, method-assumptions, method-validation.
  */
 import { h, pageHead, card, provChip, pill, icon, dataTable, sectionTitle, segmented, DISCLAIMER } from '../ui.js';
-import { chartFrame, responsive, svgIn, theme, truncate, fmtPct, fmtInt, fmtNum } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, theme, truncate, refLine, fmtPct, fmtInt, fmtNum } from '../charts/theme.js';
 import { assetURL } from '../data.js';
 
 export const data = ['method', 'kpis'];
@@ -63,12 +63,12 @@ export async function render(el, ctx) {
     { id: 'gen', tag: 'SIMULATED', title: 'World generator', text: 'Fictional fleet, part master, removals, demand and repair TATs' },
     { id: 'eng', tag: 'SIMULATED', title: 'Simulation engine', text: 'Stock, transfers, repairs, AOG desk; seeded scenarios' },
     { id: 'mod', tag: 'DERIVED', title: 'Models', text: 'Forecasting, inventory policy, capital frontier, AOG lab' },
-    { id: 'exp', tag: 'DERIVED', title: 'Exports → this site', text: 'docs/data/*.json, loaded read-only by the browser' },
+    { id: 'exp', tag: 'DERIVED', title: 'Site exports', text: 'docs/data/*.json, loaded read-only by this site' },
   ];
   const asm = { id: 'asm', tag: 'ASSUMED', title: 'Assumptions', text: `${fmtInt(asmN.ASSUMED)} tagged ASSUMED in the register (config/*.yaml)` };
   const ff = chartFrame(flowCard, {
-    headline: `${fmtInt(srcN.REAL)} of ${fmtInt(sources.length)} sources are REAL public data; the fleet, demand and repairs are SIMULATED and every result is DERIVED from them`,
-    subtitle: 'Provenance flow · sources → generator → engine → models → exports · holdout seeds run only after the freeze',
+    headline: `${fmtInt(srcN.REAL)} of ${fmtInt(sources.length)} sources are real public data; every result is derived from simulation`,
+    subtitle: 'Sources → generator → engine → models → exports · the fleet, demand and repairs are SIMULATED · holdout seeds run only after the freeze',
     provenance: 'DERIVED', source: 'method.json (source_manifest, assumptions)',
     table: { columns: [{ key: 'title', label: 'Stage' }, { key: 'tag', label: 'Provenance' }, { key: 'text', label: 'What' }], rows: [stages[0], asm, ...stages.slice(1)] },
   });
@@ -80,7 +80,7 @@ export async function render(el, ctx) {
   el.append(card({
     prov: 'DERIVED', kicker: 'Where inputs come from', title: `${fmtInt(sources.length)} sources`,
     body: h('div', { class: 'dm-wrap' }, dataTable({
-      caption: 'Source manifest', bare: true, rows: sources,
+      caption: 'Source manifest', bare: true, rows: sources, mobileColumns: ['name', 'provenance', 'used_for', 'licence'],
       columns: [
         { key: 'name', label: 'Source', render: (r) => (r.url ? h('a', { href: r.url, target: '_blank', rel: 'noopener noreferrer' }, r.name) : r.name) },
         { key: 'licence', label: 'Licence' }, { key: 'used_for', label: 'Used for' },
@@ -95,19 +95,20 @@ export async function render(el, ctx) {
   const groups = [...new Set(assumptions.map((a) => a.group || String(a.key || '').split('.')[0]).filter(Boolean))];
   const showing = h('span', { class: 'dm-showing', 'aria-live': 'polite' });
   const table = dataTable({
-    caption: 'Assumption register', bare: true, maxHeight: 520, rows: assumptions,
+    caption: 'Assumption register', bare: true, maxHeight: 520, rows: assumptions, mobileColumns: ['key', 'value', 'provenance', 'rationale'],
     columns: [
       { key: 'key', label: 'Key', mono: true },
       { key: 'value', label: 'Value', mono: true, format: (v, r) => `${v == null ? '—' : String(v).replace(/^"(.*)"$/, '$1')}${r.unit ? ` ${r.unit}` : ''}` },
       { key: 'provenance', label: 'Tag', render: (r) => provChip(r.provenance) },
-      { key: 'rationale', label: 'Rationale' },
+      { key: 'rationale', label: 'Rationale', render: (r) => (r._same ? h('span', { class: 'dm-same', title: r.rationale }, '↑ same rationale as above') : (r.rationale ?? '—')) },
     ],
   });
   const apply = () => {
     const ql = q.trim().toLowerCase();
     const rows = assumptions.filter((a) => (pf === 'ALL' || up(a.provenance) === pf) && (gf === 'ALL' || (a.group || String(a.key || '').split('.')[0]) === gf) &&
       (!ql || [a.key, a.value, a.rationale, a.source, a.group].some((v) => String(v ?? '').toLowerCase().includes(ql))));
-    table.update(rows);
+    // consecutive rows with an identical rationale: print it once, then "same as above" (critic smaller issue)
+    table.update(rows.map((r, i) => ({ ...r, _same: i > 0 && !!r.rationale && r.rationale === rows[i - 1].rationale })));
     showing.textContent = `Showing ${fmtInt(rows.length)} of ${fmtInt(assumptions.length)}`;
   };
   const search = h('input', { class: 'dm-search', type: 'search', placeholder: 'Search key, value or rationale', 'aria-label': 'Search assumptions', oninput: (e) => { q = e.target.value; apply(); } });
@@ -165,7 +166,7 @@ export async function render(el, ctx) {
     A.github ? h('a', { class: 'btn btn--sm', href: A.github, target: '_blank', rel: 'noopener noreferrer' }, 'GitHub', icon('chevron-right')) : null,
     A.linkedin ? h('a', { class: 'btn btn--sm', href: A.linkedin, target: '_blank', rel: 'noopener noreferrer' }, 'LinkedIn', icon('chevron-right')) : h('span', { class: 'chip chip-mono', title: 'LinkedIn link to be added' }, 'LinkedIn: add link')))) });
   const licCard = card({ cls: 'dm-span-12', kicker: 'Third-party licences', title: `${fmtInt((M.licences || []).length)} vendored packages and fonts`, prov: 'REAL',
-    body: dataTable({ caption: 'Licences', bare: true, dense: true, rows: M.licences || [], columns: [{ key: 'name', label: 'Package' }, { key: 'version', label: 'Version', mono: true }, { key: 'licence', label: 'Licence' }] }) });
+    body: dataTable({ caption: 'Licences', bare: true, dense: true, rows: M.licences || [], mobileColumns: ['name', 'licence', 'version'], columns: [{ key: 'name', label: 'Package' }, { key: 'version', label: 'Version', mono: true }, { key: 'licence', label: 'Licence' }] }) });
   const discCard = card({ cls: 'dm-span-7', bp: true, kicker: 'Disclaimer', body: [h('p', { class: 'dm-disclaimer' }, M.disclaimer || DISCLAIMER), h('p', {}, 'Falcon Hub Airways, its tails and its part numbers are fictional; no real airline names, logos or liveries are used. Simulated rates are not measured reliability. Deadline classes D0/D3/D10 are hypothetical and are not MEL categories.')] });
   el.append(h('div', { class: 'dm-grid' }, authorCard, discCard, licCard));
 
@@ -174,15 +175,16 @@ export async function render(el, ctx) {
 
 // ------------------------------------------------------------------ provenance flow (original SVG via D3)
 function drawFlow(body, w, stages, asm) {
-  const color = (t) => theme.color.prov[t] || theme.color.muted;
+  // provenance is carried by glyph + word (as on the chips); strokes stay neutral so the diagram adds no accents
+  const color = () => theme.series.neutral;
   const wide = w >= 760;
   const boxes = [];
   const arrows = [];
   let H;
   if (wide) {
-    const gap = 44, bw = (w - gap * 4) / 5, bh = 112, y0 = 8;
+    const gap = 44, bw = (w - gap * 4) / 5, bh = 112, y0 = 24;
     stages.forEach((s, i) => boxes.push({ ...s, x: i * (bw + gap), y: y0, w: bw, h: bh }));
-    for (let i = 0; i < 4; i++) arrows.push({ d: `M${boxes[i].x + bw + 4},${y0 + bh / 2}H${boxes[i + 1].x - 6}`, gate: i === 3 ? 'FREEZE' : null, gx: boxes[i].x + bw + gap / 2, gy: y0 + bh / 2 - 10 });
+    for (let i = 0; i < 4; i++) arrows.push({ d: `M${boxes[i].x + bw + 4},${y0 + bh / 2}H${boxes[i + 1].x - 6}`, gate: i === 3 ? 'FREEZE' : null, gx: boxes[i].x + bw + gap / 2, gy: 12, gateLine: i === 3 ? [y0 + 2, y0 + bh - 2] : null });
     const ay = y0 + bh + 56, ax = boxes[1].x, aw = boxes[3].x + bw - ax;
     boxes.push({ ...asm, x: ax, y: ay, w: aw, h: 76 });
     [1, 2, 3].forEach((i) => arrows.push({ d: `M${boxes[i].x + bw / 2},${ay - 4}V${y0 + bh + 6}`, assumed: true }));
@@ -201,15 +203,16 @@ function drawFlow(body, w, stages, asm) {
   }
   const svg = svgIn(body, w, H, 'Provenance flow: public sources and the world generator feed the simulation engine; models derive results that are exported to this site; assumptions feed generator, engine and models');
   const defs = svg.append('defs');
-  [['dm-head', theme.color.faint], ['dm-head-a', theme.color.review]].forEach(([id, c]) => defs.append('marker').attr('id', id).attr('viewBox', '0 0 8 8').attr('refX', 7).attr('refY', 4).attr('markerWidth', 8).attr('markerHeight', 8).attr('orient', 'auto').append('path').attr('d', 'M0,0L8,4L0,8z').attr('fill', c));
+  [['dm-head', theme.color.faint], ['dm-head-a', theme.color.faint]].forEach(([id, c]) => defs.append('marker').attr('id', id).attr('viewBox', '0 0 8 8').attr('refX', 7).attr('refY', 4).attr('markerWidth', 8).attr('markerHeight', 8).attr('orient', 'auto').append('path').attr('d', 'M0,0L8,4L0,8z').attr('fill', c));
   arrows.forEach((a) => {
     svg.append('path').attr('class', `dm-arrow ${a.assumed ? 'dm-arrow--assumed' : ''}`).attr('d', a.d).attr('marker-end', a.noHead ? null : `url(#${a.assumed ? 'dm-head-a' : 'dm-head'})`);
+    if (a.gateLine) svg.append('line').attr('class', 'dm-gate-line').attr('x1', a.gx).attr('x2', a.gx).attr('y1', a.gateLine[0]).attr('y2', a.gateLine[1]);
     if (a.gate) svg.append('text').attr('class', 'dm-gate').attr('x', a.gx).attr('y', a.gy).attr('text-anchor', a.anchor || 'middle').text(a.gate);
   });
   boxes.forEach((b) => {
     const g = svg.append('g').attr('transform', `translate(${b.x},${b.y})`);
     g.append('rect').attr('class', 'dm-box').attr('width', b.w).attr('height', b.h).attr('rx', 10).attr('stroke', color(b.tag)).attr('stroke-opacity', 0.7).attr('stroke-dasharray', b.tag === 'ASSUMED' ? '5 4' : null);
-    g.append('text').attr('class', 'dm-box-tag').attr('x', 14).attr('y', 22).attr('fill', color(b.tag)).text(`${GLYPH[b.tag]} ${b.tag}`);
+    g.append('text').attr('class', 'dm-box-tag').attr('x', 14).attr('y', 22).attr('fill', theme.color.muted).text(`${GLYPH[b.tag]} ${b.tag}`);
     g.append('text').attr('class', 'dm-box-title').attr('x', 14).attr('y', 44).text(truncate(b.title, b.w - 28, 8.4));
     // wrap description into up to 3 lines
     const maxC = Math.max(10, Math.floor((b.w - 28) / 6.4));
@@ -221,89 +224,126 @@ function drawFlow(body, w, stages, asm) {
 }
 
 // ------------------------------------------------------------------ calibration: target band vs achieved
+/** Diagonal-hatch pattern for ASSUMED target bands (titanium outline + hatch, never a copper fill). */
+function hatch(svg, id) {
+  const p = svg.append('defs').append('pattern').attr('id', id).attr('patternUnits', 'userSpaceOnUse').attr('width', 6).attr('height', 6).attr('patternTransform', 'rotate(45)');
+  p.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 6).attr('stroke', theme.series.neutral).attr('stroke-opacity', 0.35).attr('stroke-width', 2);
+  return `url(#${id})`;
+}
+let hatchSeq = 0;
+
 function calibration(host, cal) {
   const list = Array.isArray(cal) ? cal : cal?.targets_vs_achieved || [];
   const rows = list.filter((r) => num(r.achieved) && num(r.target_lo) && num(r.target_hi)).map((r) => ({ ...r, pass: r.pass ?? r.in_band, label: r.label || String(r.metric || '').replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()).replace(/\baog\b/gi, 'AOG') }));
   const nPass = rows.filter((r) => (r.pass ?? (r.achieved >= r.target_lo && r.achieved <= r.target_hi))).length;
   const f = chartFrame(host, {
     headline: rows.length ? `${fmtInt(nPass)} of ${fmtInt(rows.length)} calibration targets met by the P0 history` : 'Calibration results not exported',
-    subtitle: `Target band (ASSUMED, shaded) vs achieved (dot) · ${cal?.policy || 'P0'} on the public history · each row on its own scale`,
+    subtitle: `Hatched band = target range (ASSUMED) · dot = achieved · ${cal?.policy || 'P0'} on the public history · each row on its own scale`,
     provenance: cal?.provenance || 'SIMULATED', source: 'method.json (calibration)',
     table: { columns: [{ key: 'label', label: 'Metric' }, { key: 'target_lo', label: 'Target low', num: true, format: (v, r) => fmtV(v, r) }, { key: 'target_hi', label: 'Target high', num: true, format: (v, r) => fmtV(v, r) }, { key: 'achieved', label: 'Achieved', num: true, format: (v, r) => fmtV(v, r) }], rows: rows.map((r) => ({ ...r, label: r.label || r.metric })) },
   });
   if (!rows.length) { f.body.append(h('p', { class: 'faint t-14' }, 'Not run.')); return null; }
   return responsive(f.body, (w) => {
     const narrow = w < 560;
-    const rowH = narrow ? 56 : 44, labelW = narrow ? 0 : Math.min(240, w * 0.36), valW = narrow ? 0 : 96;
-    const iw = Math.max(60, w - labelW - valW - 16);
+    const rowH = narrow ? 70 : 48, labelW = narrow ? 0 : Math.min(200, w * 0.3), valW = narrow ? 0 : 120;
+    const iw = Math.max(60, w - labelW - valW - 24);
     const svg = svgIn(f.body, w, rows.length * rowH + 8, 'Calibration targets versus achieved values');
+    const fill = hatch(svg, `dm-hatch-${++hatchSeq}`);
     rows.forEach((r, i) => {
       const y0 = i * rowH + 4;
-      const cy = narrow ? y0 + 38 : y0 + rowH / 2;
+      const cy = narrow ? y0 + 52 : y0 + rowH / 2 + 4;
+      // domain always contains the band AND the achieved value (never clamped)
       const lo = Math.min(r.target_lo, r.achieved), hi = Math.max(r.target_hi, r.achieved), pad = (hi - lo) * 0.25 || Math.abs(hi) * 0.1 || 1;
       const x = d3().scaleLinear().domain([lo - pad, hi + pad]).range([labelW, labelW + iw]);
       const ok = r.pass ?? (r.achieved >= r.target_lo && r.achieved <= r.target_hi);
       const g = svg.append('g');
       g.append('line').attr('x1', labelW).attr('x2', labelW + iw).attr('y1', cy).attr('y2', cy).attr('stroke', theme.color.line);
-      g.append('rect').attr('x', x(r.target_lo)).attr('y', cy - 7).attr('width', Math.max(2, x(r.target_hi) - x(r.target_lo))).attr('height', 14).attr('rx', 3).attr('fill', theme.color.accent2).attr('fill-opacity', 0.22).attr('stroke', theme.color.accent2).attr('stroke-opacity', 0.6);
-      g.append('circle').attr('cx', x(r.achieved)).attr('cy', cy).attr('r', 5.5).attr('fill', ok ? theme.color.accent : theme.color.bg).attr('stroke', ok ? theme.color.accent : theme.color.urgent).attr('stroke-width', 2);
+      g.append('rect').attr('x', x(r.target_lo)).attr('y', cy - 7).attr('width', Math.max(2, x(r.target_hi) - x(r.target_lo))).attr('height', 14).attr('rx', 3).attr('fill', fill).attr('stroke', theme.series.neutral).attr('stroke-opacity', 0.55);
+      g.append('circle').attr('cx', x(r.achieved)).attr('cy', cy).attr('r', 5.5).attr('fill', ok ? theme.series.recommended : theme.color.bg).attr('stroke', ok ? theme.series.recommended : theme.series.urgent).attr('stroke-width', 2);
+      // band edges as faint mono ticks above the band, so every row states its own target
+      const tl = `${fmtV(r.target_lo, r)}–${fmtV(r.target_hi, r)}`;
+      g.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('font-size', 11).attr('x', (x(r.target_lo) + x(r.target_hi)) / 2).attr('y', cy - 13).attr('text-anchor', 'middle').attr('fill', theme.color.faint).text(`target ${tl}`);
       const label = r.label || r.metric;
-      const val = `${fmtV(r.achieved, r)} ${ok ? '✓ in band' : '✕ outside'}`;
-      if (narrow) {
-        g.append('text').attr('class', 'gnm-label').attr('x', 0).attr('y', y0 + 14).attr('dy', '0.32em').text(truncate(label, w * 0.55));
-        g.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', w).attr('y', y0 + 14).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', ok ? theme.color.text : theme.color.urgent).text(val);
-      } else {
-        g.append('text').attr('class', 'gnm-label').attr('x', 0).attr('y', cy).attr('dy', '0.32em').text(truncate(label, labelW - 12));
-        g.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', w).attr('y', cy).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', ok ? theme.color.text : theme.color.urgent).text(val);
-      }
-      if (i === 0 && !narrow) g.append('text').attr('class', 'gnm-label').attr('x', x(r.target_hi) + 6).attr('y', cy - 12).attr('fill', theme.color.faint).attr('font-size', 11).text(`target ${fmtV(r.target_lo, r)}–${fmtV(r.target_hi, r)}`);
+      const val = `${fmtV(r.achieved, r)} ${ok ? '✓' : '✕'}`;
+      if (narrow) g.append('text').attr('class', 'gnm-label').attr('x', 0).attr('y', y0 + 10).attr('dy', '0.32em').text(truncate(label, w * 0.6));
+      else g.append('text').attr('class', 'gnm-label').attr('x', 0).attr('y', cy).attr('dy', '0.32em').text(truncate(label, labelW - 12));
+      g.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', w).attr('y', narrow ? y0 + 10 : cy).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', ok ? theme.color.text : theme.series.urgent).text(`${val} ${ok ? 'in band' : 'outside'}`);
     });
   });
 }
 // ------------------------------------------------------------------ selection vs holdout consistency
+/**
+ * One shared axis: every value as % difference from the holdout mean, so no row is clamped or squashed and
+ * rows can be compared. Holdout 95% CI = teal whisker around 0; selection-seed mean = neutral diamond with its
+ * real value printed beside it.
+ */
 function consistency(host, kpis) {
-  const rows = (kpis?.consistency || []).filter((r) => num(r.holdout_recommended) && num(r.selection_recommended) && Array.isArray(r.holdout_ci));
-  const label = (id) => (kpis?.kpis || []).find((k) => k.id === id)?.label || String(id).replace(/_/g, ' ');
+  const rows0 = (kpis?.consistency || []).filter((r) => num(r.holdout_recommended) && num(r.selection_recommended) && Array.isArray(r.holdout_ci) && r.holdout_recommended !== 0);
+  const label = (id) => (kpis?.kpis || []).find((k) => k.id === id)?.label || String(id).replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
   const fmtU = (v, r) => (r.unit === '%' ? fmtPct(v) : r.unit === 'AED' ? `AED ${(v / 1e6).toFixed(1)}M` : r.unit === 'h' ? `${fmtInt(v)} h` : fmtNum(v, 1));
-  const inside = rows.filter((r) => r.selection_inside_holdout_ci ?? (r.selection_recommended >= r.holdout_ci[0] && r.selection_recommended <= r.holdout_ci[1]));
-  const aog = rows.find((r) => r.id === 'aog_hours');
+  const rel = (v, r) => v / r.holdout_recommended - 1;
+  const rows = rows0.map((r) => ({ ...r, ok: r.selection_inside_holdout_ci ?? (r.selection_recommended >= r.holdout_ci[0] && r.selection_recommended <= r.holdout_ci[1]), dSel: rel(r.selection_recommended, r), dLo: rel(r.holdout_ci[0], r), dHi: rel(r.holdout_ci[1], r) }));
+  const inside = rows.filter((r) => r.ok);
+  const worst = rows.filter((r) => !r.ok).sort((a, b) => Math.abs(b.dSel) - Math.abs(a.dSel))[0];
   const rec = kpis?.recommended_id || 'the recommended plan';
   const f = chartFrame(host, {
-    headline: rows.length ? `${fmtInt(inside.length)} of ${fmtInt(rows.length)} selection-seed results fall inside the holdout 95% CI${aog ? `; ${rec} material AOG was ${fmtU(aog.selection_recommended, aog)} on selection seeds and ${fmtU(aog.holdout_recommended, aog)} on the holdout` : ''}` : 'Selection vs holdout comparison not exported',
-    subtitle: `Recommended plan ${rec} · holdout mean and 95% CI (teal) vs selection-seed mean (◆ copper) · each row on its own scale`,
+    headline: rows.length ? `${fmtInt(inside.length)} of ${fmtInt(rows.length)} selection-seed results fall inside the holdout 95% CI` : 'Selection vs holdout comparison not exported',
+    subtitle: `${rec} · % difference from the holdout mean · teal = holdout 95% CI · ◇ = selection-seed mean${worst ? ` · largest gap: ${label(worst.id)}, ${fmtU(worst.selection_recommended, worst)} on selection vs ${fmtU(worst.holdout_recommended, worst)} on holdout` : ''}`,
     provenance: 'SIMULATED', source: 'kpis.json (consistency)',
-    table: { columns: [{ key: 'label', label: 'KPI' }, { key: 'sel', label: 'Selection' }, { key: 'hold', label: 'Holdout' }, { key: 'ci', label: 'Holdout 95% CI' }, { key: 'in', label: 'Selection inside CI' }],
-      rows: rows.map((r) => ({ label: label(r.id), sel: fmtU(r.selection_recommended, r), hold: fmtU(r.holdout_recommended, r), ci: `${fmtU(r.holdout_ci[0], r)} – ${fmtU(r.holdout_ci[1], r)}`, in: inside.includes(r) ? 'yes' : 'no' })) },
+    table: { columns: [{ key: 'label', label: 'KPI' }, { key: 'sel', label: 'Selection' }, { key: 'hold', label: 'Holdout' }, { key: 'ci', label: 'Holdout 95% CI' }, { key: 'd', label: 'Selection vs holdout' }, { key: 'in', label: 'Selection inside CI' }],
+      rows: rows.map((r) => ({ label: label(r.id), sel: fmtU(r.selection_recommended, r), hold: fmtU(r.holdout_recommended, r), ci: `${fmtU(r.holdout_ci[0], r)} – ${fmtU(r.holdout_ci[1], r)}`, d: fmtSignedPct(r.dSel), in: r.ok ? 'yes' : 'no' })) },
   });
   if (!rows.length) { f.body.append(h('p', { class: 'faint t-14' }, 'Not run.')); return null; }
   return responsive(f.body, (w) => {
     const narrow = w < 560;
-    const rowH = narrow ? 56 : 40, labelW = narrow ? 0 : Math.min(220, w * 0.32), valW = narrow ? 0 : 150;
-    const iw = Math.max(60, w - labelW - valW - 16);
-    const svg = svgIn(f.body, w, rows.length * rowH + 8, 'Selection versus holdout results for the recommended plan');
+    const headH = 22, axisH = 24;
+    const rowH = narrow ? 58 : 40, labelW = narrow ? 0 : Math.min(190, w * 0.28), valW = narrow ? 0 : 168;
+    const iw = Math.max(80, w - labelW - valW - 24);
+    const H = headH + rows.length * rowH + axisH;
+    const svg = svgIn(f.body, w, H, 'Selection versus holdout results for the recommended plan, as % difference from the holdout mean');
+    const ext = d3().max(rows, (r) => Math.max(Math.abs(r.dSel), Math.abs(r.dLo), Math.abs(r.dHi))) || 0.1;
+    const x = d3().scaleLinear().domain([-ext * 1.12, ext * 1.12]).nice(4).range([labelW + 8, labelW + 8 + iw]);
+    const top = headH, bottom = headH + rows.length * rowH;
+    // column headers: the ✓/✕ column is named so the glyph is never the only signal
+    if (!narrow) {
+      svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('font-size', 11).attr('x', 0).attr('y', 10).attr('fill', theme.color.faint).text('KPI');
+      svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('font-size', 11).attr('x', w).attr('y', 10).attr('text-anchor', 'end').attr('fill', theme.color.faint).text('SELECTION → HOLDOUT · IN CI');
+    } else {
+      svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('font-size', 11).attr('x', w).attr('y', 10).attr('text-anchor', 'end').attr('fill', theme.color.faint).text('SEL → HOLDOUT · IN CI');
+    }
+    // axis + zero reference (= holdout mean)
+    const ticks = x.ticks(narrow ? 3 : 5);
+    const ax = svg.append('g');
+    ticks.forEach((t) => {
+      ax.append('line').attr('class', 'gnm-grid-line').attr('x1', x(t)).attr('x2', x(t)).attr('y1', top).attr('y2', bottom).attr('stroke', theme.color.line).attr('stroke-opacity', t === 0 ? 0 : 0.5);
+      ax.append('text').attr('class', 'gnm-tick').attr('font-family', theme.font.mono).attr('font-size', 11).attr('x', x(t)).attr('y', bottom + 16).attr('text-anchor', 'middle').attr('fill', theme.color.faint).text(fmtSignedPct(t, 0));
+    });
+    refLine(svg, { x1: x(0), x2: x(0), y1: top - 2, y2: bottom, label: narrow ? '' : 'holdout mean', labelAt: 'start', anchor: 'middle', dx: 0, dy: -4 });
     rows.forEach((r, i) => {
-      const y0 = i * rowH + 4, cy = narrow ? y0 + 38 : y0 + rowH / 2;
-      const vals = [r.holdout_ci[0], r.holdout_ci[1], r.selection_recommended, r.holdout_recommended];
-      const lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) * 0.15 || Math.abs(hi) * 0.05 || 1;
-      const x = d3().scaleLinear().domain([lo - pad, hi + pad]).range([labelW, labelW + iw]);
-      const ok = inside.includes(r);
+      const y0 = top + i * rowH, cy = narrow ? y0 + 40 : y0 + rowH / 2;
       const g = svg.append('g');
-      g.append('line').attr('x1', labelW).attr('x2', labelW + iw).attr('y1', cy).attr('y2', cy).attr('stroke', theme.color.line);
-      g.append('line').attr('x1', x(r.holdout_ci[0])).attr('x2', x(r.holdout_ci[1])).attr('y1', cy).attr('y2', cy).attr('stroke', theme.color.accent).attr('stroke-width', 2);
-      [r.holdout_ci[0], r.holdout_ci[1]].forEach((v) => g.append('line').attr('x1', x(v)).attr('x2', x(v)).attr('y1', cy - 5).attr('y2', cy + 5).attr('stroke', theme.color.accent));
-      g.append('circle').attr('cx', x(r.holdout_recommended)).attr('cy', cy).attr('r', 5).attr('fill', theme.color.accent);
-      g.append('path').attr('d', d3().symbol(d3().symbolDiamond, 70)()).attr('transform', `translate(${x(r.selection_recommended)},${cy})`).attr('fill', theme.color.bg).attr('stroke', theme.color.accent2).attr('stroke-width', 2);
-      const txt = `${fmtU(r.selection_recommended, r)} → ${fmtU(r.holdout_recommended, r)} ${ok ? '✓' : '✕'}`;
-      if (narrow) {
-        g.append('text').attr('class', 'gnm-label').attr('x', 0).attr('y', y0 + 14).attr('dy', '0.32em').text(truncate(label(r.id), w * 0.45));
-        g.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', w).attr('y', y0 + 14).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', ok ? theme.color.text : theme.color.review).text(txt);
-      } else {
-        g.append('text').attr('class', 'gnm-label').attr('x', 0).attr('y', cy).attr('dy', '0.32em').text(truncate(label(r.id), labelW - 12));
-        g.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', w).attr('y', cy).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', ok ? theme.color.text : theme.color.review).text(txt);
+      g.append('line').attr('x1', x(r.dLo)).attr('x2', x(r.dHi)).attr('y1', cy).attr('y2', cy).attr('stroke', theme.series.recommended).attr('stroke-width', 2);
+      [r.dLo, r.dHi].forEach((v) => g.append('line').attr('x1', x(v)).attr('x2', x(v)).attr('y1', cy - 5).attr('y2', cy + 5).attr('stroke', theme.series.recommended));
+      g.append('circle').attr('cx', x(0)).attr('cy', cy).attr('r', 4.5).attr('fill', theme.series.recommended);
+      const sx = x(r.dSel);
+      g.append('path').attr('d', d3().symbol(d3().symbolDiamond, 64)()).attr('transform', `translate(${sx},${cy})`).attr('fill', theme.color.bg).attr('stroke', theme.series.neutral).attr('stroke-width', 2);
+      // the selection value sits beside its own diamond, on the side away from the CI
+      if (!r.ok) {
+        const leftSide = r.dSel < 0;
+        g.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('font-size', 11).attr('x', sx + (leftSide ? -9 : 9)).attr('y', cy).attr('dy', '0.32em').attr('text-anchor', leftSide ? 'end' : 'start').attr('fill', theme.color.muted).text(fmtSignedPct(r.dSel, 0));
       }
+      const txt = `${fmtU(r.selection_recommended, r)} → ${fmtU(r.holdout_recommended, r)}`;
+      const flag = r.ok ? '✓ in' : '✕ out';
+      if (narrow) g.append('text').attr('class', 'gnm-label').attr('x', 0).attr('y', y0 + 14).attr('dy', '0.32em').text(truncate(label(r.id), w * 0.42));
+      else g.append('text').attr('class', 'gnm-label').attr('x', 0).attr('y', cy).attr('dy', '0.32em').text(truncate(label(r.id), labelW - 12));
+      const vt = g.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', w).attr('y', narrow ? y0 + 14 : cy).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', theme.color.text);
+      vt.append('tspan').text(`${txt}  `);
+      vt.append('tspan').attr('fill', r.ok ? theme.color.text : theme.color.muted).attr('font-weight', r.ok ? 400 : 600).text(flag);
     });
   });
 }
+
+const fmtSignedPct = (v, d = 1) => (!num(v) ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${(Math.abs(v) * 100).toFixed(d).replace(/\.0$/, '')}%`);
 
 function fmtV(v, r) {
   if (!num(v)) return '—';

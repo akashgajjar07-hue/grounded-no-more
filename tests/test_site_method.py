@@ -58,3 +58,28 @@ def test_forced_rerun_disclosed_when_present(site, browser):  # noqa: F811
         assert page.locator(".dm-log-item").count() == len(log)
     finally:
         ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_wave2_validation_no_clamping(site, browser, vp):  # noqa: F811
+    """Critic #7: every selection diamond lies inside the plot (shared % axis), headlines <= 90, ✓/✕ column is named."""
+    ctx, page, problems = open_page(browser, site + "#/method", vp)
+    try:
+        page.wait_for_selector('[data-story="method-validation"] svg path')
+        res = page.evaluate("""() => {
+          const frames = [...document.querySelectorAll('#view figure.chart-frame')];
+          const con = frames.find((f) => /selection-seed/.test(f.querySelector('.chart-headline')?.textContent || ''));
+          const svg = con.querySelector('svg'); const sb = svg.getBoundingClientRect();
+          const dia = [...svg.querySelectorAll('path')].filter((p) => p.getAttribute('transform')).map((p) => p.getBoundingClientRect());
+          return { n: dia.length, inside: dia.every((r) => r.left >= sb.left + 1 && r.right <= sb.right - 1),
+                   header: /IN CI/.test(svg.textContent), heads: frames.map((f) => f.querySelector('.chart-headline').textContent.trim()) };
+        }""")
+        assert res["n"] >= 1 and res["inside"], res
+        assert res["header"], res
+        assert all(len(t) <= 90 for t in res["heads"]), res["heads"]
+        # assumption register prints a repeated rationale once
+        if vp == "1440":
+            assert page.locator('[data-story="method-assumptions"] .dm-same').count() >= 1
+        assert not [p for p in problems if "pageerror" in p], problems
+    finally:
+        ctx.close()

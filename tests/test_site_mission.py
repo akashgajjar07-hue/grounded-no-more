@@ -25,8 +25,8 @@ def test_mission_renders_clean(site, browser, vp, route):  # noqa: F811
         assert tiles.count() == 4
         for i in range(4):
             assert tiles.nth(i).locator(".chip-prov").count() == 1
-        # top 5 actions deep-link into the action centre
-        links = page.locator('[data-story="mission-actions"] a.mc-action')
+        # top 5 priority part numbers deep-link into the action centre
+        links = page.locator('[data-story="mission-actions"] a.mc-pr')
         assert 1 <= links.count() <= 5
         assert "#/actions?id=" in links.first.get_attribute("href")
         # the aircraft drawing has hotspots and an accessible list alternative
@@ -65,8 +65,8 @@ def test_numbers_come_from_data(site, browser):  # noqa: F811
 def test_action_deep_link_and_hotspot_navigation(site, browser):  # noqa: F811
     ctx, page, problems = open_page(browser, site + "#/mission", "1440")
     try:
-        href = page.locator('[data-story="mission-actions"] a.mc-action').first.get_attribute("href")
-        page.locator('[data-story="mission-actions"] a.mc-action').first.click()
+        href = page.locator('[data-story="mission-actions"] a.mc-pr').first.get_attribute("href")
+        page.locator('[data-story="mission-actions"] a.mc-pr').first.click()
         page.wait_for_function(f"location.hash === {json.dumps(href)}")
         page.wait_for_function("document.querySelector('.nav-item[aria-current=\"page\"]')?.dataset.route === 'actions'")
         page.goto(site + "#/mission")
@@ -100,5 +100,54 @@ def test_story_overlay_keyboard(site, browser, vp):  # noqa: F811
         page.keyboard.press("Escape")
         page.wait_for_function("!document.querySelector('.story')")
         assert not [p for p in problems if "pageerror" in p], problems
+    finally:
+        ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_wave2_priorities_grid_and_headlines(site, browser, vp):  # noqa: F811
+    """Critic #5/#8: priorities are a grid grouped by PN (no repeated PN), headlines <= 90 chars, no clipped cells."""
+    acts = json.loads((DOCS / "data/actions.json").read_text())["actions"]
+    ctx, page, problems = open_page(browser, site + "#/mission", vp)
+    try:
+        rows = page.locator('[data-story="mission-actions"] a.mc-pr')
+        pns = [rows.nth(i).locator(".mc-pr-pn").inner_text() for i in range(rows.count())]
+        assert len(pns) == len(set(pns)) and set(pns) <= {a["pn"] for a in acts}
+        # every row shows the deciding number and the due week
+        for i in range(rows.count()):
+            assert rows.nth(i).locator(".mc-pr-v").inner_text().strip()
+            assert rows.nth(i).locator(".mc-pr-due").inner_text().strip()
+        heads = page.evaluate("[...document.querySelectorAll('#view .chart-headline')].map(e => e.textContent.trim())")
+        assert heads and all(len(t) <= 90 for t in heads), heads
+        # the open-actions tile has a severity ruler, so its footer lines up with the other KPI tiles
+        assert page.locator('[data-kpi="open_exceptions"] .mc-sev, [data-kpi="open_actions"] .mc-sev').count() == 1
+        if vp == "1440":
+            foots = page.evaluate("[...document.querySelectorAll('[data-story=\"mission-kpis\"] .kpi-foot')].map(e => Math.round(e.getBoundingClientRect().top))")
+            assert max(foots) - min(foots) <= 24, foots
+            # the fault callout keeps clear of the fuselage centreline (critic: it butted against the nose)
+            gap = page.evaluate("""() => { const f = document.querySelector('.mc-fault').getBoundingClientRect();
+              const s = document.querySelector('.mc-fig svg').getBoundingClientRect(); return (s.left + s.width / 2) - f.right; }""")
+            assert gap >= 40, gap
+        # the part-level risk badge sits in the fault callout, so the status matches story step 2
+        assert page.locator('.mc-fault-risk').count() == 1
+        assert not [p for p in problems if "pageerror" in p], problems
+    finally:
+        ctx.close()
+
+
+def test_wave2_story_targets_are_tight(site, browser):  # noqa: F811
+    """Critic #10: the story card never covers the spotlit target on the steps my content controls (1440)."""
+    ctx, page, problems = open_page(browser, site + "#/mission", "1440")
+    try:
+        page.locator('[data-story="mission-start"]').click()
+        for i in range(1, 5):
+            page.wait_for_function("document.querySelector('.story') && !document.querySelector('.story').hasAttribute('aria-busy')", timeout=15000)
+            page.wait_for_timeout(500)
+            ov = page.evaluate("""() => { const c = document.querySelector('.story-card').getBoundingClientRect(), s = document.querySelector('.story-spot').getBoundingClientRect();
+              return Math.max(0, Math.min(c.right, s.right) - Math.max(c.left, s.left)) * Math.max(0, Math.min(c.bottom, s.bottom) - Math.max(c.top, s.top)); }""")
+            assert ov == 0, (i, ov)
+            assert page.evaluate("document.querySelector('.story-spot').getBoundingClientRect().height") > 40, i
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(300)
     finally:
         ctx.close()

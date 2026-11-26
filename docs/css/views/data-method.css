@@ -11,8 +11,8 @@
 .dm-flow .dm-box-tag { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; }
 .dm-flow .dm-box-text { font-family: var(--font-ui); font-size: 12px; fill: var(--text-muted); }
 .dm-flow .dm-arrow { fill: none; stroke: var(--text-faint); stroke-width: 1.25; }
-.dm-flow .dm-arrow--assumed { stroke: var(--c-amber); stroke-dasharray: 4 4; stroke-opacity: 0.8; }
-.dm-flow .dm-gate { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; fill: var(--c-amber); }
+.dm-flow .dm-arrow--assumed { stroke: var(--text-faint); stroke-dasharray: 4 4; }
+.dm-flow .dm-gate { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; fill: var(--text-muted); }
 
 .dm-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gutter); }
 .dm-span-4 { grid-column: span 4; } .dm-span-5 { grid-column: span 5; } .dm-span-6 { grid-column: span 6; }
@@ -48,7 +48,7 @@
 
 .dm-limits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-2) var(--s-4); counter-reset: lim; }
 .dm-limit { position: relative; padding-left: 40px; font-size: var(--fs-14); color: var(--text-muted); line-height: 1.55; }
-.dm-limit::before { counter-increment: lim; content: counter(lim, decimal-leading-zero); position: absolute; left: 0; top: 1px; font-family: var(--font-mono); font-size: var(--fs-12); color: var(--c-amber); }
+.dm-limit::before { counter-increment: lim; content: counter(lim, decimal-leading-zero); position: absolute; left: 0; top: 1px; font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); }
 .dm-limit b { display: block; color: var(--text); font-weight: 600; margin-bottom: 2px; }
 
 .dm-author { display: flex; gap: var(--s-3); align-items: flex-start; }
@@ -68,8 +68,9 @@
   .dm-grid { gap: var(--s-2); }
   .dm-limits { grid-template-columns: minmax(0, 1fr); }
   .dm-author { flex-direction: column; gap: var(--s-2); }
-  .dm-wrap table { min-width: 680px; }
   .dm-wrap td.mono { min-width: 160px; }
 }
 .dm-filters .seg button { white-space: nowrap; }
 @media (max-width: 767px) { .dm-filters .seg { flex: 1 1 100%; overflow-x: auto; } .dm-filters select.dm-search { flex: 1 1 100% !important; } }
+.dm-same { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); }
+.dm-flow .dm-gate-line { stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 3 3; }

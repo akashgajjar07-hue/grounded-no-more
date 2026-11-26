@@ -32,14 +32,16 @@
 @media (prefers-reduced-motion: reduce) { .mc-fig .ata-hotspot.is-missing .hs-shape { animation: none; } }
 
 .mc-fault {
-  position: absolute; left: 0; top: 0; display: flex; align-items: flex-start; gap: 10px; max-width: 228px;
+  position: absolute; left: 0; top: 0; display: flex; align-items: flex-start; gap: 10px; max-width: min(232px, calc(50% - 56px));
   padding: 12px 14px; border-radius: var(--r-control); background: rgba(15, 30, 46, 0.92); border: 1px solid rgba(231, 107, 100, 0.45);
   box-shadow: var(--shadow-pop); text-decoration: none; color: inherit; transition: border-color var(--dur-fast) var(--ease);
 }
 .mc-fault:hover { border-color: var(--c-red); }
 .mc-fault .icon { flex: none; width: 18px; height: 18px; color: var(--c-red); margin-top: 1px; }
-.mc-fault-k { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.05em; white-space: nowrap; text-transform: uppercase; color: var(--c-red); }
-.mc-fault-pn { margin-top: 4px; font-family: var(--font-mono); font-size: var(--fs-14); font-weight: 600; color: var(--text); }
+.mc-fault-k { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.05em; text-transform: uppercase; color: var(--c-red); }
+.mc-fault-pn { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 4px; font-family: var(--font-mono); font-size: var(--fs-14); font-weight: 600; color: var(--text); }
+.mc-fault-at { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-muted); }
+.mc-fault-risk { padding: 0 6px; border-radius: 4px; border: 1px solid rgba(231, 107, 100, 0.45); font-size: var(--fs-12); font-weight: 500; color: var(--c-red); }
 .mc-fault-d { margin-top: 2px; font-size: var(--fs-12); color: var(--text-muted); line-height: 1.45; }
 
 /* ------------------------------------------------------------------ KPI row */
@@ -55,16 +57,27 @@
 .mc-col { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
 .mc-grid .chart-frame { margin: 0; }
 
-/* priority actions */
-.mc-actions { display: flex; flex-direction: column; }
-.mc-action { display: grid; grid-template-columns: 28px auto minmax(0, 1fr) minmax(140px, 32%); gap: var(--s-2); align-items: center; padding: 14px 8px; margin: 0 -8px; border-bottom: 1px solid var(--line); border-radius: var(--r-control); color: inherit; text-decoration: none; transition: background var(--dur-fast) var(--ease); }
-.mc-action:last-child { border-bottom: 0; }
-.mc-action:hover { background: var(--c-teal-a08); }
-.mc-action-rank { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); }
-.mc-action-title { font-size: var(--fs-14); color: var(--text); overflow-wrap: anywhere; }
-.mc-action-meta { margin-top: 4px; font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); overflow-wrap: anywhere; }
-.mc-action-do { display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: var(--fs-12); line-height: 1.45; color: var(--text-muted); text-align: right; }
-.mc-action-do .icon { width: 16px; height: 16px; color: var(--primary); flex: none; }
+/* planner priorities: one scannable grid row per part number (critic #5) */
+.mc-prio { display: flex; flex-direction: column; margin: 0 -8px; }
+.mc-pr {
+  display: grid; grid-template-columns: 96px minmax(0, 0.9fr) minmax(0, 1.4fr) 60px 48px 16px;
+  gap: 12px; align-items: center; padding: 12px 8px; border-bottom: 1px solid var(--line);
+  border-radius: var(--r-control); color: inherit; text-decoration: none; transition: background var(--dur-fast) var(--ease);
+}
+.mc-pr:last-child { border-bottom: 0; }
+a.mc-pr:hover { background: var(--c-teal-a08); }
+.mc-pr--head { padding-top: 0; padding-bottom: 8px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
+.mc-pr .num { text-align: right; font-variant-numeric: tabular-nums; }
+.mc-pr-part, .mc-pr-sig { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mc-pr-pn { font-family: var(--font-mono); font-size: var(--fs-14); font-weight: 600; color: var(--text); white-space: nowrap; }
+.mc-pr-where { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-pr-step { font-size: var(--fs-12); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-pr-v { font-family: var(--font-mono); font-size: var(--fs-14); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-pr-aog, .mc-pr-due { font-family: var(--font-mono); font-size: var(--fs-14); color: var(--text); }
+.mc-pr-ml { display: none; }
+.mc-pr-do { display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: var(--fs-12); color: var(--text-muted); text-align: right; min-width: 0; }
+.mc-pr-do > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-pr-do .icon { width: 16px; height: 16px; color: var(--primary); flex: none; }
 
 /* station list under the map */
 .mc-map { margin: 0 -8px; }
@@ -88,6 +101,7 @@
   .mc-hero { padding: var(--s-3) var(--s-2); }
   .mc-title { font-size: 44px; }
   .mc-tagline { font-size: var(--fs-16); margin-top: var(--s-2); }
+  .mc-cta .btn--ghost { padding-left: 0; } /* stacked under the primary button: align the text to its left edge */
   .mc-fig { height: 280px; }
   .mc-kpis { gap: var(--s-1); margin-top: var(--s-2); }
   .mc-kpis .kpi-label { min-height: 0; }
@@ -95,13 +109,21 @@
   .mc-kpis .kpi-foot { flex-direction: column; align-items: flex-start; }
   .mc-kpis .kpi-foot > span { white-space: normal; }
   .mc-kpis .kpi-spark { display: none; }
-  .mc-action { grid-template-columns: minmax(0, 1fr); gap: var(--s-1); }
-  .mc-action > .pill { justify-self: start; }
   .mc-db-labels .is-ref { display: none; }
-  .mc-action-rank { display: none; }
-  .mc-action-do { grid-column: 1 / -1; justify-content: flex-start; text-align: left; }
+  .mc-sev .mc-db-labels { display: none; }
   .mc-grid { margin-top: var(--s-2); gap: var(--s-2); }
   .mc-col { gap: var(--s-2); }
+  /* priorities: two-line stacked rows — PN + severity, then signal · AOG h · due */
+  .mc-pr--head { display: none; }
+  .mc-pr { grid-template-columns: auto auto minmax(0, 1fr); grid-template-areas: "part part sev" "sig sig sig" "aog due do"; gap: 6px var(--s-2); padding: 12px 8px; }
+  .mc-pr-sev { grid-area: sev; justify-self: end; }
+  .mc-pr-part { grid-area: part; flex-direction: row; align-items: baseline; gap: 8px; }
+  .mc-pr-sig { grid-area: sig; flex-direction: row; align-items: baseline; gap: 8px; }
+  .mc-pr-aog, .mc-pr-due { font-size: var(--fs-12); text-align: left; }
+  .mc-pr .mc-pr-aog { grid-area: aog; text-align: left; }
+  .mc-pr .mc-pr-due { grid-area: due; text-align: left; }
+  .mc-pr-do { grid-area: do; }
+  .mc-pr-ml { display: inline; color: var(--text-faint); }
 }
 .mc-kpi-ref { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); margin-top: auto; }
 .mc-kpis .kpi-foot { margin-top: 0; }
@@ -121,3 +143,13 @@
 .mc-db-labels .is-base { color: var(--c-copper); }
 .mc-db-labels .is-rec { color: var(--primary); }
 .mc-db-labels .is-ref { color: var(--text-faint); }
+
+/* open-actions severity ruler (fills the dumbbell slot so the four KPI footers align) */
+.mc-sev-track { display: flex; gap: 2px; height: 8px; margin: 3px 0; border-radius: 4px; overflow: hidden; }
+.mc-sev-seg { flex-basis: 0; min-width: 3px; }
+.mc-sev-seg.is-urgent { background: var(--c-red); }
+.mc-sev-seg.is-review { background: var(--c-amber); }
+.mc-sev-seg.is-info { background: var(--c-slate, #6B7C8F); }
+.mc-sev .mc-db-labels .is-urgent { color: var(--c-red); }
+.mc-sev .mc-db-labels .is-review { color: var(--c-amber); }
+.mc-sev .mc-db-labels .is-info { color: var(--text-faint); }

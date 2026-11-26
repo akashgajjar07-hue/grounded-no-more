@@ -10,7 +10,7 @@
  * Story hooks: mission-hero, mission-aircraft, mission-kpis, mission-compare, mission-actions, mission-map.
  */
 import { h, card, kpiTile, provChip, pill, icon, inlineSVG, storyMode } from '../ui.js';
-import { chartFrame, responsive, svgIn, axisBottom, styleAxis, barList, withTooltip, truncate, theme, sparkline, fmtByUnit, fmtPct, fmtPts, fmtHours, fmtAED, fmtInt } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, axisBottom, styleAxis, barList, withTooltip, truncate, theme, sparkline, fmtByUnit, fmtPct, fmtPts, fmtHours, fmtAED, fmtInt, fmtWeek, HEADLINE_MAX } from '../charts/theme.js';
 import { renderNetworkMap } from '../charts/map.js';
 import { assetURL } from '../data.js';
 
@@ -91,8 +91,9 @@ export async function render(el, ctx) {
     ? h('a', { class: 'mc-fault', href: ctx.buildHash('actions', { id: hot.exception_id }), 'aria-label': `Urgent: ${hot.summary}. Open action ${hot.exception_id}` },
       icon('alert'),
       h('div', {},
-        h('div', { class: 'mc-fault-k' }, `${cap(hot.severity)} · ATA ${hotAta} · ${hot.station}`),
+        h('div', { class: 'mc-fault-k' }, `${cap(hot.severity)} · ATA ${hotAta}`),
         h('div', { class: 'mc-fault-pn' }, hot.pn),
+        h('div', { class: 'mc-fault-at' }, h('span', {}, hot.station), num(hotPart?.risk_score) ? h('span', { class: 'mc-fault-risk', title: 'Part-level risk score, 0–100 (log-scaled AOG hours)' }, `risk ${Math.round(hotPart.risk_score * 100)}`) : null),
         h('div', { class: 'mc-fault-d' }, [hotPart?.desc, hot.evidence?.deadline ? `deadline class ${hot.evidence.deadline} (hypothetical)` : null].filter(Boolean).join(' · ') || hot.summary)))
     : null;
   // accessible list alternative for the drawing's hotspots
@@ -143,7 +144,7 @@ export async function render(el, ctx) {
     ao && { ...ao, label: ao.label && /material/i.test(ao.label) ? ao.label : 'Material AOG hours / year' },
     sc,
     openK,
-  ].filter(Boolean).map((k) => kpiInstrument(k, baseLabel, ranked, k.recommended_id || recId || 'Rec.'));
+  ].filter(Boolean).map((k) => kpiInstrument(k, baseLabel, ranked, k.recommended_id || recId || 'Rec.', actions));
   el.append(h('div', { class: 'mc-kpis', dataset: { story: 'mission-kpis' }, role: 'group', 'aria-label': 'Headline indicators' }, tiles));
 
   // ================================================================ comparison + actions | map
@@ -156,19 +157,32 @@ export async function render(el, ctx) {
   left.append(cmpCard);
   cleanups.push(compareStrip(cmpCard, { policies, frontier, seedText, baseLabel }));
 
-  // ---- top 5 priority actions (one per part number, so the list shows breadth)
-  const seenPn = new Set();
-  const top = ranked.filter((a) => (seenPn.has(a.pn) ? false : seenPn.add(a.pn))).slice(0, 5);
-  const nUrg = (actions.actions || []).filter((a) => a.severity === 'urgent').length;
+  // ---- top 5 priority part numbers: a scannable grid, actions grouped by PN (critic #5)
+  const all = actions.actions || [];
+  const groups = groupByPn(ranked).slice(0, 5);
+  const nUrg = all.filter((a) => a.severity === 'urgent').length;
+  const nUrgPn = new Set(all.filter((a) => a.severity === 'urgent').map((a) => a.pn)).size;
+  const lookback = all.find((a) => num(a.evidence?.lookback_weeks) && a.type === 'OUTSTATION_DEPLETION')?.evidence.lookback_weeks;
+  const head = h('div', { class: 'mc-pr mc-pr--head', 'aria-hidden': 'true' },
+    h('span', {}, 'Severity'), h('span', {}, 'Part · where'), h('span', {}, 'Signal · next step'), h('span', { class: 'num' }, lookback ? `AOG h ${lookback}w` : 'AOG h'), h('span', { class: 'num' }, 'Due'), h('span', {}));
+  const rowsEl = groups.map((g) => {
+    const a = g.lead;
+    const sig = signalOf(a);
+    const where = g.stations.length ? (g.stations.length > 1 ? `${g.stations[0]} +${g.stations.length - 1} station${g.stations.length > 2 ? "s" : ""}` : g.stations[0]) : 'Network';
+    const label = `${cap(a.severity)}: ${a.pn}${g.stations.length ? ` at ${g.stations.join(', ')}` : ''}. ${sig.long}. ${a.recommended_action || ''}`;
+    return h('a', { class: `mc-pr is-${a.severity}`, href: ctx.buildHash('actions', { id: a.exception_id }), 'aria-label': label, title: a.summary },
+      h('span', { class: 'mc-pr-sev' }, pill(SEV_RANK[a.severity] != null ? a.severity : 'unknown')),
+      h('span', { class: 'mc-pr-part' }, h('span', { class: 'mc-pr-pn' }, a.pn), h('span', { class: 'mc-pr-where', title: g.stations.join(', ') }, where)),
+      h('span', { class: 'mc-pr-sig', title: sig.k }, h('span', { class: 'mc-pr-v' }, sig.v), h('span', { class: 'mc-pr-step' }, TYPE_STEP[a.type] || 'Review')),
+      h('span', { class: 'mc-pr-aog num' }, h('span', { class: 'mc-pr-ml' }, 'AOG h '), g.aog != null ? fmtInt(g.aog) : '—'),
+      h('span', { class: 'mc-pr-due num' }, h('span', { class: 'mc-pr-ml' }, 'Due '), num(g.due) ? fmtWeek(g.due) : '—'),
+      h('span', { class: 'mc-pr-do', 'aria-hidden': 'true' }, icon('chevron-right')));
+  });
   left.append(card({
     story: 'mission-actions', kicker: 'Planner priorities', prov: actions.meta?.provenance || 'DERIVED',
-    title: (actions.actions || []).length ? `${fmtInt(nUrg)} urgent of ${fmtInt((actions.actions || []).length)} open actions; the top five` : 'No open actions exported',
-    body: h('div', { class: 'mc-actions' }, top.map((a, i) => h('a', { class: 'mc-action', href: ctx.buildHash('actions', { id: a.exception_id }), 'aria-label': `${cap(a.severity)}: ${a.summary}. ${a.recommended_action || ''}` },
-      h('span', { class: 'mc-action-rank', 'aria-hidden': 'true' }, String(i + 1).padStart(2, '0')),
-      pill(SEV_RANK[a.severity] != null ? a.severity : 'unknown'),
-      h('div', { style: { minWidth: 0 } }, h('div', { class: 'mc-action-title' }, a.summary), h('div', { class: 'mc-action-meta' }, [a.exception_id, a.pn, a.station, num(a.due_week) ? `due W${a.due_week}` : null, a.owner].filter(Boolean).join(' · '))),
-      h('span', { class: 'mc-action-do' }, a.recommended_action || 'Review', icon('chevron-right'))))),
-    foot: [h('span', {}, 'Ranked by severity; one action per part number'), h('a', { class: 'card-link', href: '#/actions' }, 'Open Planner Action Centre', icon('chevron-right'))],
+    title: all.length ? `${fmtInt(nUrg)} urgent actions on ${fmtInt(nUrgPn)} part numbers; top ${fmtInt(groups.length)} shown` : 'No open actions exported',
+    body: h('div', { class: 'mc-prio', role: 'list' }, head, rowsEl.map((r) => { r.setAttribute('role', 'listitem'); return r; })),
+    foot: [h('span', {}, `Grouped by part number, ranked by severity then risk${lookback ? ` · AOG h = last ${lookback} weeks of history` : ''}`), h('a', { class: 'card-link', href: '#/actions' }, 'Open Planner Action Centre', icon('chevron-right'))],
   }));
 
   // ---- network mini-map
@@ -181,8 +195,10 @@ export async function render(el, ctx) {
   const nOut = stations.filter((s) => s.role !== 'hub').length;
   const topOut = byRisk.find((s) => s.role !== 'hub');
   const mf = chartFrame(mapCard, {
-    headline: topS ? `${topS.station} carries the most grounding exposure${topOut && topOut !== topS ? `; ${topOut.station} is the riskiest outstation (${fmtPct(topOut.risk, 0)} of ${topS.station})` : ` (${fmtPct(topS.risk, 0)})`}` : 'Station risk not run',
-    subtitle: `Station risk: ${network.risk_definition || 'material AOG exposure relative to the worst station'}, 0–100% · ${hub ? `${hub.station} hub + ${nOut} outstations · ` : ''}arc width = transfers`,
+    headline: topOut && topOut !== topS
+      ? `${topOut.station} is the riskiest outstation (${fmtPct(topOut.risk, 0)} of ${topS.role === 'hub' ? 'hub ' : ''}${topS.station})`
+      : topS ? `${topS.station} carries the most grounding exposure` : 'Station risk not run',
+    subtitle: `Risk = ${network.risk_definition || 'material AOG exposure vs the worst station'} · ${hub ? `${hub.station} hub + ${nOut} outstations · ` : ''}arc width = transfers`,
     provenance: network.meta?.provenance || 'SIMULATED', source: 'network.json',
     table: { columns: [{ key: 'station', label: 'Station', mono: true }, { key: 'role', label: 'Role' }, { key: 'risk', label: 'Risk', num: true, format: (v) => fmtPct(v, 0) }, { key: 'serviceable_units', label: 'Serviceable units', num: true, format: fmtInt }, { key: 'stock_value', label: 'Stock value', num: true, format: fmtAED }], rows: byRisk },
   });
@@ -199,8 +215,56 @@ export async function render(el, ctx) {
   return () => { cleanups.forEach((f) => { try { f?.(); } catch { /* ignore */ } }); map?.destroy(); };
 }
 
+// ------------------------------------------------------------------ planner priorities helpers
+/** Short imperative per exception type (copy, not data). */
+const TYPE_STEP = {
+  OUTSTATION_DEPLETION: 'Position stock', LEAD_TIME_DRIFT: 'Update lead time', OVERDUE_REPAIR: 'Chase repair shop',
+  EXCESS_DECLINING_DEMAND: 'Cut min/max', CONDEMNED_AWAITING_REPLACEMENT: 'Track replacement PO', QUARANTINE_DOCS: 'Review certificate',
+  EXPIRY_RISK: 'Use or rotate stock', KIT_SHORTAGE: 'Complete the kit',
+};
+
+/** Group ranked actions by PN, keeping rank order; per group: lead action, stations (by AOG h), summed AOG h, earliest due. */
+function groupByPn(ranked) {
+  const by = new Map();
+  ranked.forEach((a) => {
+    if (!by.has(a.pn)) by.set(a.pn, { pn: a.pn, lead: a, list: [] });
+    by.get(a.pn).list.push(a);
+  });
+  return [...by.values()].map((g) => {
+    const aogs = g.list.map((a) => a.evidence?.aog_hours_lookback).filter(num);
+    const st = g.list.filter((a) => a.station).sort((x, y) => (y.evidence?.aog_hours_lookback ?? 0) - (x.evidence?.aog_hours_lookback ?? 0)).map((a) => a.station);
+    const dues = g.list.map((a) => a.due_week).filter(num);
+    return { ...g, n: g.list.length, stations: [...new Set(st)], aog: aogs.length ? aogs.reduce((s, v) => s + v, 0) : null, due: dues.length ? Math.min(...dues) : null };
+  });
+}
+
+/** The one number that decides each exception type, as {k: label, v: value, long: sentence}. */
+function signalOf(a) {
+  const e = a.evidence || {};
+  switch (a.type) {
+    case 'OUTSTATION_DEPLETION':
+      if (num(e.on_hand) && num(e.target)) return { k: 'On hand / target', v: `${fmtInt(e.on_hand)} of ${fmtInt(e.target)} on hand`, long: `${fmtInt(e.on_hand)} of ${fmtInt(e.target)} on hand` };
+      break;
+    case 'LEAD_TIME_DRIFT':
+      if (num(e.mean_lead_d) && num(e.mean_quoted_d)) return { k: 'Lead time vs quote', v: `${fmtInt(e.mean_lead_d)} d vs ${fmtInt(e.mean_quoted_d)} d quoted`, long: `lead time ${fmtInt(e.mean_lead_d)} d against ${fmtInt(e.mean_quoted_d)} d quoted` };
+      break;
+    case 'OVERDUE_REPAIR':
+      if (num(e.weeks_overdue)) return { k: 'Past quoted due', v: `${e.weeks_overdue.toFixed(1)} wk overdue`, long: `repair ${e.weeks_overdue.toFixed(1)} weeks past quoted due` };
+      break;
+    case 'EXCESS_DECLINING_DEMAND':
+    case 'EXPIRY_RISK':
+      if (num(e.cover_weeks_at_recent_rate)) return { k: 'Cover', v: `${fmtInt(e.cover_weeks_at_recent_rate)} wk of cover`, long: `${fmtInt(e.cover_weeks_at_recent_rate)} weeks of cover` };
+      break;
+    case 'CONDEMNED_AWAITING_REPLACEMENT':
+      if (num(e.quoted_due_week)) return { k: 'Replacement due', v: `replacement ${fmtWeek(e.quoted_due_week)}`, long: `replacement due ${fmtWeek(e.quoted_due_week)}` };
+      break;
+    default:
+  }
+  return { k: 'Summary', v: truncate(a.summary || '', 300), long: a.summary || '' };
+}
+
 // ------------------------------------------------------------------ KPI instrument
-function kpiInstrument(k, baseLabel, ranked, recLabel) {
+function kpiInstrument(k, baseLabel, ranked, recLabel, actions) {
   const fmt = !k.unit ? fmtInt : fmtByUnit(k.unit);
   const dfmt = k.unit === '%' ? fmtPts : fmt;
   const hasDelta = num(k.delta);
@@ -213,12 +277,17 @@ function kpiInstrument(k, baseLabel, ranked, recLabel) {
     const nU = k.by_severity?.urgent ?? urgent;
     tile.querySelector('.kpi-delta')?.replaceWith(h('span', { class: 'kpi-delta is-flat' }, pill(nU ? 'urgent' : 'ok', `${fmtInt(nU)} urgent`), k.by_severity?.review != null ? h('span', { class: 'kpi-delta-ref' }, ` · ${fmtInt(k.by_severity.review)} review`) : null));
   }
-  if (footSpans[1]) footSpans[1].textContent = num(k.baseline) ? `${baseLabel} ${fmt(k.baseline)}` : num(k.as_of_week) ? `As of W${k.as_of_week}` : 'Source: actions.json';
+  if (footSpans[1]) footSpans[1].textContent = num(k.baseline) ? `${baseLabel} ${fmt(k.baseline)}` : num(k.as_of_week) ? `As of ${fmtWeek(k.as_of_week)}` : 'Source: actions.json';
   if (!Array.isArray(k.spark)) {
     const sp = tile.querySelector('.kpi-spark');
     // no time series exported: show a baseline → recommended dumbbell with both 95% CIs instead
     if (sp && num(k.baseline) && num(k.value)) sp.replaceWith(dumbbell(k, fmt, baseLabel, recLabel));
-    else sp?.remove();
+    else if (sp && !hasDelta) {
+      // count tile: a severity ruler in the dumbbell's slot, so the four tile footers line up
+      const sev = k.by_severity || actions?.counts?.by_severity || {};
+      const ruler = severityRuler(sev);
+      if (ruler) sp.replaceWith(ruler); else sp.remove();
+    } else sp?.remove();
   }
   if (footSpans[0] && !Array.isArray(k.ci)) footSpans[0].textContent = k.provenance === 'DERIVED' ? 'Count, no interval' : 'No interval';
   // provenance chip moves from the label row to the delta row so labels get the full width
@@ -227,6 +296,16 @@ function kpiInstrument(k, baseLabel, ranked, recLabel) {
   if (chip && delta) { const row = h('div', { class: 'mc-kpi-row' }); delta.replaceWith(row); row.append(delta, chip); }
   tile.dataset.kpi = k.id;
   return tile;
+}
+
+/** Stacked severity ruler (urgent / review / info) for the open-actions count tile. */
+function severityRuler(sev) {
+  const order = [['urgent', 'urgent'], ['review', 'review'], ['info', 'info']].filter(([key]) => num(sev[key]) && sev[key] > 0);
+  const total = order.reduce((s, [key]) => s + sev[key], 0);
+  if (!total) return null;
+  return h('div', { class: 'mc-db mc-sev', role: 'img', 'aria-label': order.map(([key, l]) => `${fmtInt(sev[key])} ${l}`).join(', ') },
+    h('div', { class: 'mc-sev-track' }, order.map(([key]) => h('span', { class: `mc-sev-seg is-${key}`, style: { flexGrow: String(sev[key]) } }))),
+    h('div', { class: 'mc-db-labels', 'aria-hidden': 'true' }, order.map(([key, l]) => h('span', { class: `is-${key}` }, `${l} ${fmtInt(sev[key])}`))));
 }
 
 /** Baseline → recommended dumbbell on a shared track, with each value's 95% CI as a faint band. */
@@ -264,7 +343,7 @@ function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
   const recPol = recId ? get(recId) : null;
   if (recPol?.kpi?.aog_hours && !rows.some((r) => r.key === recId)) {
     const a = recPol.kpi.aog_hours;
-    rows.push({ key: 'REC', name: `Recommended · ${recId}`, label: String(recPol.label || 'frontier point').replace(/^Recommended:\s*/, ''), value: a.mean, lo: a.ci_lo, hi: a.ci_hi, capital: recPol.kpi?.spare_capital_aed?.mean, role: 'rec' });
+    rows.push({ key: 'REC', name: `Recommended · ${recId}`, label: String(recPol.label || 'frontier point').replace(/^Recommended:\s*/, '').replace(new RegExp(`\\s*\\(${recId}\\)$`), ''), value: a.mean, lo: a.ci_lo, hi: a.ci_hi, capital: recPol.kpi?.spare_capital_aed?.mean, role: 'rec' });
   } else if (recP && num(recP.aog_hours)) {
     const ci = Array.isArray(recP.aog_ci) ? recP.aog_ci : [recP.aog_hours, recP.aog_hours];
     rows.push({ key: 'REC', name: `Recommended · ${recId}`, label: recP.label || 'balanced frontier point', value: recP.aog_hours, lo: ci[0], hi: ci[1], capital: recP.capital_aed, role: 'rec' });
@@ -272,12 +351,20 @@ function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
   const base = rows.find((r) => r.role === 'base');
   const rec = rows.find((r) => r.role === 'rec');
   let headline = 'Policy comparison not run';
+  let ciNote = '';
   if (base && rec) {
     const pct = Math.round((1 - rec.value / base.value) * 100);
     const dCap = num(rec.capital) && num(base.capital) ? rec.capital - base.capital : null;
     const overlap = rec.hi >= base.lo && rec.lo <= base.hi;
-    const capTxt = dCap == null ? '' : dCap >= 0 ? `, for ${fmtAED(dCap)} more spare capital` : `, while releasing ${fmtAED(-dCap)} of spare capital`;
-    headline = `The recommended plan ${pct >= 0 ? 'cuts' : 'raises'} modelled material AOG by ${Math.abs(pct)}% versus ${baseLabel}${capTxt}; the 95% intervals ${overlap ? 'overlap' : 'do not overlap'}`;
+    const capTxt = dCap == null ? '' : dCap >= 0 ? ` for ${fmtAED(dCap)} more capital` : ` and frees ${fmtAED(-dCap)}`;
+    const verb = pct >= 0 ? 'cuts' : 'raises';
+    const cands = [
+      `The recommended plan ${verb} material AOG ${Math.abs(pct)}% vs ${baseLabel}${capTxt}${overlap ? '; the intervals overlap' : ''}`,
+      `The recommended plan ${verb} material AOG ${Math.abs(pct)}% vs ${baseLabel}${capTxt}`,
+      `The recommended plan ${verb} material AOG ${Math.abs(pct)}% vs ${baseLabel}`,
+    ];
+    headline = cands.find((c) => c.length <= HEADLINE_MAX) || cands[cands.length - 1];
+    ciNote = overlap ? '95% intervals overlap' : '95% intervals do not overlap';
   } else if (rows.length) {
     const best = rows.reduce((a, b) => (a.value < b.value ? a : b));
     headline = `${best.name} has the lowest modelled material AOG (${fmtHours(best.value)} a year)`;
@@ -287,7 +374,7 @@ function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
   const log = vals.length && Math.max(...vals) / Math.min(...vals) > 8;
   const f = chartFrame(host, {
     headline,
-    subtitle: `Material AOG hours per year · mean and 95% CI · ${seedText}${fSplit && !seedText.includes(fSplit) ? ` (recommended point: ${fSplit} seeds)` : ''}${log ? ' · log scale' : ''} · capital = simulated spare capital`,
+    subtitle: `Material AOG h/yr · mean and 95% CI${ciNote ? ` (${ciNote.replace('95% intervals ', '')})` : ''} · ${seedText}${fSplit && !seedText.includes(fSplit) ? ` (recommended point: ${fSplit} seeds)` : ''}${log ? ' · log scale' : ''} · right: spare capital`,
     provenance: policies.meta?.provenance || 'SIMULATED', source: 'policies.json + frontier.json',
     table: { columns: [{ key: 'name', label: 'Policy' }, { key: 'label', label: 'Description' }, { key: 'value', label: 'AOG h/yr', num: true, format: fmtHours }, { key: 'lo', label: 'CI low', num: true, format: fmtHours }, { key: 'hi', label: 'CI high', num: true, format: fmtHours }, { key: 'capital', label: 'Spare capital', num: true, format: fmtAED }], rows },
   });
@@ -296,7 +383,7 @@ function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
   return responsive(f.body, (w) => {
     const narrow = w < 560;
     const rowH = narrow ? 58 : 50;
-    const m = narrow ? { top: 8, right: 8, bottom: 28, left: 8 } : { top: 8, right: 132, bottom: 28, left: 196 };
+    const m = narrow ? { top: 8, right: 8, bottom: 28, left: 8 } : { top: 8, right: 112, bottom: 28, left: Math.min(240, Math.max(196, w * 0.34)) };
     const iw = Math.max(60, w - m.left - m.right), ih = rows.length * rowH;
     const svg = svgIn(f.body, w, ih + m.top + m.bottom, 'Material AOG hours by policy, mean and 95% interval');
     const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
@@ -315,7 +402,7 @@ function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
     // faint vertical guides at ticks
     g.append('g').attr('class', 'gnm-grid').selectAll('line').data(ticks || x.ticks(5)).join('line').attr('x1', (d) => x(d)).attr('x2', (d) => x(d)).attr('y1', 0).attr('y2', ih);
 
-    const color = (r) => (r.role === 'rec' ? theme.color.accent : r.role === 'base' ? theme.color.accent2 : theme.color.muted);
+    const color = (r) => (r.role === 'rec' ? theme.series.recommended : r.role === 'base' ? theme.series.baseline : theme.series.neutral);
     rows.forEach((r, i) => {
       const y0 = i * rowH;
       const cy = narrow ? y0 + 38 : y0 + rowH / 2;
@@ -323,7 +410,7 @@ function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
       row.append('rect').attr('x', narrow ? 0 : -m.left).attr('y', y0 + 2).attr('width', narrow ? iw : w).attr('height', rowH - 4).attr('rx', 6).attr('fill', r.role === 'rec' ? 'rgba(34,199,184,0.06)' : 'transparent');
       // labels
       if (narrow) {
-        row.append('text').attr('class', r.role === 'rec' ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 8).attr('y', y0 + 16).attr('dy', '0.32em').text(truncate(`${r.name} · ${r.label}`, iw * 0.58));
+        row.append('text').attr('class', r.role === 'rec' ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 8).attr('y', y0 + 16).attr('dy', '0.32em').text(truncate(r.role === 'rec' ? r.name : `${r.name} · ${r.label}`, iw * 0.58));
         row.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', iw - 8).attr('y', y0 + 16).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', r.role === 'rec' ? theme.color.text : theme.color.muted).text(`${fmtHours(r.value)}${num(r.capital) ? ` · ${fmtAED(r.capital)}` : ''}`);
       } else {
         row.append('text').attr('class', r.role === 'rec' ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', -m.left + 16).attr('y', cy - 8).attr('dy', '0.32em').attr('fill', r.role === 'rec' ? theme.color.text : null).text(r.name);

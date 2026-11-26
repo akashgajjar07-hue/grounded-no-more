@@ -58,7 +58,8 @@ POLICY_LABELS = {
     "P0": "Legacy rules (baseline)", "P1": "Local optimised", "P2": "Network (multi-echelon)",
     "I125": "Recommended: P2 + greedy additions (I125)",
 }
-STORY_IDS = ["mission-hero", "parts-hotspot-32", "forecast-demand-strip", "rotable-float-calc",
+# data-story ids the story steps target for the current world (network-<station> follows the narrated incident)
+STORY_IDS = ["mission-kpis", "aircraft", "forecast-demand-strip", "rotable-float-calc",
              "network-bom", "frontier-chart", "aog-incident-ps1", "action-inbox"]
 
 # ----------------------------------------------------------------------------------------------
@@ -1203,77 +1204,113 @@ def build_method() -> dict:
 
 
 def build_story(data: dict) -> dict:
+    """Story-mode steps. The narrated part is the planted PS1 part (fallback GN-32-R014) and its station is that
+    part's first replayed AOG incident; every number is read from the exported files or the history.
+    Selectors are tight targets (wave-2 design review #10): the KPI row, the whole aircraft drawing, the selected
+    PN's demand strip, ... so the step card never covers what the step talks about."""
     k = {x["id"]: x for x in data["kpis"]["kpis"]}
     rid = data["kpis"]["recommended_id"]
-    part = next(p for p in data["parts"]["parts"] if p["pn"] == "GN-32-R014")
-    sys32 = next(s for s in data["parts"]["ata_systems"] if s["ata"] == "32")
+    n_seeds = len(data["kpis"].get("seeds") or []) or 20
+    parts_ = data["parts"]["parts"]
+    part = next((p for p in parts_ if p.get("planted") == "PS1"), None) or next(p for p in parts_ if p["pn"] == "GN-32-R014")
+    pn, ata = part["pn"], part["ata"]
+    noun = part["desc"].lower()
+    sys_ = next(s for s in data["parts"]["ata_systems"] if s["ata"] == ata)
+    incs = data["aog_lab"]["incidents"]
+    inc = next((i for i in incs if i["pn"] == pn), None) or next(i for i in incs if i["id"] == "AOG-0001")
+    st = inc["station"]
     mr = hist("material_requests")
-    bom = mr[(mr.pn == "GN-32-R014") & (mr.station == "BOM")]
-    bom_d0 = int((bom.deadline_class == "D0").sum())
+    at_st = mr[(mr.pn == pn) & (mr.station == st)]
+    st_d0 = int((at_st.deadline_class == "D0").sum())
     ae = hist("aog_events")
-    ae_bom = ae[(ae.station == "BOM") & ae.pns.astype(str).str.contains("GN-32-R014")]
-    chk = next(c for c in data["forecast"]["champions"] if c["demand_class"] == "intermittent" and c["part_class"] == "R")
-    fl = next(f for f in data["rotables"]["float_examples"] if f["pn"] == "GN-32-R014")
+    ae_st = ae[(ae.station == st) & ae.pns.astype(str).str.contains(pn)]
+    chk = next((c for c in data["forecast"]["champions"] if c["demand_class"] == part["demand_class"] and c["part_class"] == part["cls"]), None)
+    fl = next((f for f in data["rotables"]["float_examples"] if f["pn"] == pn), data["rotables"]["float_examples"][0])
     ffr = pq("outputs/forecasting/final_forecasts.parquet")
-    bom_ff = ffr[(ffr.pn == "GN-32-R014") & (ffr.station == "BOM")].iloc[0]
-    st = stock_table()
-    bom_units = st[(st.pn == "GN-32-R014") & (st.station == "BOM")].iloc[0]
+    st_ff = ffr[(ffr.pn == pn) & (ffr.station == st)].iloc[0]
+    stt = stock_table()
+    st_units = stt[(stt.pn == pn) & (stt.station == st)].iloc[0]
     net = {(r["policy_id"], r["station"]): r for r in data["network"]["policy_compare"]}
     pts = {p["id"]: p for p in data["frontier"]["points"]}
     rec = data["frontier"]["recommendation"]
-    inc = next(i for i in data["aog_lab"]["incidents"] if i["id"] == "AOG-0001")
     acts = data["actions"]["actions"]
-    ps1 = next((a for a in acts if a["pn"] == "GN-32-R014" and a["station"] == "BOM"), None)
+    act = next((a for a in acts if a["pn"] == pn and a["station"] == st), None)
     nurg = sum(a["severity"] == "urgent" for a in acts)
     fill, aog, cap = k["immediate_fill_rate"], k["aog_hours"], k["spare_capital_aed"]
     from gnm.policy.analytic import float_calc
-    p2_bom = int(bom_units.P2)
-    a_bom = float_calc(float(bom_ff.removal_rate_day) * 30.0, float(bom_ff.t_eff_out_d), p2_bom, 0.0)["availability"]
-    pal = (f" Even on its own {float(bom_ff.t_eff_out_d):.0f}-day repair loop, Palm's theorem gives "
-           f"{fmt_pct(a_bom, 0)} availability for the {p2_bom} units P2 places at BOM.")
+    p2_st = int(st_units.P2)
+    a_st = float_calc(float(st_ff.removal_rate_day) * 30.0, float(st_ff.t_eff_out_d), p2_st, 0.0)["availability"]
+    arc = next((a for a in data["network"]["arcs"] if a["to"] == st), None)
+    bands = data["parts"].get("system_risk_bands_share") or {}
+
+    # step 2: reconcile the system badge on the aircraft (share of fleet risk-hours) with the part-level status
+    risk = round(100 * part["risk_score"])
+    if sys_["risk_level"] != part["risk_level"]:
+        bar = f", under the {fmt_pct(bands['urgent'], 0)} urgent bar" if sys_["risk_level"] == "review" and "urgent" in bands else ""
+        lead = (f"ATA {ata} rates {sys_['risk_level'].upper()} as a system ({fmt_pct(sys_['risk_share'], 0)} of fleet "
+                f"risk-hours{bar}), but one part in it is {part['risk_level'].upper()}: {pn}, a {part['deadline']} {noun}, risk {risk}/100.")
+        t2 = f"One {part['risk_level']} part in a {sys_['risk_level']} system"
+    else:
+        lead = f"ATA {ata} rates {sys_['risk_level'].upper()}, led by {pn}, a {part['deadline']} {noun} with risk {risk}/100."
+        t2 = f"{pn}: never in stock at {st}"
+    body2 = (f"{lead} With {int(st_units.P0)} units at {st} under P0, {st_d0} D0 requests over two years became "
+             f"{len(ae_st)} AOG events ({fmt_int(ae_st.hours.sum())} h).")
+
+    body3 = (f"Its weekly demand is {part['demand_class']} (ADI {part['adi']:.2f} weeks, CV² {part['cv2']:.2f} on training "
+             "weeks W0–W77).")
+    if chk:
+        body3 += (f" The frozen MASE champion for this cell, '{chk['method']}', ranked {chk['holdout_rank']}/{chk['n_methods']} "
+                  "on the holdout, so the policies size rotables on the reliability-exposure rate.")
+    body4 = (f"Network removals run at {fl['rate_per_30d']:.1f} per 30 days with a {fl['pipeline_days']:.0f}-day hub pipeline. "
+             f"Serviceable units: P0 {fl['p0_units']}, P2 {fl['p2_units']}, recommended {fl['rec_units']}. On its "
+             f"{float(st_ff.t_eff_out_d):.0f}-day loop, Palm's theorem gives {fmt_pct(a_st, 0)} availability for the "
+             f"{p2_st} units P2 places at {st}.")
+    body5 = (f"At {st}, holdout material AOG falls from {fmt_int(net[('P0', st)]['aog_hours'])} h/yr under P0 to "
+             f"{fmt_int(net[('P2', st)]['aog_hours'])} under P2, which stocks outstations where the D0 penalty pays for the unit."
+             + (f" Each emergency hop from AUH takes {fmt_int(arc['aog_transport_h'])} h." if arc else ""))
+    body6 = (f"The pre-stated rule walks the capital-vs-AOG hull until an extra AED 1 M saves fewer than "
+             f"{rec['h_star_per_aed_1m']:.1f} AOG h/yr, and stops at {rid}: {fmt_aed_m(pts[rid]['capital_aed'])} and "
+             f"{fmt_int(pts[rid]['aog_hours'])} AOG h/yr on the holdout, against {fmt_int(pts['P2']['aog_hours'])} h for P2 at "
+             f"{fmt_aed_m(pts['P2']['capital_aed'])}.")
+    body7 = (f"{inc['id']}: {inc['tail']} (fictional) grounded at {st} for {fmt_int(inc['aog_hours'])} h waiting for a {noun}. "
+             f"Ranked on what the desk knew then, the top option was: {inc['decision']['recommended_label']}.")
+    body8 = f"The action centre raises {len(acts)} exceptions for W{data['actions']['as_of_week']}, {nurg} urgent."
+    if act and act["type"] == "OUTSTATION_DEPLETION":
+        e = act["evidence"]
+        body8 += (f" At {st}, {pn} has {e['on_hand']} of {e['target']} on hand, with {e['d0_requests_lookback']} D0 requests "
+                  f"and {fmt_int(e['aog_hours_lookback'])} AOG h in the last {e['lookback_weeks']} weeks (step 2 counted two years).")
+    elif act:
+        body8 += f" Including: {act['summary']}."
+
+    aog_sel = ('[data-story="aog-incident-ps1"]' if inc["id"] == "AOG-0001" else f'[data-incident="{inc["id"]}"]') + ' [data-story="aog-timeline"]'
     steps = [
-        ("#/mission", "mission-hero", "Fewer groundings, at a stated price",
-         f"On 20 holdout seeds the recommended plan ({rid}) cuts modelled material AOG from {fmt_int(aog['baseline'])} to "
-         f"{fmt_int(aog['value'])} hours a year and lifts immediate fill from {fmt_pct(fill['baseline'])} to "
-         f"{fmt_pct(fill['value'])}, for {fmt_aed_m(cap['value'] - cap['baseline'])} more spare capital than the legacy P0 rules."),
-        ("#/parts?ata=32&pn=GN-32-R014", "parts-hotspot-32", "A brake that is never at BOM",
-         f"GN-32-R014, a carbon brake assembly (ATA 32, D0), had {bom_d0} D0 requests at BOM in two years of history and "
-         f"{len(ae_bom)} AOG events there ({fmt_int(ae_bom.hours.sum())} h) because P0 held {int(bom_units.P0)} units at BOM. "
-         f"Its risk score is {round(100 * part['risk_score'])}/100; ATA 32 has {sys32['n_urgent']} urgent PNs."),
-        ("#/forecast?pn=GN-32-R014", "forecast-demand-strip", "Why brake demand is intermittent",
-         f"The brake's weekly demand is {part['demand_class']} (ADI {part['adi']:.2f} weeks, CV² {part['cv2']:.2f} on training "
-         f"weeks 0–77). For intermittent rotables the frozen MASE champion '{chk['method']}' ranked "
-         f"{chk['holdout_rank']}/{chk['n_methods']} on the holdout, so the policies size rotables on the reliability-exposure "
-         "rate instead."),
-        ("#/rotables?pn=GN-32-R014", "rotable-float-calc", "Float maths for one rotable",
-         f"Network removals run at {fl['rate_per_30d']:.1f} per 30 days with a {fl['pipeline_days']:.0f}-day hub pipeline. "
-         f"P0 holds {fl['p0_units']} serviceable units, P2 {fl['p2_units']}, the recommended plan {fl['rec_units']}.{pal}"),
-        ("#/network?station=BOM", "network-bom", "Positioning beats reacting",
-         f"At BOM, holdout material AOG falls from {fmt_int(net[('P0', 'BOM')]['aog_hours'])} h/yr under P0 to "
-         f"{fmt_int(net[('P2', 'BOM')]['aog_hours'])} under P2, which stocks outstations where the D0 penalty pays for the "
-         f"unit. Each emergency hop from AUH takes {fmt_int(data['network']['arcs'][[a['to'] for a in data['network']['arcs']].index('BOM')]['aog_transport_h'])} h."),
-        ("#/capital", "frontier-chart", "Where to stop buying",
-         f"The pre-stated rule walks the capital-vs-AOG hull until an extra AED 1 M saves fewer than "
-         f"{rec['h_star_per_aed_1m']:.1f} AOG h/yr, and stops at {rid}: {fmt_aed_m(pts[rid]['capital_aed'])} capital and "
-         f"{fmt_int(pts[rid]['aog_hours'])} AOG h/yr on the holdout, against {fmt_int(pts['P2']['aog_hours'])} h for P2 at "
-         f"{fmt_aed_m(pts['P2']['capital_aed'])}."),
-        ("#/aog?incident=AOG-0001", "aog-incident-ps1", "One incident, replayed",
-         f"AOG-0001: {inc['tail']} grounded at BOM for {fmt_int(inc['aog_hours'])} h waiting for a brake. The desk's options, "
-         f"ranked on information available then, put the AUH emergency transfer first ({inc['decision']['recommended_label']})."),
-        ("#/actions", "action-inbox", "What the planner does on Monday",
-         f"The action centre raises {len(acts)} exceptions for week {data['actions']['as_of_week']}, {nurg} urgent"
-         + (f" - including '{ps1['summary']}'." if ps1 else ".")),
+        # (route, story_id, selector, title, body)
+        ("#/mission", "mission-kpis", '[data-story="mission-kpis"]', "Fewer groundings, at a stated price",
+         f"Across {n_seeds} holdout seeds the recommended plan ({rid}) cuts modelled material AOG from "
+         f"{fmt_int(aog['baseline'])} to {fmt_int(aog['value'])} h a year and lifts immediate fill from "
+         f"{fmt_pct(fill['baseline'])} to {fmt_pct(fill['value'])}, for {fmt_aed_m(cap['value'] - cap['baseline'])} more "
+         "spare capital than P0."),
+        (f"#/parts?ata={ata}&pn={pn}", "aircraft", '[data-story="aircraft"]', t2, body2),
+        (f"#/forecast?pn={pn}", "forecast-demand-strip", '[data-story="forecast-demand-strip"] .fl-strip-sel',
+         f"Why its demand is {part['demand_class']}", body3),
+        (f"#/rotables?pn={pn}", "rotable-float-calc", '[data-story="rotable-float-calc"] .fc-inputs', "Float maths for one rotable", body4),
+        (f"#/network?station={st}", f"network-{st.lower()}", f'[data-story="network-{st.lower()}"]', "Positioning beats reacting", body5),
+        ("#/capital", "frontier-chart", '[data-story="frontier-chart"]', "Where to stop buying", body6),
+        (f"#/aog?incident={inc['id']}", "aog-incident-ps1", aog_sel, "One incident, replayed", body7),
+        ("#/actions", "action-inbox", '[data-story="action-inbox"]', "What the planner does on Monday", body8),
     ]
+    ids = [sid for _, sid, _, _, _ in steps]
     return {
         "meta": meta("DERIVED", ["docs/data/kpis.json", "docs/data/parts.json", "docs/data/forecast.json",
                                  "docs/data/rotables.json", "docs/data/network.json", "docs/data/frontier.json",
                                  "docs/data/aog_lab.json", "docs/data/actions.json",
                                  "data/processed/history/material_requests.parquet", "data/processed/history/aog_events.parquet"],
-                     "Story-mode steps; bodies are templated at export time from the exported numbers. Selectors are "
-                     "data-story attributes the screens must render: " + ", ".join(STORY_IDS) + "."),
-        "selector_ids": STORY_IDS,
-        "steps": [{"route": r, "selector": f'[data-story="{sid}"]', "story_id": sid, "title": t, "body": b,
-                   "provenance": "DERIVED"} for r, sid, t, b in steps],
+                     "Story-mode steps; bodies are templated at export time from the exported numbers. Each selector starts "
+                     "with the data-story attribute the screen renders (story_id), optionally narrowed to a child element so "
+                     "the step card does not cover its subject: " + ", ".join(ids) + "."),
+        "selector_ids": ids,
+        "steps": [{"route": r, "selector": sel, "story_id": sid, "title": t, "body": b, "provenance": "DERIVED"}
+                  for r, sid, sel, t, b in steps],
     }
 
 
