@@ -312,7 +312,8 @@ def test_tour_auto_advances_with_filling_bar(site, browser):  # noqa: F811
         fb = page.evaluate("document.querySelector('.story-progress .is-current .story-fill').style.transform")
         assert b > a and fa != fb and fb.startswith("scaleX(")
         page.wait_for_function("window.__gnmStory.state().index === 1", timeout=5000)
-        assert "STEP 02" in page.locator(".story-step").inner_text()
+        # the counter crossfades with the title/body (150 ms out), so it reads STEP 02 once the swap lands
+        page.wait_for_function("document.querySelector('.story-step').textContent.includes('STEP 02')", timeout=1000)
         assert page.evaluate("window.__gnmStory.state().playing")
         # the first segment is complete once the tour moved on
         assert page.evaluate("document.querySelectorAll('.story-progress .story-fill')[0].style.transform") == "scaleX(1)"

@@ -363,16 +363,27 @@ select option { background: var(--panel); color: var(--text); }
    Story mode (spotlight + step card)
    ===================================================================== */
 .story { position: fixed; inset: 0; z-index: 110; pointer-events: none; }
+/* ONE persistent spotlight: its 9999 px spread is the constant dim backdrop; the ring lives on ::after so it can soften
+   while the spot glides (translate + scale) without the dim ever changing */
 .story-spot {
-  position: fixed; border-radius: var(--r-card); pointer-events: none;
-  box-shadow: 0 0 0 1px var(--primary), 0 0 0 6px rgba(34, 199, 184, 0.16), 0 0 0 9999px rgba(4, 9, 15, 0.78);
-  transition: all var(--dur-slow) var(--ease);
+  position: fixed; left: 0; top: 0; border-radius: var(--r-card); pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(4, 9, 15, 0.78);
 }
+.story-spot::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  box-shadow: 0 0 0 1px var(--primary), 0 0 0 6px rgba(34, 199, 184, 0.16);
+}
+.story-spot.is-idle { opacity: 0; }   /* before the first target: no dim, so the first glide opens like an iris */
+/* the card's surface is a separate layer (.story-card-bg) so a height change can be FLIPped with scaleY */
 .story-card {
-  position: fixed; width: min(380px, calc(100vw - 32px)); pointer-events: auto;
-  background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r-card); box-shadow: var(--shadow-pop); padding: var(--s-3);
-  transition: top var(--dur-slow) var(--ease), left var(--dur-slow) var(--ease);
+  position: fixed; left: 0; top: 0; width: min(380px, calc(100vw - 32px)); pointer-events: auto; isolation: isolate;
+  background: transparent; border: 1px solid transparent; border-radius: var(--r-card); padding: var(--s-3);
 }
+.story-card-bg {
+  position: absolute; inset: -1px; z-index: -1; pointer-events: none; transform-origin: 50% 0;
+  background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r-card); box-shadow: var(--shadow-pop);
+}
+.story-lower { position: relative; }
 .story-step { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.14em; color: var(--primary); }
 .story-card h3 { margin: var(--s-1) 0; }
 .story-card p { font-size: var(--fs-14); color: var(--text-muted); }
@@ -383,9 +394,13 @@ select option { background: var(--panel); color: var(--text); }
 /* ≤ 480 px: bottom sheet, ≤ 40% of the viewport; the target is scrolled into the upper half */
 .story-card.is-sheet {
   left: 0 !important; right: 0; top: auto !important; bottom: 0; width: 100%; max-height: 40vh; overflow-y: auto;
+  /* the second shadow is a panel-coloured apron below the sheet: a height slide never shows a gap at the bottom */
+  background: var(--panel); border-color: var(--line-strong); box-shadow: var(--shadow-pop), 0 160px 0 160px var(--panel);
   border-radius: var(--r-card) var(--r-card) 0 0; border-bottom: 0; padding: var(--s-2) var(--s-2) calc(var(--s-2) + env(safe-area-inset-bottom, 0px));
   transition: none;
 }
+/* the sheet scrolls, so it paints its own surface (an absolute layer would scroll away with the text) */
+.story-card.is-sheet .story-card-bg { display: none; }
 .story-card.is-sheet h3 { font-size: var(--fs-16); margin: 4px 0; }
 .story-card.is-sheet p { font-size: var(--fs-14); line-height: 1.45; }
 .story-card.is-sheet .story-progress { margin: 12px 0; }

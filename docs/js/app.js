@@ -170,7 +170,12 @@ async function render({ force = false, keepScroll = false } = {}) {
   current = null;
   view.classList.remove('view-enter');
   const scrollY0 = window.scrollY;
-  if (!keepScroll) view.replaceChildren(stateBlock('loading'));
+  if (!keepScroll) {
+    // to the top before the old page is cleared: a shorter document would otherwise clamp the scroll and pull the
+    // footer into view (a layout shift on every route change, e.g. during the auto-advancing tour)
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    view.replaceChildren(stateBlock('loading'));
+  }
   hideTermTip();
   try {
     const mod = await import(route.module);

@@ -1,0 +1,24 @@
+{
+  "what": "Guided tour, full Play run (hero \"60-second tour\" button, 6 steps at the default 7 s), 1440x900, Chromium headless, CDP trace",
+  "tour_duration_s": 50.2,
+  "frames": 3342,
+  "avg_fps": 59.9,
+  "dropped_frames_gt_20ms": 3,
+  "dropped_pct": 0.09,
+  "p95_frame_ms": 16.7,
+  "worst_frame_ms": 33.4,
+  "longest_main_thread_task_ms": 39.8,
+  "long_tasks_gt_50ms": 0,
+  "cls_trace": 0.5936,
+  "cls_observer": 0.5936,
+  "layout_shift_entries": 11,
+  "cls_from_tour_elements": 0.0,
+  "cls_by_source": {
+    "disclaimer": 0.5934,
+    "node": 0.0001,
+    "row": 0.0,
+    "kpi-unit": 0.0,
+    "kpi-unit,kpi-unit": 0.0
+  },
+  "note": "frame times from an in-page rAF probe for the whole run (route changes and chart renders included); long tasks and CLS from the trace / PerformanceObserver"
+}
