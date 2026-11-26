@@ -239,6 +239,14 @@ def _restore(page, base_url: str, route: str):
         if st["modal"] or st["drawer"] or st["story"] or st["tooltip"]:
             page.keyboard.press("Escape")
             page.wait_for_timeout(120)
+    # the mobile navigation rail (#menu-btn) is not a modal/drawer in STATE_JS: close it explicitly,
+    # otherwise its scrim blocks every later control at 390 px (found by the PAGE-4 audit)
+    if page.evaluate("document.getElementById('app')?.classList.contains('rail-open') || false"):
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(120)
+        if page.evaluate("document.getElementById('app')?.classList.contains('rail-open') || false"):
+            page.evaluate("document.getElementById('menu-btn')?.click()")
+            page.wait_for_timeout(200)
     if page.evaluate("location.hash").split("?")[0] != _hash_of(route).split("?")[0]:
         _goto(page, base_url, route)
 
