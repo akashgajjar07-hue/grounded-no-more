@@ -79,3 +79,29 @@ Crew oxygen masks are expendables, so the line-station rule does not apply to th
 **27. Not an approved maintenance, airworthiness or dispatch tool.** It does not replace an approved MEL, an MRO/ERP system, an AOG desk, or certification paperwork (such as an authorised release certificate).
 
 **28. Independent project.** Not affiliated with any airline, OEM, vendor or MRO organisation, and uses none of their data or systems.
+
+## Known model limitations from the v2 domain review (disclosed, not fixed)
+
+A fresh aviation domain review of v2 (`reports/review_aviation_v2.md`) found the model-level issues below. By the author's decision they are disclosed rather than fixed, because each fix would need another rebuild, recalibration and holdout. The wording and UI issues from the same review were fixed.
+
+**29. Robbed-donor downtime is not counted (AV2-01).** A robbed donor aircraft is assumed not to fly until it is reinstated, but those hours are not counted as material AOG. In the P0 history there are about 28 robberies a year, donors are held for 8 days on average, and the donor hours come to about 5,285 a year, against 1,282 counted material AOG hours. 82% of robberies are for D3/D10 items. Absolute downtime is therefore understated for every policy. P0 robs more often than P2, so the P2-vs-P0 gap is probably understated too, but the absolute levels should not be quoted as fleet downtime.
+
+**30. P0's outstation stock is mostly unusable (AV2-02).** 6 of P0's 8 outstation rotables are wear-planned brakes, and every brake change is done at AUH, so only the rest can ever be used at a line station. P0 holds no nose-wheel or widebody wheel assemblies at outstations and never re-provisions over the two years. Most of P0's downtime comes from no-go actuators and wheels at line stations, so the P2-vs-P0 headline largely measures "stock no-go items at line stations". A P0 with a standard line kit was measured during calibration but not adopted (only the fewest-changes variant met the band); it would narrow the gap.
+
+**31. Wheels and tyres are modelled as rare unscheduled removals (AV2-04).** In reality they are the highest-volume rotable, and most changes are wear-planned.
+
+**32. Some brake positioning comes from a station-share prior (AV2-05).** P2 and I125 place a few brakes at outstations where no brake change ever happens, which is dead stock.
+
+**33. The hero part's removal rate is high, and there is no warranty or reliability escalation (AV2-06).** A real planner would escalate a part removed this often to reliability and warranty before buying more spares.
+
+**34. Robbery is the engine's automatic first route at AUH, at a flat availability (AV2-07).** In practice robbery is a case-by-case engineering decision and would often follow an exchange or loan. The AOG Response Lab never ranks robbery, but the simulated policies use it.
+
+**35. Deferral has no cost of its own (AV2-08).** Flying with a D3/D10 item deferred costs nothing until the window expires, so the optimiser can cut expensive deferrable floats more readily than an operator would.
+
+**36. AOG hours run from removal, not from the next scheduled departure (AV2-09).** Overnight hours count, so material AOG hours are higher than a departure-based count would give.
+
+**37. Exchange and loan are one route, and there is no pool or component-support contract (AV2-12).** A widebody operator would usually have a pool or support agreement that changes the widebody sourcing picture.
+
+**38. Unit costs are drawn per part family, not per aircraft type (AV2-13).** Several are well off typical list prices, so absolute capital figures, including I125's extra investment, are illustrative. Comparisons within the model are consistent, but the AED amounts are not price estimates.
+
+**39. Other simplifications the reviewer noted.** Some removal rates are high, local buy of windshields is very fast, IDG/VFSG repair is in-house, outstations are assumed to have fitting capability, robbery at AUH is not used to supply outstations, and P1 is a deliberately simple comparator. See the review for details.

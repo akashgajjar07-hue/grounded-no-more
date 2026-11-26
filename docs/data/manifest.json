@@ -1,7 +1,7 @@
 {
  "meta": {
-  "generated_at": "2026-11-26T11:59:09Z",
-  "git_sha": "26d4960",
+  "generated_at": "2026-11-26T12:25:22Z",
+  "git_sha": "843026c",
   "provenance": "DERIVED",
   "source": [
    "gnm.export.build_site_data"
@@ -33,8 +33,8 @@
   "policies": 37287,
   "aog_lab": 199032,
   "actions": 75278,
-  "method": 129230,
+  "method": 133247,
   "story": 4008
  },
- "total_bytes": 1203489
+ "total_bytes": 1207506
 }

@@ -243,4 +243,8 @@ These reviews were run on the v1 world before it was archived. The aviation revi
 
 ### v2 reviews
 
-*To be completed by the lead after the v2 reviews.*
+**Aviation domain review (fresh, v2): `reports/review_aviation_v2.md`.** 3 critical, 11 major, 11 minor.
+- **Fixed (wording/UI, design wave C, db8890c):** AV2-03 (P2 re-mixes the float: buys 68 rotables ≈ AED 8.4M and sheds 20 ≈ AED 3.1M, net ≈ +AED 0.6M; "positioning the existing float" removed); AV2-10 (v1 leftovers removed); AV2-11 (band wording: "an ASSUMED plausibility band chosen before any policy comparison"); robbery wording (used automatically first at AUH with approval flagged; never ranked by the AOG Lab); AV2-14 (outstation float view uses the resupply time from AUH); consistent MEL-analogue wording; the 120-part scope stated.
+- **Disclosed, not fixed (author decision; LIMITATIONS 29–39):** AV2-01 robbed-donor downtime not counted; AV2-02 P0's outstation stock mostly unusable brakes, no line kit, no re-provisioning; AV2-04 wheels as rare unscheduled removals; AV2-05 phantom brake positioning; AV2-06 hero-part rate and no warranty escalation; AV2-07 robbery as the automatic first route; AV2-08 no cost of deferral; AV2-09 AOG from removal, not departure; AV2-12 exchange/loan merged, no pool contract; AV2-13 unit costs per family; and the minor items. Each is described with its likely direction of bias.
+
+**Design critic (fresh, v2): `reports/review_design_5.md`.** 4.20/5, story mode 4.43. Every functional bug (F1–F9) and top issue (1–12) was fixed in design wave C (db8890c). A further fresh design re-score follows.

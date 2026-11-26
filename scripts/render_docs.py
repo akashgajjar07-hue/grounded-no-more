@@ -626,6 +626,21 @@ def compute() -> dict[str, str]:  # noqa: C901, PLR0915 - one flat list of keys 
     V["policy.remix.buy_aed"] = fmt_aed(rmx["buy_aed"])
     V["policy.remix.shed_units"] = fmt_int(rmx["shed_units"])
     V["policy.remix.shed_aed"] = fmt_aed(rmx["shed_aed"])
+    _H = ROOT / "data/processed/history"
+    _rb = pd.read_parquet(_H / "aog_robberies.parquet")
+    _rq = pd.read_parquet(_H / "material_requests.parquet")[["request_id", "deadline_class"]]
+    _ae = pd.read_parquet(_H / "aog_events.parquet")
+    _yrs = 2.0
+    V["limits.robbery_per_yr"] = fmt_int(len(_rb) / _yrs)
+    V["limits.donor_h_per_yr"] = fmt_int((_rb.reinstated_h - _rb.robbed_h).sum() / _yrs)
+    V["limits.donor_days_mean"] = f"{(_rb.reinstated_h - _rb.robbed_h).mean() / 24:.0f} days"
+    V["limits.robbery_d3d10_share"] = f"{_rb.merge(_rq, on='request_id', how='left').deadline_class.isin(['D3', 'D10']).mean():.0%}"
+    V["limits.p0_history_aog_per_yr"] = fmt_int(_ae.hours.sum() / _yrs)
+    _p0 = pd.read_csv(OUT / "policies" / "P0_stock_params.csv")
+    _pm = pd.read_parquet(_H / "part_master.parquet")[["pn", "removal_mode"]]
+    _o = _p0[(_p0.station != "AUH") & (_p0.base_stock > 0)].merge(_pm, on="pn")
+    V["limits.p0_out_total"] = fmt_int(_o.base_stock.sum())
+    V["limits.p0_out_brakes"] = fmt_int(_o[_o.removal_mode == "wear_planned"].base_stock.sum())
     V["scope.pn_count"] = fmt_int(len(pd.read_parquet(ROOT / "data/processed/history/part_master.parquet")))
     passed = junit_case_passed("test_optim_greedy", "test_greedy_equals_brute_force_at_breakpoints")
     V["optim.greedy_gap_small_case_pct"] = (
