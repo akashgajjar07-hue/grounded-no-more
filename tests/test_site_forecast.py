@@ -51,7 +51,7 @@ def test_leaderboard_is_dot_plot_with_champion_and_zero_excluded(site, browser):
         txt = page.locator(".fl-champ").inner_text()
         assert "excluded from champion eligibility" in txt
         champ = next(c for c in f["champions"] if c["demand_class"] == "intermittent" and c["part_class"] == "R")
-        assert f"{champ['mase']:.3f}" in txt
+        assert f"{champ['mase']:.2f}" in txt   # wave 4: card precision matches the chart (0.85, not 0.848)
         # selection / holdout toggle
         page.locator('.seg[aria-label="Evaluation window"] button[data-value="holdout"]').click()
         page.wait_for_timeout(400)

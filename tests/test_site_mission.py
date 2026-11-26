@@ -173,7 +173,13 @@ def test_wave3_consistency_colour_and_balance(site, browser, vp):  # noqa: F811
         for i in range(rows.count()):
             p = by_pn[rows.nth(i).locator(".mc-pr-pn").inner_text().strip()]
             if "aog_h_52w_max_station" in p:
-                assert rows.nth(i).locator(".mc-pr-aog").inner_text().split()[-1].replace(",", "") == str(round(p["aog_h_52w_max_station"]))
+                # wave 4 (C1): "120 h · AUH" — the number travels with its station; 0 h prints as "—"
+                v = round(p["aog_h_52w_max_station"])
+                cell = rows.nth(i).locator(".mc-pr-aog").inner_text()
+                if v:
+                    assert f"{v:,} h" in cell and (p.get("aog_h_52w_max_station_id") or "") in cell, cell
+                else:
+                    assert "—" in cell, cell
         # no "System OK" pill without its urgent-part count
         for r in page.locator(".mc-sys-row").all():
             t = r.inner_text()

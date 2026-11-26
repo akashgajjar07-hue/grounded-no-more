@@ -125,7 +125,10 @@ def test_canonical_cross_screen_fields():
     pn = next(s for s in story["steps"] if s["story_id"] == "aircraft")["route"].split("pn=")[1]
     fl = next(f for f in rot["float_examples"] if f["pn"] == pn)
     assert fl["spares_total"]["P2"] == fl["p2_units"] + fl["loop_units"]
-    assert f"P2 {fl['spares_total']['P2']}" in step4["body"]
+    # wave 4: step 4 quotes the recommended S the calculator opens on, and the station view's own units/availability
+    assert f"recommended {fl['spares_total']['recommended']} spares" in step4["body"]
+    sv = fl["station_view"]
+    assert f"the {sv['units']['recommended']} unit" in step4["body"] and f"{round(100 * sv['availability']['recommended'])}%" in step4["body"]
     for s in story["steps"]:
         ms = s.get("mobile_selector")
         assert ms is None or ms.startswith(f'[data-story="{s["story_id"]}"]') or ms.startswith("[data-incident="), s

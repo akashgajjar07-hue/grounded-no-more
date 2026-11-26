@@ -91,3 +91,4 @@
   .co-main > .card:not(.co-hero) { grid-column: span 12; order: 3; }
 }
 .co-hero svg .co-unstable { fill: var(--text-faint); font-family: var(--font-mono); font-size: 11px; }
+.co-rule-body { display: flex; flex-direction: column; gap: var(--s-1); } /* wave 4: 8 px between the rule and its footnote */

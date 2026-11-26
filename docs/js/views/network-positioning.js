@@ -24,8 +24,9 @@ const C = theme.color;
 const HPW = 168;
 const POLS = ['P0', 'P1', 'P2'];
 const SR = theme.series;
-// P0 = baseline (copper), P1 = other comparison (titanium), P2 = the network plan under test (teal)
-const POL_COLOR = { P0: SR.baseline, P1: SR.neutral, P2: SR.recommended };
+// P0 = baseline (copper), P1 = other comparison (slate), P2 = the network policy (bright titanium, filled).
+// Not teal: teal is the recommended I125 plan site-wide, and I125 has no per-station holdout breakdown (wave 4, C5).
+const POL_COLOR = { P0: SR.baseline, P1: SR.context, P2: SR.neutral };
 
 let cssLoaded = false;
 function loadCSS() {
@@ -77,7 +78,7 @@ const RISK = {
   urgent: { word: 'HIGH', glyph: '▲', color: C.urgent, pill: 'urgent' },
   review: { word: 'WATCH', glyph: '◆', color: C.review, pill: 'review' },
   ok: { word: 'LOW', glyph: '●', color: C.ok, pill: 'ok' },
-  watch: { word: 'WATCH', glyph: '◆', color: SR.neutral, pill: 'unknown' },
+  watch: { word: 'ELEVATED', glyph: '◆', color: SR.neutral, pill: 'unknown' }, // not WATCH: WATCH is amber review site-wide (wave 4, C4)
   low: { word: 'LOWER', glyph: '●', color: SR.context, pill: 'unknown' },
   unknown: { word: 'N/A', glyph: '○', color: C.unknown, pill: 'unknown' },
 };
@@ -176,10 +177,12 @@ export async function render(el, ctx) {
       h('span', { class: 'np-legend-k' }, 'Risk ring'),
       ...bandsPresent.map((b) => h('span', { style: { color: RISK[b].color } }, h('i', { class: 'np-ring' }), RISK[b].word.toLowerCase())),
       h('span', { class: 'np-legend-k' }, 'Transfers'),
-      h('span', { style: { color: C.accent } }, h('i', { class: 'np-line' }), 'routine'),
+      h('span', { style: { color: SR.neutral } }, h('i', { class: 'np-line' }), 'routine'),
       totalEmerg ? h('span', { style: { color: SR.urgent } }, h('i', { class: 'np-line' }), 'emergency (replay)') : null)));
   const drill = h('section', { class: 'card', dataset: { story: 'station-drill' }, 'aria-live': 'polite' });
-  el.append(h('div', { class: 'np-hero mt-3' }, mapCard, drill));
+  // wave 4: the hub-vs-outstation finding sits under the map, so the left column matches the tall station panel (no dead space)
+  const shareCard = h('section', { class: 'card', dataset: { story: 'network-hub-finding' } });
+  el.append(h('div', { class: 'np-hero mt-3' }, h('div', { class: 'np-left' }, mapCard, shareCard), drill));
 
   const map = await renderNetworkMap(mapHost, {
     stations, arcs, selected,
@@ -226,7 +229,12 @@ export async function render(el, ctx) {
     const fact = (label, value) => h('div', { class: 'np-fact' }, h('div', { class: 'np-fact-label' }, label), h('div', { class: 'np-fact-value' }, value));
     const polRows = POLS.map((pol) => ({ pol, aog: metric(pcBy(pol, s.station), 'aog_hours'), fill: metric(pcBy(pol, s.station), 'fill_rate'), rfill: metric(pcBy(pol, s.station), 'rotable_fill_rate') }));
     const bestAog = polRows.filter((r) => r.aog?.mean != null).sort((a, b) => a.aog.mean - b.aog.mean)[0];
-    const ci = (m, fmt) => (m?.lo != null && m?.hi != null ? h('span', { class: 'ci' }, `${fmt(m.lo)}–${fmt(m.hi)}`) : null);
+    // CI on its own line, one unit ("159–423 h", "98.6–98.9%"), never wrapping (wave 4)
+    const ci = (m, fmt) => {
+      if (m?.lo == null || m?.hi == null) return null;
+      const a = fmt(m.lo), b = fmt(m.hi), sa = a.match(/[^\d.,]+$/)?.[0], sb = b.match(/[^\d.,]+$/)?.[0];
+      return h('span', { class: 'ci' }, sa && sa === sb ? `${a.slice(0, -sa.length).trim()}–${b}` : `${a}–${b}`);
+    };
     const hasR = polRows.some((r) => r.rfill?.mean != null);
     drill.append(
       h('div', { class: 'np-drill-head' },
@@ -267,9 +275,8 @@ export async function render(el, ctx) {
   // ---------------------------------------------------------------- 3. P0/P1/P2 by station
   const cmpGrid = h('div', { class: 'grid-12 mt-3' });
   el.append(cmpGrid);
-  const cmpCard = h('section', { class: 'card span-8', dataset: { story: 'network-policy' } });
-  const shareCard = h('section', { class: 'card span-4', dataset: { story: 'network-hub-finding' } });
-  cmpGrid.append(cmpCard, shareCard);
+  const cmpCard = h('section', { class: 'card span-12', dataset: { story: 'network-policy' } });
+  cmpGrid.append(cmpCard);
   cleanups.push(renderCompare(cmpCard, n, p, stations, pcBy, ctx));
   cleanups.push(renderShare(shareCard, n, p, stations, pcBy, hub));
 
@@ -375,7 +382,7 @@ function renderReplay(host, n, map, byId, isAlive) {
       .attr('tabindex', 0).attr('role', 'button').attr('aria-label', (e) => `Replay ${e.kind} transfer of ${e.pn} from ${e.from} to ${e.to} in ${fmtWeek(Math.floor(e.t_h / HPW))}`);
     ev.append('circle').attr('r', 12).attr('fill', 'transparent');
     ev.append('circle').attr('class', 'np-ev-ring').attr('r', 8).attr('fill', 'none').attr('stroke', 'transparent');
-    ev.append('circle').attr('r', (e) => (e.kind === 'emergency' ? 5 : 4)).attr('fill', (e) => (e.kind === 'emergency' ? SR.urgent : C.bg)).attr('stroke', (e) => (e.kind === 'emergency' ? SR.urgent : C.accent)).attr('stroke-width', 1.5);
+    ev.append('circle').attr('r', (e) => (e.kind === 'emergency' ? 5 : 4)).attr('fill', (e) => (e.kind === 'emergency' ? SR.urgent : C.bg)).attr('stroke', (e) => (e.kind === 'emergency' ? SR.urgent : SR.neutral)).attr('stroke-width', 1.5);
     ev.on('click', (evt, e) => play([e])).on('keydown', (evt, e) => { if (evt.key === 'Enter' || evt.key === ' ') { evt.preventDefault(); play([e]); } });
     withTooltip(ev, (e) => ({ title: `${e.pn} · ${e.from} → ${e.to}`, rows: [['When', fmtWeek(Math.floor(e.t_h / HPW))], ['Kind', e.kind], ...(e.aog_transport_h != null ? [['Transport', fmtHours(e.aog_transport_h)]] : [])], note: e.planted ? `Planted situation ${e.planted}` : 'Click to replay' }));
     markSel = () => ev.classed('is-sel', (e) => e === cur);
@@ -461,7 +468,7 @@ function drawCompare(el, rows, order, mk, w) {
   g.append('g').selectAll('text').data(sts).join('text').attr('class', 'gnm-label gnm-label--strong').attr('font-family', theme.font.mono).attr('x', -10).attr('y', (s) => y(s) + y.bandwidth() / 2).attr('dy', '0.32em').attr('text-anchor', 'end').text((s) => s);
   const pts = g.append('g').selectAll('g').data(rows).join('g').attr('transform', (r) => `translate(0,${y(r.station) + y.bandwidth() / 2 + off[r.pol]})`);
   pts.filter((r) => r.m.lo != null && r.m.hi != null).append('line').attr('x1', (r) => x(Math.max(x.domain()[0], r.m.lo))).attr('x2', (r) => x(r.m.hi)).attr('stroke', (r) => POL_COLOR[r.pol]).attr('stroke-width', 1.5).attr('stroke-opacity', 0.7);
-  pts.append('circle').attr('cx', (r) => x(r.m.mean)).attr('r', 4).attr('fill', (r) => (r.pol === 'P2' ? C.accent : C.bg)).attr('stroke', (r) => POL_COLOR[r.pol]).attr('stroke-width', 1.75);
+  pts.append('circle').attr('cx', (r) => x(r.m.mean)).attr('r', 4).attr('fill', (r) => (r.pol === 'P2' ? SR.neutral : C.bg)).attr('stroke', (r) => POL_COLOR[r.pol]).attr('stroke-width', 1.75);
   withTooltip(pts, (r) => ({ title: `${r.pol} at ${r.station}`, rows: [['Mean', mk.fmt(r.m.mean)], ['95% CI', r.m.lo != null ? `${mk.fmt(r.m.lo)} – ${mk.fmt(r.m.hi)}` : '—']] }));
   // direct labels: policy names on the first row, values on the right for the hub row (wide only)
   const first = sts[0];
@@ -513,7 +520,7 @@ function renderShare(host, n, p, stations, pcBy, hub) {
     const x = d3().scaleLinear().domain([0, d3().max(rows, (r) => r.hub + r.out)]).range([0, iw]);
     rows.forEach((r, i) => {
       const yy = i * rowH;
-      dl(g, { x: -8, y: yy + 22, text: r.pol, anchor: 'end', color: r.pol === 'P2' ? C.accent : C.muted, strong: r.pol === 'P2' });
+      dl(g, { x: -8, y: yy + 22, text: r.pol, anchor: 'end', color: r.pol === 'P2' ? C.text : C.muted, strong: r.pol === 'P2' });
       g.append('rect').attr('x', 0).attr('y', yy + 14).attr('width', Math.max(1, x(r.hub))).attr('height', 16).attr('rx', 2).attr('fill', SR.neutral).attr('fill-opacity', r.pol === 'P2' ? 0.85 : 0.6);
       g.append('rect').attr('x', x(r.hub) + 1).attr('y', yy + 14).attr('width', Math.max(1, x(r.out))).attr('height', 16).attr('rx', 2).attr('fill', SR.context).attr('fill-opacity', 0.55);
       const txt = `hub ${fmtHours(r.hub)} · out ${fmtHours(r.out)}`;

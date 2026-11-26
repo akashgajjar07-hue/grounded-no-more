@@ -528,6 +528,15 @@ def build_policies() -> dict:
 # parts + demand history
 
 
+# planner exception types in plain words (the Action Centre, the Parts risk-vs-action chip and the CSV use the same labels)
+ACTION_TYPE_LABEL = {
+    "OVERDUE_REPAIR": "Overdue repair", "OUTSTATION_DEPLETION": "Outstation depletion",
+    "EXCESS_DECLINING_DEMAND": "Excess · declining demand", "CONDEMNED_AWAITING_REPLACEMENT": "Condemned · awaiting replacement",
+    "QUARANTINE_DOCS": "Quarantine · documents", "LEAD_TIME_DRIFT": "Lead-time drift", "EXPIRY_RISK": "Shelf-life expiry risk",
+    "KIT_SHORTAGE": "Kit shortage",
+}
+
+
 def build_parts() -> dict:
     rid = recommended_id()
     pm = hist("part_master").set_index("pn")
@@ -539,7 +548,14 @@ def build_parts() -> dict:
     hub = ff[ff.station == cfg()["network"]["hub"]].set_index("pn")
     mr = hist("material_requests")
     nreq = mr.groupby("pn").size()
-    acts = Counter(a["pn"] for a in jload("outputs/actions/actions.json")["actions"])
+    acts_all = jload("outputs/actions/actions.json")["actions"]
+    acts = Counter(a["pn"] for a in acts_all)
+    sev_rank = {"urgent": 0, "review": 1, "info": 2}
+    exc_by_pn: dict = {}
+    for a in sorted(acts_all, key=lambda a: (sev_rank.get(a["severity"], 9), a["exception_id"])):
+        exc_by_pn.setdefault(a["pn"], []).append({"exception_id": a["exception_id"], "type": a["type"],
+                                                  "type_label": ACTION_TYPE_LABEL.get(a["type"], a["type"].replace("_", " ").capitalize()),
+                                                  "severity": a["severity"], "station": a["station"]})
     piv = {pid: st.pivot(index="pn", columns="station", values=pid).reindex(columns=stations()) for pid in ["P0", "P2", rid]}
     parts = []
     for pn in pm.index:
@@ -562,6 +578,7 @@ def build_parts() -> dict:
             "unit_cost": num(p.unit_cost_aed),
             "planted": (None if pd.isna(p.planted) else str(p.planted)),
             "requests_hist": int(nreq.get(pn, 0)), "n_actions": int(acts.get(pn, 0)),
+            "exceptions": exc_by_pn.get(pn, [])[:3],
             "champion": hub.at[pn, "champion"], "lt_quoted_d": num(hub.at[pn, "lt_quoted_d"]),
             "lt_est_d": num(hub.at[pn, "lt_est_d"]),
             "provenance": "SIMULATED",
@@ -609,7 +626,9 @@ def build_parts() -> dict:
                      "at 0; rotables only (residual_modelled=false for C/E, residual 0). risk_score = ln(1+risk_hours) / "
                      f"ln(1+max risk_hours) in [0,1]. risk_level: urgent if risk_hours >= {RISK_URGENT_H:g}, review if >= "
                      f"{RISK_REVIEW_H:g}, else ok. ata_systems.risk = max risk_score in the chapter; ata_systems.risk_level is relative: urgent if the chapter holds >= 15% of fleet risk-hours, review if >= 7%, else ok (ASSUMED bands, DERIVED values); system_level = that rating, has_urgent_part = n_urgent > 0, status/status_label = what to print on the system pill (an OK system with urgent parts reads 'WATCH · n urgent PNs', status review). CANONICAL AOG METRICS (the same numbers on every screen, labels in aog_metric_labels): aog_h_2y / aog_events_2y = whole hours of every history AOG event listing the PN (all stations, weeks 0-103); aog_h_52w / aog_events_52w = the last 52 weeks only (W52-W103, the action centre's lookback); aog_h_52w_max_station(_id) = the worst single station in that window (equals the largest actions.json aog_hours_lookback for the PN when that station has a depletion exception). risk_hours instead splits multi-PN events equally and is per year. adi/cv2 are null "
-                     "when demand_class = insufficient_data (fewer than 3 non-zero training weeks: undefined).",
+                     "when demand_class = insufficient_data (fewer than 3 non-zero training weeks: undefined). exceptions = up to 3 "
+                     "actions.json exceptions for the PN (most severe first, with a plain type_label): an exception's severity is "
+                     "planning urgency, not grounding risk, so a risk-0 PN can carry an urgent lead-time-drift action.",
                      provenance_by_key={"risk_bands_h": "ASSUMED", "system_risk_bands_share": "ASSUMED",
                                         "aog_lookback_weeks": "ASSUMED"}),
         "stock_basis": (f"{rid} recommended allocation target units: P2 stock params with the {rid} changes from "
@@ -825,6 +844,24 @@ def build_rotables() -> dict:
     st = stock_table()
     tot = st[st.part_class == "R"].groupby("pn")[["P0", "P1", "P2", rid]].sum()
     reasons = {r["pn"]: r["reason"] for r in jload("outputs/frontier/allocations.json")["allocations"][rid] if r.get("reason")}
+    # station view (wave 4, C9): the pooled network float hides the outstation reality. For each rotable, one outstation:
+    # the narrated incident's station for the planted PN that has one, else the outstation with the highest removal rate.
+    from gnm.policy.analytic import float_calc
+    outs_ff = ff[(ff.station != "AUH") & (ff.part_class == "R")]
+    st_idx = st.set_index(["pn", "station"])
+    inc_st = {i["pn"]: i["station"] for i in jload("outputs/aog_lab/incidents.json")["incidents"] if i["id"] == "AOG-0001"}
+
+    def station_view(pn):
+        g = outs_ff[outs_ff.pn == pn]
+        if g.empty:
+            return None
+        s_ = inc_st.get(pn) if inc_st.get(pn) in set(g.station) else g.sort_values("removal_rate_day", ascending=False).station.iloc[0]
+        r_ = g[g.station == s_].iloc[0]
+        rate30, loop_d = float(r_.removal_rate_day) * 30.0, float(r_.t_eff_out_d)
+        units = {k: int(st_idx.at[(pn, s_), c]) for k, c in (("P0", "P0"), ("P2", "P2"), ("recommended", rid))}
+        return {"station": s_, "rate_per_30d": rate30, "loop_days": loop_d, "units": units,
+                "availability": {k: float(float_calc(rate30, loop_d, u, 0.0)["availability"]) for k, u in units.items()},
+                "provenance": "DERIVED"}
     floats = []
     for pn in hub.index:
         r = hub.loc[pn]
@@ -838,7 +875,8 @@ def build_rotables() -> dict:
                        # S as the float calculator defines it: serviceable base stock + the units already in the loop
                        "spares_total": {k: int(tot.at[pn, c]) + int(loop.get(pn, 0))
                                         for k, c in (("P0", "P0"), ("P1", "P1"), ("P2", "P2"), ("recommended", rid))},
-                       "reason": reasons.get(pn, ""), "planted": planted.get(pn), "provenance": "DERIVED"})
+                       "reason": reasons.get(pn, ""), "planted": planted.get(pn), "station_view": station_view(pn),
+                       "provenance": "DERIVED"})
     floats.sort(key=lambda x: (x["planted"] is None, x["pn"]))
     keep = ["pn", "station", "deadline_class", "base_stock", "total_spares", "rate_per_year", "pipeline_days",
             "pipeline_mean", "palm_availability", "palm_ebo", "palm_availability_hub_resupply", "sim_requests",
@@ -857,7 +895,10 @@ def build_rotables() -> dict:
                      "= return - shop in; cycle = return - removal. float_examples feed the float calculator: rate_per_30d "
                      "= network reliability-exposure removal rate, pipeline_days = hub effective pipeline (T_eff), units = "
                      f"serviceable base stock (P0/P1/P2/{rid}); loop_units = units the engine seeds in the repair loop "
-                     "(palm_vs_sim total_spares - base_stock at AUH), so Palm total spares = units + loop_units. "
+                     "(palm_vs_sim total_spares - base_stock at AUH), so Palm total spares = units + loop_units. station_view = one "
+                     "outstation's own float (the AOG-0001 station for its PN, else the outstation with the highest removal rate): "
+                     "its removal rate, effective loop days (T_eff_out), the units P0/P2/the recommended plan place there and "
+                     "Palm availability for each (no pooling with the hub). "
                      "palm_vs_sim = P1 floats on selection seeds 100-119 (Palm analytic vs simulated fill; inventory-policy note section 7), DERIVED.",
                      provenance_by_key={"as_of_h": "ASSUMED"}),
         "as_of_h": AS_OF_H, "recommended_id": rid,
@@ -1162,10 +1203,21 @@ def build_aog_lab() -> dict:
 
 def build_actions() -> dict:
     a = jload("outputs/actions/actions.json")
-    acts = [dict(x, provenance=x.get("provenance", "SIMULATED" if x["type"] == "QUARANTINE_DOCS" else "DERIVED"))
+    def plural_fix(txt):
+        """'Position 1 unit(s)' -> 'Position 1 unit', '3 unit(s)' -> '3 units' (F5: never 'unit(s)')."""
+        if not isinstance(txt, str):
+            return txt
+        txt = re.sub(r"(\d+(?:\.\d+)?) (\w+)\(s\)", lambda m: f"{m.group(1)} {m.group(2)}{'' if m.group(1) == '1' else 's'}", txt)
+        # '1 D0 requests' -> '1 D0 request' (counts printed by the rule engine without plural())
+        return re.sub(r"\b1 ((?:D\d+ |AOG )?)(request|event|unit|exception|week)s\b", r"1 \1\2", txt)
+    acts = [dict(x, provenance=x.get("provenance", "SIMULATED" if x["type"] == "QUARANTINE_DOCS" else "DERIVED"),
+                 summary=plural_fix(x.get("summary")), recommended_action=plural_fix(x.get("recommended_action")),
+                 type_label=ACTION_TYPE_LABEL.get(x["type"], x["type"].replace("_", " ").capitalize()),
+                 severity_label=str(x["severity"]).capitalize())
             for x in a["actions"]]
     return {
-        "meta": meta("DERIVED", ["outputs/actions/actions.json"], a["meta"]["notes"],
+        "meta": meta("DERIVED", ["outputs/actions/actions.json"], a["meta"]["notes"] + " type_label / severity_label = "
+                     "plain-language labels for type / severity (the UI and the CSV export use them).",
                      provenance_by_key={"as_of_week": "ASSUMED"}),
         "as_of_week": a["as_of_week"], "counts": {**a["counts"], "provenance": "DERIVED"}, "actions": acts,
     }
@@ -1341,7 +1393,8 @@ def build_story(data: dict) -> dict:
         bar = f", under the {fmt_pct(bands['urgent'], 0)} urgent bar" if sys_["risk_level"] == "review" and "urgent" in bands else ""
         lead = (f"ATA {ata} rates {sys_['risk_level'].upper()} as a system ({fmt_pct(sys_['risk_share'], 0)} of fleet "
                 f"risk-hours{bar}), but one part in it is {part['risk_level'].upper()}: {pn}, a {part['deadline']} {noun}, risk {risk}/100.")
-        t2 = f"One {part['risk_level']} part in a {sys_['risk_level']} system"
+        art = "An" if part['risk_level'][0] in "aeiou" else "A"
+        t2 = f"{art} {part['risk_level']} part inside a {sys_['risk_level']}-rated system"
     else:
         lead = f"ATA {ata} rates {sys_['risk_level'].upper()}, led by {pn}, a {part['deadline']} {noun} with risk {risk}/100."
         t2 = f"{pn}: never in stock at {st}"
@@ -1353,11 +1406,15 @@ def build_story(data: dict) -> dict:
     if chk:
         body3 += (f" The frozen MASE champion for this cell, '{chk['method']}', ranked {chk['holdout_rank']}/{chk['n_methods']} "
                   "on the holdout, so the policies size rotables on the reliability-exposure rate.")
-    body4 = (f"Network removals run at {fl['rate_per_30d']:.1f} per 30 days with a {fl['pipeline_days']:.0f}-day hub pipeline. "
-             f"Spares S, as the calculator counts them (on the shelf + {fl['loop_units']} already in the repair loop): "
-             f"P0 {fl['spares_total']['P0']}, P2 {fl['spares_total']['P2']}, recommended {fl['spares_total']['recommended']}. On its "
-             f"{float(st_ff.t_eff_out_d):.0f}-day loop, Palm's theorem gives {fmt_pct(a_st, 0)} availability for the "
-             f"{p2_st} units P2 places at {st}.")
+    rec_s = fl['spares_total']['recommended']
+    rec_st = int(st_units[rid])
+    a_rec_st = float_calc(float(st_ff.removal_rate_day) * 30.0, float(st_ff.t_eff_out_d), rec_st, 0.0)["availability"]
+    a_pool = float_calc(round(fl['rate_per_30d'], 1), round(fl['pipeline_days']), rec_s, 0.0)["availability"]
+    pool_txt = "over 99.9%" if a_pool > 0.9995 else fmt_pct(a_pool)
+    body4 = (f"Pooled across the network, the recommended {rec_s} spares ({rec_s - fl['loop_units']} on the shelf + "
+             f"{fl['loop_units']} in repair) cover {pool_txt} of removals. An aircraft at {st} can only use the "
+             f"{rec_st} unit{'s' if rec_st != 1 else ''} there: on its {float(st_ff.t_eff_out_d):.0f}-day loop, Palm's theorem gives "
+             f"{fmt_pct(a_rec_st, 0)}. Station figures, not pooled ones, decide AOG hours.")
     body5 = (f"At {st}, holdout material AOG falls from {fmt_int(net[('P0', st)]['aog_hours'])} h/yr under P0 to "
              f"{fmt_int(net[('P2', st)]['aog_hours'])} under P2, which stocks outstations where the D0 penalty pays for the unit."
              + (f" Each emergency hop from AUH takes {fmt_int(arc['aog_transport_h'])} h." if arc else ""))
@@ -1379,18 +1436,20 @@ def build_story(data: dict) -> dict:
     steps = [
         # (route, story_id, selector, title, body)
         ("#/mission", "mission-kpis", '[data-story="mission-kpis"]', "Fewer groundings, at a stated price",
-         f"Across {n_seeds} holdout seeds the recommended plan ({rid}) cuts modelled material AOG from "
-         f"{fmt_int(aog['baseline'])} to {fmt_int(aog['value'])} h a year and lifts immediate fill from "
-         f"{fmt_pct(fill['baseline'])} to {fmt_pct(fill['value'])}, for {fmt_aed_m(cap['value'] - cap['baseline'])} more "
-         "spare capital than P0."),
+         # the result leads, so the phone peek strip (first ~2 lines) always shows it (wave 4)
+         f"{fmt_int(aog['value'])} h of material AOG a year, down from {fmt_int(aog['baseline'])} under P0: the recommended "
+         f"plan ({rid}) across {n_seeds} holdout seeds. Immediate fill rises from {fmt_pct(fill['baseline'])} to "
+         f"{fmt_pct(fill['value'])}, for {fmt_aed_m(cap['value'] - cap['baseline'])} more spare capital than P0."),
         (f"#/parts?ata={ata}&pn={pn}", "aircraft", '[data-story="aircraft"]', t2, body2),
         (f"#/forecast?pn={pn}", "forecast-demand-strip", '[data-story="forecast-demand-strip"] .fl-strip-sel',
          f"Why its demand is {part['demand_class']}", body3),
-        (f"#/rotables?pn={pn}", "rotable-float-calc", '[data-story="rotable-float-calc"] .fc-inputs', "Float maths for one rotable", body4),
+        (f"#/rotables?pn={pn}", "rotable-float-calc", '[data-story="rotable-float-calc"] .fc-results', "Pooled float vs the station", body4),
         (f"#/network?station={st}", f"network-{st.lower()}", f'[data-story="network-{st.lower()}"]', "Positioning beats reacting", body5),
         ("#/capital", "frontier-chart", '[data-story="frontier-chart"]', "Where to stop buying", body6),
         (f"#/aog?incident={inc['id']}", "aog-incident-ps1", aog_sel, "One incident, replayed", body7),
-        ("#/actions", "action-inbox", '[data-story="action-inbox"]', "What the planner does on Monday", body8),
+        # F2 (wave 4): spotlight the BOM row the copy talks about, on desktop too, so the card sits clear of the inbox head
+        ("#/actions", "action-inbox", (f'[data-story="action-inbox"] [data-id="{act["exception_id"]}"]' if act else '[data-story="action-inbox"]'),
+         "What the planner does on Monday", body8),
     ]
     # phones (<= 480 px): a narrower child to spotlight so the bottom sheet does not cover the subject (wave-3 #4).
     # Hooks are stable view markup (see docs/agent_notes/wave3-S.md); the UI falls back to `selector` if absent.
@@ -1398,6 +1457,7 @@ def build_story(data: dict) -> dict:
     mobile = {
         "network-" + st.lower(): f'[data-story="network-{st.lower()}"] .np-pol',
         "frontier-chart": '[data-story="frontier-chart"] .chart-body',
+        "rotable-float-calc": '[data-story="rotable-float-calc"] .fc-station',
         "aog-incident-ps1": tl,
         "action-inbox": (f'[data-story="action-inbox"] [data-id="{act["exception_id"]}"]' if act else None),
     }

@@ -61,7 +61,8 @@ def test_float_calculator_matches_floatcalc_js(site, inp):
             page.fill(f'[data-input="{k}"]', str(v))
         page.wait_for_timeout(200)
         shown = page.evaluate(
-            """() => Object.fromEntries([...document.querySelectorAll('[data-out]')].map((e) => [e.dataset.out, e.textContent.trim()]))"""
+            # wave 4: displays are rounded for reading ("< 0.01", "> 99.9%"); the exact value is in data-value
+            """() => Object.fromEntries([...document.querySelectorAll('[data-out]')].map((e) => [e.dataset.out, e.dataset.value ?? e.textContent.trim()]))"""
         )
         ref = page.evaluate(
             """async (i) => {
@@ -73,13 +74,17 @@ def test_float_calculator_matches_floatcalc_js(site, inp):
             inp,
         )
         r, c = ref["r"], ref["c"]
-        num = lambda s: float("".join(ch for ch in s.split(" ")[0] if ch in "0123456789.-"))  # noqa: E731
+        def num(s):
+            try:
+                return float(s)          # data-value: the exact number (may be in e-notation)
+            except ValueError:
+                return float("".join(ch for ch in s.split(" ")[0] if ch in "0123456789.-"))
         assert num(shown["pipeline_mean"]) == pytest.approx(r["pipeline_mean"], abs=0.006)
-        assert num(shown["availability"]) / 100 == pytest.approx(r["availability"], abs=0.0006)
+        assert num(shown["availability"]) == pytest.approx(r["availability"], abs=0.0006)
         assert num(shown["ebo"]) == pytest.approx(r["ebo"], abs=0.0006)
         assert num(shown["expected_wait_days"]) == pytest.approx(r["expected_wait_days"], abs=0.006)
-        assert num(shown["extra_spares_availability"]) / 100 == pytest.approx(c["extra_spares"]["availability"], abs=0.0006)
-        assert num(shown["tat_cut_availability"]) / 100 == pytest.approx(c["tat_cut"]["availability"], abs=0.0006)
+        assert num(shown["extra_spares_availability"]) == pytest.approx(c["extra_spares"]["availability"], abs=0.0006)
+        assert num(shown["tat_cut_availability"]) == pytest.approx(c["tat_cut"]["availability"], abs=0.0006)
         assert num(shown["extra_spares_ebo"]) == pytest.approx(c["extra_spares"]["ebo"], abs=0.0006)
         assert num(shown["tat_cut_ebo"]) == pytest.approx(c["tat_cut"]["ebo"], abs=0.0006)
         assert not problems, problems

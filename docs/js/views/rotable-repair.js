@@ -170,7 +170,7 @@ export async function render(el, ctx) {
         { key: 'late_d', label: 'vs due', short: 'vs due', num: true, format: (v) => (v == null ? '—' : v > 0 ? `+${fmtDays(v)}` : `−${fmtDays(-v)}`) },
         { key: 'overdue', label: 'Status', render: (o) => (isCritical(o) ? pill('urgent', o.planted ? `Critical · ${o.planted}` : 'Critical') : o.overdue ? h('span', { class: 'pill pill--unknown rr-pill-late' }, o.planted ? `Overdue · ${o.planted}` : 'Overdue') : h('span', { class: 'pill pill--unknown rr-pill-quote' }, 'In quote')) },
       ],
-      rows: tableRows,
+      rows: tableRows, sort: { key: 'late_d', dir: 'desc' }, // F7 (wave 4): the mobile Sort control names the real order
     }),
   })));
 
@@ -250,6 +250,12 @@ function drawFlow(el, states, counts, flows, w) {
       .attr('stroke', o.color).attr('stroke-opacity', o.op).attr('stroke-width', sw(f.count)).attr('stroke-dasharray', o.dash || null);
     g.append('line').attr('x1', x1).attr('x2', x2).attr('y1', r.y).attr('y2', r.y).attr('stroke', o.color).attr('stroke-width', 1).attr('marker-end', `url(#rr-arr-${k})`);
     chipLabel(g, { x: (x1 + x2) / 2, y: r.y, text: fmtInt(f.count), color: C.text, cls: 'rr-flow-chip' });
+    // wave 4: every desktop lane names its own transition ("Serviceable → Installed"), as the phone ladder does
+    const name = `${stateName(f.from)} → ${stateName(f.to)}`;
+    const tw = name.length * 6.6;
+    const lo = Math.min(x1, x2), hi = Math.max(x1, x2);
+    const right = hi + 12 + tw <= w, left = lo - 12 - tw >= 0;
+    if (right || left) g.append('text').attr('class', 'gnm-label rr-lane-name').attr('x', right ? hi + 12 : lo - 12).attr('y', r.y).attr('dy', '0.32em').attr('text-anchor', right ? 'start' : 'end').text(name);
     withTooltip(g, () => tip(f));
   });
   const nodes = svg.append('g').selectAll('g').data(order).join('g').attr('class', 'rr-node-g').attr('transform', (s) => `translate(${idx(s) * (boxW + gap)},${top})`);
@@ -543,11 +549,19 @@ function exampleInputs(ex, r) {
     cost: num(pick(ex, 'unit_cost_aed', 'unit_cost')),
     recommended: num(ex.recommended),
     reason: ex.reason || '',
+    stationView: ex.station_view || null,
     provenance: ex.provenance || prov(r.meta),
   };
 }
 
+let ctxRec = null;
+/** Availability that never prints a misleading "100.0%" for a Poisson tail: > 99.9%. */
+const fmtAvail = (v) => (v == null ? '—' : v > 0.9995 ? '> 99.9%' : fmtPct(v, 1));
+const fmtEbo = (v) => (v == null ? '—' : v < 0.01 ? '< 0.01' : fmtNum(v, 2));
+/** Expected wait: hours under two days ("< 1 h", "5 h"), days above ("3.2 d"). */
+const fmtWait = (d) => (d == null ? '—' : d * 24 < 1 ? '< 1 h' : d < 2 ? `${fmtInt(d * 24)} h` : `${fmtNum(d, 1)} d`);
 function renderFloatCalc(host, r, method, ctx) {
+  ctxRec = r.recommended_id || null;
   const examples = (r.float_examples || []).map((ex) => exampleInputs(ex, r));
   const accel = accelAssumption(r, method);
   const want = ctx.params.pn;
@@ -588,6 +602,9 @@ function renderFloatCalc(host, r, method, ctx) {
   const oW = out('expected_wait_days', 'Expected wait');
   const oCap = out('capital_aed', 'Float capital');
   const outs = h('div', { class: 'fc-outs', role: 'status', 'aria-live': 'polite' }, oA.el, oMu.el, oE.el, oW.el, oCap.el);
+  // C9 (wave 4): the pooled network figure next to one outstation's own float, with a one-line explanation
+  const stationBox = h('div', { class: 'fc-station', dataset: { out: 'station' } });
+  const results = h('div', { class: 'fc-results' }, outs, stationBox);
   const chartHost = h('div');
 
   // levers
@@ -600,8 +617,8 @@ function renderFloatCalc(host, r, method, ctx) {
       : [provChip('ASSUMED'), h('span', {}, 'Repair acceleration fee: not exported — TAT-cut cost not run')]);
 
   // grid areas: inputs left / outputs + chart right at desktop; outputs first on narrow screens
-  inputs.classList.add('fc-area-in'); outs.classList.add('fc-area-out'); chartHost.classList.add('fc-area-chart');
-  host.append(h('div', { class: 'fc-grid' }, inputs, outs, chartHost));
+  inputs.classList.add('fc-area-in'); results.classList.add('fc-area-out'); chartHost.classList.add('fc-area-chart');
+  host.append(h('div', { class: 'fc-grid' }, inputs, results, chartHost));
   host.append(h('div', { class: 'section-title mt-3' }, h('h2', { class: 't-16' }, 'Lever comparison: buy spares vs cut TAT'), h('span', { class: 'rule' })));
   host.append(h('div', { class: 'fc-lever-controls' }, lN.el, lD.el), leverBox, verdict, assume);
   host.append(h('p', { class: 'rr-method-note mt-2' }, 'Palm’s theorem: with Poisson removals at rate λ and any repair-time distribution of mean T, the number of units in the pipeline is Poisson(λT). Availability = P(X < S); EBO = E[max(X − S, 0)]; expected wait = EBO / λ. Single site, infinite repair capacity, no condemnation — hence “METRIC-inspired”, not a full multi-echelon METRIC.'));
@@ -620,13 +637,16 @@ function renderFloatCalc(host, r, method, ctx) {
     const all = { rate: fRate, tat: fTat, spares: fSp, cost: fCost, extra: lN, cut: lD };
     Object.entries(all).forEach(([k, f]) => { if (k === key) return; f.input.value = f.input.dataset.grouped ? (state[k] == null ? '' : fmtCount(state[k])) : state[k] ?? ''; f.range.value = state[k] ?? 0; f.vt?.(); });
   };
+  const round = (v, d) => (v == null ? null : Math.round(v * 10 ** d) / 10 ** d);
   const load = (ex) => {
     cur = ex;
-    Object.assign(state, { rate: ex.rate, tat: ex.tat, spares: ex.spares, cost: ex.cost });
+    // C9 (wave 4): open on the Recommended preset (not P0's S); removals to 1 decimal, TAT to whole days
+    const recS = (ex.presets || []).find(([k]) => k === 'Recommended')?.[1];
+    Object.assign(state, { rate: round(ex.rate, 1), tat: round(ex.tat, 0), spares: recS ?? ex.spares, cost: ex.cost });
     lD.range.max = Math.max(10, Math.floor(ex.tat ?? 10));
     if (state.tat != null && state.cut > state.tat) state.cut = Math.floor(state.tat / 2);
     reason.replaceChildren(`${ex.deadline ? `${ex.deadline} (hypothetical deadline class) · ` : ''}${ex.station && ex.station !== 'network' ? `${ex.station} · ` : 'network float · '}spares include ${fmtInt(ex.loop ?? 0)} units already in the repair loop. `, ex.reason ? h('details', { class: 'fc-why' }, h('summary', {}, `Why the model recommends ${ex.recommended != null ? fmtInt(ex.recommended) : 'this'} base-stock units`), h('p', {}, ex.reason)) : '');
-    presetBox.replaceChildren(...(ex.presets || []).map(([k, v]) => h('button', { type: 'button', class: 'btn btn--sm', dataset: { preset: k }, onclick: () => { state.spares = v; sync(null); compute(); } }, (ex.loop ? `${k} · ${fmtInt(v - ex.loop)} + ${fmtInt(ex.loop)} = ${fmtInt(v)}` : `${k} · S = ${fmtInt(v)}`))));
+    presetBox.replaceChildren(...(ex.presets || []).map(([k, v]) => h('button', { type: 'button', class: 'btn btn--sm', 'aria-pressed': 'false', dataset: { preset: k, value: v }, onclick: () => { state.spares = v; sync(null); compute(); } }, (ex.loop ? `${k} · ${fmtInt(v - ex.loop)} + ${fmtInt(ex.loop)} = ${fmtInt(v)}` : `${k} · S = ${fmtInt(v)}`))));
     setRanges(); sync(null); compute();
   };
   [...fields, lN, lD].forEach((f) => {
@@ -642,6 +662,20 @@ function renderFloatCalc(host, r, method, ctx) {
   });
   sel.addEventListener('change', () => { const ex = examples.find((e) => e.pn === sel.value); if (ex) { ctx.setParams({ pn: ex.pn }); load(ex); } });
 
+  /** Station view: one outstation's own float (no pooling), with the pooled-vs-station callout. */
+  function renderStation(res) {
+    const sv = cur.stationView;
+    if (!sv || !sv.units) { stationBox.replaceChildren(); stationBox.hidden = true; return; }
+    stationBox.hidden = false;
+    const rec = ctxRec || 'Recommended';
+    const rows = [['P0', 'P0'], ['P2', 'P2'], ['recommended', rec]].filter(([k]) => sv.units[k] != null);
+    const recU = sv.units.recommended, recA = sv.availability?.recommended;
+    stationBox.replaceChildren(
+      h('div', { class: 'fc-station-head' }, h('span', { class: 'fc-out-label' }, `Station view · ${sv.station}`), h('span', { class: 'fc-hint' }, `${fmtNum(sv.rate_per_30d, 1)} removals / 30 d · ${fmtInt(sv.loop_days)}-day loop · own units only`)),
+      h('div', { class: 'fc-station-rows' }, rows.map(([k, label]) => h('div', { class: `fc-station-row ${k === 'recommended' ? 'is-rec' : ''}`, dataset: { station: k } },
+        h('span', { class: 'fc-station-k' }, label), h('span', { class: 'fc-station-u' }, `${fmtInt(sv.units[k])} unit${sv.units[k] === 1 ? '' : 's'}`), h('span', { class: 'fc-station-a' }, fmtPct(sv.availability?.[k], 0))))),
+      h('p', { class: 'fc-station-note' }, icon('info'), h('span', {}, `Pooled vs station: the ${fmtAvail(res.availability)} above pools every spare as if any unit reached any station at once. An aircraft at ${sv.station} waits for one of the ${fmtInt(recU)} unit${recU === 1 ? '' : 's'} there: ${fmtPct(recA, 0)} available, which is where the AOG hours come from.`)));
+  }
   let stopChart = null;
   function compute() {
     const { rate, tat, spares, cost, extra, cut } = state;
@@ -656,13 +690,18 @@ function renderFloatCalc(host, r, method, ctx) {
     }
     const S = Math.round(spares);
     const res = floatCalc(rate, tat, S, cost);
-    oMu.v.textContent = `${fmtNum(res.pipeline_mean, 2)} units`;
-    oA.v.textContent = fmtPct(res.availability, 1);
-    oE.v.textContent = fmtNum(res.ebo, 3);
-    oW.v.textContent = `${fmtNum(res.expected_wait_days, 2)} d`;
+    oMu.v.textContent = `${fmtNum(res.pipeline_mean, 1)} units`;
+    oA.v.textContent = fmtAvail(res.availability);
+    oE.v.textContent = fmtEbo(res.ebo);
+    oW.v.textContent = fmtWait(res.expected_wait_days);
+    // exact values ride along in data-value (the text is rounded for reading; tests compare the exact maths)
+    Object.assign(oMu.v.dataset, { value: res.pipeline_mean }); Object.assign(oA.v.dataset, { value: res.availability });
+    Object.assign(oE.v.dataset, { value: res.ebo }); Object.assign(oW.v.dataset, { value: res.expected_wait_days });
+    presetBox.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.value === S)));
+    renderStation(res);
     oCap.v.textContent = fmtAED(res.capital_aed);
-    frame.root.querySelector('.chart-headline').textContent = `${fmtInt(S)} spare${S === 1 ? '' : 's'} cover ${fmtPct(res.availability, 1)} of removals against a mean pipeline of ${fmtNum(res.pipeline_mean, 2)} units`;
-    frame.root.querySelector('.chart-subtitle').textContent = `P(k units in the repair pipeline), X ~ Poisson(λT = ${fmtNum(rate, 2)}/30 d × ${fmtNum(tat, 1)} d)${cur.pn ? ` for ${cur.pn}` : ''} · bars at k ≥ S are shortages`;
+    frame.root.querySelector('.chart-headline').textContent = `${fmtInt(S)} pooled spare${S === 1 ? '' : 's'} cover ${fmtAvail(res.availability)} of removals against a mean pipeline of ${fmtNum(res.pipeline_mean, 1)} units`;
+    frame.root.querySelector('.chart-subtitle').textContent = `P(k units in the repair pipeline), X ~ Poisson(λT = ${fmtNum(rate, 1)}/30 d × ${fmtInt(tat)} d)${cur.pn ? ` for ${cur.pn}` : ''} · bars at k ≥ S are shortages`;
     stopChart?.();
     stopChart = drawPmf(frame, res.pipeline_mean, S, res);
     // levers
@@ -670,11 +709,17 @@ function renderFloatCalc(host, r, method, ctx) {
     const cl = compareLevers(rate, tat, S, cost, D, N, accel ? accel.value : 0);
     const gainA = cl.extra_spares.availability - cl.base.availability;
     const gainB = cl.tat_cut.availability - cl.base.availability;
-    const betterA = gainA > gainB + 1e-9, betterB = gainB > gainA + 1e-9;
+    // C6 (wave 4): highlight the CHEAPER lever per availability point (annual AED / pt), as the Capital lever panel does;
+    // "more availability" stays a neutral note in the verdict
+    const annA = carryingValue(cl.extra_spares.incremental_capital_aed, method);
+    const annB = accel ? cl.tat_cut.incremental_annual_aed : null;
+    const perPt = (ann, gain) => (ann != null && gain > 1e-9 ? ann / (gain * 100) : null);
+    const cA = perPt(annA, gainA), cB = perPt(annB, gainB);
+    const betterA = cA != null && (cB == null || cA < cB - 1e-6), betterB = cB != null && (cA == null || cB < cA - 1e-6);
     const cell = (v, out, better) => h('td', { class: better ? 'is-better' : '', dataset: out ? { out } : undefined }, v);
     const rowC = (label, a, b, outA, outB) => h('tr', {}, h('th', { scope: 'row' }, label), cell(a, outA, betterA), cell(b, outB, betterB));
-    const gainTxt = (o, gain) => [fmtPct(o.availability, 1), h('span', { class: 'fc-gain' }, ` ${gain >= 0 ? '+' : '−'}${fmtNum(Math.abs(gain) * 100, 1)} pts`)];
-    const thLever = (title, key, better) => h('th', { scope: 'col', class: better ? 'is-better' : '', dataset: { lever: key } }, h('span', { class: 'fc-lever-title' }, title), better ? h('span', { class: 'fc-win' }, icon('check'), 'More availability') : null);
+    const gainTxt = (o, gain) => [fmtAvail(o.availability), h('span', { class: 'fc-gain' }, ` ${gain >= 0 ? '+' : '−'}${fmtNum(Math.abs(gain) * 100, 1)} pts`)];
+    const thLever = (title, key, better) => h('th', { scope: 'col', class: better ? 'is-better' : '', dataset: { lever: key } }, h('span', { class: 'fc-lever-title' }, title), better ? h('span', { class: 'fc-win' }, icon('check'), 'Cheaper per point') : null);
     leverBox.replaceChildren(h('table', { class: 'fc-cmp' },
       h('caption', { class: 'sr-only' }, 'Lever comparison: buy spares versus cut TAT'),
       h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, h('span', { class: 'sr-only' }, 'Metric')),
@@ -682,15 +727,28 @@ function renderFloatCalc(host, r, method, ctx) {
         thLever(`Cut TAT by ${fmtInt(D)} day${D === 1 ? '' : 's'}`, 'tat_cut', betterB))),
       h('tbody', {},
         rowC('Availability', gainTxt(cl.extra_spares, gainA), gainTxt(cl.tat_cut, gainB), 'extra_spares_availability', 'tat_cut_availability'),
-        rowC('Expected backorders', fmtNum(cl.extra_spares.ebo, 3), fmtNum(cl.tat_cut.ebo, 3), 'extra_spares_ebo', 'tat_cut_ebo'),
-        rowC('Expected wait', `${fmtNum(cl.extra_spares.expected_wait_days, 2)} d`, `${fmtNum(cl.tat_cut.expected_wait_days, 2)} d`),
+        rowC('Expected backorders', fmtEbo(cl.extra_spares.ebo), fmtEbo(cl.tat_cut.ebo), 'extra_spares_ebo', 'tat_cut_ebo'),
+        rowC('Expected wait', fmtWait(cl.extra_spares.expected_wait_days), fmtWait(cl.tat_cut.expected_wait_days)),
         rowC('One-off capital', fmtAED(cl.extra_spares.incremental_capital_aed), fmtAED(0), 'extra_spares_capital'),
-        rowC('Annual cost', h('span', {}, carrying(cl.extra_spares.incremental_capital_aed, method), h('span', { class: 'fc-gain' }, ' carrying')), h('span', {}, accel ? fmtAED(cl.tat_cut.incremental_annual_aed) : 'not run', h('span', { class: 'fc-gain' }, ' fees')), null, 'tat_cut_annual'))));
+        rowC('Annual cost', h('span', {}, carrying(cl.extra_spares.incremental_capital_aed, method), h('span', { class: 'fc-gain' }, ' carrying')), h('span', {}, accel ? fmtAED(cl.tat_cut.incremental_annual_aed) : 'not run', h('span', { class: 'fc-gain' }, ' fees')), null, 'tat_cut_annual'),
+        rowC('Annual cost per pt', cA != null ? fmtAED(cA) : '—', cB != null ? fmtAED(cB) : '—', 'extra_spares_per_pt', 'tat_cut_per_pt'))));
+    [['extra_spares_availability', cl.extra_spares.availability], ['tat_cut_availability', cl.tat_cut.availability], ['extra_spares_ebo', cl.extra_spares.ebo], ['tat_cut_ebo', cl.tat_cut.ebo]]
+      .forEach(([k, v]) => { const c = leverBox.querySelector(`[data-out="${k}"]`); if (c) c.dataset.value = v; });
     const ann = carryingValue(cl.extra_spares.incremental_capital_aed, method);
+    const saturated = Math.max(gainA, gainB) < 0.0005;
+    const p0S = (cur.presets || []).find(([k]) => k === 'P0')?.[1];
+    const cheaper = betterA ? `Buying ${fmtInt(N)} spare${N === 1 ? '' : 's'} is the cheaper lever per availability point` : betterB ? `Cutting TAT by ${fmtInt(D)} d is the cheaper lever per availability point` : null;
+    const more = gainA > gainB + 1e-9 ? `the spares add more availability` : gainB > gainA + 1e-9 ? `the TAT cut adds more availability` : 'both add the same availability';
+    const annualTxt = accel && ann != null ? `On an annual basis the spares cost ${fmtAED(ann)}/yr to carry versus ${fmtAED(cl.tat_cut.incremental_annual_aed)}/yr in acceleration fees for ${fmtNum((rate * 365) / 30, 1)} removals a year.` : 'Annual cost comparison needs the carrying rate and acceleration fee from the assumption register.';
+    if (saturated) {
+      // the pooled float is already saturated (e.g. the Recommended S): say so, and offer the level where the levers bite
+      verdict.replaceChildren(h('strong', {}, `At S = ${fmtInt(S)} the pooled float is saturated: neither lever moves availability. `),
+        p0S != null && p0S !== S ? h('button', { type: 'button', class: 'btn btn--sm btn--ghost fc-try-p0', onclick: () => { state.spares = p0S; sync(null); compute(); } }, `Compare the levers at P0 (S = ${fmtInt(p0S)})`) : null, ' ', annualTxt);
+      return;
+    }
     verdict.replaceChildren(
-      h('strong', {}, gainA > gainB + 1e-9 ? `Buying ${fmtInt(N)} spare${N === 1 ? '' : 's'} lifts availability more` : gainB > gainA + 1e-9 ? `Cutting TAT by ${fmtInt(D)} d lifts availability more` : 'Both levers give the same availability'),
-      ` (${fmtPts(gainA)} vs ${fmtPts(gainB)}). `,
-      accel && ann != null ? `On an annual basis the spares cost ${fmtAED(ann)}/yr to carry versus ${fmtAED(cl.tat_cut.incremental_annual_aed)}/yr in acceleration fees for ${fmtNum((rate * 365) / 30, 1)} removals a year.` : 'Annual cost comparison needs the carrying rate and acceleration fee from the assumption register.');
+      h('strong', {}, cheaper || (gainA > gainB + 1e-9 ? `Buying ${fmtInt(N)} spare${N === 1 ? '' : 's'} lifts availability more` : gainB > gainA + 1e-9 ? `Cutting TAT by ${fmtInt(D)} d lifts availability more` : 'Both levers give the same availability')),
+      cheaper ? `; ${more} (${fmtPts(gainA)} vs ${fmtPts(gainB)}). ` : ` (${fmtPts(gainA)} vs ${fmtPts(gainB)}). `, annualTxt);
   }
   setRanges();
   if (cur.pn) load(cur); else compute();

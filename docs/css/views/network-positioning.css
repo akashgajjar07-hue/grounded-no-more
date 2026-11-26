@@ -32,7 +32,7 @@
 .np-pol th { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); font-weight: 500; }
 .np-pol td { font-family: var(--font-mono); font-size: var(--fs-12); }
 .np-pol tr.is-best td { color: var(--c-teal-hi); }
-.np-pol .ci { color: var(--text-faint); display: block; font-size: 11px; }
+.np-pol .ci { color: var(--text-faint); display: block; font-size: 11px; white-space: nowrap; }
 .np-link { margin-top: var(--s-2); }
 
 .np-replay-bar { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-2); align-items: center; margin-bottom: var(--s-2); }
@@ -49,7 +49,7 @@
 .np-finding strong { color: var(--text); font-weight: 500; }
 .np-findings { list-style: none; margin: var(--s-2) 0 0; padding: 0; display: grid; gap: 10px; }
 .np-findings li { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 8px; font-size: var(--fs-14); line-height: 1.5; color: var(--text-muted); }
-.np-findings li .icon { width: 16px; height: 16px; margin-top: 3px; color: var(--primary); }
+.np-findings li .icon { width: 16px; height: 16px; margin-top: 3px; color: var(--text-faint); }
 .np-findings strong { color: var(--text); font-weight: 500; }
 .np-metric-bar { display: flex; flex-wrap: wrap; gap: var(--s-1); align-items: center; margin-bottom: var(--s-2); }
 .np-rank { display: grid; gap: 6px; }
@@ -78,3 +78,6 @@
 /* wave 3: the lowest-AOG policy row is emphasised in neutral (teal = the recommended plan only) */
 .np-pol tr.is-best td { color: var(--text); font-weight: 600; }
 .np-pol .np-best { color: var(--text-faint); font-weight: 400; font-family: var(--font-ui); font-size: 11px; }
+/* wave 4: left column = map + hub finding; the findings list runs in two columns beside the bars when wide */
+.np-left { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
+@media (min-width: 1200px) { .np-left .np-findings { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-2); } }

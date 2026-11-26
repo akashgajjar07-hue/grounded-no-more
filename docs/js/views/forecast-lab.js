@@ -19,6 +19,7 @@ const lab = (g, o) => { const t = directLabel(g, o); if (o.color) t.style('fill'
 export const data = ['forecast', 'demand_history', 'parts', 'method'];
 
 const d3 = () => window.d3;
+const num = (v) => (v == null || v === '' || Number.isNaN(+v) ? null : +v);
 const DC_ORDER = ['smooth', 'erratic', 'intermittent', 'lumpy', 'insufficient_data'];
 const PC_NAME = { R: 'rotables', E: 'expendables', C: 'consumables' };
 const METHOD = {
@@ -199,12 +200,12 @@ export async function render(el, ctx) {
     champCard.replaceChildren(
       h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, `Champion · ${dcLabel(dc)} ${PC_NAME[pc]}`), h('h3', { class: 'fl-champ-name' }, champ ? mName(champOf(champ)) : 'not run')), provChip(fprov)),
       champ ? h('dl', { class: 'meta-list' }, ...[
-        ['Selection MASE', fmtNum(champ.mase ?? champ.mean_mase, 3)],
+        ['Selection MASE', fmtNum(champ.mase ?? champ.mean_mase, 2)],
         ['Bias', champ.mean_bias != null ? `${fmtNum(champ.mean_bias, 3)} units / wk` : null],
         ['Basis', champ.basis ? String(champ.basis).replace(/_/g, ' ') : null],
         ['Runner-up', runner ? mName(runner) : null],
         ['Holdout rank', chk ? `${fmtInt(chk.champion_rank)} of ${fmtInt(chk.n_methods)}` : 'not run'],
-        ['Best in hindsight', chk ? `${mName(chk.best_in_hindsight)} (${fmtNum(chk.best_mase, 3)})` : null],
+        ['Best in hindsight', chk ? `${mName(chk.best_in_hindsight)} (${fmtNum(chk.best_mase, 2)})` : null],
       ].filter(([, v]) => v != null).flatMap(([k, v]) => [h('dt', {}, k), h('dd', { class: 'mono' }, v)])) : stateBlock('empty', 'No champion exported for this cell'),
       h('div', { class: 'fl-honest', role: 'note' }, icon('info'),
         h('div', {}, h('strong', {}, 'Why the zero forecast is not allowed to win'),
@@ -246,7 +247,7 @@ export async function render(el, ctx) {
         rg.each(function (r) { d3().select(this).selectAll('circle.t').data(d3().range(1, r.n_methods + 1)).join('circle').attr('class', 't fl-rank-tick').attr('cx', (k) => x(k)).attr('r', 2); });
         rg.append('circle').attr('class', 'fl-rank-dot').attr('cx', (r) => x(r.champion_rank)).attr('r', (r) => 4 + Math.min(4, Math.sqrt(r.n_parts || 1)));
         rg.append('text').attr('class', 'fl-mlabel').attr('x', -12).attr('dy', '0.32em').attr('text-anchor', 'end').text((r) => truncate(`${mNameS(r.champion, small)} · ${small ? ({ intermittent: 'interm.', insufficient_data: 'insuff.' }[r.demand_class] || r.demand_class) : dcLabel(r.demand_class)} ${r.part_class}`, labelW - 14));
-        rg.append('text').attr('class', 'fl-vlabel').attr('x', iw + 14).attr('dy', '0.32em').text((r) => (small ? `${r.champion_rank}/${r.n_methods}` : `${r.champion_rank}/${r.n_methods}${r.champion_rank > 1 ? ` · best: ${mName(r.best_in_hindsight)}` : ' · held'}`));
+        rg.append('text').attr('class', 'fl-vlabel').attr('x', iw + 14).attr('dy', '0.32em').text((r) => (small ? `${r.champion_rank}/${r.n_methods}` : `${r.champion_rank}/${r.n_methods}${r.champion_rank > 1 ? ` · best: ${mName(r.best_in_hindsight)}` : ' · ★ held'}`));
         withTooltip(rg, (r) => ({ title: `${dcLabel(r.demand_class)} · ${r.part_class}`, rows: [['Champion', mName(r.champion)], ['Holdout rank', `${r.champion_rank} of ${r.n_methods}`], ['Champion MASE', fmtNum(r.champion_mase, 3)], ['Best in hindsight', `${mName(r.best_in_hindsight)} ${fmtNum(r.best_mase, 3)}`], ['PNs', fmtInt(r.n_parts)]] }));
         const wi = rows.indexOf(worst);
         annotate(g, { x: x(worst.champion_rank), y: wi * rowH + rowH / 2, dx: -48, dy: wi === rows.length - 1 ? 26 : -14, anchor: 'end', title: mKey(worst.champion) === 'naive' ? 'Naive: a MASE artefact on 0/1 series' : `${mName(worst.champion)} did not hold up`, sub: small ? undefined : mKey(worst.champion) === 'naive' && worst.part_class === 'R' ? `${fmtInt(worst.n_parts)} PNs · rotable policies use the reliability rate` : `${fmtInt(worst.n_parts)} PNs in this cell` });
@@ -282,11 +283,17 @@ export async function render(el, ctx) {
       const rop = L.reorder_point ?? (sl != null ? rows.find((r) => r.cdf >= sl - 1e-9)?.q ?? rows.at(-1).q : null);
       const mean = L.mean ?? rows.reduce((s2, r) => s2 + r.q * r.p, 0);
       const f = chartFrame(frameHost, {
-        headline: rop != null ? fitN(HALF, `${L.pn} needs ${fmtInt(rop)} units to cover ${fmtPct(sl, 0)} of lead times${L.station ? ` at ${L.station}` : ''}`, `${L.pn} needs ${fmtInt(rop)} units to cover ${fmtPct(sl, 0)} of lead times`, `To cover ${fmtPct(sl, 0)} of lead times at ${L.station || 'the hub'}, ${L.pn} needs ${fmtInt(rop)} units against a mean demand of ${fmtNum(mean, 1)}`, `To cover ${fmtPct(sl, 0)} of lead times, ${L.pn} needs ${fmtInt(rop)} units (mean demand ${fmtNum(mean, 1)})`) : `${L.pn}: expected lead-time demand ${fmtNum(mean, 1)} units`,
+        // C8 (wave 4): this is the service-level QUANTILE; the plans position a cost-based number (note under the chart)
+        headline: rop != null ? fitN(HALF, `${L.pn}'s ${fmtPct(sl, 0)} service-level quantile${L.station ? ` at ${L.station}` : ''} is ${fmtInt(rop)} units`, `${L.pn}: ${fmtPct(sl, 0)} service-level quantile ${fmtInt(rop)} units`, `Covering ${fmtPct(sl, 0)} of lead times at ${L.station || 'the hub'} takes ${fmtInt(rop)} units of ${L.pn} (mean demand ${fmtNum(mean, 1)})`, `${fmtPct(sl, 0)} service-level quantile: ${fmtInt(rop)} units (mean demand ${fmtNum(mean, 1)})`) : `${L.pn}: expected lead-time demand ${fmtNum(mean, 1)} units`,
         subtitle: `P(demand = q) over ${L.lead_time_days != null ? `${fmtNum(L.lead_time_days, 0)} days` : 'the lead time'} · ${L.dist_kind || 'champion'} · rate from ${mName(L.rate_source || L.champion)}${sl != null ? ` · ${part?.deadline} service target ${fmtPct(sl, 0)} (${slA?.provenance || 'ASSUMED'})` : ' · service level not exported'}`,
         provenance: L.provenance || fprov, source: 'forecast.json (ltd_examples), method.json (service_targets)', story: 'forecast-ltd',
         table: { columns: [{ key: 'q', label: 'Units', num: true }, { key: 'p', label: 'P(X = q)', num: true, format: (v) => fmtPct(v, 1) }, { key: 'cdf', label: 'P(X ≤ q)', num: true, format: (v) => fmtPct(v, 1) }], rows },
       });
+      // C8 (wave 4): reconcile the quantile with what the plans actually position at this station
+      const placed = L.station ? num(part?.stock_by_station?.[L.station]) : null;
+      if (rop != null && placed != null && placed !== rop) {
+        f.body.after(h('p', { class: 'fl-reconcile t-12 muted' }, icon('info'), h('span', {}, `Service-level quantile ${fmtInt(rop)} vs positioned ${fmtInt(placed)}: the recommended plan places ${fmtInt(placed)} at ${L.station}. Its cost-based allocation ${placed < rop ? `stops short of the quantile because the next unit's modelled AOG saving is worth less than its holding cost` : `goes past the quantile because the D0 penalty pays for the extra unit`} (see Capital Optimiser).`)));
+      }
       stop = responsive(f.body, (w) => {
         const hgt = 260, m = { top: 30, right: 16, bottom: 34, left: 44 };
         const iw = w - m.left - m.right, ih = hgt - m.top - m.bottom;

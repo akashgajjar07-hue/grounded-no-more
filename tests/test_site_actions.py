@@ -10,7 +10,9 @@ import pytest
 from _sitefx import DOCS, VIEWPORTS, audit, browser, open_page, site  # noqa: F401
 
 pytestmark = pytest.mark.browser
-HEADER = ["exception_id", "week", "type", "severity", "pn", "station", "summary", "recommended_action", "owner", "due_week", "evidence"]
+HEADER = ["exception_id", "week", "type_label", "severity_label", "pn", "station", "summary", "recommended_action", "owner",
+          "due_week", "on_hand", "target", "aog_h_52w", "d0_req_52w", "lead_time_ratio", "weeks_overdue", "type", "severity",
+          "evidence_json"]
 
 
 def _actions():
@@ -82,8 +84,10 @@ def test_csv_export_header_and_rows(site, browser):  # noqa: F811
         assert rows[0] == HEADER
         body = rows[1:]
         assert len(body) == sum(a["severity"] == "urgent" for a in A)
-        assert all(r[3] == "urgent" for r in body)
-        json.loads(body[0][10])  # evidence column is JSON
+        assert all(r[3] == "Urgent" and r[17] == "urgent" for r in body)
+        assert all("_" not in r[2] for r in body)          # human-readable type labels (F6)
+        assert "(s)" not in text and not any(" 1 D0 requests" in r[6] for r in body)  # F5
+        json.loads(body[0][-1])  # the raw evidence JSON stays, as the last column
         assert not problems, problems
     finally:
         ctx.close()
@@ -138,7 +142,8 @@ def test_wave3_actions(site, browser, vp):  # noqa: F811
         for g in heads:
             v = by.get(g["pn"], {}).get("aog_h_52w_max_station")
             if v:
-                assert f"max {round(v):,} AOG h at one station" in g["t"], g
+                # wave 4 (C1): the worst-station number travels with its station id
+                assert f"worst station {by[g['pn']]['aog_h_52w_max_station_id']} {round(v):,} h" in g["t"], g
         page.locator(".pac-row").first.click()
         page.wait_for_timeout(400)
         dr = page.locator(".drawer").inner_text()

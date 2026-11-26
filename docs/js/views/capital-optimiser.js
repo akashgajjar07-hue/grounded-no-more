@@ -119,11 +119,11 @@ export async function render(el, ctx) {
     meta: [provChip(prov), h('span', { class: 'chip chip-mono' }, split === 'holdout' ? 'Holdout · central' : `${split} · central`)],
   }));
 
-  // ---- KPI strip (constructed from frontier points; baseline = base policy P2)
+  // ---- KPI strip (constructed from frontier points; compared with the base policy P2, labelled 'vs P2' — 'baseline' is P0 only)
   if (rec && P2) {
-    const capTile = kpiTile({ label: `${rec.id} capital`, value: rec.cap, baseline: P2.cap, delta: rec.cap - P2.cap, better: 'lower', provenance: prov, ci: rec.capCI[0] != null ? rec.capCI : null }, { format: fmtAED, deltaFormat: (v) => fmtAED(v) });
+    const capTile = kpiTile({ label: `${rec.id} simulated capital`, value: rec.cap, baseline: P2.cap, baseline_label: P2.id, delta: rec.cap - P2.cap, better: 'lower', provenance: prov, ci: rec.capCI[0] != null ? rec.capCI : null }, { format: fmtAED, deltaFormat: (v) => fmtAED(v) });
     // One AOG tile with both comparisons (vs the base policy and vs P0), instead of the same value twice.
-    const aogTile = kpiTile({ label: `${rec.id} AOG / yr`, value: rec.aog, baseline: P2.aog, delta: rec.aog - P2.aog, better: 'lower', provenance: prov, ci: rec.ci }, { format: fmtHours });
+    const aogTile = kpiTile({ label: `${rec.id} AOG / yr`, value: rec.aog, baseline: P2.aog, baseline_label: P2.id, delta: rec.aog - P2.aog, better: 'lower', provenance: prov, ci: rec.ci }, { format: fmtHours });
 
     if (P0) {
       const d0 = rec.aog - P0.aog;
@@ -133,7 +133,7 @@ export async function render(el, ctx) {
       if (foot) foot.textContent = `${baseId} ${fmtHours(P2.aog)} · P0 ${fmtHours(P0.aog)}`;
       aogTile.setAttribute('aria-label', `${rec.id} AOG per year: ${fmtHours(rec.aog)}; ${fmtHours(Math.abs(rec.aog - P2.aog))} ${rec.aog < P2.aog ? 'below' : 'above'} ${baseId}, ${fmtHours(Math.abs(d0))} ${d0 < 0 ? 'below' : 'above'} P0`);
     }
-    const costTile = rec.total != null && P2.total != null ? kpiTile({ label: `${rec.id} annual cost`, value: rec.total, baseline: P2.total, delta: rec.total - P2.total, better: 'lower', provenance: prov, ci: rec.totalCI }, { format: fmtAED }) : null;
+    const costTile = rec.total != null && P2.total != null ? kpiTile({ label: `${rec.id} annual cost`, value: rec.total, baseline: P2.total, baseline_label: P2.id, delta: rec.total - P2.total, better: 'lower', provenance: prov, ci: rec.totalCI }, { format: fmtAED }) : null;
     const tiles = [capTile, aogTile, costTile].filter(Boolean);
     tiles.forEach((t) => { const r = t.querySelector('.kpi-delta-ref'); if (r) r.textContent = ` vs ${baseId}`; t.querySelector('.kpi-spark')?.remove(); });
     tiles.forEach((t) => t.classList.add(tiles.length === 3 ? 'span-4' : 'span-6'));
@@ -174,7 +174,7 @@ export async function render(el, ctx) {
 
   function drawFrontier(body, w) {
     const narrow = w < 560;
-    const hgt = narrow ? 340 : 440;
+    const hgt = narrow ? 340 : w >= 640 ? 560 : 440;
     const m = { top: 28, right: narrow ? 30 : 36, bottom: 44, left: narrow ? 44 : 56 };
     const iw = Math.max(60, w - m.left - m.right), ih = hgt - m.top - m.bottom;
     const svg = svgIn(body, w, hgt, 'Readiness frontier: spare capital versus material AOG hours');
@@ -326,7 +326,7 @@ export async function render(el, ctx) {
   const R = F.recommendation || {};
   const rule = card({
     kicker: 'Recommendation rule · pre-stated', title: R.h_star_per_aed_1m != null ? `Stop when an extra AED 1M buys fewer than ${fmtNum(R.h_star_per_aed_1m, 1)} AOG h` : 'Balanced point rule', prov: 'ASSUMED',
-    body: h('div', { class: 'stack-1 t-14 muted' },
+    body: h('div', { class: 't-14 muted co-rule-body' },
       h('p', { class: 'm-0' }, R.aed_per_aog_hour != null ? `Walk the lower hull of the capital-only plans. Each segment buys AOG hours per extra AED 1M. Break-even h* = carrying ${fmtNum((R.carrying_pct ?? 0) * 100, 0)}% × AED 1M ÷ ${fmtAED(R.aed_per_aog_hour)} per AOG hour. The recommendation is the last vertex before the first segment below h*.` : 'Walk the lower hull of the capital-only plans and stop at the first segment worth less than its holding cost.'),
       R.segments ? h('p', { class: 'm-0 t-12 faint' }, `Selection-seed hull. Segment into ${R.recommended || rec.id}: ${fmtNum(R.segments.find((s) => s.to === (R.recommended || rec.id))?.h_per_aed_1m, 1)} h per AED 1M; next segment: ${fmtNum(R.segments.find((s) => s.from === (R.recommended || rec.id))?.h_per_aed_1m, 1)} h.`) : null),
   });
@@ -340,7 +340,8 @@ export async function render(el, ctx) {
         readout),
     }),
   );
-  mainCol.append(rule);
+  // wave 4: the rule card lives under the controls (right column), so neither column leaves ~300 px of dead space
+  side.append(rule);
   showSel();
 
   // ---- allocation table
@@ -379,13 +380,18 @@ export async function render(el, ctx) {
     const units = num(tot?.delta_units) ?? rows.reduce((s, r) => s + (r.change || 0), 0);
     const nAll = num(tot?.n_rows) ?? rows.length;
     allocHead.replaceChildren(
-      h('div', {}, h('div', { class: 'card-kicker' }, `Allocation · ${sel.id}`), h('h3', { class: 'card-title co-alloc-title', 'aria-live': 'polite' }, rows.length ? `${sel.id} changes ${fmtInt(nAll)} PN-station levels vs ${baseId}: ${units >= 0 ? '+' : '−'}${fmtInt(Math.abs(units))} units, ${capWords(sumCap)}` : sel === P2 ? `${baseId} is the base policy: no changes` : `No allocation rows exported for ${sel.id}`)),
+      h('div', {}, h('div', { class: 'card-kicker' }, `Allocation · ${sel.id}`), h('h3', { class: 'card-title co-alloc-title', 'aria-live': 'polite' }, rows.length ? `${sel.id} changes ${fmtInt(nAll)} PN-station levels vs ${baseId}: ${units >= 0 ? '+' : '−'}${fmtInt(Math.abs(units))} units, ${fmtAED(Math.abs(sumCap))} ${sumCap >= 0 ? 'more' : 'less'} allocation capital` : sel === P2 ? `${baseId} is the base policy: no changes` : `No allocation rows exported for ${sel.id}`)),
       h('div', { class: 'row' }, provChip(prov)));
     allocTable.update(rows);
     allocMore.dataset.label = `Show all ${fmtInt(rows.length)} changes`;
     allocMore.textContent = allocCard.classList.contains('is-expanded') ? 'Show fewer rows' : allocMore.dataset.label;
     allocCard.classList.toggle('has-more', rows.length > 8);
-    allocNote.textContent = tot && num(tot.n_rows_shown) < num(tot.n_rows) ? `Showing the ${fmtInt(tot.n_rows_shown)} changes with the largest modelled effect of ${fmtInt(tot.n_rows)}; totals cover all rows.` : '';
+    // C3 (wave 4): two capital bases on one page, each named. Allocation capital = target units × unit cost (this table);
+    // simulated capital = the time-average stock value over the run, net of AOG-desk buys (the KPI and the frontier).
+    const simD = sel !== P2 && num(sel.cap) != null && num(P2?.cap) != null ? sel.cap - P2.cap : null;
+    const basis = rows.length && simD != null ? `Allocation capital is target units × unit cost. The KPI and frontier show simulated capital (the time-average stock value, which nets out units in repair and AOG-desk buys): ${fmtAED(Math.abs(simD))} ${simD >= 0 ? 'more' : 'less'} than ${baseId}.` : '';
+    const shown = tot && num(tot.n_rows_shown) < num(tot.n_rows) ? `Showing the ${fmtInt(tot.n_rows_shown)} changes with the largest modelled effect of ${fmtInt(tot.n_rows)}; totals cover all rows. ` : '';
+    allocNote.textContent = `${shown}${basis}`;
     allocCard.dataset.point = sel.id;
   }
   showAlloc();
@@ -599,7 +605,8 @@ export async function render(el, ctx) {
         { key: 'label', label: 'Stress' }, { key: 'p2', label: baseId, num: true, format: fmtHours }, { key: 'rec', label: rec.id, num: true, format: fmtHours },
         { key: 'dA', label: 'Saved', num: true, render: (r) => h('span', { class: 'co-two' }, fmtHours(r.dA), h('small', {}, ciTxt(r.dAlo, r.dAhi, (v) => fmtNum(v, Math.abs(v) < 20 ? 1 : 0)).trim())) },
         { key: 'nb', label: 'Net / yr', short: 'Net', num: true, render: (r) => h('span', { class: `co-two ${r.nbhi < 0 ? 'co-neg' : ''}` }, h('span', {}, r.nbhi < 0 ? icon('alert') : null, fmtAED(r.nb)), h('small', {}, ciTxt(r.nblo, r.nbhi, (v) => fmtAED(v).replace('AED ', '')).trim())) },
-        { key: 'pick', label: 'Rule', short: 'Rule picks', mono: true },
+        // raw plan codes get a gloss ("B125 · budget point, AED 45.0M"), never a bare code (wave 4)
+        { key: 'pick', label: 'Rule picks', short: 'Rule picks', render: (r) => { const q = byId.get(r.pick); return h('span', { title: q ? `${KIND_LABEL[q.kind] || q.kind}, ${fmtAED(q.cap)} simulated capital` : null }, h('span', { class: 'mono' }, r.pick), q && !isPolicy(q) && q !== rec ? h('span', { class: 'faint t-12' }, ' budget pt') : null); } },
       ],
       rows,
     });

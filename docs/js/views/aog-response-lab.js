@@ -20,6 +20,8 @@ const BASIS = {
   replan_expedite_at_quoted_due: 'The order missed its quoted date, so the best option is re-planned to an expedite at that date.',
   estimate_not_realisable: 'Not taken in history, so it keeps the ex-ante estimate (cannot be realised from the record).',
 };
+/** Plain words for the scoring-basis counts ("112 scored on transport times"). */
+const BASIS_SHORT = { transport_matrix: 'scored on fixed transport times', actual_order_arrival: 'scored on the order’s actual arrival', replan_expedite_at_quoted_due: 're-planned to an expedite at the quoted date', estimate_not_realisable: 'kept the estimate (not taken in history)' };
 const stepLabel = (s) => STEP_LABEL[s] || String(s || 'step').replace(/_/g, ' ');
 /** Short step names for the swimlane (the full sentence lives in the event log). */
 const STEP_SHORT = { removal: 'Removal', requirement: 'Requirement', request: 'Request', local_check: 'Local check', network_check: 'Network check', aog_start: 'AOG starts', sourcing: 'Sourcing', ordered: 'Ordered', shipped: 'Shipped', arrived: 'Arrived', received: 'Received', fitted: 'Fitted', unfilled: 'Unfilled', context: 'Context' };
@@ -178,7 +180,11 @@ export async function render(el, ctx) {
     // options
     const opts = (inc.options || []).slice().sort((a, b) => optState(a, rec).order - optState(b, rec).order || (a.rank ?? 99) - (b.rank ?? 99) || String(a.key).localeCompare(String(b.key)));
     const mNote = missedNote(inc, rec, slack);
-    const optCards = opts.map((o) => optionCard(o, rec, inc, codes, optLabel, slack, o === rec ? mNote : null));
+    // wave 4: when EVERY feasible option misses (e.g. D0 with 0 h slack) that is one structural fact: one banner, and the
+    // per-card deadline cells turn neutral ("+9 h past D0") instead of four red MISSED pills
+    const feasAll = opts.filter((o) => o.feasible && !o.human_decision && o.wait_h != null);
+    const noneMeets = feasAll.length > 0 && feasAll.every((o) => !o.deadline_met);
+    const optCards = opts.map((o) => optionCard(o, rec, inc, codes, optLabel, slack, o === rec && !noneMeets ? mNote : null, noneMeets));
     const okCards = optCards.filter((c, i) => optState(opts[i], rec).group === 'ok');
     const naCards = optCards.filter((c, i) => optState(opts[i], rec).group === 'na');
     const feas = opts.filter((o) => o.feasible && o.exposure_aed != null && !o.human_decision);
@@ -221,11 +227,13 @@ export async function render(el, ctx) {
     const optsWrap = card({
       cls: 'span-12', kicker: `Options a–h · ${fmtInt(okCards.length)} feasible`, title: 'Every sourcing route the desk could have taken', prov, story: 'aog-options',
       body: h('div', { class: 'stack-3' },
+        noneMeets ? h('div', { class: 'aog-nomeet', role: 'note', dataset: { role: 'none-meets' } }, icon('alert'), h('span', {}, h('b', {}, `No option can meet ${inc.deadline || 'the deadline'}. `), !slack ? 'The aircraft is AOG from removal (0 h slack), so every route misses; the options are ranked by exposure.' : `No route arrives within the ${fmtHours(slack)} slack, so some AOG is unavoidable; the options are ranked by exposure.`)) : null,
         h('div', { class: 'aog-optgroup', dataset: { group: 'feasible' } },
           h('div', { class: 'aog-optgroup-head' }, h('h4', {}, `Feasible (${fmtInt(okCards.length)})`), h('span', { class: 't-12 faint' }, okCards.length ? 'Ranked by exposure: hours beyond the deadline slack × AOG penalty + direct cost.' : 'No route could supply a unit at the time of the request.')),
           okCards.length ? h('div', { class: 'aog-opts' }, okCards) : null),
-        naCards.length ? h('div', { class: 'aog-optgroup', dataset: { group: 'unavailable' } },
-          h('div', { class: 'aog-optgroup-head' }, h('h4', {}, `Not available (${fmtInt(naCards.length)})`), h('span', { class: 't-12 faint' }, 'Not contracted, infeasible at the time, or a human decision the lab never ranks.')),
+        // phones: the unavailable routes collapse behind a summary (the page was 8,000 px tall)
+        naCards.length ? h('details', { class: 'aog-optgroup aog-optgroup--na', dataset: { group: 'unavailable' }, open: innerWidth > 480 ? true : null },
+          h('summary', { class: 'aog-optgroup-head' }, h('h4', {}, `Not available (${fmtInt(naCards.length)})`), h('span', { class: 't-12 faint' }, 'Not contracted, infeasible at the time, or a human decision the lab never ranks.')),
           h('div', { class: 'aog-opts' }, naCards)) : null),
     });
 
@@ -287,7 +295,7 @@ export async function render(el, ctx) {
         h('dl', { class: 'meta-list' },
           h('dt', {}, 'Best option taken'), h('dd', {}, C.history_took_best_option != null ? `${fmtInt(C.history_took_best_option)} of ${fmtInt(n)} requests (${fmtPct(C.history_took_best_option / n, 0)})` : 'not run'),
           h('dt', {}, 'History did better'), h('dd', {}, C.requests_where_history_beat_estimate != null ? `${fmtInt(C.requests_where_history_beat_estimate)} requests` : 'not run'),
-          h('dt', {}, 'Scoring basis'), h('dd', {}, C.realised_basis_counts ? Object.entries(C.realised_basis_counts).map(([k, v]) => `${fmtInt(v)} ${fmtEnum(k).toLowerCase()}`).join(' · ') : 'not run')),
+          h('dt', {}, 'Scoring basis'), h('dd', {}, C.realised_basis_counts ? Object.entries(C.realised_basis_counts).map(([k, v]) => `${fmtInt(v)} ${BASIS_SHORT[k] || fmtEnum(k).toLowerCase()}`).join(' · ') : 'not run')),
         h('ul', { class: 'aog-caveats' },
           h('li', {}, 'Options are ex-ante estimates built on quoted figures. Quoted repair and purchase dates are unreliable in this world, and expedite lead times are a cap, not a supplier quote.'),
           h('li', {}, 'Accelerated repair, expedite and pool were not taken in history, so they keep their estimate; they cannot be realised from the record.'),
@@ -303,10 +311,12 @@ export async function render(el, ctx) {
 }
 
 // ----------------------------------------------------------------------------- pieces
-function optionCard(o, rec, inc, codes, optLabel, slack, note) {
+function optionCard(o, rec, inc, codes, optLabel, slack, note, noneMeets = false) {
   const st = optState(o, rec);
   const metric = (k, v, extra) => h('div', { class: 'aog-m' }, h('dt', {}, k), h('dd', { class: 'num' }, v, extra || null));
-  const met = o.human_decision ? h('span', { class: 'faint' }, 'n/a') : o.wait_h == null ? h('span', { class: 'faint' }, '—') : o.deadline_met ? pill('ok', 'Met') : pill('urgent', 'Missed');
+  const late = o.wait_h != null ? o.wait_h - (slack || 0) : null;
+  const met = o.human_decision ? h('span', { class: 'faint' }, 'n/a') : o.wait_h == null ? h('span', { class: 'faint' }, '—') : o.deadline_met ? pill('ok', 'Met')
+    : noneMeets ? h('span', { class: 'aog-late mono', title: 'Every option misses this deadline (see the note above)' }, `+${fmtHours(Math.max(0, late))} late`) : pill('urgent', 'Missed');
   const rc = (o.reason_codes || []).map((c) => h('li', { title: c, dataset: { code: c } }, h('span', { class: 'aog-code' }, reasonLabel(c)), codes[c] ? h('span', { class: 'aog-code-txt' }, tidyProse(codes[c])) : null));
   return h('article', { class: `aog-opt aog-opt--${st.cls}`, dataset: { key: o.key, state: st.cls }, 'aria-label': `Option ${o.key}: ${optLabel(o)}` },
     h('div', { class: 'aog-opt-head' }, h('span', { class: 'aog-key mono' }, o.key), h('h4', { class: 'aog-opt-title' }, optLabel(o)), st.pill),

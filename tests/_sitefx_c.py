@@ -78,4 +78,8 @@ def assert_clean(page, problems, label):
     assert not r["overflow"], f"{label}: text overflow {r['overflow'][:5]}"
     assert not r["hscroll"], f"{label}: horizontal page scroll"
     assert r["disclaimer"], f"{label}: footer disclaimer missing"
+    from _sitefx import AUDIT_JS  # wave 4: the shared F1 rules (squeezed short labels, clipped pills without a title)
+    a = page.evaluate(AUDIT_JS)
+    assert not a["squeezed"], f"{label}: short labels squeezed to one letter per line {a['squeezed']}"
+    assert not a["clipped"], f"{label}: truncated pills/chips without a title {a['clipped']}"
     return r

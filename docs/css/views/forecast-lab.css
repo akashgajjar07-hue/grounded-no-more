@@ -52,11 +52,11 @@
 .fl-rank-track { stroke: var(--line-strong); stroke-width: 1; }
 .fl-rank-tick { fill: var(--c-slate); }
 .fl-rank-dot { fill: var(--c-titanium); fill-opacity: 0.35; stroke: var(--c-titanium); stroke-width: 1.5; }
-.fl-rank.is-first .fl-rank-dot { fill: var(--primary); fill-opacity: 0.85; stroke: var(--c-teal-hi); }
+.fl-rank.is-first .fl-rank-dot { fill: var(--c-titanium); fill-opacity: 0.85; stroke: var(--c-ice); } /* neutral + star: two different methods held, neither is "the recommended plan" */
 .fl-rank.is-last .fl-rank-dot { fill: var(--c-titanium); fill-opacity: 0.9; stroke: var(--c-ice); stroke-width: 2; }
 .fl-rank.is-last .fl-vlabel { fill: var(--text); font-weight: 600; }
 .fl-rank.is-last .fl-mlabel { fill: var(--text); font-weight: 600; }
-.fl-rank.is-first .fl-vlabel { fill: var(--primary); }
+.fl-rank.is-first .fl-vlabel { fill: var(--text); }
 
 /* LTD */
 .fl-bar { fill: var(--c-slate); fill-opacity: 0.55; }
@@ -90,3 +90,5 @@
   .fl-card-seg { justify-content: flex-start; }
   .fl-champ-name { font-size: var(--fs-20); }
 }
+.fl-reconcile { display: flex; gap: 8px; align-items: flex-start; margin: var(--s-1) 0 0; line-height: 1.5; }
+.fl-reconcile .icon { flex: none; width: 14px; height: 14px; margin-top: 2px; color: var(--text-faint); }

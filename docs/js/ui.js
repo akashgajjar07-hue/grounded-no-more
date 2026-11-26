@@ -94,7 +94,9 @@ export function pill(status = 'unknown', text) {
   const s = PILL[status] ? status : 'unknown';
   const [ic, label] = PILL[s];
   const cls = s === 'info' ? 'unknown' : s;
-  return h('span', { class: `pill pill--${cls}` }, icon(ic), text ?? label);
+  const t = text ?? label;
+  // the full text rides along as a tooltip, so a pill clipped by a narrow container never loses its meaning
+  return h('span', { class: `pill pill--${cls}`, title: typeof t === 'string' ? t : null }, icon(ic), h('span', { class: 'pill-text' }, t));
 }
 
 export const kbd = (k) => h('kbd', { class: 'kbd' }, k);
@@ -126,7 +128,8 @@ export function card({ title, kicker, prov, actions, body, foot, cls = '', story
 
 // --------------------------------------------------------------------------- KPI instrument tile
 /**
- * KPI tile from a kpis.json row: {id,label,value,unit,baseline,delta,better,provenance,ci,spark,target}
+ * KPI tile from a kpis.json row: {id,label,value,unit,baseline,baseline_label?,delta,better,provenance,ci,spark,target}
+ * baseline_label names the comparison when it is not the P0 baseline ("vs P2", footer "P2 AED 37M").
  * opts.format(value) → string (defaults chosen by unit), opts.sparkline(el, values) to draw the spark.
  * opts.scale: {min, max} for the instrument ruler (optional).
  * opts.capital: capital deltas are NEUTRAL (titanium + arrow + "more/less capital"), never red/green.
@@ -141,13 +144,15 @@ export function kpiTile(k, { format, deltaFormat, sparkline, scale, hero = false
   const neutral = deltaTone === 'neutral' || (deltaTone === 'auto' && isCap);
   const good = k.delta === 0 ? 'flat' : neutral ? 'neutral' : (k.better === 'lower' ? k.delta < 0 : k.delta > 0) ? 'good' : 'bad';
   const [num, unit] = splitUnit(fmt(k.value));
+  // "baseline" means P0 site-wide: a tile compared with anything else names it (k.baseline_label, e.g. 'P2')
+  const refName = k.baseline_label || 'baseline';
   const delta = h(
     'span',
     { class: `kpi-delta is-${good}` },
     icon(k.delta < 0 ? 'arrow-down' : k.delta > 0 ? 'arrow-up' : 'minus'),
     `${k.delta > 0 ? '+' : k.delta < 0 ? '−' : ''}${dfmt(Math.abs(k.delta))}`,
     isCap && k.delta ? h('span', { class: 'kpi-delta-word' }, k.delta > 0 ? ' more capital' : ' less capital') : null,
-    h('span', { class: 'kpi-delta-ref' }, ' vs baseline'),
+    h('span', { class: 'kpi-delta-ref' }, ` vs ${refName}`),
     h('span', { class: 'sr-only' }, good === 'good' ? ' (improvement)' : good === 'bad' ? ' (worse)' : '')
   );
   const spark = h('div', { class: 'kpi-spark', 'aria-hidden': 'true' });
@@ -171,7 +176,7 @@ export function kpiTile(k, { format, deltaFormat, sparkline, scale, hero = false
     ruler,
     delta,
     spark,
-    h('div', { class: 'kpi-foot' }, h('span', {}, ci), h('span', {}, `Baseline ${fmt(k.baseline)}`))
+    h('div', { class: 'kpi-foot' }, h('span', {}, ci), h('span', {}, `${k.baseline_label || 'Baseline'} ${fmt(k.baseline)}`))
   );
   if (sparkline && Array.isArray(k.spark)) requestAnimationFrame(() => sparkline(spark, k.spark, { better: k.better, color: isCap ? '#B9C8D6' : undefined }));
   return tile;
@@ -258,11 +263,20 @@ export function dataTable({ columns, rows, sort, onRowClick, rowKey, selected, m
   function rowAttrs(r) {
     return {
       'aria-selected': rowKey && state.selected != null ? String(r[rowKey] === state.selected) : null,
+      'data-key': rowKey ? String(r[rowKey]) : null,
       tabindex: onRowClick ? '0' : null,
       style: onRowClick ? { cursor: 'pointer' } : undefined,
       onclick: onRowClick ? () => onRowClick(r) : null,
       onkeydown: onRowClick ? (e) => { if (e.key === 'Enter') onRowClick(r); } : null,
     };
+  }
+  /** Line-1 metric: a value in a labelled capsule, or a status pill on its own (never a pill inside a capsule). */
+  function metricSlot(c, v) {
+    if (v instanceof Element && v.classList.contains('pill')) {
+      if (!v.title) v.title = `${c.short || c.label}: ${v.textContent}`;
+      return h('div', { class: 'dts-metric dts-metric--pill', 'aria-label': `${c.short || c.label}: ${v.textContent}` }, v);
+    }
+    return h('div', { class: 'dts-metric' }, h('span', { class: 'dts-metric-label' }, c.short || c.label), v ?? '—');
   }
   function renderStack(data) {
     if (!stackEl || !mq.matches) { stackEl?.replaceChildren(); return; }
@@ -271,14 +285,16 @@ export function dataTable({ columns, rows, sort, onRowClick, rowKey, selected, m
     const c1 = byKey[k1], c2 = k2 ? byKey[k2] : null;
     const sortable = columns.filter((c) => c.sortable !== false);
     const sel = h('select', { 'aria-label': 'Sort rows by', onchange: (e) => toggleSort(e.target.value, state.sort?.dir || 'desc') },
+      // an unsorted (pre-ordered) table says so, instead of showing the first column as if it were the sort key (F7)
+      state.sort ? null : h('option', { value: '', selected: true, disabled: true }, 'As listed'),
       sortable.map((c) => h('option', { value: c.key, selected: state.sort?.key === c.key ? true : null }, c.short || c.label)));
     const dirBtn = h('button', { class: 'btn btn--sm btn--icon', type: 'button', 'aria-label': state.sort?.dir === 'asc' ? 'Sort ascending (switch to descending)' : 'Sort descending (switch to ascending)', onclick: () => toggleSort(state.sort?.key || sortable[0]?.key, state.sort?.dir === 'asc' ? 'desc' : 'asc') }, icon(state.sort?.dir === 'asc' ? 'arrow-up' : 'arrow-down'));
     const list = h('ul', { class: 'dts-list', 'aria-label': caption || 'Rows' }, data.map((r) => {
       const a = rowAttrs(r);
-      return h('li', { class: 'dts-row', role: onRowClick ? 'button' : null, tabindex: a.tabindex, 'aria-selected': a['aria-selected'], onclick: a.onclick, onkeydown: a.onkeydown },
+      return h('li', { class: 'dts-row', 'data-key': a['data-key'], role: onRowClick ? 'button' : null, tabindex: a.tabindex, 'aria-selected': a['aria-selected'], onclick: a.onclick, onkeydown: a.onkeydown },
         h('div', { class: `dts-primary ${c1.mono ? '' : 'is-text'}`.trim() }, cell(c1, r) ?? '—'),
-        c2 ? h('div', { class: 'dts-metric' }, h('span', { class: 'dts-metric-label' }, c2.short || c2.label), cell(c2, r) ?? '—') : h('span'),
-        rest.length ? h('div', { class: 'dts-secondary' }, rest.map((k) => byKey[k]).map((c) => h('span', {}, `${c.short || c.label} `, h('b', {}, cell(c, r) ?? '—')))) : null);
+        c2 ? metricSlot(c2, cell(c2, r)) : h('span'),
+        rest.length ? h('div', { class: 'dts-secondary' }, rest.map((k) => byKey[k]).map((c) => h('span', {}, h('span', {}, `${c.short || c.label} `, h('b', {}, cell(c, r) ?? '—'))))) : null);
     }));
     stackEl.replaceChildren(sortable.length ? h('div', { class: 'dts-sort' }, h('label', {}, 'Sort'), sel, dirBtn) : null, list);
   }
@@ -354,12 +370,13 @@ export function bindValueText(input, fmt = String) {
 export function slider({ label, min, max, step = 1, value, format = String, valueText, onInput, id }) {
   const sid = id || `sl-${Math.random().toString(36).slice(2, 8)}`;
   const out = h('output', { for: sid, 'aria-hidden': 'true' }, format(value));
-  const input = h('input', { class: 'slider', type: 'range', id: sid, min, max, step, value });
+  // F4 (wave 4): the accessible name is the label text only ("Capital budget"); the live value is in aria-valuetext
+  const input = h('input', { class: 'slider', type: 'range', id: sid, min, max, step, value, 'aria-labelledby': `${sid}-l` });
   const pct = () => input.style.setProperty('--pct', `${max > min ? ((input.value - min) / (max - min)) * 100 : 0}%`);
   pct();
   const vt = bindValueText(input, valueText || format);
   input.addEventListener('input', () => { pct(); out.textContent = format(+input.value); onInput?.(+input.value); });
-  const field = h('div', { class: 'field' }, h('label', { class: 'field-label', for: sid }, label, out), input, h('div', { class: 'slider-scale', 'aria-hidden': 'true' }, h('span', {}, format(min)), h('span', {}, format(max))));
+  const field = h('div', { class: 'field' }, h('div', { class: 'field-label' }, h('label', { for: sid, id: `${sid}-l` }, label), out), input, h('div', { class: 'slider-scale', 'aria-hidden': 'true' }, h('span', {}, format(min)), h('span', {}, format(max))));
   field.input = input;
   field.setValue = (v) => { input.value = v; pct(); out.textContent = format(+input.value); vt(); };
   return field;
@@ -418,12 +435,13 @@ function trapFocus(container, e) {
 }
 
 /**
- * Right-hand drawer. drawer({title, kicker, body, foot, onClose, persistOnParams}) → {open(), close(), el, body, isOpen}
+ * Right-hand drawer. drawer({title, kicker, body, foot, onClose, persistOnParams, returnFocus}) → {open(), close(), el, body, isOpen}
+ * returnFocus: element or () => element that receives focus on close when nothing had focus before (deep links).
  * Closes on Esc, scrim click and the close button; returns focus to the opener; locks page scroll while open.
  * The router closes it on every route change (onClose receives {reason: 'route'}); set persistOnParams: true to keep
  * it open across same-route param updates that the view handles itself (see `onParams` in app.js).
  */
-export function drawer({ title, kicker, body, foot, onClose, persistOnParams = false } = {}) {
+export function drawer({ title, kicker, body, foot, onClose, persistOnParams = false, returnFocus } = {}) {
   const scrim = h('div', { class: 'scrim' });
   const bodyEl = h('div', { class: 'drawer-body' }, body);
   const el = h(
@@ -459,7 +477,11 @@ export function drawer({ title, kicker, body, foot, onClose, persistOnParams = f
       scrim.classList.remove('is-open'); el.classList.remove('is-open');
       document.removeEventListener('keydown', onKey);
       if (immediate) { scrim.remove(); el.remove(); } else setTimeout(() => { scrim.remove(); el.remove(); }, 320);
-      if (reason === 'user' && lastFocus?.isConnected) lastFocus.focus?.({ preventScroll: true });
+      if (reason === 'user') {
+        // returnFocus(): where focus goes when there was no opener (a deep-linked drawer opened on load)
+        const back = lastFocus?.isConnected && lastFocus !== document.body ? lastFocus : (typeof returnFocus === 'function' ? returnFocus() : returnFocus);
+        back?.focus?.({ preventScroll: true });
+      }
       onClose?.({ reason });
     },
   };
@@ -489,7 +511,11 @@ export function modal({ title, body, persistOnParams = false } = {}) {
       if (!api.isOpen) return;
       api.isOpen = false; openOverlays.delete(entry); unlockScroll();
       scrim.remove(); wrap.remove(); document.removeEventListener('keydown', onKey);
-      if (reason === 'user' && lastFocus?.isConnected) lastFocus.focus?.({ preventScroll: true });
+      if (reason === 'user') {
+        // returnFocus(): where focus goes when there was no opener (a deep-linked drawer opened on load)
+        const back = lastFocus?.isConnected && lastFocus !== document.body ? lastFocus : (typeof returnFocus === 'function' ? returnFocus() : returnFocus);
+        back?.focus?.({ preventScroll: true });
+      }
     },
   };
   return api;

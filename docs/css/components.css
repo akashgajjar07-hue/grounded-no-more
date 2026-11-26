@@ -191,7 +191,8 @@
   font-size: var(--fs-12); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
   color: var(--pill); background: color-mix(in srgb, var(--pill) 12%, transparent); border: 1px solid color-mix(in srgb, var(--pill) 40%, transparent);
 }
-.pill .icon { width: 14px; height: 14px; }
+.pill .icon { width: 14px; height: 14px; flex: none; }
+.pill-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pill--ok { --pill: var(--status-ok); }
 .pill--review { --pill: var(--status-review); }
 .pill--urgent { --pill: var(--status-urgent); }
@@ -550,5 +551,10 @@ select option { background: var(--panel); color: var(--text); }
 .map-arc-chips { pointer-events: none; }
 .map-arc-chips .gnm-chip-text { font-size: 11px; }
 /* stacked rows: never let a long metric pill squeeze the primary column (wave-3 V1 finding) */
-.dts-metric { max-width: 100%; min-width: 0; white-space: normal; height: auto; min-height: 24px; padding-block: 2px; overflow-wrap: anywhere; }
-.dts-row { grid-template-columns: minmax(45%, 1fr) minmax(0, auto); }
+.dts-metric { max-width: 100%; min-width: 0; white-space: nowrap; height: auto; min-height: 24px; padding-block: 2px; overflow: hidden; }
+.dts-metric-label { flex: none; white-space: nowrap; }
+.dts-metric > :not(.dts-metric-label) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.dts-row { grid-template-columns: fit-content(60%) minmax(0, 1fr); }
+/* F1 (wave 4): a status pill is the metric itself, not wrapped in a second capsule; it may ellipsize (title carries it) */
+.dts-metric--pill { padding: 0; border: 0; background: none; min-height: 0; max-width: 100%; }
+.dts-metric--pill > .pill { max-width: 100%; min-width: 0; }

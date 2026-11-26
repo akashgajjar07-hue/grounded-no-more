@@ -6,7 +6,7 @@
  *   map.select('LHR'); map.destroy();
  *
  * - Natural Earth land (1:110m) in very low-contrast steel + faint graticule.
- * - Geodesic arcs from the hub in teal with a gradient (faint at the hub, bright at the station).
+ * - Geodesic arcs from the hub in neutral titanium with a gradient (faint at the hub, bright at the station).
  * - Airport nodes as precise rings with IATA labels in IBM Plex Mono; AUH hub has a soft radar
  *   pulse (disabled under prefers-reduced-motion).
  * - Detailed Europe–Middle East–Asia conic projection + world locator inset.
@@ -117,8 +117,9 @@ export async function renderNetworkMap(host, opts = {}) {
       const p0 = projection([A.lon, A.lat]), p1 = projection([B.lon, B.lat]);
       const gid = `${uid}-g${i}`;
       const grad = defs.append('linearGradient').attr('id', gid).attr('gradientUnits', 'userSpaceOnUse').attr('x1', p0[0]).attr('y1', p0[1]).attr('x2', p1[0]).attr('y2', p1[1]);
-      grad.append('stop').attr('offset', '0%').attr('stop-color', theme.color.accent).attr('stop-opacity', 0.18);
-      grad.append('stop').attr('offset', '100%').attr('stop-color', theme.color.accent).attr('stop-opacity', 0.95);
+      // routine arcs are neutral titanium: teal is reserved for the recommended plan (wave 4, C5)
+      grad.append('stop').attr('offset', '0%').attr('stop-color', theme.series.neutral).attr('stop-opacity', 0.15);
+      grad.append('stop').attr('offset', '100%').attr('stop-color', theme.series.neutral).attr('stop-opacity', 0.7);
       const geo = { type: 'LineString', coordinates: [[A.lon, A.lat], [B.lon, B.lat]] };
       arcLayer.append('path').datum(a).attr('class', 'map-arc').attr('d', path(geo)).attr('stroke', `url(#${gid})`).attr('stroke-width', 1 + 2.2 * ((a.transfers || 1) / maxT))
         .on('pointerenter', (e) => tooltip.show(e, { title: `${a.from} → ${a.to}`, rows: [['AOG transport', `${a.aog_transport_h ?? '—'} h`], ['Transfers', fmtInt(a.transfers)], ['Emergency', fmtInt(a.emergency)]] }))
@@ -150,7 +151,7 @@ export async function renderNetworkMap(host, opts = {}) {
       const nc = nodeColor ? nodeColor(s) : null;
       const node = g.append('circle').attr('class', `map-node ${isHub ? 'map-node--hub' : ''}`).attr('r', nr);
       if (nc) node.style('stroke', nc);
-      g.append('circle').attr('class', 'map-node-inner').attr('r', isHub ? 3 : 2).attr('fill', nc || (isHub ? theme.color.text : theme.color.accent));
+      g.append('circle').attr('class', 'map-node-inner').attr('r', isHub ? 3 : 2).attr('fill', nc || (isHub ? theme.color.text : theme.series.neutral));
       g.append('circle').attr('class', 'map-sel').attr('r', nr + 5).attr('fill', 'none').attr('stroke', theme.color.accentHi).attr('stroke-width', 1.25).attr('stroke-dasharray', '2 3').style('display', s.station === selected ? null : 'none');
       const sub = labelSub ? labelSub(s) : null;
       const showSub = !!(sub && w >= 520);
@@ -179,7 +180,7 @@ export async function renderNetworkMap(host, opts = {}) {
       isvg.append('path').datum({ type: 'Sphere' }).attr('class', 'map-sphere').attr('d', ipath);
       isvg.append('path').datum(atlas.land).attr('d', ipath).attr('fill', 'rgba(185,200,214,0.22)');
       isvg.append('path').datum(boxPolygon(EXTENT)).attr('class', 'map-inset-frame').attr('d', ipath);
-      if (hub) { const [hx, hy] = ip([hub.lon, hub.lat]); isvg.append('circle').attr('cx', hx).attr('cy', hy).attr('r', 2.2).attr('fill', theme.color.accent); }
+      if (hub) { const [hx, hy] = ip([hub.lon, hub.lat]); isvg.append('circle').attr('cx', hx).attr('cy', hy).attr('r', 2.2).attr('fill', theme.color.text); }
     }
   }
 
@@ -195,7 +196,7 @@ export async function renderNetworkMap(host, opts = {}) {
       if (!ctx) return Promise.resolve();
       const A = byId[from], B = byId[to];
       if (!A || !B) return Promise.resolve();
-      const color = kind === 'emergency' ? theme.series.urgent : theme.color.accentHi;
+      const color = kind === 'emergency' ? theme.series.urgent : theme.series.neutral;
       const p = ctx.tokenLayer.append('path').attr('d', ctx.path({ type: 'LineString', coordinates: [[A.lon, A.lat], [B.lon, B.lat]] })).attr('fill', 'none').attr('stroke', color).attr('stroke-width', 2).attr('stroke-linecap', 'round');
       const len = p.node().getTotalLength();
       if (reducedMotion()) {

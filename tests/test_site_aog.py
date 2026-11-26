@@ -106,6 +106,11 @@ def test_aog_wave2_design(site, browser, vp, inc_id):  # noqa: F811
         if rec.count() and "Missed" in rec.inner_text():
             note = rec.locator('[data-role="missed-note"]').inner_text()
             assert "ranked by exposure" in note.lower() or "lowest exposure" in note.lower()
+        # wave 4: when every feasible option misses, one banner replaces the per-card red MISSED pills
+        feas_opts = [o for o in inc["options"] if o.get("feasible") and not o.get("human_decision") and o.get("wait_h") is not None]
+        if feas_opts and all(not o.get("deadline_met") for o in feas_opts):
+            assert page.locator('[data-role="none-meets"]').count() == 1
+            assert page.locator('.aog-opt .pill--urgent', has_text="Missed").count() == 0
         # swimlane: every step has its own position (no stacked cluster at T+0)
         pos = page.locator('[data-story="aog-timeline"] svg g.aog-sl-step').evaluate_all("(els) => els.map((e) => e.getAttribute('transform'))")
         assert len(pos) == len(inc["timeline"]) and len(set(pos)) == len(pos)

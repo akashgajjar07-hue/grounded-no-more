@@ -56,7 +56,7 @@ EDGE_JS = r"""() => {
 }"""
 
 AUDIT_JS = r"""() => {
-  const out = { overflow: [], frames: [], words: [], edge: [], hscroll: document.documentElement.scrollWidth > window.innerWidth };
+  const out = { overflow: [], frames: [], words: [], edge: [], squeezed: [], clipped: [], hscroll: document.documentElement.scrollWidth > window.innerWidth };
   const norm = (s) => String(s || '').replace(/[\s\u2026]+/g, ' ').replace(/\.\.\.$/, '').trim().toLowerCase();
   // a deliberate single-line ellipsis is fine when the full text is in a title attribute (the element or an ancestor)
   const okEllipsis = (e, cs) => {
@@ -74,6 +74,31 @@ AUDIT_JS = r"""() => {
     out.frames.push({ headline: (f.querySelector('.chart-headline')?.textContent || '').trim(),
       subtitle: (f.querySelector('.chart-subtitle')?.textContent || '').trim(),
       chip: !!f.querySelector('.chart-head .chip-prov') });
+  });
+  // F1 (wave 4): a short label (<= 8 chars, e.g. RISK) squeezed to one letter per line: more than 2 line boxes
+  const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !e.closest('.sr-only, [hidden], details:not([open]) > :not(summary)'); };
+  document.querySelectorAll('#view td, #view th, #view .dts-row *, #view .pill, #view .chip, #view .kpi *, #view label, #view button').forEach((e) => {
+    if (e.closest('svg') || !vis(e)) return;
+    [...e.childNodes].filter((n) => n.nodeType === 3).forEach((n) => {
+      const t = n.textContent.trim();
+      if (!t || t.length > 8 || /\s/.test(t)) return;
+      const rg = document.createRange(); rg.selectNodeContents(n);
+      const lines = new Set([...rg.getClientRects()].filter((r) => r.width > 0).map((r) => Math.round(r.top)));
+      if (lines.size > 2) out.squeezed.push(`${(e.className || e.tagName).toString().slice(0, 40)}: ${t} (${lines.size} lines)`);
+    });
+  });
+  // truncated pills / chips (visually clipped, e.g. a pill inside a narrow capsule) must carry the full text in a title
+  document.querySelectorAll('#view .pill, #view .chip').forEach((e) => {
+    if (e.closest('svg') || !vis(e)) return;
+    const inner = e.querySelector('.pill-text') || e;
+    const clippedSelf = inner.scrollWidth > inner.clientWidth + 1;
+    let clippedByParent = false;
+    const r = e.getBoundingClientRect();
+    for (let a = e.parentElement; a && !a.matches('.card, body'); a = a.parentElement) {
+      const cs = getComputedStyle(a);
+      if (cs.overflowX !== 'visible') { const ar = a.getBoundingClientRect(); if (r.right > ar.right + 1 || r.left < ar.left - 1) clippedByParent = true; break; }
+    }
+    if ((clippedSelf || clippedByParent) && !(e.closest('[title]') && e.closest('[title]').getAttribute('title').trim())) out.clipped.push(`${e.className}: ${e.textContent.trim().slice(0, 50)}`);
   });
   const text = document.body.innerText;
   out.words = ['NaN', 'undefined', 'null'].filter((w) => new RegExp(`\\b${w}\\b`).test(text));
@@ -128,6 +153,8 @@ def audit(page, problems, min_frames=1):
     assert not res["hscroll"], "horizontal page scroll"
     assert not res["overflow"], res["overflow"]
     assert not res["edge"], f"text past the card / viewport right edge: {res['edge']}"
+    assert not res["squeezed"], f"short labels squeezed to one letter per line: {res['squeezed']}"
+    assert not res["clipped"], f"truncated pills/chips without a title: {res['clipped']}"
     assert len(res["frames"]) >= min_frames, res["frames"]
     for f in res["frames"]:
         assert f["headline"] and f["subtitle"] and f["chip"], f

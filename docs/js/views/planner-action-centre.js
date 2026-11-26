@@ -7,7 +7,7 @@
  * week) and a client-side CSV export of the current filtered list.
  */
 import { h, pageHead, card, provChip, pill, drawer, icon, segmented } from '../ui.js';
-import { chartFrame, responsive, svgIn, theme, fmtAED, fmtInt, fmtNum, fmtWeek, withTooltip, fmtEnum, plural } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, theme, fmtAED, fmtHours, fmtInt, fmtNum, fmtWeek, withTooltip, fmtEnum, plural } from '../charts/theme.js';
 
 export const data = ['actions', 'parts'];
 
@@ -107,7 +107,7 @@ function fmtEv(k, v) {
   if (/(^|_)week$|_week$/.test(k)) return fmtWeek(v);
   if (/_weeks$|^weeks_/.test(k) || k === 'cover_weeks_at_recent_rate' || k === 'shelf_life_weeks' || k === 'lookback_weeks') return `${fmtNum(v, Number.isInteger(v) ? 0 : 1)} wk`;
   if (/_d$/.test(k)) return `${fmtNum(v, Number.isInteger(v) ? 0 : 1)} d`;
-  if (/_h$|hours/.test(k)) return `${fmtNum(v, Number.isInteger(v) ? 0 : 1)} h`;
+  if (/_h$|_h_|hours/.test(k)) return `${fmtNum(v, Number.isInteger(v) ? 0 : 1)} h`;
   if (k === 'ratio') return `${fmtNum(v, 2)}×`;
   if (k === 'risk_score') return fmtNum(v, 2);
   if (/_id$|^txn|^ro_id|^po_id/.test(k)) return String(v);
@@ -207,14 +207,25 @@ function hbars(el, rows, fmt, maxV) {
 }
 
 // ----------------------------------------------------------------------------- CSV
-const CSV_COLS = ['exception_id', 'week', 'type', 'severity', 'pn', 'station', 'summary', 'recommended_action', 'owner', 'due_week', 'evidence'];
+// F6 (wave 4): human-readable type/severity labels and the key evidence flattened into columns; the raw JSON stays last
+const CSV_EV = [['on_hand', 'on_hand'], ['target', 'target'], ['aog_h_52w', 'aog_hours_lookback'], ['d0_req_52w', 'd0_requests_lookback'], ['lead_time_ratio', 'ratio'], ['weeks_overdue', 'weeks_overdue']];
+const CSV_COLS = ['exception_id', 'week', 'type_label', 'severity_label', 'pn', 'station', 'summary', 'recommended_action', 'owner', 'due_week', ...CSV_EV.map(([c]) => c), 'type', 'severity', 'evidence_json'];
+function csvRow(r) {
+  const e = r.evidence || {};
+  return {
+    ...r, type_label: r.type_label || typeLabel(r.type), severity_label: r.severity_label || SEV_LABEL[r.severity] || r.severity,
+    week: r.week != null ? fmtWeek(r.week) : '', due_week: r.due_week != null ? fmtWeek(r.due_week) : '',
+    summary: tidyEnums(r.summary || ''), recommended_action: tidyEnums(r.recommended_action || ''),
+    ...Object.fromEntries(CSV_EV.map(([c, k]) => [c, e[k] ?? ''])), evidence_json: e,
+  };
+}
 function csvCell(v) {
   if (v === null || v === undefined) return '';
   const s = typeof v === 'object' ? JSON.stringify(v) : String(v);
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 export function toCSV(rows) {
-  return [CSV_COLS.join(','), ...rows.map((r) => CSV_COLS.map((c) => csvCell(r[c])).join(','))].join('\r\n') + '\r\n';
+  return [CSV_COLS.join(','), ...rows.map(csvRow).map((r) => CSV_COLS.map((c) => csvCell(r[c])).join(','))].join('\r\n') + '\r\n';
 }
 
 // ----------------------------------------------------------------------------- view
@@ -321,7 +332,7 @@ export async function render(el, ctx) {
   const csvBtn = h('button', { type: 'button', class: 'btn btn--sm', dataset: { action: 'export-csv' }, onclick: () => exportCSV() }, icon('download'), 'Export CSV');
   const list = h('ul', { class: 'pac-list list-reset', role: 'list', 'aria-label': 'Exceptions, grouped by part number' });
   const gridHead = h('div', { class: 'pac-grid pac-grid-head', 'aria-hidden': 'true' },
-    h('span', {}, 'Severity'), h('span', {}, 'Part · station'), h('span', {}, 'Issue'), h('span', { class: 'is-num', title: 'Serviceable + inbound vs station target' }, 'On hand'), h('span', { class: 'is-num', title: 'AOG hours in the last 52 weeks' }, 'AOG h'), h('span', { class: 'is-num', title: 'D0 requests in the last 52 weeks' }, 'D0 req'), h('span', {}, 'Recommended action'), h('span', { class: 'is-num' }, 'Due'));
+    h('span', {}, 'Severity'), h('span', {}, 'Part · station'), h('span', {}, 'Issue'), h('span', { class: 'is-num', title: 'Serviceable + inbound vs station target' }, 'On hand'), h('span', { class: 'is-num', title: 'AOG hours in the last 52 weeks' }, 'AOG h · 52 wk'), h('span', { class: 'is-num', title: 'D0 requests in the last 52 weeks' }, 'D0 req'), h('span', {}, 'Recommended action'), h('span', { class: 'is-num' }, 'Due'));
   const PAGE = 12;
   const GROUP_PEEK = 3;
   const openGroups = new Set();
@@ -369,7 +380,7 @@ export async function render(el, ctx) {
   function groupsOf(rows) {
     const map = new Map();
     rows.forEach((a) => { const k = a.pn || a.exception_id; if (!map.has(k)) map.set(k, []); map.get(k).push(a); });
-    const gs = [...map.entries()].map(([pn, rs]) => { const pv = nOr(partBy[pn]?.aog_h_52w_max_station); return { pn, rows: rs, sev: Math.min(...rs.map((a) => SEV_RANK[a.severity] ?? 9)), aog: pv ?? Math.max(0, ...rs.map((a) => rowMetrics(a).aogH || 0)), first: rows.indexOf(rs[0]) }; });
+    const gs = [...map.entries()].map(([pn, rs]) => { const pv = nOr(partBy[pn]?.aog_h_52w_max_station); const aog = pv ?? Math.max(0, ...rs.map((a) => rowMetrics(a).aogH || 0)); return { pn, rows: rs, sev: Math.min(...rs.map((a) => SEV_RANK[a.severity] ?? 9)), aog, aogSt: pv != null ? partBy[pn]?.aog_h_52w_max_station_id || null : rs.find((a) => rowMetrics(a).aogH === aog)?.station || null, first: rows.indexOf(rs[0]) }; });
     return gs.sort((a, b) => a.sev - b.sev || a.first - b.first);
   }
   const peek = (g) => (openGroups.has(g.pn) ? g.rows.length : Math.min(g.rows.length, GROUP_PEEK));
@@ -384,7 +395,7 @@ export async function render(el, ctx) {
     return h('li', { class: `pac-group pac-group--${sevKey}`, dataset: { pn: g.pn } },
       h('div', { class: 'pac-ghead' },
         h('span', { class: 'pac-ghead-pn mono' }, g.pn),
-        h('span', { class: 'pac-ghead-meta' }, `${fmtInt(g.rows.length)} exceptions · ${fmtInt(stations.size)} ${stations.size === 1 ? 'station' : 'stations'}${nU ? ` · ${fmtInt(nU)} urgent` : ''}`, g.aog ? h('span', { class: 'pac-nw', title: `${aogLabel} (${aogShort})` }, ` · max ${fmtInt(g.aog)} AOG h at one station`) : null),
+        h('span', { class: 'pac-ghead-meta' }, `${fmtInt(g.rows.length)} exceptions · ${fmtInt(stations.size)} ${stations.size === 1 ? 'station' : 'stations'}${nU ? ` · ${fmtInt(nU)} urgent` : ''}`, g.aog ? h('span', { class: 'pac-nw', title: `${aogLabel} (${aogShort})` }, ` · worst station ${g.aogSt ? `${g.aogSt} ` : ''}${fmtHours(g.aog)}${g.aogSt && !g.rows.some((a) => a.station === g.aogSt) ? ' (no exception there)' : ''}`) : null),
         g.rows.length > GROUP_PEEK ? toggle : null),
       h('ul', { class: 'list-reset pac-grows' }, g.rows.map((a, i) => { const li = row(a, { inGroup: true }); if (i >= GROUP_PEEK && !isOpen) li.hidden = true; return li; })));
   }
@@ -411,7 +422,11 @@ export async function render(el, ctx) {
           h('table', { class: 'data-table data-table--dense pac-evtable' }, h('caption', { class: 'sr-only' }, 'Evidence'), h('tbody', {}, evRows.map(([k, v]) => h('tr', {}, h('th', { scope: 'row' }, evLabel(k)), h('td', { class: 'is-num mono' }, fmtEv(k, v))))))),
         prov === 'SIMULATED' ? h('p', { class: 't-12 faint m-0' }, 'This exception comes from a seeded random flag, not from document data. It illustrates the quarantine workflow only.') : null,
         h('p', { class: 't-12 faint m-0' }, 'Deadline classes D0/D3/D10 are hypothetical simulation classes, not MEL categories. A planner confirms before acting.')),
-      foot: h('a', { class: 'btn btn--sm btn--ghost', href: ctx.buildHash('actions', { id: a.exception_id }) }, icon('chevron-right'), 'Deep link'),
+      foot: [
+        a.pn ? h('a', { class: 'btn btn--sm', href: ctx.buildHash('parts', { ata: a.pn.split('-')[1], pn: a.pn }) }, icon('layers'), 'Open part') : null,
+        a.station && a.station !== NETWORK ? h('a', { class: 'btn btn--sm', href: ctx.buildHash('network', { station: a.station }) }, icon('map-pin'), 'Open station') : null,
+        h('a', { class: 'btn btn--sm btn--ghost', href: ctx.buildHash('actions', { id: a.exception_id }) }, icon('chevron-right'), 'Deep link'),
+      ].filter(Boolean),
     }).open();
   }
 

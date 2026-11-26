@@ -88,6 +88,11 @@ AUDIT_FIXTURE_JS = r"""async () => {
   const wide = document.createElement('p'); wide.className = 'bad-html'; wide.style.cssText = 'white-space:nowrap;margin-left:200px';
   wide.textContent = 'This sentence runs past the right edge of its card';
   card.append(wide);
+  const td = document.createElement('div'); td.className = 'dts-row'; td.innerHTML = '<span class="bad-squeeze" style="display:inline-block;width:9px;word-break:break-all">RISK</span>';
+  card.append(td);
+  const cap = document.createElement('div'); cap.style.cssText = 'width:60px;overflow:hidden';
+  cap.innerHTML = '<span class="pill bad-pill">WATCH · 71% OF BOM</span><span class="pill ok-pill" title="WATCH · 71% of BOM">WATCH · 71% OF BOM</span>';
+  card.append(cap);
   await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
   const res = (AUDIT)();
   card.remove();
@@ -106,6 +111,9 @@ def test_edge_and_ellipsis_audit(site, browser):  # noqa: F811
     assert "bad-clip" in over and "ok-ellipsis" not in over, res["overflow"]
     assert "bad-svg" in edge and "bad-html" in edge, res["edge"]
     assert "ok-svg" not in edge and "ok-ellipsis" not in edge, res["edge"]
+    assert any("bad-squeeze" in x for x in res["squeezed"]), res["squeezed"]
+    clipped = " ".join(res["clipped"])
+    assert "bad-pill" in clipped and "ok-pill" not in clipped, res["clipped"]
 
 
 def _hash(page):

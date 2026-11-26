@@ -186,9 +186,10 @@ export async function render(el, ctx) {
   // (exporter field aog_h_52w_max_station when present, else the max over the PN's actions), with the exporter's label
   const aogMeta = parts.aog_metric_labels?.aog_h_52w_max_station;
   const aogLabel = (typeof aogMeta === 'string' ? aogMeta : aogMeta?.label) || `AOG h · last ${lookback || 52} wk · worst station`;
-  groups.forEach((g) => { const pv = partBy[g.pn]?.aog_h_52w_max_station; if (num(pv)) g.aog = pv; });
+  // C1 (wave 4): the worst-station number always travels with its station id ("120 h · AUH")
+  groups.forEach((g) => { const pv = partBy[g.pn]?.aog_h_52w_max_station; if (num(pv)) { g.aog = pv; g.aogSt = partBy[g.pn]?.aog_h_52w_max_station_id || null; } else if (g.aog != null) g.aogSt = g.list.find((a) => a.evidence?.aog_hours_lookback === g.aog)?.station || null; });
   const head = h('div', { class: 'mc-pr mc-pr--head', 'aria-hidden': 'true' },
-    h('span', {}, 'Severity'), h('span', {}, 'Part · where'), h('span', {}, 'Signal · next step'), h('span', { class: 'num mc-pr-aogh', title: aogLabel }, h('span', {}, 'AOG h'), h('span', {}, 'worst stn')), h('span', { class: 'num' }, 'Due'), h('span', {}));
+    h('span', {}, 'Severity'), h('span', {}, 'Part · where'), h('span', {}, 'Signal · next step'), h('span', { class: 'num mc-pr-aogh', title: aogLabel }, h('span', {}, 'AOG h · 52 wk'), h('span', {}, 'worst station')), h('span', { class: 'num' }, 'Due'), h('span', {}));
   const rowsEl = groups.map((g) => {
     const a = g.lead;
     const sig = signalOf(a);
@@ -196,9 +197,11 @@ export async function render(el, ctx) {
     const label = `${cap(a.severity)}: ${a.pn}${g.stations.length ? ` at ${g.stations.join(', ')}` : ''}. ${sig.long}. ${a.recommended_action || ''}`;
     return h('a', { class: `mc-pr is-${a.severity}`, href: ctx.buildHash('actions', { id: a.exception_id }), 'aria-label': label, title: a.summary },
       h('span', { class: 'mc-pr-sev' }, pill(SEV_RANK[a.severity] != null ? a.severity : 'unknown')),
-      h('span', { class: 'mc-pr-part' }, h('span', { class: 'mc-pr-pn' }, a.pn), h('span', { class: 'mc-pr-where', title: g.stations.join(', ') }, where)),
+      h('span', { class: 'mc-pr-part' }, h('span', { class: 'mc-pr-pn' }, a.pn), h('span', { class: 'mc-pr-where', title: g.stations.join(', ') }, where),
+        // C10 (wave 4): the exception type, so a low-risk PN ranked urgent for planning data is not puzzling
+        h('span', { class: 'mc-pr-type', title: `${a.type_label || a.type}: a planning exception, not a grounding-risk score` }, a.type_label || a.type)),
       h('span', { class: 'mc-pr-sig', title: sig.k }, h('span', { class: 'mc-pr-v' }, sig.v), h('span', { class: 'mc-pr-step' }, TYPE_STEP[a.type] || 'Review')),
-      h('span', { class: 'mc-pr-aog num', title: aogLabel }, h('span', { class: 'mc-pr-ml' }, 'AOG h worst stn '), g.aog != null ? fmtInt(g.aog) : '—'),
+      h('span', { class: 'mc-pr-aog num', title: aogLabel }, h('span', { class: 'mc-pr-ml' }, 'Worst stn '), g.aog ? [fmtHours(g.aog), g.aogSt ? h('span', { class: 'mc-pr-st' }, ` · ${g.aogSt}`) : null] : '—'),
       h('span', { class: 'mc-pr-due num' }, h('span', { class: 'mc-pr-ml' }, 'Due '), num(g.due) ? fmtWeek(g.due) : '—'),
       h('span', { class: 'mc-pr-do', 'aria-hidden': 'true' }, icon('chevron-right')));
   });
@@ -297,7 +300,7 @@ function signalOf(a) {
       if (num(e.on_hand) && num(e.target)) return { k: 'On hand / target', v: `${fmtInt(e.on_hand)} of ${fmtInt(e.target)} on hand`, long: `${fmtInt(e.on_hand)} of ${fmtInt(e.target)} on hand` };
       break;
     case 'LEAD_TIME_DRIFT':
-      if (num(e.mean_lead_d) && num(e.mean_quoted_d)) return { k: 'Lead time vs quote', v: `${fmtInt(e.mean_lead_d)} d vs ${fmtInt(e.mean_quoted_d)} d quoted`, long: `lead time ${fmtInt(e.mean_lead_d)} d against ${fmtInt(e.mean_quoted_d)} d quoted` };
+      if (num(e.mean_lead_d) && num(e.mean_quoted_d)) return { k: 'Lead time vs quote', v: `${fmtInt(e.mean_lead_d)} d vs ${fmtInt(e.mean_quoted_d)} d quote`, long: `lead time ${fmtInt(e.mean_lead_d)} d against ${fmtInt(e.mean_quoted_d)} d quoted` };
       break;
     case 'OVERDUE_REPAIR':
       if (num(e.weeks_overdue)) return { k: 'Past quoted due', v: `${e.weeks_overdue.toFixed(1)} wk overdue`, long: `repair ${e.weeks_overdue.toFixed(1)} weeks past quoted due` };

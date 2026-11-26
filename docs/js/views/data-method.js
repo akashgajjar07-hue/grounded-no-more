@@ -120,7 +120,7 @@ export async function render(el, ctx) {
     segmented({ label: 'Filter by provenance', value: 'ALL', options: [{ value: 'ALL', label: 'All' }, ...PROV.filter((p) => asmN[p]).map((p) => ({ value: p, label: `${GLYPH[p]} ${p[0]}${p.slice(1).toLowerCase()}` }))], onChange: (v) => { pf = v; apply(); } }),
     groups.length > 1 ? h('select', { class: 'dm-search', style: { flex: '0 1 200px' }, 'aria-label': 'Filter by group', onchange: (e) => { gf = e.target.value; apply(); } }, h('option', { value: 'ALL' }, 'All groups'), groups.map((g) => h('option', { value: g }, g))) : null,
     showing);
-  el.append(card({ story: 'method-assumptions', prov: 'ASSUMED', kicker: 'Planning assumptions, with rationale', title: `${fmtInt(assumptions.length)} entries · ${fmtInt(asmN.ASSUMED)} ASSUMED, ${fmtInt(asmN.REAL)} REAL`, body: [filters, h('div', { class: 'dm-wrap' }, table)] }));
+  el.append(card({ story: 'method-assumptions', prov: 'ASSUMED', kicker: 'Planning assumptions, with rationale', title: `${fmtInt(assumptions.length)} entries · ${PROV.filter((p) => asmN[p]).map((p) => `${fmtInt(asmN[p])} ${p.toLowerCase()}`).join(' · ')}`, body: [filters, h('div', { class: 'dm-wrap' }, table)] }));
   apply();
 
   // ---------------------------------------------------------------- validation
@@ -266,7 +266,7 @@ function calibration(host, cal) {
       const g = svg.append('g');
       g.append('line').attr('x1', labelW).attr('x2', labelW + iw).attr('y1', cy).attr('y2', cy).attr('stroke', theme.color.line);
       g.append('rect').attr('x', x(r.target_lo)).attr('y', cy - 7).attr('width', Math.max(2, x(r.target_hi) - x(r.target_lo))).attr('height', 14).attr('rx', 3).attr('fill', fill).attr('stroke', theme.series.neutral).attr('stroke-opacity', 0.55);
-      g.append('circle').attr('cx', x(r.achieved)).attr('cy', cy).attr('r', 5.5).attr('fill', ok ? theme.series.recommended : theme.color.bg).attr('stroke', ok ? theme.series.recommended : theme.series.urgent).attr('stroke-width', 2);
+      g.append('circle').attr('cx', x(r.achieved)).attr('cy', cy).attr('r', 5.5).attr('fill', ok ? theme.series.baseline : theme.color.bg).attr('stroke', ok ? theme.series.baseline : theme.series.urgent).attr('stroke-width', 2); // P0 = copper
       // band edges as faint mono ticks above the band, so every row states its own target
       const tl = `${fmtV(r.target_lo, r)}–${fmtV(r.target_hi, r)}`;
       g.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('font-size', 11).attr('x', (x(r.target_lo) + x(r.target_hi)) / 2).attr('y', cy - 13).attr('text-anchor', 'middle').attr('fill', theme.color.faint).text(`target ${tl}`);
@@ -304,7 +304,8 @@ function consistency(host, kpis) {
   return responsive(f.body, (w) => {
     const narrow = w < 560;
     const headH = 22, axisH = 24;
-    const rowH = narrow ? 58 : 40, labelW = narrow ? 0 : Math.min(190, w * 0.28), valW = narrow ? 0 : 168;
+    // phones: label on line 1, values on line 2, the CI row on line 3 (no truncation, no text over the diamonds)
+    const rowH = narrow ? 76 : 40, labelW = narrow ? 0 : Math.min(190, w * 0.28), valW = narrow ? 0 : 168;
     const iw = Math.max(80, w - labelW - valW - 24);
     const H = headH + rows.length * rowH + axisH;
     const svg = svgIn(f.body, w, H, 'Selection versus holdout results for the recommended plan, as % difference from the holdout mean');
@@ -327,7 +328,7 @@ function consistency(host, kpis) {
     });
     refLine(svg, { x1: x(0), x2: x(0), y1: top - 2, y2: bottom, label: narrow ? '' : 'holdout mean', labelAt: 'start', anchor: 'middle', dx: 0, dy: -4 });
     rows.forEach((r, i) => {
-      const y0 = top + i * rowH, cy = narrow ? y0 + 40 : y0 + rowH / 2;
+      const y0 = top + i * rowH, cy = narrow ? y0 + 56 : y0 + rowH / 2;
       const g = svg.append('g');
       g.append('line').attr('x1', x(r.dLo)).attr('x2', x(r.dHi)).attr('y1', cy).attr('y2', cy).attr('stroke', theme.series.recommended).attr('stroke-width', 2);
       [r.dLo, r.dHi].forEach((v) => g.append('line').attr('x1', x(v)).attr('x2', x(v)).attr('y1', cy - 5).attr('y2', cy + 5).attr('stroke', theme.series.recommended));
@@ -341,9 +342,9 @@ function consistency(host, kpis) {
       }
       const txt = `${fmtU(r.selection_recommended, r)} → ${fmtU(r.holdout_recommended, r)}`;
       const flag = r.ok ? '✓ in' : '✕ out';
-      if (narrow) g.append('text').attr('class', 'gnm-label').attr('x', 0).attr('y', y0 + 14).attr('dy', '0.32em').text(truncate(label(r.id), w * 0.42));
+      if (narrow) g.append('text').attr('class', 'gnm-label gnm-label--strong').attr('x', 0).attr('y', y0 + 12).attr('dy', '0.32em').text(truncate(label(r.id), w));
       else g.append('text').attr('class', 'gnm-label').attr('x', 0).attr('y', cy).attr('dy', '0.32em').text(truncate(label(r.id), labelW - 12));
-      const vt = g.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', w).attr('y', narrow ? y0 + 14 : cy).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', theme.color.text);
+      const vt = g.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('font-size', narrow ? 11 : null).attr('x', narrow ? 0 : w).attr('y', narrow ? y0 + 30 : cy).attr('dy', '0.32em').attr('text-anchor', narrow ? 'start' : 'end').attr('fill', theme.color.text);
       vt.append('tspan').text(`${txt}  `);
       vt.append('tspan').attr('fill', r.ok ? theme.color.text : theme.color.muted).attr('font-weight', r.ok ? 400 : 600).text(flag);
     });

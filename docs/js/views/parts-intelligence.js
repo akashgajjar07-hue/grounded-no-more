@@ -9,7 +9,7 @@
  * Every number on screen comes from the JSON exports.
  */
 import { h, icon, pageHead, card, provChip, pill, segmented, dataTable, drawer, inlineSVG, fillExploded, blueprintAircraft } from '../ui.js';
-import { chartFrame, responsive, svgIn, axisBottom, axisLeft, theme, annotate, withTooltip, directLabel, refLine, markerRect, labelBox, fmtAED, fmtInt, fmtNum, fmtPct, fmtWeek } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, axisBottom, axisLeft, theme, annotate, withTooltip, directLabel, refLine, markerRect, labelBox, fmtAED, fmtHours, fmtInt, fmtNum, fmtPct, fmtWeek } from '../charts/theme.js';
 import { assetURL } from '../data.js';
 import { demandStrip, demandStats } from './parts-intelligence/strip.js';
 
@@ -92,9 +92,15 @@ export async function render(el, ctx) {
   const explorerCard = card({
     cls: 'span-7 md-span-12 pi-explorer', bp: true, prov,
     kicker: 'Aircraft system explorer · plan view · generic twin, fictional',
-    title: worst ? `ATA ${worst.ata} ${worst.name.toLowerCase()} carries the most risk: ${worst.share != null ? fmtPct(worst.share, 0) + ' of fleet risk-hours, ' : ''}${worst.urgent} urgent of ${worst.n} PNs` : 'No risk scores exported',
+    title: explorerTitle(),
     body: [airHost, airNote, legend],
   });
+  /** F8 (wave 4): the headline follows the selected ATA; with "All" (or nothing selected) it names the riskiest system. */
+  function explorerTitle() {
+    const s = ata && ata !== 'all' ? sysStat[ata] : null;
+    if (s) return `ATA ${s.ata} ${s.name.toLowerCase()}: ${s.share != null ? `${fmtPct(s.share, 0)} of fleet risk-hours, ` : ''}${fmtInt(s.urgent)} urgent of ${fmtInt(s.n)} PNs${worst && worst.ata === s.ata ? ', the most of any system' : ''}`;
+    return worst ? `ATA ${worst.ata} ${worst.name.toLowerCase()} carries the most risk: ${worst.share != null ? fmtPct(worst.share, 0) + ' of fleet risk-hours, ' : ''}${worst.urgent} urgent of ${worst.n} PNs` : 'No risk scores exported';
+  }
 
   const sysList = h('ul', { class: 'pi-syslist list-reset', role: 'list', 'aria-label': 'ATA systems (list alternative to the aircraft diagram)' });
   const sysButtons = ATAS.map((a) => {
@@ -132,15 +138,31 @@ export async function render(el, ctx) {
     { key: 'deadline', label: 'Deadline', mono: true },
     { key: 'demand_class', label: 'Demand', format: (v) => dcLabel(v) },
     { key: 'abc', label: 'ABC', mono: true },
-    { key: 'stock_total', label: 'Stock', short: 'Stock', num: true, format: fmtInt },
+    // C7 (wave 4): this is the recommended plan's target (all stations), not on-hand stock
+    { key: 'stock_total', label: `${P.stock_basis_id || 'Plan'} target`, short: `${P.stock_basis_id || 'Plan'} target`, num: true, format: fmtInt },
     { key: 'unit_cost', label: 'Unit cost', num: true, format: (v) => fmtAED(v) },
-    { key: 'risk_score', label: 'Risk', short: 'Risk', num: true, render: (r) => h('span', { title: riskTitle(r) }, pill(r.risk_level, riskPct(r.risk_score))) },
+    { key: 'risk_score', label: 'Risk', short: 'Risk', num: true, render: (r) => h('span', { class: 'pi-risk-cell', title: riskTitle(r) }, riskPill(r), excChip(r)) },
   ];
+  /** Risk pill: urgent red, review amber; a calm score is a neutral pill (teal is the recommended plan only). */
+  function riskPill(r, text = riskPct(r.risk_score)) {
+    const pl = pill(r.risk_level === 'ok' ? 'unknown' : r.risk_level, text);
+    if (r.risk_level === 'ok') { pl.querySelector('.icon use')?.setAttribute('href', '#i-check'); pl.classList.add('pill--calm'); }
+    return pl;
+  }
+  /**
+   * C10 (wave 4): risk is grounding exposure; an exception's severity is planning urgency. A PN with a low risk score but an
+   * urgent/review exception (PS4 GN-30-E025: lead-time drift) shows that exception beside its score.
+   */
+  function excChip(r) {
+    const e = (r.exceptions || []).find((x) => x.severity === 'urgent' || x.severity === 'review');
+    if (!e || r.risk_level === e.severity) return null;
+    return h('span', { class: `chip pi-exc pi-exc--${e.severity}`, title: `${e.type_label} · ${e.severity} planner action (${e.exception_id} at ${e.station}). Risk scores grounding exposure; this action is about planning data.` }, icon(e.severity === 'urgent' ? 'alert' : 'clock'), `${e.type_label} · ${e.severity}`);
+  }
   function riskTitle(r) {
-    return `${r.risk_hours != null ? `${fmtNum(r.risk_hours, 1)} AOG h/yr = ${fmtNum(r.aog_hours_hist_per_yr, 1)} history + ${fmtNum(r.residual_aog_h_per_yr, 1)} modelled residual. ` : ''}Score = ln(1 + AOG h) / ln(1 + fleet max), × 100.`;
+    return `${r.risk_hours != null ? `${fmtHours(r.risk_hours)}/yr of AOG = ${fmtHours(r.aog_hours_hist_per_yr)} history + ${fmtNum(r.residual_aog_h_per_yr, 1)} h modelled residual. ` : ''}Score = ln(1 + AOG h) / ln(1 + fleet max), × 100.`;
   }
   const rowsFor = () => parts.filter((p) => (ata === 'all' || p.ata === ata) && (cls === 'all' || p.cls === cls) && (!query || p.pn.toLowerCase().includes(query) || String(p.desc).toLowerCase().includes(query)));
-  const table = dataTable({ columns, rows: rowsFor(), sort: { key: 'risk_score', dir: 'desc' }, onRowClick: (r) => openPart(r.pn), caption: 'Parts for the selected ATA system', maxHeight: 520, mobileColumns: ['pn', 'risk_score', 'stock_total', 'desc'], stickyFirst: true });
+  const table = dataTable({ columns, rows: rowsFor(), sort: { key: 'risk_score', dir: 'desc' }, onRowClick: (r) => openPart(r.pn), rowKey: 'pn', caption: 'Parts for the selected ATA system', maxHeight: 520, mobileColumns: ['pn', 'risk_score', 'stock_total', 'desc'], stickyFirst: true });
   const tableCount = h('span', { class: 'chip' });
   const tableTitle = h('h3', { class: 'card-title' });
   const tableCard = h('section', { class: 'card span-12', dataset: { story: 'parts-table' } },
@@ -292,7 +314,7 @@ export async function render(el, ctx) {
     const vb = svg.viewBox.baseVal;
     const ov = (a, b) => Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
     const out = (b) => Math.max(0, vb.x - b.x) + Math.max(0, b.x + b.width - vb.x - vb.width) + Math.max(0, vb.y - b.y) + Math.max(0, b.y + b.height - vb.y - vb.height);
-    const best = cands.map((c, i) => ({ ...c, cost: obstacles.reduce((s, o) => s + ov({ ...c, width: bw, height: bh }, o), 0) * 50 + out({ ...c, width: bw, height: bh }) * 1e6 + Math.hypot(c.x + bw / 2 - cx, c.y + bh / 2 - cy) * 0.5 + i })).sort((a, b) => a.cost - b.cost)[0];
+    const best = cands.map((c, i) => ({ ...c, cost: obstacles.reduce((s, o) => s + ov({ ...c, width: bw, height: bh }, o), 0) * 50 + out({ ...c, width: bw, height: bh }) * 1e6 + Math.hypot(Math.max(c.x - cx, cx - c.x - bw, 0), Math.max(c.y - cy, cy - c.y - bh, 0)) * 6 / u + i })).sort((a, b) => a.cost - b.cost)[0];
     rect.setAttribute('x', best.x); rect.setAttribute('y', best.y); rect.setAttribute('width', bw); rect.setAttribute('height', bh);
     rect.style.strokeWidth = `${1.25 * u}px`;
     t.setAttribute('x', best.x + padX); t.setAttribute('y', best.y + bh / 2);
@@ -428,7 +450,7 @@ export async function render(el, ctx) {
       const dots = g.append('g').selectAll('circle').data(ordered).join('circle')
         .attr('cx', px).attr('cy', py)
         .attr('r', (p) => (sel(p) ? 5 : 3.5))
-        .attr('class', (p) => (sel(p) ? 'pi-dot is-sel' : 'pi-dot'))
+        .attr('class', (p) => `pi-dot${sel(p) ? ' is-sel' : ''}${p.pn === ctx.params.pn ? ' is-pn' : ''}`)
         .attr('tabindex', (p) => (sel(p) ? 0 : null))
         .attr('role', (p) => (sel(p) ? 'button' : null))
         .attr('aria-label', (p) => (sel(p) ? `${p.pn} ${dcLabel(p.demand_class)}, ADI ${fmtNum(p.adi)}, CV² ${fmtNum(p.cv2)}` : null))
@@ -528,7 +550,7 @@ export async function render(el, ctx) {
         dcs.forEach((c, i) => {
           const cell = cells.find((x) => x.abc === a && x.dc === c);
           const gx = labW + i * cw;
-          const rect = svg.append('rect').attr('x', gx + 2).attr('y', yy + 2).attr('width', cw - 4).attr('height', rowH - 4).attr('rx', 6).attr('fill', theme.color.accent).attr('fill-opacity', cell.n ? op(cell.n) : 0).attr('stroke', theme.color.line);
+          const rect = svg.append('rect').attr('x', gx + 2).attr('y', yy + 2).attr('width', cw - 4).attr('height', rowH - 4).attr('rx', 6).attr('fill', theme.series.neutral).attr('fill-opacity', cell.n ? op(cell.n) : 0).attr('stroke', theme.color.line);
           withTooltip(rect.datum(cell), (d) => ({ title: `${d.abc} · ${dcLabel(d.dc)}`, rows: [['PNs', fmtInt(d.n)]] }));
           svg.append('text').attr('class', cell.n && op(cell.n) > 0.5 ? 'pi-hm-n is-dark' : 'pi-hm-n').attr('x', gx + cw / 2).attr('y', yy + rowH / 2).attr('dy', '0.32em').attr('text-anchor', 'middle').style('pointer-events', 'none').text(cell.n ? fmtInt(cell.n) : '·');
         });
@@ -537,7 +559,7 @@ export async function render(el, ctx) {
       // sequential key
       const ky = topH + abcs.length * rowH + 14;
       const kg = svg.append('g').attr('transform', `translate(${labW},${ky})`);
-      [0.1, 0.3, 0.5, 0.7, 0.85].forEach((o, i) => kg.append('rect').attr('x', i * 18).attr('y', -6).attr('width', 16).attr('height', 10).attr('rx', 2).attr('fill', theme.color.accent).attr('fill-opacity', o));
+      [0.1, 0.3, 0.5, 0.7, 0.85].forEach((o, i) => kg.append('rect').attr('x', i * 18).attr('y', -6).attr('width', 16).attr('height', 10).attr('rx', 2).attr('fill', theme.series.neutral).attr('fill-opacity', o));
       lab(kg, { x: 5 * 18 + 8, y: 0, text: small ? `fewer → more PNs (max ${fmtInt(max)})` : `fewer → more PNs (max ${fmtInt(max)} per cell)`, color: theme.color.faint });
       if (topA) {
         const i = dcs.indexOf(topA.dc);
@@ -562,6 +584,7 @@ export async function render(el, ctx) {
   // ------------------------------------------------------------------ state changes
   async function setAta(a) {
     ata = a;
+    const t = explorerCard.querySelector('.card-title'); if (t) t.textContent = explorerTitle();
     sysButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.ata === a)));
     allBtn.setAttribute('aria-pressed', String(a === 'all'));
     air.setActive(a === 'all' ? null : a);
@@ -584,12 +607,16 @@ export async function render(el, ctx) {
     const tr = demandStats(series, 0, trainEnd);
     const body = h('div', { class: 'stack-3 pi-drawer' });
     const head = h('div', { class: 'row-wrap gap-1' },
-      pill(p.risk_level, `Risk ${riskPct(p.risk_score)}`),
-      h('span', { class: `chip pi-cls--${p.cls}` }, CLS_NAME[p.cls] || p.cls),
+      riskPill(p, `Risk ${riskPct(p.risk_score)}`), excChip(p),
+      h('span', { class: 'chip' }, CLS_NAME[p.cls] || p.cls),
       h('span', { class: 'chip' }, dcLabel(p.demand_class)),
       h('span', { class: 'chip' }, `ABC ${p.abc}`),
       provChip(p.provenance || prov));
     body.append(head);
+    const ex = (p.exceptions || []).find((x) => x.severity === 'urgent' || x.severity === 'review');
+    if (ex && p.risk_level !== ex.severity) {
+      body.append(h('p', { class: 'pi-exc-note t-12 muted', role: 'note' }, icon('info'), h('span', {}, `Risk ${riskPct(p.risk_score)} measures grounding exposure (AOG hours). The ${ex.severity} ${ex.type_label.toLowerCase()} action (${ex.exception_id}) is about planning data, so it ranks high on Mission and in the Action Centre while the risk score stays low.`)));
+    }
     if (p.planted) {
       body.append(h('div', { class: 'pi-planted-banner', role: 'note' }, icon('target'), h('div', {}, h('strong', {}, `Planted situation ${p.planted}`), h('p', { class: 'faint t-12' }, p.planted_note || 'A scenario planted in the simulator for the planning logic to detect from history alone.'))));
     }
@@ -598,8 +625,8 @@ export async function render(el, ctx) {
     body.append(h('dl', { class: 'meta-list' }, ...[
       ['Description', p.desc], ['ATA', `${p.ata} · ${sysName(p.ata)}`], ['Class', `${CLS_NAME[p.cls] || p.cls} · deadline ${p.deadline} (hypothetical)`],
       ['Demand class', `${dcLabel(p.demand_class)} · ADI ${fmtNum(p.adi)} · CV² ${fmtNum(p.cv2)}`], ['ABC', p.abc], ['Unit cost', fmtAED(p.unit_cost)],
-      ['Grounding risk', p.risk_hours != null ? `${fmtNum(p.risk_hours, 1)} AOG h / yr (history + modelled residual)` : riskPct(p.risk_score)],
-      ['Stock (all stations)', `${fmtInt(p.stock_total)} units`],
+      ['Grounding risk', p.risk_hours != null ? `${fmtHours(p.risk_hours)}/yr of AOG (history + modelled residual)` : riskPct(p.risk_score)],
+      [`${P.stock_basis_id || 'Plan'} target (all stations)`, `${fmtInt(p.stock_total)} unit${p.stock_total === 1 ? '' : 's'}`],
       // canonical per-PN AOG metrics, labelled exactly as on Mission and the Action Centre
       ...['aog_h_52w', 'aog_h_52w_max_station'].filter((k) => Number.isFinite(p[k])).map((k) => [P.aog_metric_labels?.[k]?.label || k, `${fmtInt(p[k])} h${k === 'aog_h_52w_max_station' && p.aog_h_52w_max_station_id ? ` (${p.aog_h_52w_max_station_id})` : ''}`]),
     ].flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])));
@@ -609,7 +636,10 @@ export async function render(el, ctx) {
     const fq = new URLSearchParams({ class: p.demand_class, part: p.cls, pn }).toString();
     const foot = [h('a', { class: 'btn btn--sm', href: `#/forecast?${fq}` }, icon('flask'), 'See in Forecast Lab')];
     if (p.cls === 'R') foot.push(h('a', { class: 'btn btn--sm', href: `#/rotables?pn=${encodeURIComponent(pn)}` }, icon('rotable'), 'See in Rotable Control'));
-    const d = drawer({ kicker: `Part number · ATA ${p.ata}`, title: pn, body, foot, onClose: () => { ctx.setParams({ pn: '' }); openDrawer = null; } }).open();
+    const d = drawer({ kicker: `Part number · ATA ${p.ata}`, title: pn, body, foot,
+      // F3 (wave 4): opened from a deep link there is no opener; Esc returns focus to the part's table row or its ATA hotspot
+      returnFocus: () => [...document.querySelectorAll(`#view [data-story="parts-table"] [data-key="${pn}"]`)].find((e) => e.getClientRects().length) || document.querySelector(`#view .pi-sys[data-ata="${p.ata}"]`),
+      onClose: () => { ctx.setParams({ pn: '' }); openDrawer = null; } }).open();
     openDrawer = d;
     requestAnimationFrame(() => {
       const f = chartFrame(chartHost, {

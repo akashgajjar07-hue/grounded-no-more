@@ -118,11 +118,12 @@
 .pi-quad-n { fill: var(--text); font-weight: 600; }
 .pi-axis-t { fill: var(--text-faint); font-family: var(--font-mono); font-size: 11px; }
 .pi-dot { fill: var(--bg); stroke: var(--c-titanium); stroke-opacity: 0.55; stroke-width: 1.2; }
-.pi-dot.is-sel { fill: var(--primary); fill-opacity: 0.9; stroke: var(--c-teal-hi); stroke-opacity: 1; }
+.pi-dot.is-sel { fill: var(--c-ice); fill-opacity: 0.18; stroke: var(--c-ice); stroke-opacity: 0.95; stroke-width: 1.4; } /* the selected ATA's parts: ice outline (teal = the selected PN only) */
+.pi-dot.is-pn { fill: var(--primary); fill-opacity: 0.95; stroke: var(--c-teal-hi); stroke-opacity: 1; }
 .pi-dot:focus-visible { outline: none; stroke: var(--c-ice); stroke-width: 2.5; }
 .pi-matrix-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: var(--fs-12); color: var(--text-faint); margin-top: calc(-1 * var(--s-1)); }
 .pi-key-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.2px solid var(--c-titanium); display: inline-block; }
-.pi-key-dot.is-sel { background: var(--primary); border-color: var(--c-teal-hi); }
+.pi-key-dot.is-sel { background: rgba(242, 246, 250, 0.18); border-color: var(--c-ice); }
 .pi-key-sw { width: 14px; height: 10px; background: rgba(185, 200, 214, 0.10); border: 1px dashed rgba(185, 200, 214, 0.5); display: inline-block; }
 
 /* ---------- table ---------- */
@@ -131,7 +132,7 @@
 .pi-pn { display: inline-flex; align-items: center; gap: 8px; }
 .pi-desc { display: inline-block; max-width: 280px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
 .pi-cls { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; font-family: var(--font-mono); font-size: 12px; font-weight: 600; border: 1px solid var(--line-strong); color: var(--text-muted); }
-.pi-cls--R { color: var(--c-teal-hi); border-color: rgba(34, 199, 184, 0.5); }
+.pi-cls--R { color: var(--text); border-color: var(--line-strong); } /* neutral: teal is the recommended plan only */
 .pi-planted { height: 18px; padding: 0 6px; font-size: 11px; color: var(--text); border-color: var(--line-strong); background: var(--c-titanium-a10); } /* neutral: amber is review status only */
 
 /* ---------- heatmap ---------- */
@@ -198,3 +199,15 @@
 .pi-air-note-btn.is-urgent { border-color: var(--status-urgent); } .pi-air-note-btn.is-urgent .pi-air-note-v { color: var(--status-urgent); }
 .pi-air-note-btn.is-review { border-color: var(--status-review); } .pi-air-note-btn.is-review .pi-air-note-v { color: var(--status-review); }
 @media (max-width: 767px) { .pi-slotdesc { white-space: normal; overflow: visible; text-overflow: clip; } }
+/* wave 4 (C10): risk score vs planner-action severity, shown side by side */
+.pi-risk-cell { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.pi-exc { height: 20px; padding: 0 8px; font-size: 11px; gap: 4px; white-space: nowrap; }
+.pi-exc .icon { width: 12px; height: 12px; }
+.pi-exc--urgent { color: var(--status-urgent); border-color: color-mix(in srgb, var(--status-urgent) 45%, transparent); }
+.pi-exc--review { color: var(--status-review); border-color: color-mix(in srgb, var(--status-review) 45%, transparent); }
+.pi-exc-note { display: flex; gap: 8px; align-items: flex-start; margin: 0; line-height: 1.5; }
+.pi-exc-note .icon { flex: none; width: 14px; height: 14px; margin-top: 2px; color: var(--text-faint); }
+/* the drawer key/value list stacks on phones (review 3: "32 · Landing / gear") */
+@media (max-width: 480px) { .pi-drawer .meta-list { grid-template-columns: minmax(0, 1fr); } .pi-drawer .meta-list dd { margin-bottom: 6px; } }
+.dts-metric:has(.pi-exc) { white-space: normal; border-radius: 12px; padding-block: 4px; }
+.dts-metric > .pi-risk-cell { overflow: visible; white-space: normal; }
