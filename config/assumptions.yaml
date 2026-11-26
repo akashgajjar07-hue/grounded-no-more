@@ -1,0 +1,216 @@
+# GROUNDED NO MORE — assumption register (single source of truth for every
+# configurable parameter). Every entry carries a provenance tag:
+#   REAL      – sourced from a public, cited dataset
+#   DERIVED   – computed in this repo from REAL / SIMULATED data
+#   ASSUMED   – a planning assumption chosen by the author (with rationale)
+#   SIMULATED – produced by the synthetic generator
+# The airline "Falcon Hub Airways (fictional)" does not exist. None of these
+# values are measured aviation reliability or any operator's data.
+#
+# Ranges are sampled per part by the generator with WORLD_SEED. Values are
+# configurable; sensitivity tests vary the starred (*) ones.
+
+meta:
+  airline_name: "Falcon Hub Airways (fictional)"
+  currency: AED
+  time_unit: hour
+  timezone: UTC          # simulated clock; hub local time = UTC+4 shown in UI only
+  version: 1
+
+calendar:
+  epoch: "2023-01-02T00:00:00Z"      # Monday; simulated calendar, not real dates
+  history_weeks: [0, 103]            # inclusive; 104 weeks of "airline history"
+  train_weeks: [0, 77]               # forecasting model fitting
+  selection_weeks: [78, 103]         # forecasting model selection (rolling origins)
+  evaluation_weeks: [104, 155]       # 52-week evaluation horizon (holdout)
+  warmup_weeks: 8                    # policy runs start at week 96, KPIs from 104
+  rolling_origin_step_weeks: 4
+  forecast_horizon_weeks: 4
+  provenance: ASSUMED
+  rationale: "Two years of history mirrors what a materials planner typically has in an MRO/ERP system for sparse-demand parts; the final 26 weeks of history are reserved for model selection so the 52-week horizon remains untouched until freeze."
+
+seeds:
+  world_seed: 2023                   # master data + hidden ground truth
+  history_seed: 7                    # the airline's realised history (+ forecast-holdout continuation)
+  selection_seeds: [100, 119]        # inclusive; policy tuning + frontier candidate selection
+  holdout_seeds: [1000, 1019]        # inclusive; run ONCE after freeze
+  provenance: ASSUMED
+
+fleet:
+  narrowbody:
+    archetype: "A320-family archetype (generic single-aisle)"
+    count: 24
+    tail_prefix: "A6-FH"             # fictional registrations, marked fictional in UI
+    fh_per_day: {mean: 10.5, sd: 1.0}
+    fc_per_day: {mean: 4.2, sd: 0.5}
+    provenance: ASSUMED
+    rationale: "Short/medium-haul single-aisle utilisation of ~10–11 block hours and ~4 cycles a day is typical of hub-and-spoke operations (order-of-magnitude, not operator data)."
+  widebody:
+    archetype: "787-family archetype (generic twin-aisle)"
+    count: 16
+    tail_prefix: "A6-FW"
+    fh_per_day: {mean: 14.0, sd: 1.2}
+    fc_per_day: {mean: 1.6, sd: 0.3}
+    provenance: ASSUMED
+    rationale: "Long-haul twin-aisle aircraft fly more hours and far fewer cycles per day."
+  seasonality:                       # multiplicative factors on utilisation
+    weekly: [1.00, 0.96, 0.97, 1.02, 1.05, 1.03, 0.97]   # Mon..Sun
+    monthly: [1.02, 0.95, 0.97, 1.00, 0.98, 1.06, 1.12, 1.12, 0.97, 0.98, 0.99, 1.08]
+    holiday_peaks_weeks_of_year: [14, 15, 25, 26, 51, 52]
+    holiday_factor: 1.06
+    provenance: ASSUMED
+    rationale: "Summer (Jul–Aug) and year-end holiday peaks are typical for a Gulf hub; factors are illustrative."
+  exposure_feedback: false
+  exposure_feedback_rationale: "Grounding does not reduce scheduled exposure (protection via spare aircraft / sub-charter assumed). Lost flying is costed through the AOG penalty. Keeps exogenous demand identical across policies for paired comparison."
+
+network:
+  hub: AUH
+  outstations: [LHR, FRA, CAI, JED, BOM, SIN]
+  stations:                          # coordinates verified against OurAirports (public domain) by sim-engine; see data/source_manifest.csv
+    AUH: {name: "Abu Dhabi International", lat: 24.4330, lon: 54.6511, role: hub}
+    LHR: {name: "London Heathrow", lat: 51.4706, lon: -0.4619, role: outstation}
+    FRA: {name: "Frankfurt am Main", lat: 50.0333, lon: 8.5706, role: outstation}
+    CAI: {name: "Cairo International", lat: 30.1219, lon: 31.4056, role: outstation}
+    JED: {name: "King Abdulaziz International, Jeddah", lat: 21.6796, lon: 39.1565, role: outstation}
+    BOM: {name: "Chhatrapati Shivaji Maharaj International, Mumbai", lat: 19.0887, lon: 72.8679, role: outstation}
+    SIN: {name: "Singapore Changi", lat: 1.3644, lon: 103.9915, role: outstation}
+  coordinates_provenance: REAL
+  route_mix:                         # share of each archetype's rotations to each outstation
+    narrowbody: {CAI: 0.30, JED: 0.35, BOM: 0.35}
+    widebody: {LHR: 0.30, FRA: 0.25, BOM: 0.15, SIN: 0.30}
+    provenance: ASSUMED
+  aog_transport_hours:               # next-flight-out / hand-carry incl. handling + customs (AUH -> station); symmetric
+    AUH: {AUH: 0, LHR: 16, FRA: 14, CAI: 11, JED: 9, BOM: 9, SIN: 13}
+    LHR: {LHR: 0, FRA: 8, CAI: 18, JED: 22, BOM: 26, SIN: 28}
+    FRA: {FRA: 0, CAI: 16, JED: 20, BOM: 24, SIN: 26}
+    CAI: {CAI: 0, JED: 10, BOM: 22, SIN: 26}
+    JED: {JED: 0, BOM: 20, SIN: 24}
+    BOM: {BOM: 0, SIN: 14}
+    SIN: {SIN: 0}
+    provenance: ASSUMED
+    rationale: "Station-to-station AOG times include waiting for the next suitable flight, handling and customs; outstation-to-outstation usually routes via the hub."
+  routine_transport_days: {mean: 4.0, sd: 1.0}   # hub -> outstation scheduled replenishment
+  routine_transport_provenance: ASSUMED
+  removed_unit_return_days: {mean: 5.0, sd: 1.5} # outstation -> AUH for unserviceable cores
+  removed_unit_return_provenance: ASSUMED
+
+parts:
+  counts: {consumable: 45, expendable: 35, rotable: 40}
+  pn_format: "GN-<ATA>-<C|E|R><nnn>"
+  ata_chapters:
+    "21": "Air conditioning & pressurisation"
+    "24": "Electrical power"
+    "27": "Flight controls"
+    "29": "Hydraulic power"
+    "32": "Landing gear"
+    "34": "Navigation"
+    "36": "Pneumatic"
+    "49": "Airborne auxiliary power (APU)"
+    "28": "Fuel"
+    "30": "Ice & rain protection"
+    "33": "Lights"
+    "35": "Oxygen"
+    "38": "Water & waste"
+  ata_weights: {"21": 0.11, "24": 0.10, "27": 0.10, "29": 0.10, "32": 0.13, "34": 0.11, "36": 0.09, "49": 0.08, "28": 0.04, "30": 0.04, "33": 0.04, "35": 0.03, "38": 0.03}
+  unit_cost_aed:                     # log-uniform within range *
+    consumable: [20, 500]
+    expendable: [500, 15000]
+    rotable: [15000, 500000]
+  lead_time_days:                    # purchase lead time mean drawn uniform in range; cv per part
+    consumable: [7, 45]
+    expendable: [14, 90]
+    rotable: [30, 180]
+    cv: [0.15, 0.45]
+  repair_tat_days: [15, 90]          # mean shop TAT (excl. transport, excl. queue) *
+  repair_tat_cv: [0.20, 0.50]
+  repair_cost_pct_of_unit: [0.08, 0.25]
+  condemnation_prob: [0.01, 0.08]
+  qty_per_aircraft: {consumable: [1, 1], expendable: [1, 6], rotable: [1, 4]}
+  mtbur_fh: [3000, 40000]            # rotables & expendables driven by FH (true value hidden; see ground truth)
+  mtbur_fc: [2000, 25000]            # for cycle-driven parts (landing gear, brakes, doors, APU starts)
+  fc_driven_share: 0.35
+  quoted_mtbur_noise_sd_log: 0.35    # OEM/vendor-quoted MTBUR in part master deviates from truth (lognormal)
+  quoted_mtbur_optimism: 1.25        # quoted figures are on average 25% optimistic (higher MTBUR)
+  overdispersion:                    # negative-binomial clustering for some parts (k = shape; var = mu + mu^2/k)
+    share_of_parts: 0.30
+    k_range: [0.6, 3.0]
+  consumable_usage_per_1000_fc: [0.5, 40]    # line-maintenance usage of consumables (Poisson/NB)
+  scheduled_kit_share_consumable: 0.5        # share of consumable PNs also consumed by scheduled task kits
+  shelf_life:
+    share_of_consumables: 0.25
+    months: [12, 36]
+  deadline_class_mix:                # hypothetical requirement deadline classes (NOT MEL categories)
+    rotable: {D0: 0.45, D3: 0.35, D10: 0.20}
+    expendable: {D0: 0.25, D3: 0.40, D10: 0.35}
+    consumable: {D0: 0.05, D3: 0.35, D10: 0.60}
+  provenance: ASSUMED
+  rationale: "Ranges reflect order-of-magnitude aviation materials practice (consumables cheap and fast, rotables expensive and repairable with long lead times). Values are illustrative and configurable; no OEM or operator data is used."
+
+deadline_classes:
+  D0: {hours: 0, label: "Needed before next departure", note: "Aircraft grounded until fitted"}
+  D3: {hours: 72, label: "Deferral window ~72 h"}
+  D10: {hours: 240, label: "Deferral window ~10 days"}
+  provenance: ASSUMED
+  disclaimer: "Hypothetical deadline classes for simulation. Real MEL/CDL relief is operator-, type- and configuration-specific; these are NOT MEL categories."
+
+maintenance:
+  scheduled_checks:                  # scheduled task demand known in advance -> kits
+    A_check_interval_fh: {narrowbody: 750, widebody: 1000}
+    A_check_station: AUH
+    kit_lines_per_check: [6, 14]
+    kit_notice_days: 21
+  provenance: ASSUMED
+
+repair_shops:
+  AUH_INHOUSE: {location: AUH, capacity_slots: 6, atas: ["21", "24", "29", "36", "33", "35", "38"]}
+  EU_VENDOR:   {location: FRA, capacity_slots: 8, atas: ["27", "32", "34", "49", "28", "30"]}
+  vendor_transit_days_from_auh: {AUH_INHOUSE: 0, EU_VENDOR: 4}
+  provenance: ASSUMED
+  rationale: "A hub in-house shop for simpler LRUs and an external vendor for flight controls, landing gear, avionics and APU components; finite parallel capacity creates queueing."
+
+economics:
+  carrying_cost_pct_per_year: 0.20   # * range 0.15–0.25
+  carrying_cost_range: [0.15, 0.25]
+  emergency_logistics_aed: [2000, 15000]     # per AOG shipment, scaled by distance
+  routine_shipment_aed_per_line: 150
+  expedite_purchase_premium_pct: 0.15
+  repair_acceleration_cost_aed_per_day_per_unit: 400   # paying a vendor to cut TAT
+  aog_penalty_aed_per_hour:          # * scenario value for decision-making, sensitivity-tested
+    narrowbody: 15000
+    widebody: 30000
+  aog_penalty_sensitivity: [0.5, 1.0, 2.0]
+  provenance: ASSUMED
+  rationale: "AOG cost per hour is a planning scenario (lost revenue, re-accommodation, crew, sub-charter) — highly operator-specific, hence sensitivity tested. Capital tied up in spares is reported separately from annual operating costs."
+
+service_targets:                     # target cycle service level by deadline class (P1/P2)
+  D0: 0.97
+  D3: 0.92
+  D10: 0.85
+  provenance: ASSUMED
+
+policy_baseline_P0:                  # "legacy" static rules
+  consumable_min_weeks_of_avg_demand: 6
+  consumable_max_multiple_of_min: 2.0
+  rotable_float_rule: "ceil(5% of installed fleet quantity), all held at AUH; outstations hold 1 unit only for PNs flagged D0 and fleet qty >= 40"
+  provenance: ASSUMED
+  rationale: "Static min/max and rule-of-thumb float are common starting points before data-driven planning."
+
+pool_exchange_P3:                    # Tier 3 stretch
+  response_hours: 24
+  fee_pct_of_unit: 0.08
+  core_return_days: 10
+  annual_access_fee_aed: 250000
+  capacity_per_month: 6
+  provenance: ASSUMED
+
+planted_situations:                  # documented demo situations (generator implements; see data/ground_truth)
+  provenance: SIMULATED
+  items:
+    - id: PS1
+      description: "Understocked D0 rotable at BOM (widebody + narrowbody exposure, baseline float held only at AUH)"
+    - id: PS2
+      description: "Long-TAT rotable with an overdue repair order at the EU vendor"
+    - id: PS3
+      description: "Declining-demand consumable creating excess stock"
+    - id: PS4
+      description: "Lead-time jump on one expendable (supplier change) during history week ~70"
