@@ -1,0 +1,27 @@
+{
+ "view": "aog-response-lab",
+ "mode": "simple",
+ "grade": 3.1,
+ "maxSentenceWords": 25,
+ "longSentences": [],
+ "viewports": {
+  "simple-1440": {
+   "grade": 3.1,
+   "maxSentenceWords": 25
+  },
+  "simple-390": {
+   "grade": 3.1,
+   "maxSentenceWords": 25
+  },
+  "expert-1440": {
+   "grade": 6.4,
+   "maxSentenceWords": 36
+  },
+  "expert-390": {
+   "grade": 6.4,
+   "maxSentenceWords": 36
+  }
+ },
+ "skipped": [],
+ "measured_with": "docs/js/lib/readability.js via Playwright (#view)"
+}

@@ -156,3 +156,81 @@ def test_wave3_network(site, viewport):
         assert not problems, problems
     finally:
         ctx.close()
+
+
+# ----------------------------------------------------------------------------- v2.1 (PAGE-3): modes, names, shares, scope
+def set_mode(page, mode):
+    page.evaluate(f"import('./js/lib/mode.js').then((m) => m.setMode('{mode}'))")
+    page.wait_for_selector('html[data-ready="true"]', timeout=15000)
+    page.wait_for_timeout(900)
+    assert page.evaluate("document.body.classList.contains('mode-' + %r)" % mode)
+
+
+TEXT_JS = """() => { const v = document.querySelector('#view');
+  const hid = [...v.querySelectorAll('.term-expert, .mono-tag')]; hid.forEach((e) => { e.dataset.t = e.textContent; e.textContent = ''; });
+  const t = v.innerText; hid.forEach((e) => { e.textContent = e.dataset.t; }); return t; }"""
+
+
+@pytest.mark.parametrize("viewport", list(VIEWPORTS))
+@pytest.mark.parametrize("mode", ["simple", "expert"])
+def test_v21_modes(site, mode, viewport):
+    import re
+    b, base = site
+    ctx, page, problems = open_route(b, base, "#/network?station=BOM", viewport)
+    try:
+        if mode == "expert":
+            set_mode(page, "expert")
+        assert_clean(page, problems, f"{mode}@{viewport}")
+        assert page.locator('[data-role="intro3"]').count() == 1
+        # scope line under every downtime block: map, hub finding, station drill, compare chart, station table
+        assert page.locator('#view [data-role="scope"]').count() >= 5
+        assert page.locator('[data-role="share-note"]').count() == 1
+        text = page.evaluate(TEXT_JS)
+        assert "Network Plan" in text and "Simple Rulebook" in text and "Each Airport for Itself" in text
+        if mode == "simple":
+            assert not re.search(r"\b(P0|P1|P2|I125)\b", text), re.findall(r".{30}\b(?:P0|P1|P2|I125)\b.{10}", text)[:5]
+            lede = page.locator(".page-head .lede").inner_text()
+            assert "other airports (outstations)" in lede
+            assert "AOG" not in text and "outstation" not in text.replace("(outstation", "")
+        else:
+            assert re.search(r"\bP2\b", text)
+    finally:
+        ctx.close()
+
+
+def test_v21_station_shares_one_denominator(site):
+    """Every station share uses the same denominator: P0 holdout AOG h of the station / sum over all stations.
+    Pills in the table, the drill-down fact and the hub-finding headline agree, and the shares sum to ~100%."""
+    b, base = site
+    ctx, page, problems = open_route(b, base, "#/network?station=BOM", "1440")
+    try:
+        res = page.evaluate("""async () => {
+          const n = await (await fetch('./data/network.json')).json();
+          const tot = n.stations.reduce((a, s) => a + s.aog_hours_by_policy.P0.mean, 0);
+          const exp = Object.fromEntries(n.stations.map((s) => [s.station, Math.round(100 * s.aog_hours_by_policy.P0.mean / tot)]));
+          const hub = n.stations.find((s) => s.role === 'hub');
+          const pills = [...document.querySelectorAll('.data-table tbody tr, .dts-row')].map((r) => r.innerText).filter(Boolean);
+          const fact = [...document.querySelectorAll('.np-fact')].find((f) => /share of grounded time/i.test(f.innerText))?.innerText || '';
+          const head = document.querySelector('[data-story="network-hub-finding"] .chart-headline').textContent;
+          return { exp, pills, fact, head, hubOut: 100 - exp[hub.station] };
+        }""")
+        for st, pct in res["exp"].items():
+            assert any(st in r and f"{pct}% of all" in r for r in res["pills"]), (st, pct, res["pills"])
+        assert f"{res['exp']['BOM']}% of all" in res["fact"]
+        assert f"{res['hubOut']}%" in res["head"]
+        assert abs(sum(res["exp"].values()) - 100) <= 3
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+@pytest.mark.parametrize("viewport", list(VIEWPORTS))
+def test_v21_readability_simple(site, viewport):
+    b, base = site
+    ctx, page, problems = open_route(b, base, "#/network?station=BOM", viewport)
+    try:
+        r = page.evaluate("import('./js/lib/readability.js').then((R) => R.readability())")
+        assert r["grade"] <= 9, r
+        assert r["maxSentenceWords"] <= 25, r["longSentences"]
+    finally:
+        ctx.close()

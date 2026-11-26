@@ -95,3 +95,13 @@
 .fl-key { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 0 0 var(--s-1); }
 .fl-key-i { color: var(--text); }
 .fl-key-sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); margin-left: 10px; }
+
+/* v2.1: the honest result (three findings, both modes) */
+.fl-findings { margin-bottom: var(--s-3); }
+.fl-find-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--s-3); margin-top: var(--s-2); }
+.fl-find { display: flex; flex-direction: column; gap: 6px; padding: var(--s-2) var(--s-3); border-left: 2px solid var(--line-strong); min-width: 0; }
+.fl-find-v { font-family: var(--font-display); font-size: var(--fs-28, 28px); font-weight: 500; line-height: 1.1; color: var(--text); font-variant-numeric: tabular-nums; }
+.fl-find-t { margin: 0; font-size: var(--fs-14, 14px); color: var(--text); line-height: 1.45; }
+.fl-find-n { margin: 0; font-size: var(--fs-12, 12px); color: var(--text-muted); line-height: 1.45; }
+.fl-findings .scope-line { margin-top: var(--s-2); }
+@media (max-width: 520px) { .fl-find { padding: var(--s-1) var(--s-2); } .fl-find-v { font-size: 24px; } }

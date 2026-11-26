@@ -1,13 +1,22 @@
-"""Browser tests for 03 Forecast Lab (screens-B)."""
+"""Browser tests for 03 Forecast Lab (screens-B; v2.1 Simple / Expert modes)."""
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 
 from _sitefx import DOCS, VIEWPORTS, audit, browser, open_page, site  # noqa: F401
 
 pytestmark = pytest.mark.browser
+
+
+def set_mode(page, mode):
+    """Switch the reading mode in place; the router re-renders the view."""
+    page.evaluate(f"import('./js/lib/mode.js').then((m) => m.setMode('{mode}'))")
+    page.wait_for_function("document.documentElement.dataset.ready === 'true'", timeout=15000)
+    page.wait_for_timeout(900)
+    assert page.evaluate("document.body.classList.contains('mode-' + %r)" % mode)
 
 
 def _forecast():
@@ -41,6 +50,7 @@ def test_leaderboard_is_dot_plot_with_champion_and_zero_excluded(site, browser):
     f = _forecast()
     ctx, page, problems = open_page(browser, site + "#/forecast?class=intermittent&part=R", "1440")
     try:
+        set_mode(page, "expert")
         board = page.locator('[data-story="forecast-leaderboard"]')
         n = sum(1 for r in f["leaderboard"] if r["demand_class"] == "intermittent" and r["part_class"] == "R" and r.get("split", "selection") == "selection")
         assert board.locator("g.fl-row").count() == n
@@ -99,6 +109,7 @@ def test_monash_real_panel_has_attribution(site, browser):  # noqa: F811
 def test_ltd_marks_reorder_point_and_truth_note(site, browser):  # noqa: F811
     ctx, page, problems = open_page(browser, site + "#/forecast", "1440")
     try:
+        set_mode(page, "expert")
         ltd = page.locator('[data-story="forecast-ltd"]')
         assert ltd.locator("rect.fl-bar").count() >= 2
         assert ltd.locator("line.fl-rop").count() == 1
@@ -163,5 +174,74 @@ def test_wave3_colour_discipline(site, browser, vp):  # noqa: F811
         assert all(0 < len(h) <= 72 for h in res["heads"]), res["heads"]
         assert page.locator(".gnm-annot-text", has_text="Frozen champion").count() == 0
         assert not problems, problems
+    finally:
+        ctx.close()
+
+
+# ----------------------------------------------------------------------------- v2.1 (PAGE-3): modes, honest result, readability
+METHOD_NAMES = r"\b(Croston|SBA|TSB|ADIDA|IMAPA|Willemain|MASE|Naive|Reliability-exposure)\b"
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+@pytest.mark.parametrize("mode", ["simple", "expert"])
+def test_v21_modes_render_clean(site, browser, vp, mode):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/forecast", vp)
+    try:
+        if mode == "expert":
+            set_mode(page, "expert")
+        audit(page, problems, min_frames=7)
+        assert page.locator('[data-role="intro3"]').count() == 1
+        assert page.locator('[data-story="forecast-honest"] [data-role="scope"]').count() == 1
+        # the grey first-use bracket (.term-expert) is the one allowed place for an expert term in Simple mode
+        text = page.evaluate("""() => { const v = document.querySelector('#view');
+          const hid = [...v.querySelectorAll('.term-expert')]; hid.forEach((e) => { e.dataset.t = e.textContent; e.textContent = ''; });
+          const t = v.innerText; hid.forEach((e) => { e.textContent = e.dataset.t; }); return t; }""")
+        names = re.findall(METHOD_NAMES, text)
+        if mode == "simple":
+            assert not names, f"method names visible in Simple mode: {sorted(set(names))}"
+            assert not re.search(r"\b(P0|P1|P2|I125)\b", text)
+        else:
+            assert {"SBA", "MASE"} <= set(names), sorted(set(names))
+    finally:
+        ctx.close()
+
+
+@pytest.mark.parametrize("mode", ["simple", "expert"])
+def test_v21_honest_result_from_data(site, browser, mode):  # noqa: F811
+    """The three findings: champions held in N of M groups, the intermittent-rotable champion's holdout rank,
+    history-fitted vs supplier-quoted removal-rate error. Every number from forecast.json."""
+    f = _forecast()
+    chk = f["champion_check"]
+    held = sum(1 for r in chk if r["champion_rank"] == 1)
+    ir = next(r for r in chk if r["demand_class"] == "intermittent" and r["part_class"] == "R")
+    tr = next(t for t in f["truth_recovery"] if t.get("vendor_quoted") is not None and "MTBUR" in t["param"] and "+" in t["param"])
+    ctx, page, problems = open_page(browser, site + "#/forecast", "1440")
+    try:
+        if mode == "expert":
+            set_mode(page, "expert")
+        txt = page.locator('[data-story="forecast-honest"]').inner_text()
+        assert f"{held} of {len(chk)}" in txt
+        est, quo = f"{round(tr['estimated'] * 100)}%", f"{round(tr['vendor_quoted'] * 100)}%"
+        if mode == "simple":
+            sfx = {1: "st", 2: "nd", 3: "rd"}.get(ir["champion_rank"] % 10, "th")
+            assert f"best in only {held} of {len(chk)} groups of parts" in txt
+            assert f"ranked {ir['champion_rank']}{sfx} of {ir['n_methods']}" in txt
+            assert f"about {est} off the truth" in txt and f"about {quo} off" in txt
+            assert "Only the scoring step reads them" in txt
+        else:
+            assert f"{ir['champion_rank']} of {ir['n_methods']} on the holdout" in txt and "SBA" in txt
+            assert f"{tr['estimated']:.3f}" in txt and f"{tr['vendor_quoted']:.3f}" in txt
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_v21_readability_simple(site, browser, vp):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/forecast", vp)
+    try:
+        r = page.evaluate("import('./js/lib/readability.js').then((R) => R.readability())")
+        assert r["grade"] <= 9, r
+        assert r["maxSentenceWords"] <= 25, r["longSentences"]
     finally:
         ctx.close()

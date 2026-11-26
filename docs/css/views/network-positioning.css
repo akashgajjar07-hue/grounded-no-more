@@ -87,3 +87,16 @@
 .np-pol .np-rec-note { text-align: left !important; font-family: var(--font-ui); font-size: 11px; line-height: 1.45; color: var(--text-muted); white-space: normal; }
 .np-legend .np-line--dash { background: none; border-top: 2px dashed currentColor; height: 0; }
 .np-pol tr.is-opt td:first-child { color: var(--text-muted); box-shadow: inset 2px 0 0 var(--line-strong); }
+
+/* v2.1: plan key in HTML (display names wrap at 390 instead of overlapping in the SVG) */
+.np-key { display: flex; flex-wrap: wrap; gap: 6px var(--s-2); margin: 0 0 var(--s-1); font-size: var(--fs-12); color: var(--text-muted); }
+.np-key-i { display: inline-flex; align-items: center; gap: 6px; }
+.np-key-i i { width: 9px; height: 9px; border-radius: 50%; border: 1.75px solid; display: inline-block; }
+.np-key-i.is-p2 { color: var(--text); font-weight: 500; }
+.np-share-note { flex-basis: 100%; }
+/* v2.1: display names are longer than codes: two plans per row, names in the UI face, first column of the plan table wider */
+.np-units { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.np-unit-k { font-family: var(--font-ui); letter-spacing: 0.02em; overflow-wrap: normal; line-height: 1.3; }
+.np-pol td:first-child { font-family: var(--font-ui); min-width: 8.5em; line-height: 1.3; }
+.np-pol td:first-child .np-best { display: block; }
+.np-fact-value { white-space: normal; overflow-wrap: anywhere; }

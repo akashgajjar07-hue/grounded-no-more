@@ -1,0 +1,29 @@
+{
+ "view": "capital-optimiser",
+ "mode": "simple",
+ "grade": 4.2,
+ "maxSentenceWords": 23,
+ "longSentences": [],
+ "viewports": {
+  "simple-1440": {
+   "grade": 4.2,
+   "maxSentenceWords": 23
+  },
+  "simple-390": {
+   "grade": 4.1,
+   "maxSentenceWords": 23
+  },
+  "expert-1440": {
+   "grade": 6.8,
+   "maxSentenceWords": 68
+  },
+  "expert-390": {
+   "grade": 6.7,
+   "maxSentenceWords": 68
+  }
+ },
+ "skipped": [
+  "A6 stress-worlds text (verbatim, data-readability=skip)"
+ ],
+ "measured_with": "docs/js/lib/readability.js via Playwright (#view)"
+}
