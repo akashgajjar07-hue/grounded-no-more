@@ -17,7 +17,7 @@ FORBIDDEN = [
     "COMAC", "CFM", "Pratt", "Rolls-Royce", "Honeywell", "Safran", "Collins", "Thales", "Goodrich", "Liebherr",
 ]
 PARTS = {p["pn"]: p for p in json.loads((DOCS / "data/parts.json").read_text())["parts"]}
-LEADER_MAX = 370
+LEADER_MAX = 320
 
 
 def _open(browser, site, vp, reduced=True):  # noqa: F811
@@ -171,13 +171,14 @@ def test_hover_shows_docked_card_with_parts_json_data(site, browser):  # noqa: F
           const hit = (a, b) => !(a.right < b.left || b.right < a.left || a.bottom < b.top || b.bottom < a.top);
           return {{ h: c.height, w: c.width, bottom: c.bottom, right: c.right, vw: innerWidth, vh: innerHeight, overPart: hit(c, part), overLabel: hit(c, lab),
                    scroll: document.querySelector('.cw-card').scrollHeight - document.querySelector('.cw-card').clientHeight,
-                   conn: +document.querySelector('.cw-conn').getAttribute('opacity') }};
+                   conn: +(document.querySelector('.cw-conn')?.getAttribute('opacity') || 0),
+                   leaderLit: !!document.querySelector('.cw-callout.is-active') }};
         }}""")
         assert geo["h"] <= 360 and geo["w"] <= 340, geo
         assert geo["bottom"] <= geo["vh"] and geo["right"] <= geo["vw"], geo
         assert not geo["overPart"] and not geo["overLabel"], geo
         assert geo["scroll"] <= 2, f"card content clipped: {geo}"
-        assert geo["conn"] == 1
+        assert geo["conn"] == 0 and geo["leaderLit"], geo  # no connector across the drawing: the active leader + tag glow instead
         # the active part's system runs light up (hydraulics for the steering actuator)
         assert page.locator('.cw-sys[data-sys="hyd"].is-on').count() == 1
         assert page.locator('.cw-sys.is-on').count() == 1
@@ -219,6 +220,13 @@ def test_mobile_zoned_list_dots_and_inset(site, browser):  # noqa: F811
         # number dots on the drawing: one per part, mono numerals ≥ 9 px
         dots = page.evaluate("[...document.querySelectorAll('.cw-ndot text')].map((t) => t.getBoundingClientRect().height)")
         assert len(dots) == items.count() and min(dots) >= 9, dots
+        # 44 CSS px tap circles under every dot, and no two badges overlap
+        hits = page.evaluate("[...document.querySelectorAll('.cw-ndot-hit')].map((c) => c.getBoundingClientRect().width)")
+        assert len(hits) == len(dots) and min(hits) >= 43.5, hits
+        circ = page.evaluate("[...document.querySelectorAll('.cw-ndot')].map((g) => { const r = g.querySelector('circle').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2, r.width / 2]; })")
+        for i, a in enumerate(circ):
+            for b2 in circ[i + 1:]:
+                assert ((a[0] - b2[0]) ** 2 + (a[1] - b2[1]) ** 2) ** 0.5 >= a[2] + b2[2] - 0.5
         # the drawing fills the width
         fig = page.locator(".cw-mfig svg").bounding_box()
         assert fig["width"] >= 340
@@ -233,10 +241,11 @@ def test_mobile_zoned_list_dots_and_inset(site, browser):  # noqa: F811
         assert f"{PARTS[pn]['stock_total_p2']} in total" in detail.inner_text()
         assert page.locator(f'.cw-part[data-pn="{pn}"].is-active').count() == 1
         assert page.locator(".cw-inset").is_visible()
+        assert "is-on" in (page.locator(".cw-caption").get_attribute("class") or "")  # zone caption on the sticky figure
         assert b.bounding_box()["height"] >= 44, "touch target"
         # tapping a number dot selects that part
-        dot = page.locator(".cw-ndot").nth(5)
-        dpn = dot.get_attribute("data-pn")
+        dpn = next(d for d in page.evaluate("[...document.querySelectorAll('.cw-ndot')].map((d) => d.dataset.pn)") if d != pn)
+        dot = page.locator(f'.cw-ndot[data-pn="{dpn}"]')
         dot.locator("circle").click(force=True)
         page.wait_for_timeout(300)
         assert page.locator(f'.cw-item[data-pn="{dpn}"]').get_attribute("aria-expanded") == "true"

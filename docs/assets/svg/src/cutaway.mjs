@@ -117,6 +117,7 @@ const naca = (f) => 5 * (0.2969 * Math.sqrt(Math.max(f, 0)) - 0.126 * f - 0.3516
 const wT = (y) => wC(y) * lerp(0.11, 0.09, (y - WG.y0) / (WG.yt - WG.y0)); // thickness / chord 0.11 → 0.09
 const wPt = (s, y, f, side = 1) => [wXle(y) + f * wC(y), s * y, wZ(y) + (side > 0 ? 1.1 : -0.9) * wT(y) * naca(f)];
 
+let FIN_FILL = '';
 const TP = { y0: 0.55, xle0: 32.0, sw: 31 * deg, yt: 6.25, c0: 3.5, ct: 1.3, z0: 0.95, dih: 6 * deg };
 const tXle = (y) => TP.xle0 + (y - TP.y0) * Math.tan(TP.sw);
 const tC = (y) => lerp(TP.c0, TP.ct, (y - TP.y0) / (TP.yt - TP.y0));
@@ -128,13 +129,14 @@ const fC = (eta) => lerp(FIN.cr, FIN.ct, eta);
 const fPt = (eta, f, side = 0) => { const z = FIN.zr + eta * FIN.h; const xl = FIN.xr + eta * FIN.h * Math.tan(FIN.sw); return [xl + f * fC(eta), side * 0.1 * fC(eta) * naca(f), z]; };
 
 // engines sit forward and outboard of the main gear so the two read separately
-const NAC = { y: 6.3, z: -2.05, prof: [[8.55, 0.9], [8.75, 1.02], [9.3, 1.08], [10.6, 1.07], [11.7, 1.0], [12.2, 0.9], [12.35, 0.66], [13.6, 0.58], [14.1, 0.44], [14.95, 0.1]] };
+const NAC = { y: 7.0, z: -2.55, prof: [[7.95, 0.9], [8.15, 1.02], [8.7, 1.08], [10, 1.07], [11.1, 1.0], [11.6, 0.9], [11.75, 0.66], [13, 0.58], [13.5, 0.44], [14.35, 0.1]] };
 const nacR = (x) => { const p = NAC.prof; if (x <= p[0][0]) return p[0][1]; for (let i = 1; i < p.length; i++) if (x <= p[i][0]) return lerp(p[i - 1][1], p[i][1], (x - p[i - 1][0]) / (p[i][0] - p[i - 1][0])); return p[p.length - 1][1]; };
 const nacPt = (s, x, r, a) => [x, s * NAC.y + r * Math.cos(a), NAC.z + r * Math.sin(a)];
 
 const NG = { x: 5.25, zTop: -1.55, zAx: -3.78, r: 0.39, w: 0.22, dy: 0.27 };
-const MGy = 3.45;
-const MG = { x: 17.45, y: MGy, zTop: wPt(1, MGy, 0.62, -1)[2] - 0.05, zAx: -3.62, r: 0.585, w: 0.4, dy: 0.46 };
+// main gear inboard of the engine under the wing root: axle ≈ 0.55 root chord aft of the root leading edge, ≈ 2.6 m out
+const MGy = 2.62;
+const MG = { x: WG.xle0 + 0.6 * WG.c0, y: MGy, zTop: wPt(1, MGy, 0.62, -1)[2] - 0.05, zAx: -3.62, r: 0.585, w: 0.38, dy: 0.42 };
 const GROUND = MG.zAx - MG.r;
 
 // ---------------------------------------------------------------- line tiers + depth fading
@@ -146,13 +148,14 @@ const STY = {
   T2b: { stroke: C.copper, 'stroke-opacity': 0.85, 'stroke-width': 0.9, cap: 'round' },
   T3: { stroke: C.titanium, 'stroke-opacity': 0.55, 'stroke-width': 0.9, cap: 'butt' },
   T4: { stroke: C.titanium, 'stroke-opacity': 0.22, 'stroke-width': 0.5, cap: 'butt' },
+  SEAT: { stroke: C.titanium, 'stroke-opacity': 0.18, 'stroke-width': 0.5, cap: 'butt' },
   T5: { stroke: C.titanium, 'stroke-opacity': 0.12, 'stroke-width': 0.5, cap: 'butt', dash: '3 3' },
   FAR: { stroke: T1C, 'stroke-opacity': 0.34, 'stroke-width': 1.0, cap: 'round' },
   PAN: { stroke: C.titanium, 'stroke-opacity': 0.42, 'stroke-width': 0.7, cap: 'butt' },
   CONS: { stroke: C.titanium, 'stroke-opacity': 0.3, 'stroke-width': 0.6, cap: 'butt', dash: '14 4 2 4' },
   DIM: { stroke: C.titanium, 'stroke-opacity': 0.7, 'stroke-width': 0.8, cap: 'butt' },
 };
-const FADE = new Set(['T3', 'T4', 'T5', 'PAN', 'T1b']);
+const FADE = new Set(['T3', 'T4', 'T5', 'PAN', 'T1b', 'SEAT']);
 const FADE_K = [1, 0.72, 0.46];
 let SIMPLE = false;
 const B = {};
@@ -203,6 +206,7 @@ function boxEdges(k, a, b) {
   const c = [[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0], [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]];
   [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]].forEach(([i, j]) => line3(k, [c[i], c[j]]));
 }
+function halfRing3(c, u, r) { const sv = norm(cross(u, V)), w = norm(cross(sv, u)); return range(0, 180, 9).map((a) => add(c, add(mul(sv, r * Math.cos(a * deg)), mul(w, r * Math.sin(a * deg))))); }
 function basis(u) { const t = Math.abs(u[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0]; const e1 = norm(cross(u, t)); return [e1, cross(u, e1)]; }
 const circle3 = (c, u, r, N = 32) => { const [e1, e2] = basis(norm(u)); return range(0, N - 1, 1).map((i) => add(c, add(mul(e1, r * Math.cos(i / N * 2 * Math.PI)), mul(e2, r * Math.sin(i / N * 2 * Math.PI))))); };
 function tube(k, p0, p1, r, nSeg = 28, caps = true) {
@@ -269,7 +273,7 @@ function drawFuselage(full) {
   line3('T1b', range(0, 360, 10).map((a) => FS(FL - 0.02, a * deg)), true);
   if (!full) {
     // phone: primary structure only (every 4th frame front face, floor edge, cut edge)
-    range(1.0, FL - 0.4, 0.62).forEach((x, i) => { if (i % 4) return; const pts = [], nr = []; for (let a = 0; a <= 360; a += 6) { pts.push(FS(x, a * deg)); nr.push(FN(x, a * deg)); } surfCurve(pts, nr, 'T4', null); });
+    range(1.0, FL - 0.4, 0.62).forEach((x, i) => { if (i % 2) return; const pts = [], nr = []; for (let a = 0; a <= 360; a += 6) { pts.push(FS(x, a * deg)); nr.push(FN(x, a * deg)); } surfCurve(pts, nr, i % 4 ? 'T4' : 'T3', null); });
     const edge = []; for (let x = 0.25; x <= 28.3; x += 0.1) { const hi = cutHi(x); if (hi === null) { if (edge.length > 1) line3('T2', edge); edge.length = 0; continue; } edge.push(FS(x, hi * deg)); }
     if (edge.length > 1) line3('T2', edge);
     line3('T3', range(9.4, 28.2, 0.4).map((x) => [x, -floorY(x), FLOOR_Z]));
@@ -348,15 +352,15 @@ function drawInterior() {
   const fl = el('path', { d: dP([...range(9.4, 28.2, 0.4).map((x) => [x, -floorY(x), FLOOR_Z]), ...range(28.2, 9.4, -0.4).map((x) => [x, floorY(x), FLOOR_Z])], true), fill: C.titanium, 'fill-opacity': 0.04, stroke: 'none' });
   line3('T3', range(2.2, 31.5, 0.3).map((x) => [x, -floorY(x), FLOOR_Z]));
   line3('T4', range(2.2, 31.5, 0.3).map((x) => [x, floorY(x), FLOOR_Z]));
-  range(2.4, 31.2, 0.62).forEach((x, i) => line3(i % 2 ? 'T4' : 'T3', [[x, -floorY(x), FLOOR_Z], [x, floorY(x), FLOOR_Z]]));
+  range(2.4, 31.2, 0.62).forEach((x) => line3(x > 9.2 && x < 28.5 ? 'T3' : 'T4', [[x, -floorY(x), FLOOR_Z], [x, floorY(x), FLOOR_Z]])); // floor-beam ladder
   for (const y of [-1.32, -0.56, 0.56, 1.32]) line3('T4', [[9.6, y, FLOOR_Z + 0.01], [28, y, FLOOR_Z + 0.01]]);
   // seats: near half of the cabin only (the far half made moiré)
   for (let x = 10.9; x <= 26.2; x += 0.78) {
     if (Math.abs(x - 15.6) < 0.5) continue;
     for (const y of [-1.58, -1.07, -0.56]) {
       const w = 0.22, zc = FLOOR_Z + 0.44, zb = FLOOR_Z + 1.12;
-      line3('T4', [[x - 0.04, y - w, zc], [x + 0.4, y - w, zc], [x + 0.5, y - w, zb], [x + 0.44, y + w, zb], [x + 0.36, y + w, zc], [x - 0.04, y + w, zc], [x - 0.04, y - w, zc]]);
-      line3('T4', [[x + 0.05, y, FLOOR_Z], [x + 0.1, y, zc]]);
+      line3('SEAT', [[x - 0.04, y - w, zc], [x + 0.4, y - w, zc], [x + 0.5, y - w, zb], [x + 0.44, y + w, zb], [x + 0.36, y + w, zc], [x - 0.04, y + w, zc], [x - 0.04, y - w, zc]]);
+      line3('SEAT', [[x + 0.05, y, FLOOR_Z], [x + 0.1, y, zc]]);
     }
   }
   line3('T4', range(7, 28.5, 0.5).map((x) => [x, -1.42, 1.25])); line3('T4', range(7, 28.5, 0.5).map((x) => [x, -1.05, 1.62]));
@@ -445,7 +449,10 @@ function drawWing(s, full, near = false) {
     return out.join('');
   }
   // spars (hidden under the skin) + control surfaces
-  for (const f of [0.15, 0.62]) line3(K.hid, range(yIn, WG.yt - 0.3, 0.3).map((y) => wPt(s, y, f)));
+  // spars (front 15 %, rear 62 %) and ribs every ~1.2 m, seen through the skin
+  for (const f of [0.15, 0.62]) line3(near ? 'T3' : 'T5', range(yIn, WG.yt - 0.3, 0.3).map((y) => wPt(s, y, f)));
+  for (const y of range(yIn + 0.6, WG.yt - 0.4, 1.2)) line3(near ? 'T4' : 'T5', range(0.15, 0.62, 0.05).map((f) => wPt(s, y, f)));
+  if (near) line3('T1b', range(yIn, WG.yt, 0.25).map((y) => wPt(s, y, 0.16, -1))); // lower surface: the wing's thickness
   for (const [a, b] of [[2.3, 5.0], [6.9, 9.3], [9.3, 11.8], [11.8, 14.2], [14.2, 16.5]]) {
     if (near && a < yIn) continue;
     line3(K.pan, range(a, b, 0.25).map((y) => wPt(s, y, 0.13))); line3(K.pan, [wPt(s, a, 0), wPt(s, a, 0.13)]); line3(K.pan, [wPt(s, b, 0), wPt(s, b, 0.13)]);
@@ -482,6 +489,9 @@ function drawTailplane(s, full, near = false) {
   const span = range(TP.y0, TP.yt, 0.2);
   line3(K.sil, span.map((y) => tPt(s, y, 0))); line3(K.sil, span.map((y) => tPt(s, y, 1)));
   line3(K.sil, [...range(0, 1, 0.05).map((f) => tPt(s, TP.yt, f, 1)), ...range(1, 0, -0.05).map((f) => tPt(s, TP.yt, f, -1))], true); // closed tip
+  line3(near ? 'T3' : 'FAR', [tPt(s, TP.y0, 0), tPt(s, TP.y0, 1)]); // root chord closes the outline
+  for (const f of [0.15, 0.62]) line3(near ? 'T4' : 'T5', range(TP.y0, TP.yt - 0.2, 0.3).map((y) => tPt(s, y, f)));
+  for (const y of range(TP.y0 + 0.8, TP.yt - 0.3, 1.2)) line3(near ? 'T4' : 'T5', [tPt(s, y, 0.15), tPt(s, y, 0.62)]);
   if (near) line3('T1b', span.map((y) => tPt(s, y, 0.04, -1))); // leading-edge radius line
   if (!full) return;
   line3(K.pan, range(TP.y0 + 0.3, TP.yt - 0.2, 0.2).map((y) => tPt(s, y, 0.7)));
@@ -490,6 +500,7 @@ function drawTailplane(s, full, near = false) {
 }
 function drawFin(full) {
   const etas = range(0, 1, 0.05);
+  FIN_FILL = el('path', { d: dP([...etas.map((e) => fPt(e, 0)), ...etas.slice().reverse().map((e) => fPt(e, 1))], true), fill: C.midnight, 'fill-opacity': 0.55, stroke: 'none' });
   line3('T1', etas.map((e) => fPt(e, 0))); line3('T1', etas.map((e) => fPt(e, 1)));
   line3('T1', [...range(0, 1, 0.05).map((f) => fPt(1, f, -1)), ...range(1, 0, -0.05).map((f) => fPt(1, f, 1))], true); // closed tip
   line3('T1b', etas.map((e) => fPt(e, 0.035, -1))); // leading-edge radius line (port side)
@@ -505,7 +516,7 @@ function drawFin(full) {
 }
 
 // ---------------------------------------------------------------- nacelle (revolved profile; near one sectioned)
-const NCUT = { a0: 132 * deg, a1: 262 * deg, x0: 9.25, x1: 13.45 };
+const NCUT = { a0: 132 * deg, a1: 262 * deg, x0: 8.65, x1: 12.85 };
 function drawNacelle(s, full, near = false) {
   const K = near ? { sil: 'T1', st: 'T3', fine: 'T4', pan: 'PAN' } : { sil: 'FAR', st: 'T5', fine: 'T5', pan: 'T5' };
   const u = [1, 0, 0], sv = norm(cross(u, V));
@@ -524,18 +535,19 @@ function drawNacelle(s, full, near = false) {
     line3(K.st, range(0, 360, 10).map((a) => nacPt(s, fx - 0.1, 0.24, a * deg)), true);
     line3(K.st, [nacPt(s, x0 + 0.2, 0, 0), nacPt(s, fx - 0.1, 0.24, 140 * deg)]); line3(K.st, [nacPt(s, x0 + 0.2, 0, 0), nacPt(s, fx - 0.1, 0.24, 320 * deg)]);
   }
-  if (full) for (const x of [9.3, 10.6, 11.7, 12.35, 13.6]) {
+  if (full) for (const x of [8.7, 10, 11.1, 11.75, 13]) {
     const pts = [], nr = [];
     for (let a = 0; a <= 360; a += 6) { const inCut = near && x > NCUT.x0 && x < NCUT.x1 && a * deg > NCUT.a0 && a * deg < NCUT.a1; pts.push(nacPt(s, x, nacR(x), a * deg)); nr.push(inCut ? [0, 0, 0] : [0, Math.cos(a * deg), Math.sin(a * deg)]); }
     surfCurve(pts, nr, K.pan, near ? null : null);
   }
   // swept-box pylon: two side profiles (±0.24) joined by edges, plus the aft fairing curve
   const yP = s * NAC.y;
-  const prof = (dy) => [[9.8, yP + dy, NAC.z + 1.0], [wXle(NAC.y) - 0.2, yP + dy, wPt(1, NAC.y, 0.02, -1)[2] - 0.02], [wXle(NAC.y) + wC(NAC.y) * 0.62, yP + dy, wPt(1, NAC.y, 0.62, -1)[2] - 0.02], [14, yP + dy, NAC.z + 0.62], [13, yP + dy, NAC.z + 0.7]];
+  const prof = (dy) => [[9.2, yP + dy, NAC.z + 1.0], [wXle(NAC.y) - 0.2, yP + dy, wPt(1, NAC.y, 0.02, -1)[2] - 0.02], [wXle(NAC.y) + wC(NAC.y) * 0.62, yP + dy, wPt(1, NAC.y, 0.62, -1)[2] - 0.02], [13.4, yP + dy, NAC.z + 0.62], [12.4, yP + dy, NAC.z + 0.7]];
   const pa = prof(-0.24), pb = prof(0.24);
-  line3(K.st === 'T5' ? 'T5' : 'T1b', [...pa, pa[0]]); line3(near ? 'T3' : 'T5', [...pb, pb[0]]);
+  if (near) out.push(el('path', { d: dP(pa, true), fill: C.midnight, 'fill-opacity': 0.55, stroke: 'none' }));
+  line3(near ? 'T1' : 'T5', [...pa, pa[0]]); line3(near ? 'T3' : 'FAR', [...pb, pb[0]]);
   for (let i = 0; i < pa.length; i++) line3(near ? 'T3' : 'T5', [pa[i], pb[i]]);
-  line3(near ? 'T3' : 'T5', range(0, 1, 0.1).map((t) => [lerp(14, wXle(NAC.y) + wC(NAC.y) * 0.95, t), yP, lerp(NAC.z + 0.62, wPt(1, NAC.y, 0.95, -1)[2] - 0.05, Math.sin(t * Math.PI / 2))]));
+  line3(near ? 'T3' : 'T5', range(0, 1, 0.1).map((t) => [lerp(13.4, wXle(NAC.y) + wC(NAC.y) * 0.95, t), yP, lerp(NAC.z + 0.62, wPt(1, NAC.y, 0.95, -1)[2] - 0.05, Math.sin(t * Math.PI / 2))]));
   if (near && full) {
     // cowl cut: torn edges + hatched cowl section; inside, the core: fan, 3 compressor discs, combustor, turbine
     const jag = (t, i) => 0.04 * vnoise(t * 5 + i * 0.1) + 0.02 * tri(t * 7.3);
@@ -544,14 +556,16 @@ function drawNacelle(s, full, near = false) {
     const e0 = range(NCUT.a0, NCUT.a1, 4 * deg).map((a) => nacPt(s, NCUT.x0, nacR(NCUT.x0), a));
     const e1 = range(NCUT.a0, NCUT.a1, 4 * deg).map((a) => nacPt(s, NCUT.x1, nacR(NCUT.x1), a));
     for (const e of [eA, eB, e0, e1]) { line3('T2', e); sectionFace(e, e.map((p) => { const r = sub(p, ax(p[0])); return add(ax(p[0]), mul(r, 0.88)); })); }
-    tube('T3', ax(9.95), ax(13.6), 0.52, 32, false);
-    for (const [x, r] of [[10.3, 0.5], [10.65, 0.46], [11, 0.42]]) { line3('T3', range(0, 360, 8).map((a) => nacPt(s, x, r, a * deg)), true); for (let b = 0; b < 12; b++) line3('T4', [nacPt(s, x, 0.12, b * 30 * deg), nacPt(s, x, r, b * 30 * deg)]); }
-    line3('T3', range(0, 360, 8).map((a) => nacPt(s, 11.55, 0.47, a * deg)), true); line3('T3', range(0, 360, 8).map((a) => nacPt(s, 11.95, 0.47, a * deg)), true);
-    for (let b = 0; b < 10; b++) line3('T4', range(0, 360, 30).map((a) => add(nacPt(s, 11.75, 0.33, b * 36 * deg), [0.1 * Math.cos(a * deg), 0, 0.08 * Math.sin(a * deg)])), true); // combustor cans
-    line3('T3', [nacPt(s, 12.35, 0.45, 160 * deg), nacPt(s, 13.5, 0.15, 160 * deg)]); line3('T3', [nacPt(s, 12.35, 0.45, 300 * deg), nacPt(s, 13.5, 0.15, 300 * deg)]);
-    for (const x of [12.5, 12.85]) line3('T3', range(0, 360, 8).map((a) => nacPt(s, x, lerp(0.43, 0.2, (x - 12.35)), a * deg)), true);
-    line3('T4', [ax(9.9), ax(13.9)]); // shaft
-    boxEdges('T3', [9.9, yP - 0.82, NAC.z - 0.98], [11.45, yP - 0.38, NAC.z - 0.66]); // accessory gearbox
+    // engine core as a drum with discrete stages (visible half of each disc, so it reads as stages, not a coil)
+    const u = [1, 0, 0], svx = norm(cross(u, V));
+    const stage = (x, r, k = 'T3') => line3(k, halfRing3(ax(x), u, r));
+    const drum = (x0, r0, x1, r1, k = 'T1b') => { line3(k, [add(ax(x0), mul(svx, r0)), add(ax(x1), mul(svx, r1))]); line3(k, [add(ax(x0), mul(svx, -r0)), add(ax(x1), mul(svx, -r1))]); };
+    drum(9.35, 0.5, 10.55, 0.36); range(0, 6, 1).forEach((i) => stage(9.4 + i * 0.19, lerp(0.5, 0.37, i / 6))); // 7-stage compressor
+    drum(10.65, 0.46, 11.4, 0.46, 'T3'); for (const x of [10.65, 11.4]) stage(x, 0.46, 'T1b'); line3('T4', halfRing3(ax(11.02), u, 0.3)); // combustor ring
+    drum(11.5, 0.42, 12.15, 0.38, 'T3'); [11.55, 11.8, 12.05].forEach((x, i) => stage(x, 0.42 - i * 0.02)); // 3-stage turbine
+    line3('T3', [add(ax(12.2), mul(svx, 0.3)), ax(13.2)]); line3('T3', [add(ax(12.2), mul(svx, -0.3)), ax(13.2)]); stage(12.2, 0.3); // tail cone
+    line3('T4', [ax(9.2), ax(12.2)]); // shaft
+    boxEdges('T3', [9.3, yP - 0.82, NAC.z - 0.98], [10.85, yP - 0.38, NAC.z - 0.66]); // accessory gearbox
   }
   return out.join('');
 }
@@ -563,8 +577,8 @@ function drawMainGear(s, near) {
   tube(kb, top, knee, 0.16, 18); // oleo cylinder
   tube(k, knee, add(ax, [0, 0, 0.22]), 0.1, 14); // sliding piston
   line3(k, [add(knee, [-0.12, 0, -0.05]), add(lerp3(knee, ax, 0.5), [-0.42, 0, 0]), add(ax, [-0.12, 0, 0.3])]); // torque link
-  line3(kb, [lerp3(top, knee, 0.75), [MG.x - 0.1, s * 1.3, -1.6]]); // side brace into the wheel well
-  line3(k, [lerp3(top, knee, 0.55), [MG.x - 0.75, s * 2.4, wZ(2.4) - 0.3]]);
+  line3(kb, [lerp3(top, knee, 0.6), [MG.x + 0.1, s * 1.35, -1.75]]); // side brace to the belly
+  line3(k, [lerp3(top, knee, 0.55), [MG.x - 0.7, s * (MG.y + 0.9), wZ(MG.y + 0.9) - 0.32]]); // drag brace to the rear spar
   line3(kb, [add(ax, [0, -MG.dy - 0.22, 0]), add(ax, [0, MG.dy + 0.22, 0])]); // axle
   line3(k, [[MG.x - 0.65, y - s * 0.3, MG.zTop - 0.1], [MG.x + 0.6, y - s * 0.3, MG.zTop - 0.1], [MG.x + 0.55, y - s * 0.26, -2.75], [MG.x - 0.6, y - s * 0.26, -2.75], [MG.x - 0.65, y - s * 0.3, MG.zTop - 0.1]]); // leg door
   if (!near) for (const dy of [-MG.dy, MG.dy]) { const c = [MG.x, y + dy, MG.zAx]; for (const yy of [-MG.w / 2, MG.w / 2]) line3('T5', circle3(add(c, [0, yy, 0]), [0, 1, 0], MG.r, 32), true); }
@@ -675,9 +689,9 @@ const PART_DEFS = [
     const y = 3.0; return [wXle(y) + 0.19 * wC(y), -y, wZ(y) - 0.15];
   } },
   { pn: 'GN-28-E006', label: 'Fuel quantity probe', zone: 'wing', sys: 'fuel', build() { for (const [y, f] of [[8.2, 0.3], [9.3, 0.45], [10.4, 0.33], [11.0, 0.5]]) { const p = wPt(-1, y, f), q = wPt(-1, y, f, -1); pCyl(add(q, [0, 0, -0.02]), add(p, [0, 0, 0.06]), 0.05, { cap: true }); } return wPt(-1, 9.3, 0.45); } },
-  { pn: 'GN-24-R004', label: 'Integrated drive generator', zone: 'engine', sys: 'elec', build() { const c0 = [10.55, NY - 0.5, NAC.z - 0.82], c1 = [11.25, NY - 0.5, NAC.z - 0.82]; pCyl(c0, c1, 0.23, { rings: [0.35, 0.7], cap: true }); pCyl([10.45, NY - 0.5, NAC.z - 0.82], c0, 0.28); return lerp3(c0, c1, 0.5); } },
-  { pn: 'GN-29-R011', label: 'Engine-driven hydraulic pump', zone: 'engine', sys: 'hyd', build() { pPump([10, NY - 0.22, NAC.z - 0.98], [10.42, NY - 0.22, NAC.z - 0.98], 0.13); return [10.2, NY - 0.22, NAC.z - 0.98]; } },
-  { pn: 'GN-36-R022', label: 'Bleed air valve', zone: 'engine', sys: 'bleed', build() { pValve([12.7, NY, NAC.z + 0.62], [12.7, NY, NAC.z + 1.02], 0.11); return [12.7, NY, NAC.z + 0.82]; } },
+  { pn: 'GN-24-R004', label: 'Integrated drive generator', zone: 'engine', sys: 'elec', build() { const c0 = [9.95, NY - 0.5, NAC.z - 0.82], c1 = [10.65, NY - 0.5, NAC.z - 0.82]; pCyl(c0, c1, 0.23, { rings: [0.35, 0.7], cap: true }); pCyl([9.85, NY - 0.5, NAC.z - 0.82], c0, 0.28); return lerp3(c0, c1, 0.5); } },
+  { pn: 'GN-29-R011', label: 'Engine-driven hydraulic pump', zone: 'engine', sys: 'hyd', build() { pPump([10, NY - 0.22, NAC.z - 0.98], [9.82, NY - 0.22, NAC.z - 0.98], 0.13); return [9.6, NY - 0.22, NAC.z - 0.98]; } },
+  { pn: 'GN-36-R022', label: 'Bleed air valve', zone: 'engine', sys: 'bleed', build() { pValve([12.1, NY, NAC.z + 0.62], [12.1, NY, NAC.z + 1.02], 0.11); return [12.1, NY, NAC.z + 0.82]; } },
   { pn: 'GN-32-R015', label: 'Main wheel and tyre', zone: 'gear', build() { pWheel([MG.x, -MG.y - MG.dy, MG.zAx], MG.r, MG.w); return [MG.x, -MG.y - MG.dy - MG.w / 2, MG.zAx + 0.2]; } },
   { pn: 'GN-32-R013', label: 'Carbon brake assembly', zone: 'gear', sys: 'hyd', build() {
     const c = [MG.x, -MG.y + MG.dy, MG.zAx];
@@ -697,9 +711,9 @@ const PART_DEFS = [
 
 // ---------------------------------------------------------------- system runs (schematic routes)
 const SYSTEMS = {
-  bleed: { label: 'Bleed air', width: 1.4, dash: null, routes: [[[12.7, NY, NAC.z + 1.0], [13.1, NY, wZ(NAC.y) - 0.3], [13.9, -4.0, wZ(4.0) - 0.2], [13.2, -2.2, -1.35], [11.8, -1.0, -1.15], [11.5, -0.78, -1.15]], [[11.0, -0.78, -1.15], [10.8, -0.82, -1.4], [11.6, -0.82, -1.68]]] },
+  bleed: { label: 'Bleed air', width: 1.4, dash: null, routes: [[[12.1, NY, NAC.z + 1.0], [12.5, NY, wZ(NAC.y) - 0.3], [13.9, -4.0, wZ(4.0) - 0.2], [13.2, -2.2, -1.35], [11.8, -1.0, -1.15], [11.5, -0.78, -1.15]], [[11.0, -0.78, -1.15], [10.8, -0.82, -1.4], [11.6, -0.82, -1.68]]] },
   hyd: { label: 'Hydraulics', width: 0.9, routes: [
-    { dash: null, pts: [[10.2, NY - 0.22, NAC.z - 0.98], [10.9, NY, NAC.z + 0.85], [16.6, -NAC.y + 0.3, wZ(5.6) - 0.22], [17.2, -3.0, wZ(3.0) - 0.25], [18.6, -1.0, -1.5], [18.65, -0.55, -1.55]] },
+    { dash: null, pts: [[9.6, NY - 0.22, NAC.z - 0.98], [10.3, NY, NAC.z + 0.85], [16.6, -NAC.y + 0.3, wZ(5.6) - 0.22], [17.2, -3.0, wZ(3.0) - 0.25], [18.6, -1.0, -1.5], [18.65, -0.55, -1.55]] },
     { dash: '4 2', pts: [[17.0, -NAC.y + 0.2, wZ(5.8) - 0.2], [wXle(9.1) + 0.6 * wC(9.1), -9.1, wZ(9.1) - 0.15], [wXle(14.5) + 0.6 * wC(14.5), -14.5, wZ(14.5) - 0.1]] },
     { dash: '1 2', pts: [[19.3, -0.55, -1.55], [24.0, -0.5, -1.5], [30.0, -0.4, -0.2], [tXle(1.0) + 1.0, -1.0, tZ(1.0)], [tXle(1.75) + 1.68, -1.75, tZ(1.75)]] },
     { dash: '1 2', pts: [[18.65, -0.55, -1.55], [14.0, -0.6, -1.95], [8.0, -0.6, -1.95], [NG.x, -0.3, -1.85]] },
@@ -707,11 +721,11 @@ const SYSTEMS = {
   ] },
   fuel: { label: 'Fuel', width: 0.9, routes: [
     { dash: '6 2', pts: [wPt(-1, 9.3, 0.45, -1), [wXle(6.0) + 0.2 * wC(6.0), -6.0, wZ(6.0) - 0.1], [wXle(3.4) + 0.19 * wC(3.4), -3.4, wZ(3.4) - 0.2], [wXle(3.0) + 0.19 * wC(3.0), -3.0, wZ(3.0) - 0.15]] },
-    { dash: '6 2', pts: [[wXle(3.4) + 0.19 * wC(3.4), -3.4, wZ(3.4) - 0.3], [wXle(NAC.y) + 0.1, NY, wZ(NAC.y) - 0.4], [11.5, NY, NAC.z + 0.6], [11.6, NY, NAC.z]] },
+    { dash: '6 2', pts: [[wXle(3.4) + 0.19 * wC(3.4), -3.4, wZ(3.4) - 0.3], [wXle(NAC.y) + 0.1, NY, wZ(NAC.y) - 0.4], [10.9, NY, NAC.z + 0.6], [11, NY, NAC.z]] },
     { dash: '6 2', pts: [[14.0, -1.5, -1.9], [24.0, -0.9, -1.6], [31.0, -0.5, -0.1], [35.55, -0.36, 0.36]] },
   ] },
   elec: { label: 'Electrical', width: 0.8, routes: [
-    { dash: '8 2 2 2', pts: [[10.9, NY - 0.5, NAC.z - 0.82], [10.6, NY + 0.3, NAC.z + 0.9], [13.2, -3.6, wZ(3.6) - 0.15], [12.5, -1.3, -1.2], [9.5, -0.7, -1.3], [7.5, -0.6, -1.37]] },
+    { dash: '8 2 2 2', pts: [[10.3, NY - 0.5, NAC.z - 0.82], [10, NY + 0.3, NAC.z + 0.9], [13.2, -3.6, wZ(3.6) - 0.15], [12.5, -1.3, -1.2], [9.5, -0.7, -1.3], [7.5, -0.6, -1.37]] },
     { dash: '8 2 2 2', pts: [[7.05, -0.67, -1.2], [6.45, -0.66, -1.0], [7.4, -0.66, -1.0], [8.3, -0.66, -1.0]] },
     { dash: '8 2 2 2', pts: [[6.2, -0.6, -1.3], [4.5, -0.9, -1.0], [3.3, -1.0, -1.0], [2.75, -1.6, -0.6], [1.65, -0.3, -0.95]] },
     { dash: '8 2 2 2', pts: [[9.5, -0.6, -1.3], [20.0, -0.95, -1.15], [31.5, -0.5, 0.0], [34.85, -0.22, 0.45]] },
@@ -731,7 +745,7 @@ function drawSystems(simple) {
 }
 
 // ================================================================= CALLOUTS (nearest side, elbow leaders)
-const LEADER_MAX = 370, LEADER_TARGET = 320; // hard cap / soft target (units at 1600 wide)
+const LEADER_MAX = 320, LEADER_TARGET = 290; // hard cap / soft target (units at 1600 wide)
 const FAIL = (m) => { if (process.env.CW_LAX) console.warn(m); else throw new Error(m); };
 const NAME_FS = 13.5, CHAR_W = 8.1, TAG_W = 30, WRAP = 18;
 function wrap(s, max) { const words = s.split(' '), lines = []; let cur = ''; for (const w of words) { if ((cur + ' ' + w).trim().length > max && cur) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); } if (cur) lines.push(cur); return lines; }
@@ -773,48 +787,46 @@ function layoutCallouts(parts, { W, H, obstacles, reserved, side }) {
   const slots = [];
   const okRect = (r) => !obstacles.some((poly) => rectHitsPoly({ x0: r.x0 - 6, y0: r.y0 - 5, x1: r.x1 + 6, y1: r.y1 + 5 }, poly)) && !reserved.some((q) => !(r.x1 < q.x0 || r.x0 > q.x1 || r.y1 < q.y0 || r.y0 > q.y1));
   const colW = side.colW;
-  for (let y = side.top; y + 40 <= side.leftBottom; y += 44) { // left column (tag on the inner edge)
-    const x1 = side.left + colW; const r = { x0: side.left, y0: y, x1, y1: y + 40 };
-    if (okRect(r)) slots.push({ kind: 'L', r, tag: [x1 - TAG_W, y + 2], elbow: [x1 + 34, y + 11.5], end: [x1, y + 11.5] });
-  }
-  for (let y = side.top; y + 40 <= side.rightBottom; y += 44) { // right column
-    const x0 = W - side.right - colW; const r = { x0, y0: y, x1: W - side.right, y1: y + 40 };
-    if (okRect(r)) slots.push({ kind: 'R', r, tag: [x0, y + 2], elbow: [x0 - 34, y + 11.5], end: [x0, y + 11.5] });
-  }
+  // Every leader is one angled segment plus one short horizontal run into the tag. A slot is a tag position plus
+  // the side the run arrives from: attach 'L' (tag at the left end of its label, elbow 28 units further left) or
+  // attach 'R' (tag at the right end, label text right-aligned before it, elbow to the right).
+  const add = (kind, attach, tx, y) => {
+    const elbow = attach === 'L' ? [tx - 28, y + 11.5] : [tx + TAG_W + 28, y + 11.5];
+    const end = attach === 'L' ? [tx, y + 11.5] : [tx + TAG_W, y + 11.5];
+    const r = attach === 'L' ? { x0: tx, y0: y, x1: tx + colW, y1: y + 40 } : { x0: tx + TAG_W - colW, y0: y, x1: tx + TAG_W, y1: y + 40 };
+    slots.push({ kind, attach, r, tag: [tx, y + 2], elbow, end });
+  };
+  for (let y = side.top; y + 40 <= side.leftBottom; y += 44) add('L', 'R', side.left + colW - TAG_W, y); // left column
+  for (let y = side.top; y + 40 <= side.rightBottom; y += 44) add('R', 'L', W - side.right - colW, y); // right column
   const yb = H - side.bottom - 40;
-  for (let x = side.bottomLeft; x + colW <= side.bottomRight; x += colW + 12) { // bottom row (leader drops onto the tag)
-    const r = { x0: x, y0: yb, x1: x + colW, y1: yb + 40 };
-    if (okRect(r)) slots.push({ kind: 'B', r, tag: [x, yb + 2], elbow: [x + TAG_W / 2, yb - 30], end: [x + TAG_W / 2, yb + 2] });
-  }
-  const yt = side.topRow;
-  if (yt != null) for (let x = side.topLeft; x + colW <= side.topRight; x += colW + 12) { // top row
-    const r = { x0: x, y0: yt, x1: x + colW, y1: yt + 40 };
-    if (okRect(r)) slots.push({ kind: 'T', r, tag: [x, yt + 2], elbow: [x + TAG_W / 2, yt + 52], end: [x + TAG_W / 2, yt + 21] });
-  }
-  // free interior cells (sheet areas clear of the airframe): label above the part (leader rises onto the tag
-  // from below, kind U) or below it (leader drops onto the tag, kind D)
+  for (let x = side.bottomLeft; x + 60 <= side.bottomRight; x += 30) { add('B', 'L', x, yb); add('B', 'R', x, yb); }
+  if (side.topRow != null) for (let x = side.topLeft; x + 60 <= side.topRight; x += 30) { add('T', 'L', x, side.topRow); add('T', 'R', x, side.topRow); }
   for (let y = side.top - 140; y + 40 <= H - side.bottom - 50; y += 22) {
-    for (let x = side.left + colW + 50; x + 150 <= W - side.right - colW - 40; x += 40) {
-      const r = { x0: x, y0: y, x1: x + 150, y1: y + 40 };
-      if (!okRect({ x0: r.x0 - 4, y0: r.y0 - 8, x1: r.x1 + 4, y1: r.y1 + 8 })) continue;
-      slots.push({ kind: 'U', r, tag: [x, y + 2], elbow: [x + TAG_W / 2, y + 56], end: [x + TAG_W / 2, y + 21] });
-      slots.push({ kind: 'D', r, tag: [x, y + 2], elbow: [x + TAG_W / 2, y - 26], end: [x + TAG_W / 2, y + 2] });
-    }
+    for (let x = side.left + colW + 60; x + 60 <= W - side.right - colW - 60; x += 30) { add('I', 'L', x, y); add('I', 'R', x, y); }
   }
   const lenOf = (p, s) => Math.hypot(s.elbow[0] - p.anchor[0], s.elbow[1] - p.anchor[1]) + Math.hypot(s.end[0] - s.elbow[0], s.end[1] - s.elbow[1]);
-  const rectOf = (p, s) => { const w = labelW(p.label), h = wrap(p.label, WRAP).length > 1 ? 38 : 22; return s.kind === 'L' ? { x0: s.r.x1 - w, y0: s.r.y0, x1: s.r.x1, y1: s.r.y0 + h } : { x0: s.r.x0, y0: s.r.y0, x1: s.r.x0 + w, y1: s.r.y0 + h }; };
+  const rectOf = (p, s) => { const w = labelW(p.label), h = wrap(p.label, WRAP).length > 1 ? 38 : 22; return s.attach === 'R' ? { x0: s.r.x1 - w, y0: s.r.y0, x1: s.r.x1, y1: s.r.y0 + h } : { x0: s.r.x0, y0: s.r.y0, x1: s.r.x0 + w, y1: s.r.y0 + h }; };
   const segsOf = (p, s) => [[p.anchor, s.elbow], [s.elbow, s.end]];
   // the diagonal must head towards its slot (a leader never doubles back over its own label)
-  const valid = (p, s) => (s.kind === 'L' ? p.anchor[0] > s.elbow[0] : s.kind === 'R' ? p.anchor[0] < s.elbow[0] : s.kind === 'B' || s.kind === 'D' ? p.anchor[1] < s.elbow[1] : p.anchor[1] > s.elbow[1]);
-  const cost = parts.map((p) => slots.map((s) => { const L = lenOf(p, s); return !valid(p, s) || !okRect(rectOf(p, s)) ? 1e7 : L; }));
+  const valid = (p, s) => {
+    const r = rectOf(p, s);
+    if (segHitsRect(p.anchor, s.elbow, { x0: r.x0 - 3, y0: r.y0 - 3, x1: r.x1 + 3, y1: r.y1 + 3 })) return false; // never over its own label
+    const dx = Math.abs(p.anchor[0] - s.elbow[0]), dy = Math.abs(p.anchor[1] - s.elbow[1]);
+    if (s.attach === 'L' && p.anchor[0] > s.elbow[0] + 4 && dy < 50) return false; // the angled run must not double back
+    if (s.attach === 'R' && p.anchor[0] < s.elbow[0] - 4 && dy < 50) return false;
+    return dx + dy > 20;
+  };
+  const cost = parts.map((p) => slots.map((s) => { const L = lenOf(p, s); if (L > LEADER_MAX + 60) return 1e7; return !valid(p, s) || !okRect(rectOf(p, s)) ? 1e7 : L; }));
   const shr = (r) => ({ x0: r.x0 - 2, y0: r.y0 - 2, x1: r.x1 + 2, y1: r.y1 + 2 });
   // Interior U and D variants share a cell: never give one cell to two parts.
-  const cellOf = (j) => `${slots[j].r.x0},${slots[j].r.y0}`;
+  const cellOf = (j) => `${slots[j].tag[0]},${slots[j].tag[1]}`;
   // geometry cache per (part, slot)
-  const G = parts.map((p) => slots.map((sl) => { const r = rectOf(p, sl); return { r, rg: shr(r), s: segsOf(p, sl), inner: sl.kind === 'U' || sl.kind === 'D' }; }));
+  const G = parts.map((p) => slots.map((sl) => { const r = rectOf(p, sl); return { r, rg: shr(r), s: segsOf(p, sl) }; }));
   const badPair = (i, si, k, sk) => {
     if (si === sk || cellOf(si) === cellOf(sk)) return true;
     const A = G[i][si], Bq = G[k][sk], ra = A.r, rb = Bq.r;
+    const ki = slots[si].kind, kk = slots[sk].kind; // columns keep the parts' screen order (leaders fan out)
+    if (ki === kk && (ki === 'L' || ki === 'R') && (slots[si].r.y0 - slots[sk].r.y0) * (parts[i].anchor[1] - parts[k].anchor[1]) < 0) return true;
     if (!(ra.x1 + 10 < rb.x0 || rb.x1 + 10 < ra.x0 || ra.y1 + 4 < rb.y0 || rb.y1 + 4 < ra.y0)) return true;
     for (const [p1, p2] of A.s) { if (segHitsRect(p1, p2, Bq.rg)) return true; for (const [q1, q2] of Bq.s) if (segX(p1, p2, q1, q2)) return true; }
     for (const [q1, q2] of Bq.s) if (segHitsRect(q1, q2, A.rg)) return true;
@@ -826,7 +838,7 @@ function layoutCallouts(parts, { W, H, obstacles, reserved, side }) {
   const cand = parts.map((_, i) => slots.map((_, j) => j).filter((j) => cost[i][j] < 1e6));
   const own = (i, j) => { const L = lenOf(parts[i], slots[j]); return L + (L > LEADER_TARGET - 10 ? 40 * (L - LEADER_TARGET + 10) : 0) + (L > LEADER_MAX - 5 ? 400 * (L - LEADER_MAX + 5) : 0); };
   let best = null;
-  for (const [seed0, Wc] of [[555, 1e4], [31337, 1e4], [2024, 2e4], [777, 2e4], [8086, 1e4], [12345, 1e4], [4242, 1e4], [555, 1e4], [9001, 2e4], [1234, 1e4], [42, 2e4]]) {
+  for (const [seed0, Wc] of [[2024, 2e4], [31337, 1e4], [555, 1e4], [777, 2e4], [8086, 1e4], [12345, 1e4], [4242, 1e4], [555, 1e4], [9001, 2e4], [1234, 1e4], [42, 2e4]]) {
     let seed = seed0; const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
     const asg = hungarian(cost);
     const pairE = (i, j, k, jk) => (badPair(i, j, k, jk) ? Wc : 0);
@@ -949,7 +961,7 @@ function focusTarget(p) {
     el('path', { class: 'cw-bracket', d, fill: 'none', stroke: C.tealHi, 'stroke-width': 1.5, opacity: 0 }));
 }
 function callout(p) {
-  const num = String(p.num).padStart(2, '0'), s = p.slot, lines = wrap(p.label, WRAP), L = s.kind === 'L';
+  const num = String(p.num).padStart(2, '0'), s = p.slot, lines = wrap(p.label, WRAP), L = s.attach === 'R';
   const tx = L ? s.tag[0] - 8 : s.tag[0] + TAG_W + 8, ty = s.r.y0 + 16;
   const d = d2(p.leader);
   return el('g', { class: 'cw-callout', 'data-pn': p.pn, 'aria-hidden': 'true' },
@@ -979,14 +991,16 @@ function dimensions() {
     void m; labels.push({ a, b, dir, label, t });
   };
   const m = (v) => (v * MODEL_SCALE).toFixed(1);
-  // overall length along the belly (ground line under the centreline)
-  const gz = GROUND - 0.35;
-  line3('CONS', [[0, 0, FS(0.001, 0)[2]], [0, 0, gz - 0.3]]); line3('CONS', [[FL, 0, FS(FL - 0.01, 0)[2]], [FL, 0, gz - 0.3]]);
-  dimLine([0, 0, gz], [FL, 0, gz], `LENGTH ${m(FL)} m`, 0.17);
-  // span, tip to tip, aft of the trailing edges
-  const ys = WG.yt + 0.42, xs = wXle(WG.yt) + wC(WG.yt) + 2.4, zs = wZ(WG.yt);
-  for (const s of [-1, 1]) line3('CONS', [[wXle(WG.yt) + wC(WG.yt) + 0.3, s * ys, zs], [xs + 0.5, s * ys, zs]]);
-  dimLine([xs, -ys, zs], [xs, ys, zs], `SPAN ${m(2 * ys)} m`, 0.12);
+  // overall length: parallel to the fuselage, offset above the crown (only ghosted far-side lines lie behind it),
+  // with extension lines rising from the nose tip and the tail cone
+  const lz = RZ + 1.35, ly = 1.2;
+  line3('CONS', [[0, 0, FS(0.001, 0)[2]], [0, ly, lz + 0.3]]); line3('CONS', [[FL, 0, FS(FL - 0.01, 0)[2]], [FL, ly, lz + 0.3]]);
+  dimLine([0, ly, lz], [FL, ly, lz], `LENGTH ${m(FL)} m`, 0.3);
+  // near semi-span, along (and aft of) the near wing's trailing edge, from the centreline plane to the tip
+  const ys = WG.yt + 0.42, zs = wZ(WG.yt) - 0.1;
+  const xsOf = (y) => wXle(Math.max(y, WG.y0)) + wC(Math.max(y, WG.y0)) + 1.0;
+  line3('CONS', [[wXle(WG.yt) + wC(WG.yt) + 0.1, -ys, zs], [xsOf(WG.yt) + 0.5, -ys, zs]]);
+  dimLine([xsOf(WG.yt), -ys, zs], [xsOf(WG.yt), -RY, zs], `½ SPAN ${m(ys)} m`, 0.45);
   // height to the fin tip
   const tipZ = fPt(1, 0)[2], xh = FL + 0.9;
   line3('CONS', [[fPt(1, 1)[0], 0, tipZ], [xh + 0.4, 0, tipZ]]); line3('CONS', [[FL, 0, GROUND], [xh + 0.4, 0, GROUND]]);
@@ -1045,12 +1059,14 @@ function numberDots(parts, W, H) {
       const a = dots[i], b = dots[j]; let dx = b.x - a.x, dy = b.y - a.y; const d = Math.hypot(dx, dy) || 0.01;
       if (d < MIN) { const push = (MIN - d) / 2; dx /= d; dy /= d; a.x -= dx * push; a.y -= dy * push; b.x += dx * push; b.y += dy * push; }
     }
-    for (const dt of dots) { dt.x += (dt.p.anchor[0] + 18 - dt.x) * 0.02; dt.y += (dt.p.anchor[1] - 22 - dt.y) * 0.02; dt.x = Math.max(R + 2, Math.min(W - R - 2, dt.x)); dt.y = Math.max(R + 2, Math.min(H - R - 2, dt.y)); }
+    const pull = it < 300 ? 0.02 : 0; // last 100 rounds: pushes only, so no two badges overlap (≥ 2-unit gap)
+    for (const dt of dots) { dt.x += (dt.p.anchor[0] + 18 - dt.x) * pull; dt.y += (dt.p.anchor[1] - 22 - dt.y) * pull; dt.x = Math.max(R + 2, Math.min(W - R - 2, dt.x)); dt.y = Math.max(R + 2, Math.min(H - R - 2, dt.y)); }
   }
+  for (let i = 0; i < dots.length; i++) for (let j = i + 1; j < dots.length; j++) if (Math.hypot(dots[i].x - dots[j].x, dots[i].y - dots[j].y) < 2 * R + 1.5) throw new Error(`phone badges overlap: ${dots[i].p.pn} × ${dots[j].p.pn}`);
   // hit circles (≈ 32 px) sit underneath every visible dot, so a tap on a dot always picks that dot
   const hits = dots.map(({ p, x, y }) => el('circle', { class: 'cw-ndot-hit', 'data-pn': p.pn, cx: x, cy: y, r: 44, fill: 'transparent' })).join('');
   return el('g', { class: 'cw-ndot-hits', 'aria-hidden': 'true' }, hits) + dots.map(({ p, x, y }) => el('g', { class: 'cw-ndot', 'data-pn': p.pn, 'aria-hidden': 'true' },
-    el('line', { x1: p.anchor[0], y1: p.anchor[1], x2: x, y2: y, stroke: C.titanium, 'stroke-opacity': 0.7, 'stroke-width': 1.2 }),
+    el('line', { class: 'cw-tick', x1: p.anchor[0], y1: p.anchor[1], x2: x, y2: y, stroke: C.titanium, 'stroke-opacity': 0.75, 'stroke-width': 1.4 }),
     el('circle', { cx: x, cy: y, r: R, fill: C.midnight, stroke: TEAL, 'stroke-width': 1.8 }),
     el('text', { x, y: y + 8.5, 'text-anchor': 'middle', 'font-family': FONT_MONO, 'font-size': 25, 'font-weight': 600, fill: C.ice }, String(p.num).padStart(2, '0')))).join('');
 }
@@ -1063,9 +1079,9 @@ function build(mode) {
   let W = full ? 1600 : 1000, H = full ? 880 : 1000;
   for (const k of Object.keys(B)) delete B[k];
   HATCH.length = 0;
-  const box = full ? { x0: 225, y0: 24, x1: 1375, y1: 812 } : { x0: 20, y0: 30, x1: W - 46, y1: H - 8 };
+  const box = full ? { x0: 225, y0: 24, x1: 1375, y1: 812 } : { x0: 12, y0: 30, x1: W - 30, y1: H - 8 };
   const fb = fit(box);
-  if (!full) { OY += 26 - fb.y0; H = Math.ceil(fb.y1 - fb.y0 + 26 + 36); }
+  if (!full) { OY += 14 - fb.y0; H = Math.ceil(fb.y1 - fb.y0 + 14 + 22); }
 
   // far side
   drawWing(+1, full); drawTailplane(+1, full); drawNacelle(+1, full); drawMainGear(+1, false);
@@ -1078,7 +1094,7 @@ function build(mode) {
   const back = take('T5');
   const floorFill = full ? drawInterior() : '';
   if (!full) { drawNoseGear(); line3('T3', [[12.75, -1.7, -1.95], [16.3, -1.7, -1.95]]); }
-  const interior = take('T4', 'T3', 'PAN');
+  const interior = take('SEAT', 'T4', 'T3', 'PAN');
   if (full) drawNoseGear();
   const noseGear = full ? take('T1b', 'T3') : '';
   const front = take('T1b', 'T1', 'T2b', 'T2') ;
@@ -1102,7 +1118,7 @@ function build(mode) {
   let ordered = parts;
   if (full) {
     const dimBoxes = dims.specs.map(({ a, b, dir, label, t }) => { const m = [lerp(a[0], b[0], t), lerp(a[1], b[1], t)], hw = label.length * 4.3 + 12, ux = dir[0], uy = dir[1]; return [[m[0] - ux * hw - uy * 13, m[1] - uy * hw + ux * 13], [m[0] + ux * hw - uy * 13, m[1] + uy * hw + ux * 13], [m[0] + ux * hw + uy * 13, m[1] + uy * hw - ux * 13], [m[0] - ux * hw + uy * 13, m[1] - uy * hw - ux * 13]]; });
-    const obstacles = [...obstaclePolys(), ...dimBoxes, ...parts.map((p) => [[p.bb.x0, p.bb.y0], [p.bb.x1, p.bb.y0], [p.bb.x1, p.bb.y1], [p.bb.x0, p.bb.y1]])];
+    const obstacles = [...obstaclePolys(), ...dimBoxes, ...DIM_OBS, ...parts.map((p) => [[p.bb.x0, p.bb.y0], [p.bb.x1, p.bb.y0], [p.bb.x1, p.bb.y1], [p.bb.x0, p.bb.y1]])];
     const reserved = [{ x0: 0, y0: 0, x1: 640, y1: 160 }, { x0: 0, y0: 0, x1: CARD_RES.x1 + 8, y1: CARD_RES.y1 + 8 }];
     ordered = layoutCallouts(parts, { W, H, obstacles, reserved, side: { left: 14, right: 14, bottom: 6, colW: 196, top: 172, leftBottom: H - 56, rightBottom: H - 10, bottomLeft: 250, bottomRight: W - 14 - 196 - 12, topRow: 14, topLeft: 660, topRight: 1400 } });
     build.numbers = Object.fromEntries(ordered.map((p) => [p.pn, p.num]));
@@ -1127,7 +1143,7 @@ function build(mode) {
       el('g', { class: 'cw-frame' }, farSide, fus.fill, fus.glow || '', back, floorFill, interior, noseGear),
       systems,
       T(early),
-      el('g', { class: 'cw-frame' }, front, fusHatch, fin, nearTail), T(groupOf.tail),
+      el('g', { class: 'cw-frame' }, front, fusHatch, FIN_FILL, fin, nearTail), T(groupOf.tail),
       el('g', { class: 'cw-frame' }, nearWingFill, nearWing, wingHatch), T(groupOf.wing),
       el('g', { class: 'cw-frame' }, nacFill, nearNac, nacHatch), T(groupOf.nac),
       el('g', { class: 'cw-frame' }, nearGear), T(groupOf.gear)),

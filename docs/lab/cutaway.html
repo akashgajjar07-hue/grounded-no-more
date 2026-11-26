@@ -46,7 +46,8 @@
         fetch('../data/parts.json').then((r) => r.json()),
         fetch('../data/rotables.json').then((r) => r.json()),
       ]);
-      await mountCutaway(host, { parts: parts.parts, repair: rot.tat });
+      const cw = await mountCutaway(host, { parts: parts.parts, repair: rot.tat });
+      await cw.settled();
     } catch (err) {
       host.textContent = 'The cutaway could not load. Please reload the page.';
       console.error(err);

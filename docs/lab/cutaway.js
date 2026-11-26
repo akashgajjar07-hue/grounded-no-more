@@ -103,17 +103,25 @@ export async function mountCutaway(el, opts = {}) {
   const repByPn = new Map((repair || []).map((r) => [r.pn, r]));
   const facts = (pn) => partFacts(byPn.get(pn), repByPn.get(pn));
   const mq = matchMedia(mobileQuery);
-  let mode = null, cleanup = () => {};
+  let mode = null, cleanup = () => {}, token = 0, pending = Promise.resolve();
 
-  async function render() {
+  // Renders are serialised by a token: a layout switch while an SVG is still loading can never leave the host
+  // empty, and settled() resolves only when the drawing for the current layout is in the DOM.
+  function render() {
     const next = mq.matches ? 'simple' : 'full';
-    if (next === mode) return;
-    cleanup(); mode = next;
-    el.classList.add('cw-root');
-    el.innerHTML = '';
-    const svgText = await loadSVG(`${svgBase.replace(/\/?$/, '/')}${next === 'full' ? 'cutaway.svg' : 'cutaway-simple.svg'}`);
-    if (mode !== next) return;
-    cleanup = next === 'full' ? mountFull(svgText) : mountSimple(svgText);
+    if (next === mode && el.querySelector('svg.cw-svg')) return pending;
+    const my = ++token;
+    mode = next;
+    pending = (async () => {
+      const svgText = await loadSVG(`${svgBase.replace(/\/?$/, '/')}${next === 'full' ? 'cutaway.svg' : 'cutaway-simple.svg'}`);
+      if (my !== token) return;
+      cleanup();
+      el.classList.add('cw-root');
+      el.innerHTML = '';
+      el.dataset.mode = next;
+      cleanup = next === 'full' ? mountFull(svgText) : mountSimple(svgText);
+    })();
+    return pending;
   }
 
   function startDraw(svg) {
@@ -149,7 +157,6 @@ export async function mountCutaway(el, opts = {}) {
     const svgEl = stage.querySelector('svg');
     const svg = d3.select(svgEl);
     const dock = (svgEl.dataset.card || '14 14 372 396').split(' ').map(Number);
-    const conn = svgEl.querySelector('.cw-conn');
     const stopDraw = startDraw(svgEl);
     let active = null, pinned = false, lastPointer = 'mouse', hideT = null;
 
@@ -169,20 +176,6 @@ export async function mountCutaway(el, opts = {}) {
       card.style.width = `${Math.round(Math.min(330, b.x - a.x))}px`;
       card.style.maxHeight = `${Math.round(Math.max(220, b.y - a.y))}px`;
     }
-    function drawConnector(pn) {
-      const g = svgEl.querySelector(`.cw-part[data-pn="${pn}"]`);
-      if (!g || !conn) return;
-      const ax = +g.dataset.ax, ay = +g.dataset.ay;
-      // card edge in viewBox units (it may be shorter than the dock)
-      const m = svgEl.getScreenCTM().inverse(), r = card.getBoundingClientRect();
-      const pt = svgEl.createSVGPoint(); pt.x = r.right; pt.y = r.top + Math.min(r.height - 16, 40); const e = pt.matrixTransform(m);
-      pt.x = r.left + 40; pt.y = r.bottom; const e2 = pt.matrixTransform(m);
-      const fromBottom = ay > e2.y + 60 && ax < e.x + 120;
-      const s = fromBottom ? [e2.x, e2.y] : [e.x, e.y];
-      const mid = fromBottom ? [s[0], ay] : [s[0] + 24, s[1]];
-      conn.setAttribute('d', `M${s[0].toFixed(1)} ${s[1].toFixed(1)}L${mid[0].toFixed(1)} ${mid[1].toFixed(1)}L${ax} ${ay}`);
-      conn.setAttribute('opacity', '1');
-    }
     function show(pn, pin = false) {
       clearTimeout(hideT);
       const f = facts(pn);
@@ -198,7 +191,6 @@ export async function mountCutaway(el, opts = {}) {
       svg.selectAll('.cw-part, .cw-callout, .cw-focus').classed('is-active', function () { return this.dataset.pn === pn; });
       lightSystems(svgEl, pn);
       placeCard();
-      drawConnector(pn);
     }
     function hide(now = false) {
       clearTimeout(hideT);
@@ -207,7 +199,6 @@ export async function mountCutaway(el, opts = {}) {
         active = null; card.hidden = true; svgEl.classList.remove('has-active');
         svg.selectAll('.is-active').classed('is-active', false);
         lightSystems(svgEl, null);
-        if (conn) conn.setAttribute('opacity', '0');
       };
       if (now) go(); else hideT = setTimeout(go, 140);
     }
@@ -233,7 +224,7 @@ export async function mountCutaway(el, opts = {}) {
     const onKey = (e) => { if (e.key === 'Escape' && active) { pinned = false; hide(true); } };
     document.addEventListener('pointerdown', outside);
     document.addEventListener('keydown', onKey);
-    const onResize = () => { if (active) { placeCard(); drawConnector(active); } };
+    const onResize = () => { if (active) placeCard(); };
     window.addEventListener('resize', onResize);
     api.select = (pn) => show(pn, true);
     return () => { stopDraw && stopDraw(); document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', onKey); window.removeEventListener('resize', onResize); };
@@ -257,7 +248,7 @@ export async function mountCutaway(el, opts = {}) {
     const ns = 'http://www.w3.org/2000/svg';
     const marker = svg.append('g').attr('class', 'cw-marker').attr('aria-hidden', 'true').style('display', 'none');
     marker.append('circle').attr('class', 'cw-ring').attr('r', 34);
-    const IW = 330, IH = 200, IX = 10, IY = 10, Z = 2.5;
+    const IW = 320, IH = 190, IX = 22, IY = 22, Z = 2.5;
     const inset = svg.append('g').attr('class', 'cw-inset').attr('aria-hidden', 'true').style('display', 'none');
     const clipId = 'cw-inset-clip';
     svg.select('defs').append('clipPath').attr('id', clipId).append('rect').attr('x', IX).attr('y', IY).attr('width', IW).attr('height', IH).attr('rx', 8);
@@ -267,10 +258,19 @@ export async function mountCutaway(el, opts = {}) {
     use.setAttribute('href', '#cw-root-simple');
     insetView.node().appendChild(use);
     const insetRing = insetView.append('circle').attr('class', 'cw-ring').attr('r', 30);
+    inset.append('rect').attr('class', 'cw-inset-halo').attr('x', IX - 1.5).attr('y', IY - 1.5).attr('width', IW + 3).attr('height', IH + 3).attr('rx', 9);
     inset.append('rect').attr('class', 'cw-inset-frame').attr('x', IX).attr('y', IY).attr('width', IW).attr('height', IH).attr('rx', 8);
     const insetTag = inset.append('text').attr('class', 'cw-inset-t').attr('x', IX + 14).attr('y', IY + IH - 14);
 
-    const setFigH = () => el.style.setProperty('--cw-fig-h', `${Math.round(fig.getBoundingClientRect().height)}px`);
+    const caption = document.createElement('p');
+    caption.className = 'cw-caption';
+    caption.setAttribute('aria-hidden', 'true');
+    caption.textContent = 'Tap a number or a row';
+    fig.appendChild(caption);
+    // 44 CSS px tap circles: the radius is set in viewBox units from the rendered scale
+    const sizeHits = () => { const k = svgEl.getBoundingClientRect().width / vb.width; if (k > 0) svgEl.querySelectorAll('.cw-ndot-hit').forEach((c) => c.setAttribute('r', (22 / k).toFixed(1))); };
+    sizeHits();
+    const setFigH = () => { el.style.setProperty('--cw-fig-h', `${Math.round(fig.getBoundingClientRect().height)}px`); sizeHits(); };
     setFigH();
     const onResize = () => setFigH();
     window.addEventListener('resize', onResize);
@@ -286,6 +286,9 @@ export async function mountCutaway(el, opts = {}) {
         document.getElementById(b.getAttribute('aria-controls')).hidden = !on;
       });
       open = willOpen;
+      const zoneName = (ZONES.find(([z]) => z === (it && it.zone)) || [])[1];
+      caption.innerHTML = open && it ? `<span class="mono">${pad2(it.n)}</span> ${esc(zoneName || '')} · ${esc(it.label)}` : 'Tap a number or a row';
+      caption.classList.toggle('is-on', !!open);
       svg.selectAll('.cw-part, .cw-ndot').classed('is-active', function () { return this.dataset.pn === open; });
       svgEl.classList.toggle('has-active', !!open);
       lightSystems(svgEl, open);
@@ -333,7 +336,7 @@ export async function mountCutaway(el, opts = {}) {
     return () => { stopDraw && stopDraw(); window.removeEventListener('resize', onResize); };
   }
 
-  const api = { select: () => {}, destroy() { cleanup(); mq.removeEventListener('change', render); el.innerHTML = ''; el.classList.remove('cw-root'); } };
+  const api = { select: () => {}, settled: () => pending.then(() => (el.dataset.mode !== (mq.matches ? 'simple' : 'full') ? render() : null)), destroy() { cleanup(); mq.removeEventListener('change', render); el.innerHTML = ''; el.classList.remove('cw-root'); } };
   mq.addEventListener('change', render);
   await render();
   return api;

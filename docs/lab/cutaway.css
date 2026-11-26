@@ -89,6 +89,12 @@
 .cw-svg .cw-marker .cw-ring, .cw-svg .cw-inset .cw-ring { fill: none; stroke: #7FF3E6; stroke-width: 3; }
 .cw-svg .cw-inset-bg { fill: #09131F; }
 .cw-svg .cw-inset-frame { fill: none; stroke: #C47F52; stroke-width: 2; }
+.cw-svg .cw-inset-halo { fill: none; stroke: #09131F; stroke-width: 3; }
+.cw-svg .cw-inset, .cw-svg .cw-marker { pointer-events: none; }
+.cw-caption { margin: 4px 6px 2px; display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cw-caption::before { content: ''; flex: none; width: 3px; height: 11px; background: var(--c-copper); }
+.cw-caption.is-on { color: var(--text); }
+.cw-caption .mono { color: var(--primary); font-weight: 600; }
 .cw-svg .cw-inset-t { fill: #F2F6FA; font-family: var(--font-mono); font-size: 22px; font-weight: 600; }
 .cw-list { margin-top: 12px; display: grid; gap: 14px; }
 .cw-zone-h { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-family: var(--font-mono); font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
