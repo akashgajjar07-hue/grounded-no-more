@@ -1,0 +1,144 @@
+{
+ "mission": {
+  "js_bytes": 698524,
+  "view_js_bytes": 34317,
+  "json_bytes": 282528,
+  "total_bytes": 1271236,
+  "requests": 36,
+  "data_files": [
+   "actions.json",
+   "kpis.json",
+   "manifest.json",
+   "parts.json",
+   "policies.json",
+   "story.json"
+  ]
+ },
+ "parts": {
+  "js_bytes": 756126,
+  "view_js_bytes": 91919,
+  "json_bytes": 171033,
+  "total_bytes": 1254597,
+  "requests": 36,
+  "data_files": [
+   "demand_history.json",
+   "manifest.json",
+   "parts.json"
+  ]
+ },
+ "forecast": {
+  "js_bytes": 748711,
+  "view_js_bytes": 84504,
+  "json_bytes": 423783,
+  "total_bytes": 1434657,
+  "requests": 37,
+  "data_files": [
+   "demand_history.json",
+   "forecast.json",
+   "manifest.json",
+   "method.json",
+   "parts.json"
+  ]
+ },
+ "rotables": {
+  "js_bytes": 771501,
+  "view_js_bytes": 105169,
+  "json_bytes": 512912,
+  "total_bytes": 1532951,
+  "requests": 36,
+  "data_files": [
+   "manifest.json",
+   "method.json",
+   "network.json",
+   "parts.json",
+   "rotables.json"
+  ]
+ },
+ "network": {
+  "js_bytes": 746144,
+  "view_js_bytes": 64805,
+  "json_bytes": 533127,
+  "total_bytes": 1502823,
+  "requests": 35,
+  "data_files": [
+   "countries-110m.json",
+   "frontier.json",
+   "land-110m.json",
+   "manifest.json",
+   "network.json",
+   "policies.json"
+  ]
+ },
+ "capital": {
+  "js_bytes": 752345,
+  "view_js_bytes": 88138,
+  "json_bytes": 483973,
+  "total_bytes": 1489161,
+  "requests": 33,
+  "data_files": [
+   "frontier.json",
+   "manifest.json",
+   "parts.json",
+   "policies.json"
+  ]
+ },
+ "aog": {
+  "js_bytes": 734177,
+  "view_js_bytes": 69970,
+  "json_bytes": 199824,
+  "total_bytes": 1175057,
+  "requests": 30,
+  "data_files": [
+   "aog_lab.json",
+   "manifest.json"
+  ]
+ },
+ "actions": {
+  "js_bytes": 720160,
+  "view_js_bytes": 55953,
+  "json_bytes": 215516,
+  "total_bytes": 1174696,
+  "requests": 31,
+  "data_files": [
+   "actions.json",
+   "manifest.json",
+   "parts.json"
+  ]
+ },
+ "method": {
+  "js_bytes": 716178,
+  "view_js_bytes": 51971,
+  "json_bytes": 162704,
+  "total_bytes": 1119462,
+  "requests": 32,
+  "data_files": [
+   "kpis.json",
+   "manifest.json",
+   "method.json"
+  ]
+ },
+ "about": {
+  "js_bytes": 639273,
+  "view_js_bytes": 16540,
+  "json_bytes": 0,
+  "total_bytes": 862152,
+  "requests": 30,
+  "data_files": []
+ },
+ "glossary": {
+  "js_bytes": 625394,
+  "view_js_bytes": 8123,
+  "json_bytes": 0,
+  "total_bytes": 842675,
+  "requests": 25,
+  "data_files": []
+ },
+ "planner": {
+  "js_bytes": 644942,
+  "view_js_bytes": 22209,
+  "json_bytes": 0,
+  "total_bytes": 877992,
+  "requests": 30,
+  "data_files": []
+ }
+}

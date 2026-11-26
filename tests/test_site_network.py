@@ -41,7 +41,6 @@ def test_station_select_updates_url_and_replay_runs(site):
     b, base = site
     ctx, page, problems = open_route(b, base, "#/network", "1440")
     try:
-        # the chip row is a keyboard-only selector now (visually hidden until focused)
         btn = page.locator('.np-picker button[data-station="BOM"]')
         btn.focus()
         page.keyboard.press("Enter")
@@ -85,7 +84,7 @@ FRAME_JS = """async () => {
 
 @pytest.mark.parametrize("viewport", list(VIEWPORTS))
 def test_wave2_design_fixes(site, viewport):
-    """Design wave 2: headlines <= 90, <= 2 accents per chart, sub-labels without bullets, hidden chip row, stacked table."""
+    """Design wave 2: headlines <= 90, <= 2 accents per chart, sub-labels without bullets, visible chip row (v2.1), stacked table."""
     b, base = site
     ctx, page, problems = open_route(b, base, "#/network?station=BOM", viewport)
     try:
@@ -95,11 +94,10 @@ def test_wave2_design_fixes(site, viewport):
             assert len(f["accents"]) <= 2, f
         subs = page.eval_on_selector_all("svg.map-main .map-label-sub", "els => els.map(e => e.textContent)")
         assert all("●" not in t and "▲" not in t for t in subs), subs
-        # chip row is visually hidden until focus, then shown
+        # v2.1 addendum: the station chip row is visible (pointer + keyboard), not hidden until focus
         picker = page.locator(".np-picker")
-        assert picker.bounding_box()["width"] <= 2
-        page.locator('.np-picker button[data-station="AUH"]').focus()
         assert picker.bounding_box()["width"] > 40
+        assert page.locator(".np-picker button").count() == 7
         # no copper on the emergency encodings (legend, replay dots)
         legend = page.locator(".np-legend").inner_html().lower()
         assert "196, 127, 82" not in legend and "#c47f52" not in legend
@@ -232,5 +230,103 @@ def test_v21_readability_simple(site, viewport):
         r = page.evaluate("import('./js/lib/readability.js').then((R) => R.readability())")
         assert r["grade"] <= 9, r
         assert r["maxSentenceWords"] <= 25, r["longSentences"]
+    finally:
+        ctx.close()
+
+
+# ----------------------------------------------------------------------------- v2.1 addendum: keyboard walk
+KB_TARGETS_JS = r"""() => {
+  const vis = (e) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && !e.closest('[hidden], details:not([open]) > :not(summary), [inert]'); };
+  const sel = 'a[href], button:not([disabled]), input:not([type=hidden]):not([disabled]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+  return [...document.querySelectorAll('#view ' + sel.split(', ').join(', #view '))].filter(vis).filter((e) => e.tabIndex >= 0).length;
+}"""
+KB_STEP_JS = r"""() => {
+  const a = document.activeElement;
+  if (!a || a === document.body) return { where: 'body' };
+  const inView = !!a.closest('#view');
+  if (!window.__kbSeen) window.__kbSeen = [];
+  let order = 'ok';
+  const last = window.__kbSeen.at(-1);
+  if (inView && last && last.isConnected && (last.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_PRECEDING)) order = 'back';
+  if (inView) window.__kbSeen.push(a);
+  const cs = getComputedStyle(a);
+  const ring = cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0 || cs.boxShadow !== 'none' || a.matches('g, svg *');
+  return { where: inView ? 'view' : 'shell', order, ring, tag: a.tagName, label: (a.getAttribute('aria-label') || a.textContent || '').trim().slice(0, 40) };
+}"""
+
+
+def keyboard_walk(page, max_tabs=400):
+    """Tab from the top through the whole page: focus never lost to <body> after entering the view, view controls
+    visited in document order, every visible view control reached, focus ring visible, and the walk leaves the view
+    (no trap). Returns (visited_in_view, expected)."""
+    expected = page.evaluate(KB_TARGETS_JS)
+    page.evaluate("window.__kbSeen = []; document.activeElement?.blur(); window.scrollTo(0, 0)")
+    seen_view, left_after_view, problems = 0, False, []
+    for _ in range(max_tabs):
+        page.keyboard.press("Tab")
+        st = page.evaluate(KB_STEP_JS)
+        if st["where"] == "view":
+            seen_view += 1
+            if st["order"] == "back":
+                problems.append(f"focus moved backwards to {st['tag']} {st['label']}")
+            if not st["ring"]:
+                problems.append(f"no visible focus ring on {st['tag']} {st['label']}")
+        elif seen_view and st["where"] in ("shell", "body"):
+            left_after_view = True
+            break
+    unique = page.evaluate("new Set(window.__kbSeen).size")
+    assert left_after_view, "keyboard focus trapped inside the view"
+    assert not problems, problems[:5]
+    assert unique >= expected, f"Tab reached {unique} of {expected} view controls"
+    return unique, expected
+
+
+@pytest.mark.parametrize("viewport", list(VIEWPORTS))
+def test_v21_keyboard(site, viewport):
+    b, base = site
+    ctx, page, problems = open_route(b, base, "#/network", viewport)
+    try:
+        keyboard_walk(page, max_tabs=600)
+        # Enter on a map node selects it and opens the station drawer; Esc closes it and focus is not lost
+        node = page.locator('svg.map-main g[data-station="CAI"]')
+        node.focus()
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(400)
+        assert page.locator(".drawer.is-open").count() == 1
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(400)
+        assert page.locator(".drawer.is-open").count() == 0
+        assert page.evaluate("document.activeElement && document.activeElement !== document.body")
+        # metric radios work from the keyboard (Space)
+        r = page.locator('[data-story="network-policy"] [role="radio"][data-value="fill_rate"]')
+        r.focus()
+        page.keyboard.press(" ")
+        page.wait_for_timeout(400)
+        assert r.get_attribute("aria-checked") == "true" and "metric=fill_rate" in page.url
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+def test_v21_motion_metric_morph(site):
+    """The station comparison morphs between metrics: dots interpolate, the metric control gets a sliding thumb."""
+    b, base = site
+    ctx = b.new_context(viewport={"width": 1440, "height": 900}, reduced_motion="no-preference")
+    page = ctx.new_page()
+    try:
+        page.goto(f"{base}/index.html#/network")
+        page.wait_for_selector('html[data-ready="true"]', timeout=15000)
+        page.wait_for_timeout(1200)
+        assert page.locator('[data-story="network-policy"] .seg .seg-thumb').count() == 1
+        js = "() => [...document.querySelectorAll('[data-story=network-policy] .np-cmp-pt circle')].map((c) => +c.getAttribute('cx'))"
+        before = page.evaluate(js)
+        page.locator('[data-story="network-policy"] [role="radio"][data-value="fill_rate"]').click()
+        page.wait_for_timeout(60)
+        mid = page.evaluate(js)
+        page.wait_for_timeout(700)
+        after = page.evaluate(js)
+        assert len(before) == len(after) == len(mid)
+        moved = [i for i in range(len(after)) if abs(after[i] - before[i]) > 2]
+        assert moved and any(abs(mid[i] - after[i]) > 0.5 and abs(mid[i] - before[i]) > 0.5 for i in moved)
     finally:
         ctx.close()

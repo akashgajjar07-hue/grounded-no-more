@@ -1,0 +1,248 @@
+{
+ "route": "glossary",
+ "owner": "docs/js/views/glossary.js",
+ "problems": [],
+ "warnings": [],
+ "expected": 27,
+ "reached": 27,
+ "presses": 29,
+ "cycled": true,
+ "activation": [
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "dom-mutation"
+   ],
+   "ms": 56.5,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k10",
+    "returned_to_invoker": true
+   },
+   "control": "60-second tourS",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "chart-update"
+   ],
+   "ms": 122.4,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k10",
+    "returned_to_invoker": true
+   },
+   "control": "60-second tourS",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "chart-update"
+   ],
+   "ms": 67.6,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k17",
+    "returned_to_invoker": true
+   },
+   "control": "Story",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "chart-update"
+   ],
+   "ms": 158.4,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k17",
+    "returned_to_invoker": true
+   },
+   "control": "Story",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "modal",
+    "dom-mutation"
+   ],
+   "ms": 23.1,
+   "esc": {
+    "opened": [
+     "modal"
+    ],
+    "closed": true,
+    "focus": "k18",
+    "returned_to_invoker": true
+   },
+   "control": "Keyboard shortcuts",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "modal",
+    "dom-mutation"
+   ],
+   "ms": 122.8,
+   "esc": {
+    "opened": [
+     "modal"
+    ],
+    "closed": true,
+    "focus": "k18",
+    "returned_to_invoker": true
+   },
+   "control": "Keyboard shortcuts",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 4.5,
+   "control": "Downtime and urgency",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 50.1,
+   "control": "Parts",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 48.2,
+   "control": "Repair",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 29.8,
+   "control": "Stock and network",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 144.6,
+   "control": "Forecasting",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 4.4,
+   "control": "Plans and money",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 34.4,
+   "control": "Testing and results",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  }
+ ],
+ "shell": [
+  {
+   "what": "help modal (?)",
+   "ok": true,
+   "invoker": "Downtime and urgency",
+   "focus_after": {
+    "id": "k20",
+    "label": "Downtime and urgency"
+   },
+   "returned_to_invoker": true,
+   "note": ""
+  },
+  {
+   "what": "tour (rail button)",
+   "ok": true,
+   "invoker": "60-second tourS",
+   "focus_after": {
+    "id": "k10",
+    "label": "60-second tourS"
+   },
+   "returned_to_invoker": true,
+   "note": ""
+  },
+  {
+   "what": "nav rail (390 menu)",
+   "ok": true,
+   "invoker": "Open navigation",
+   "focus_after": {
+    "id": "k16",
+    "label": "Simple"
+   },
+   "returned_to_invoker": false,
+   "note": ""
+  }
+ ]
+}

@@ -99,6 +99,16 @@ export function countUpOnce(el, value, fmt = (v) => String(Math.round(v)), { key
  * A d3 transition carrying the motion tokens: chartTransition({duration: 'base'|'slow'|ms, ease: 'standard'|'enter'|'exit', delay, name}).
  * Use as sel.transition(chartTransition()) (shared timing) or chartTransition().… directly. Reduced motion → 0 ms.
  */
+/**
+ * Preferred: a transition created ON the selection (never inherits a document-level transition, so a newer
+ * transition elsewhere can't cancel its parent and throw "transition N not found" mid-navigation).
+ */
+export function tx(sel, { duration = 'base', ease = 'standard', delay = 0, name } = {}) {
+  const t = sel.transition(name).duration(dur(duration)).ease(EASE[ease] || EASE.standard);
+  return delay && !reducedMotion() ? t.delay(delay) : t;
+}
+
+/** @deprecated for inheritance (`sel.transition(chartTransition())`): use tx(sel) instead. */
 export function chartTransition({ duration = 'base', ease = 'standard', delay = 0, name } = {}) {
   const d3 = window.d3;
   const t = d3.transition(name).duration(dur(duration)).ease(EASE[ease] || EASE.standard);

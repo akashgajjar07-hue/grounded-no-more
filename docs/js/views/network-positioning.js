@@ -11,7 +11,9 @@
  *  4. Station table
  * Coordinates are REAL (OurAirports); everything else is SIMULATED. Numbers come from the JSON only.
  */
-import { h, icon, pageHead, card, provChip, pill, dataTable, drawer, intro3, scopeLine } from '../ui.js';
+import { h, icon, pageHead, card, provChip, pill, dataTable, drawer, intro3, scopeLine, slidingThumb } from '../ui.js';
+import { morphStore, morph, morphAxis, drawIn, liveDraw } from './forecast-lab/morph.js';
+import { MOTION } from '../lib/motion.js';
 import { term, termText } from '../lib/glossary.js';
 import { isSimple, byMode } from '../lib/mode.js';
 import { nameTag, displayName } from '../lib/names.js';
@@ -21,6 +23,7 @@ import { chartFrame, responsive, svgIn, axisBottom, directLabel, annotate, withT
 export const data = ['network', 'policies', 'frontier'];
 
 const d3 = () => window.d3;
+let MS = morphStore(); // v2.1 motion: previous mark positions per chart (reset each render)
 /** directLabel whose colour wins over the .gnm-label CSS fill. */
 const dl = (g, o) => directLabel(g, o).style('fill', o.color || null);
 const C = theme.color;
@@ -166,6 +169,7 @@ function splitLabel(n, p) {
 // ----------------------------------------------------------------------------- view
 export async function render(el, ctx) {
   loadCSS();
+  MS = morphStore();
   const { network: n, policies: p, frontier: F } = ctx.data;
   const stations = n.stations || [];
   // the recommended plan's network-level holdout result (frontier.json); per-station holdout exists only for P0/P1/P2
@@ -209,7 +213,7 @@ export async function render(el, ctx) {
   const maxUnits = Math.max(1, ...stations.map((s) => num(s.serviceable_units) ?? 0));
   const mapHost = h('div', { style: { minHeight: '260px' } });
   // keyboard selector for the map: visually hidden until it receives focus (the map nodes and the table select with the pointer)
-  const picker = h('div', { class: 'np-picker', role: 'group', 'aria-label': 'Select a station' });
+  const picker = h('div', { class: 'np-picker', role: 'group', 'aria-label': 'Select a station' }, h('span', { class: 'np-picker-k', 'aria-hidden': 'true' }, byMode('Airports', 'Stations')));
   stations.forEach((s) => {
     const rb = RISK[riskBand(s)];
     picker.append(h('button', { type: 'button', 'aria-pressed': String(s.station === selected), dataset: { station: s.station }, onclick: () => choose(s.station, true) },
@@ -278,6 +282,18 @@ export async function render(el, ctx) {
     label: 'Network map of Falcon Hub Airways (fictional) stations',
     // the hub's arcs leave to the west and east; its label block sits above-right, clear of them and of the Gulf outstations
     labelOffsets: hub ? { [hub.station]: [12, -30, 'start'] } : {},
+    // v2.1 addendum: each node gets an invisible, pointer-transparent frame centred on the node and enclosing its label
+    // and the hub's radar pulse. The node's box is then centred on the node (a click at its centre lands on the node,
+    // not on the land between node and label) and constant while the pulse animates. One getBBox per node per draw.
+    onDraw: ({ svg }) => {
+      svg.selectAll('g[data-station]').each(function () {
+        const g = d3().select(this);
+        g.select('rect.np-node-frame').remove();
+        const b = this.getBBox();
+        const hw = Math.max(30, Math.abs(b.x), Math.abs(b.x + b.width)), hh = Math.max(30, Math.abs(b.y), Math.abs(b.y + b.height));
+        g.insert('rect', ':first-child').attr('class', 'np-node-frame').attr('x', -hw).attr('y', -hh).attr('width', 2 * hw).attr('height', 2 * hh).attr('fill', 'none').attr('pointer-events', 'none');
+      });
+    },
   });
   cleanups.push(() => map.destroy());
   if (!alive) return () => {};
@@ -457,7 +473,7 @@ function renderReplay(host, n, map, byId, isAlive) {
   const sel = h('select', { class: 'select', 'aria-label': 'Choose a transfer to replay' }, events.map((e) => h('option', { value: String(e.i) }, `${fmtWeek(Math.floor(e.t_h / HPW))} · ${e.pn} · ${e.from}→${e.to} · ${e.kind}${e.planted ? ` · ${e.planted}` : ''}`)));
   sel.value = String(cur.i);
   const playBtn = h('button', { class: 'btn btn--primary btn--sm', type: 'button' }, icon('play'), 'Replay transfer');
-  const allBtn = h('button', { class: 'btn btn--sm', type: 'button' }, icon('route'), 'Replay all');
+  const allBtn = h('button', { class: 'btn btn--sm', type: 'button', 'aria-pressed': 'false' }, icon('route'), 'Replay all');
   const info = h('div', { class: 'np-event', role: 'status', 'aria-live': 'polite' });
   f.body.before(h('div', { class: 'np-replay-bar' }, sel, playBtn, allBtn));
   const strip = h('div', { class: 'np-strip' });
@@ -477,17 +493,20 @@ function renderReplay(host, n, map, byId, isAlive) {
       e.planted && !isSimple() ? h('span', { class: 'chip chip-mono' }, `Planted ${e.planted}`) : null,
       e.note ? h('span', { class: 'faint' }, e.note) : null].filter(Boolean));
   };
-  let busy = false;
+  // v2.1 addendum: controls stay live while a replay runs; a new request supersedes the running one (no disabled
+  // buttons that swallow clicks). The playing state shows on the buttons (aria-pressed) and the event panel.
+  let run = 0;
   const play = async (list) => {
-    if (busy) return;
-    busy = true; playBtn.disabled = true; allBtn.disabled = true;
+    const me = ++run;
+    host.classList.add('is-playing');
+    allBtn.setAttribute('aria-pressed', String(list.length > 1));
     for (const e of list) {
-      if (!isAlive()) break;
+      if (!isAlive() || me !== run) break;
       cur = e; sel.value = String(e.i); setInfo(e); markSel();
       map.select(e.to);
-      await map.animateTransfer(e.from, e.to, { kind: e.kind, duration: list.length > 1 ? 700 : 1400 });
+      await map.animateTransfer(e.from, e.to, { kind: e.kind, duration: list.length > 1 ? MOTION.slow + MOTION.base : MOTION.hero });
     }
-    busy = false; if (isAlive()) { playBtn.disabled = false; allBtn.disabled = false; }
+    if (me === run && isAlive()) { host.classList.remove('is-playing'); allBtn.setAttribute('aria-pressed', 'false'); }
   };
   playBtn.addEventListener('click', () => play([cur]));
   allBtn.addEventListener('click', () => play(events.slice().sort((a, b) => a.t_h - b.t_h)));
@@ -508,11 +527,19 @@ function renderReplay(host, n, map, byId, isAlive) {
     g.append('g').selectAll('line').data(dests).join('line').attr('x1', 0).attr('x2', iw).attr('y1', (d) => y(d) + y.bandwidth() / 2).attr('y2', (d) => y(d) + y.bandwidth() / 2).attr('stroke', C.line);
     g.append('g').selectAll('text').data(dests).join('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', -10).attr('y', (d) => y(d) + y.bandwidth() / 2).attr('dy', '0.32em').attr('text-anchor', 'end').text((d) => d);
     axisBottom(g.append('g'), x, { ticks: w < 480 ? 3 : 6, format: (v) => (t1 - t0 < 4 * HPW ? fmtHours(v) : fmtWeek(Math.floor(v / HPW))), height: dests.length * rowH });
-    const ev = g.append('g').selectAll('g').data(events).join('g').attr('class', 'np-ev').attr('transform', (e) => `translate(${x(e.t_h)},${y(e.to) + y.bandwidth() / 2})`)
+    // v2.1 addendum: transfers closer than one dot apart on the same row are nudged up / down, so every dot stays
+    // clickable on its own (they overlapped at 390 and one swallowed the other's clicks)
+    const nudge = new Map();
+    d3().groups(events, (e) => e.to).forEach(([, list]) => {
+      let lastX = -1e9, k = 0;
+      list.slice().sort((a, b) => a.t_h - b.t_h).forEach((e) => { const px = x(e.t_h); k = px - lastX < 14 ? k + 1 : 0; lastX = px; nudge.set(e, k ? (k % 2 ? -1 : 1) * Math.min(y.bandwidth() / 2, 9) : 0); });
+    });
+    const ev = g.append('g').selectAll('g').data(events).join('g').attr('class', 'np-ev').attr('transform', (e) => `translate(${x(e.t_h)},${y(e.to) + y.bandwidth() / 2 + nudge.get(e)})`)
       .attr('tabindex', 0).attr('role', 'button').attr('aria-label', (e) => `Replay ${e.kind} transfer of ${e.pn} from ${e.from} to ${e.to} in ${fmtWeek(Math.floor(e.t_h / HPW))}`);
-    ev.append('circle').attr('r', 12).attr('fill', 'transparent');
-    ev.append('circle').attr('class', 'np-ev-ring').attr('r', 8).attr('fill', 'none').attr('stroke', 'transparent');
+    ev.append('circle').attr('r', w < 520 ? 7 : 12).attr('fill', 'transparent');
+    ev.append('circle').attr('class', 'np-ev-ring').attr('r', 8).attr('fill', 'none').attr('stroke', 'transparent').attr('pointer-events', 'none');
     ev.append('circle').attr('r', (e) => (e.kind === 'emergency' ? 5 : 4)).attr('fill', (e) => (e.kind === 'emergency' ? SR.urgent : C.bg)).attr('stroke', (e) => (e.kind === 'emergency' ? SR.urgent : SR.neutral)).attr('stroke-width', 1.5);
+    drawIn(MS, 'replay', w, ev);
     ev.on('click', (evt, e) => play([e])).on('keydown', (evt, e) => { if (evt.key === 'Enter' || evt.key === ' ') { evt.preventDefault(); play([e]); } });
     withTooltip(ev, (e) => ({ title: `${e.pn} · ${e.from} → ${e.to}`, rows: [['When', fmtWeek(Math.floor(e.t_h / HPW))], ['Kind', e.kind], ...(e.aog_transport_h != null ? [['Transport', fmtHours(e.aog_transport_h)]] : [])], note: e.planted ? `Planted situation ${e.planted}` : 'Click to replay' }));
     markSel = () => ev.classed('is-sel', (e) => e === cur);
@@ -533,6 +560,7 @@ function renderCompare(host, n, p, stations, pcBy, ctx) {
   const order = stations.slice().sort((a, b) => (a.role === 'hub' ? -1 : b.role === 'hub' ? 1 : 0) || a.station.localeCompare(b.station));
   const f = chartFrame(host, { implication: byMode('The Network Plan cuts grounded time at the home base and other airports, without stocking every airport.', 'Network positioning cuts downtime at the hub and the outstations without stocking every station.'), headline: byMode('The three plans by airport', 'Policy comparison by station'), subtitle: byMode('the three plans', 'P0 / P1 / P2'), provenance: prov(n.meta), source: 'network.json → policy_compare' });
   const seg = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Metric' }, avail.map((m) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(m === mk), dataset: { value: m.key }, onclick: () => { mk = m; ctx.setParams({ metric: m.key }); seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.value === m.key))); draw(); } }, m.label)));
+  slidingThumb(seg);
   f.body.before(h('div', { class: 'np-metric-bar' }, seg),
     h('div', { class: 'np-key', 'aria-hidden': 'true' }, POLS.map((pol) => h('span', { class: `np-key-i is-${pol.toLowerCase()}` }, h('i', { style: { borderColor: POL_COLOR[pol], background: pol === 'P2' ? POL_COLOR[pol] : 'transparent' } }), pnS(pol), isSimple() ? null : h('span', { class: 'mono-tag' }, pol)))));
   f.body.after(scopeLine());
@@ -569,7 +597,7 @@ function renderCompare(host, n, p, stations, pcBy, ctx) {
     sub.title = sub.textContent;
     f.setTable([{ key: 'station', label: byMode('Airport', 'Station') }, { key: 'pol', label: byMode('Plan', 'Policy'), format: (c) => pn(c) }, { key: 'mean', label: 'Mean', num: true, format: mk.fmt }, { key: 'lo', label: 'CI lo', num: true, format: mk.fmt }, { key: 'hi', label: 'CI hi', num: true, format: mk.fmt }], rows.map((r) => ({ station: r.station, pol: r.pol, mean: r.m.mean, lo: r.m.lo, hi: r.m.hi })));
     stop?.();
-    stop = responsive(f.body, (w) => drawCompare(f.body, rows, order, mk, w));
+    stop = liveDraw(f.body, (w) => drawCompare(f.body, rows, order, mk, w));
   }
   draw();
   return () => stop?.();
@@ -593,7 +621,11 @@ function drawCompare(el, rows, order, mk, w) {
   const ticks = mk.key === 'aog_hours' ? x.ticks(narrow ? 3 : 5) : x.ticks(narrow ? 3 : 5);
   g.append('g').selectAll('line').data(ticks).join('line').attr('class', 'gnm-grid').attr('x1', (t) => x(t)).attr('x2', (t) => x(t)).attr('y1', 0).attr('y2', sts.length * rowH).attr('stroke', C.line).attr('stroke-dasharray', '2 4');
   const axG = g.append('g');
-  axisBottom(axG, x, { ticks: narrow ? 3 : 5, format: mk.fmt, height: sts.length * rowH });
+  // v2.1 motion: the axis transitions between metrics; a sqrt ↔ linear switch snaps (different scale types)
+  const sameKind = MS.get('cmp-x')?.kind === mk.key;
+  if (!sameKind) MS.delete('cmp-x');
+  morphAxis(MS, 'cmp-x', w, axG, x, (ga, sc) => axisBottom(ga, sc, { ticks: narrow ? 3 : 5, format: mk.fmt, height: sts.length * rowH }));
+  MS.get('cmp-x').kind = mk.key;
   // a square-root scale bunches the top ticks: drop any tick label (and its grid line) that would sit within 56 px of the previous one
   if (mk.key === 'aog_hours') {
     let last = -1e9;
@@ -602,9 +634,13 @@ function drawCompare(el, rows, order, mk, w) {
     g.selectAll('line.gnm-grid').filter((t) => !keep.has(t)).remove();
   }
   g.append('g').selectAll('text').data(sts).join('text').attr('class', 'gnm-label gnm-label--strong').attr('font-family', theme.font.mono).attr('x', -10).attr('y', (s) => y(s) + y.bandwidth() / 2).attr('dy', '0.32em').attr('text-anchor', 'end').text((s) => s);
-  const pts = g.append('g').selectAll('g').data(rows).join('g').attr('transform', (r) => `translate(0,${y(r.station) + y.bandwidth() / 2 + off[r.pol]})`);
-  pts.filter((r) => r.m.lo != null && r.m.hi != null).append('line').attr('x1', (r) => x(Math.max(x.domain()[0], r.m.lo))).attr('x2', (r) => x(r.m.hi)).attr('stroke', (r) => POL_COLOR[r.pol]).attr('stroke-width', 1.5).attr('stroke-opacity', 0.7);
-  pts.append('circle').attr('cx', (r) => x(r.m.mean)).attr('r', 4).attr('fill', (r) => (r.pol === 'P2' ? SR.neutral : C.bg)).attr('stroke', (r) => POL_COLOR[r.pol]).attr('stroke-width', 1.75);
+  const pts = g.append('g').selectAll('g').data(rows).join('g').attr('class', 'np-cmp-pt').attr('transform', (r) => `translate(0,${y(r.station) + y.bandwidth() / 2 + off[r.pol]})`);
+  const ciL = pts.filter((r) => r.m.lo != null && r.m.hi != null).append('line').attr('stroke', (r) => POL_COLOR[r.pol]).attr('stroke-width', 1.5).attr('stroke-opacity', 0.7);
+  const dots = pts.append('circle').attr('r', 4).attr('fill', (r) => (r.pol === 'P2' ? SR.neutral : C.bg)).attr('stroke', (r) => POL_COLOR[r.pol]).attr('stroke-width', 1.75);
+  // v2.1 motion: keyed by station × plan, values slide to the new metric (sqrt ↔ linear included), never from zero
+  const kf = (r) => `${r.station}:${r.pol}`;
+  morph(MS, 'cmp', w, ciL, kf, { x1: (r) => x(Math.max(x.domain()[0], r.m.lo)), x2: (r) => x(r.m.hi) });
+  morph(MS, 'cmp', w, dots, kf, { cx: (r) => x(r.m.mean) });
   withTooltip(pts, (r) => ({ title: `${pn(r.pol)} at ${r.station}`, rows: [[byMode('Average', 'Mean'), mk.fmt(r.m.mean)], [termText('ci', { cap: true }), r.m.lo != null ? `${mk.fmt(r.m.lo)} – ${mk.fmt(r.m.hi)}` : '—']] }));
   // direct labels: policy names on the first row, values on the right for the hub row (wide only)
   const first = sts[0];
@@ -666,6 +702,7 @@ function renderShare(host, n, p, stations, pcBy, hub) {
     const svg = svgIn(f.body, w, hgt, byMode('Hours grounded, home base versus other airports, by plan', 'AOG hours, hub versus outstations, by policy'));
     const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
     const x = d3().scaleLinear().domain([0, d3().max(rows, (r) => r.hub + r.out)]).range([0, iw]);
+    drawIn(MS, 'share', w, g);
     rows.forEach((r, i) => {
       const yy = i * rowH;
       // the plan name and its numbers sit on one line above the bar (no codes in Simple mode)

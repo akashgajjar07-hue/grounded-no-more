@@ -17,6 +17,7 @@ import { assetURL } from '../data.js';
 import { getMode, byMode } from '../lib/mode.js';
 import { displayName, nameTag, replaceCodes } from '../lib/names.js';
 import { term, termText } from '../lib/glossary.js';
+import { countUpOnce } from '../lib/motion.js';
 
 export const data = ['kpis', 'policies', 'parts', 'actions'];
 
@@ -51,9 +52,11 @@ function rankActions(list = []) {
 }
 
 /** Scroll the Results section into view (after the router has finished its own scroll reset). */
-function scrollToResults(smooth = true) {
-  const go = () => document.getElementById('results')?.scrollIntoView({ behavior: smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'auto', block: 'start' });
-  requestAnimationFrame(() => setTimeout(go, 30));
+function scrollToResults(user = true) {
+  // instant jump (smooth scrolling fought later clicks while still moving; motion stays transform/opacity only).
+  // A user action (onParams) jumps synchronously and moves focus there; after a render, wait for the router's scroll reset.
+  const go = () => { const t = document.getElementById('results'); if (!t) return; t.scrollIntoView({ block: 'start' }); if (user) t.focus?.({ preventScroll: true }); };
+  if (user) go(); else requestAnimationFrame(() => setTimeout(go, 30));
 }
 
 /** Same-route query change (#/mission ↔ #/mission?section=results): scroll instead of re-rendering. */
@@ -73,11 +76,13 @@ export async function render(el, ctx) {
   const ataName = Object.fromEntries((parts.ata_systems || []).map((a) => [a.ata, a.name]));
 
   // ================================================================ HERO (A1 verbatim, no result numbers)
+  // the hero button starts the tour already playing (story.json is fetched up front so the click is instant)
+  const storyP = ctx.load('story').catch((e) => { console.warn('story unavailable', e); return null; });
   const startTour = async () => {
-    try {
-      const s = await ctx.load('story');
-      storyMode({ steps: s.steps || [], navigate: ctx.navigate }).start();
-    } catch (e) { console.warn('story unavailable', e); }
+    const s = await storyP;
+    if (!s?.steps?.length) return;
+    const api = storyMode({ steps: s.steps, navigate: ctx.navigate }).start();
+    api?.play?.();
   };
   const toResults = (e) => { e.preventDefault(); ctx.setParams({ section: 'results' }); scrollToResults(); };
   const stats = (L.stats || []).filter((s) => num(s.value));
@@ -154,8 +159,31 @@ export async function render(el, ctx) {
         if (t) t.style.fontSize = `${Math.max(17, 11.5 * u)}px`;
       });
     };
-    sizeBadges();
-    const ro = new ResizeObserver(() => requestAnimationFrame(sizeBadges)); ro.observe(fig); cleanups.push(() => ro.disconnect());
+    // hit areas (audit): each zone gets a small invisible target at the centre of its on-screen box (thin outline
+    // zones were hollow there), then overlapping zones are re-stacked so every zone is the top element at its centre
+    const zones = [...svg.querySelectorAll('.ata-hotspot')];
+    const placeHits = () => {
+      zones.forEach((g) => {
+        g.querySelector('.hs-hit--c')?.remove();
+        const cr = g.getBoundingClientRect(), ctm = g.getScreenCTM();
+        if (!cr.width || !ctm) return;
+        const pt = svg.createSVGPoint(); pt.x = cr.left + cr.width / 2; pt.y = cr.top + cr.height / 2;
+        const c = pt.matrixTransform(ctm.inverse()), s = 4 / (Math.abs(ctm.a) || 1);
+        const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        Object.entries({ x: c.x - s / 2, y: c.y - s / 2, width: s, height: s, class: 'hs-hit hs-hit--c', fill: 'transparent' }).forEach(([k, v]) => r.setAttribute(k, v));
+        g.append(r);
+      });
+      const top = (g) => { const r = g.getBoundingClientRect(); const e = r.width ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null; return !e || !svg.contains(e) || e.closest('.ata-hotspot') === g; };
+      // smaller zones first on top, then fix any zone whose centre is still covered (bounded passes)
+      zones.slice().sort((x, y) => { const a = x.getBoundingClientRect(), b2 = y.getBoundingClientRect(); return b2.width * b2.height - a.width * a.height; }).forEach((g) => g.parentNode.append(g));
+      for (let pass = 0; pass < zones.length * 2; pass += 1) { const bad = zones.find((g) => !top(g)); if (!bad) break; bad.parentNode.append(bad); }
+    };
+    // re-stacking needs the drawing on screen (hit testing), so it also runs whenever the drawing comes fully into view
+    const refresh = () => { sizeBadges(); placeHits(); };
+    requestAnimationFrame(refresh);
+    const ro = new ResizeObserver(() => requestAnimationFrame(refresh)); ro.observe(fig); cleanups.push(() => ro.disconnect());
+    const vis = new IntersectionObserver((ents) => { if (ents.some((e) => e.intersectionRatio > 0.98)) placeHits(); }, { threshold: [0.99] });
+    vis.observe(fig); cleanups.push(() => vis.disconnect());
   }).catch(() => fig.replaceChildren(h('p', { class: 'faint t-12' }, 'Aircraft drawing unavailable.')));
 
   // ================================================================ RESULTS
@@ -224,6 +252,7 @@ export async function render(el, ctx) {
 }
 
 // ------------------------------------------------------------------ the four plans
+let barsDrawn = false;   // the bars draw in once per page session, not on every mode re-render
 function plansChart(host, policies) {
   const P = policies.policies || [];
   const expert = getMode() === 'expert';
@@ -246,7 +275,8 @@ function plansChart(host, policies) {
   if (!rows.length) { f.body.append(h('p', { class: 'faint t-14' }, 'Not run.')); return; }
   const max = Math.max(...rows.map((r) => (expert ? r.hi : r.value))) * 1.04;
   const pc = (v) => `${Math.max(0, Math.min(100, (v / max) * 100))}%`;
-  f.body.append(h('ul', { class: 'mc-bars list-reset', role: 'list', 'aria-label': 'Hours waiting for parts per year, by plan' },
+  const draw = !barsDrawn; barsDrawn = true;
+  f.body.append(h('ul', { class: `mc-bars list-reset${draw ? ' is-drawing' : ''}`, role: 'list', 'aria-label': 'Hours waiting for parts per year, by plan' },
     rows.map((r) => h('li', { class: `mc-bar is-${r.id === 'P2' ? 'core' : r.id === 'P0' ? 'base' : 'ctx'}`, dataset: { code: r.id } },
       h('span', { class: 'mc-bar-name' }, nameTag(r.id)),
       h('span', { class: 'mc-bar-track', 'aria-hidden': 'true' },
@@ -271,6 +301,20 @@ function kpiCard(k, kpis) {
     { format: fmt, deltaFormat: dfmt, deltaTone: /fill/.test(k.id) ? 'neutral' : 'auto' });
   tile.dataset.kpi = k.id;
   tile.querySelector('.kpi-spark')?.remove();
+  // count the value up once per session (600 ms); re-renders print the final value straight away
+  const vEl = tile.querySelector('.kpi-value'), t0 = vEl?.firstChild;
+  if (t0?.nodeType === 3 && num(k.value)) {
+    const numOnly = (v) => String(fmt(v)).replace(/\s?(h|%)$/, '');
+    const span = h('span', { class: 'mc-kpi-num' }, t0.nodeValue);
+    t0.replaceWith(span);
+    // first view = when the tile scrolls into sight (the Results section starts below the fold)
+    const io = new IntersectionObserver((ents) => {
+      if (!ents.some((e) => e.isIntersecting)) return;
+      io.disconnect();
+      countUpOnce(span, k.value, numOnly, { key: `mission-kpi-${k.id}` });
+    }, { threshold: 0.6 });
+    requestAnimationFrame(() => (span.isConnected ? io.observe(span) : io.disconnect()));
+  }
   const plan = h('div', { class: 'mc-kpi-plan' }, nameTag(kpis.core_id || 'P2', { mode: 'short' }));
   tile.querySelector('.kpi-value')?.before(plan);
   const foot = tile.querySelectorAll('.kpi-foot > span');

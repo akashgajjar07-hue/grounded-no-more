@@ -1,0 +1,325 @@
+{
+ "route": "aog",
+ "owner": "docs/js/views/aog-response-lab.js",
+ "problems": [],
+ "warnings": [],
+ "expected": 39,
+ "reached": 39,
+ "presses": 41,
+ "cycled": true,
+ "activation": [
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "dom-mutation"
+   ],
+   "ms": 251.8,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k10",
+    "returned_to_invoker": true
+   },
+   "control": "60-second tourS",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "dom-mutation"
+   ],
+   "ms": 14.9,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k10",
+    "returned_to_invoker": true
+   },
+   "control": "60-second tourS",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "dom-mutation"
+   ],
+   "ms": 8.8,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k17",
+    "returned_to_invoker": true
+   },
+   "control": "Story",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "chart-update"
+   ],
+   "ms": 345.9,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k17",
+    "returned_to_invoker": true
+   },
+   "control": "Story",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "modal",
+    "dom-mutation"
+   ],
+   "ms": 9.6,
+   "esc": {
+    "opened": [
+     "modal"
+    ],
+    "closed": true,
+    "focus": "k18",
+    "returned_to_invoker": true
+   },
+   "control": "Keyboard shortcuts",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "modal",
+    "dom-mutation"
+   ],
+   "ms": 34.5,
+   "esc": {
+    "opened": [
+     "modal"
+    ],
+    "closed": true,
+    "focus": "k18",
+    "returned_to_invoker": true
+   },
+   "control": "Keyboard shortcuts",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 16.1,
+   "control": "hours planes sat grounded waiting for a part (material AOG h",
+   "tag": "span",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 4.1,
+   "control": "borrowing a part from another of our aircraft (robbery)",
+   "tag": "span",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 14.7,
+   "control": "Must be fixed before the next flight (D0)",
+   "tag": "span",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 36.2,
+   "control": "Event log · 10 steps, each with its record",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 20.0,
+   "control": "Event log · 10 steps, each with its record",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 89.1,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 12.0,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 29.3,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 16.4,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 11.4,
+   "control": "Not available (6)No contract, not possible at the time, or a",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 56.3,
+   "control": "Not available (6)No contract, not possible at the time, or a",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 18.9,
+   "control": "borrowing a part from another of our aircraft (robbery)",
+   "tag": "span",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 93.3,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 60.6,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  }
+ ],
+ "shell": [
+  {
+   "what": "help modal (?)",
+   "ok": true,
+   "invoker": "AOG-0001D0GN-32-R014Nose wheel steering ",
+   "focus_after": {
+    "id": "k21",
+    "label": "AOG-0001D0GN-32-R014Nose wheel steering actuator ("
+   },
+   "returned_to_invoker": true,
+   "note": ""
+  },
+  {
+   "what": "tour (rail button)",
+   "ok": true,
+   "invoker": "60-second tourS",
+   "focus_after": {
+    "id": "k10",
+    "label": "60-second tourS"
+   },
+   "returned_to_invoker": true,
+   "note": ""
+  },
+  {
+   "what": "nav rail (390 menu)",
+   "ok": true,
+   "invoker": "Open navigation",
+   "focus_after": {
+    "id": "k16",
+    "label": "Simple"
+   },
+   "returned_to_invoker": false,
+   "note": ""
+  }
+ ]
+}

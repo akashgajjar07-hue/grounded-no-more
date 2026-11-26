@@ -51,7 +51,19 @@ export async function render(el, ctx) {
     autocomplete: 'off', spellcheck: 'false', 'aria-controls': 'gl-list', 'aria-describedby': 'gl-count',
   });
   const count = h('p', { class: 'gl-count', id: 'gl-count', role: 'status', 'aria-live': 'polite' });
-  const jumps = h('nav', { class: 'gl-jumps', 'aria-label': 'Glossary groups' }, cats.map((c) => h('a', { class: 'chip gl-jump', href: `#${slug(c)}`, dataset: { cat: c }, onclick: (ev) => { ev.preventDefault(); document.getElementById(slug(c))?.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }, c)));
+  const jumps = h('nav', { class: 'gl-jumps', 'aria-label': 'Glossary groups' }, cats.map((c) => h('a', { class: 'chip gl-jump', href: `#${slug(c)}`, dataset: { cat: c }, onclick: (ev) => { ev.preventDefault(); jumpTo(c, ev.currentTarget); } }, c)));
+  /** Jump to a group: mark the chip current, highlight the group briefly and move focus to its heading (keyboard). */
+  function jumpTo(c, chip) {
+    jumps.querySelectorAll('.gl-jump').forEach((a) => a.removeAttribute('aria-current'));
+    chip.setAttribute('aria-current', 'true');
+    const sec = document.getElementById(slug(c));
+    if (!sec) return;
+    list.querySelectorAll('.gl-group.is-jumped').forEach((g) => g.classList.remove('is-jumped'));
+    sec.classList.add('is-jumped');
+    // instant jump (a smooth scroll leaves the chip row moving under the pointer); the group highlight fades in instead
+    sec.scrollIntoView({ block: 'start' });
+    sec.querySelector('.gl-group-title')?.focus({ preventScroll: true });
+  }
   el.append(h('section', { class: 'card gl-tools' },
     h('label', { class: 'gl-search-label', for: 'gl-search' }, icon('filter'), byMode('Find a word', 'Find a term')),
     input, count, jumps));
@@ -63,7 +75,7 @@ export async function render(el, ctx) {
   cats.forEach((c) => {
     const group = entries.filter((e) => e.category === c);
     const sec = h('section', { class: 'card gl-group', id: slug(c), 'aria-labelledby': `${slug(c)}-h` },
-      h('h2', { class: 'gl-group-title', id: `${slug(c)}-h` }, c, h('span', { class: 'gl-group-n' }, String(group.length))));
+      h('h2', { class: 'gl-group-title', id: `${slug(c)}-h`, tabindex: '-1' }, c, h('span', { class: 'gl-group-n' }, String(group.length))));
     const dl = h('div', { class: 'gl-entries' });
     group.forEach((e) => {
       const lead = S ? cap1(e.simple) : e.expert;

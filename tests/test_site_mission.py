@@ -181,3 +181,37 @@ def test_story_overlay_keyboard(site, browser, vp):  # noqa: F811
         assert not [p for p in problems if "pageerror" in p], problems
     finally:
         ctx.close()
+
+
+def test_hero_tour_starts_playing(site, browser):  # noqa: F811
+    """Addendum: the hero's 60-second tour opens already in Play mode, visibly within 1 s."""
+    ctx, page, problems = open_page(browser, site + "#/mission", "1440")
+    try:
+        page.evaluate("window.__gnmTourStepMs = 60000")
+        page.locator('[data-story="mission-start"]').click()
+        page.wait_for_function("window.__gnmStory && window.__gnmStory.state().playing && document.querySelector('.story-play')?.getAttribute('aria-pressed') === 'true'", timeout=1000)
+        page.keyboard.press("Escape")
+        page.wait_for_function("!document.querySelector('.story')")
+        assert not [p for p in problems if "pageerror" in p], problems
+    finally:
+        ctx.close()
+
+
+def test_kpi_count_up_once(site, browser):  # noqa: F811
+    """Addendum: KPI values count up once per session; a mode re-render prints the final value at once."""
+    ctx, page, problems = open_page(browser, site + "#/mission", "1440", reduced=False)
+    try:
+        k = {x["id"]: x for x in KPIS["kpis"]}["aog_hours"]
+        sel = '[data-kpi="aog_hours"] .mc-kpi-num'
+        page.locator(sel).scroll_into_view_if_needed()
+        page.wait_for_function(f"document.querySelector('{sel}').dataset.counting === 'true'", timeout=2000)
+        page.wait_for_function(f"!document.querySelector('{sel}').dataset.counting", timeout=3000)
+        assert page.locator(sel).inner_text().strip() == f"{round(k['value']):,}"
+        page.evaluate("import('./js/lib/mode.js').then(m => m.setMode('expert'))")
+        page.wait_for_function("document.body.classList.contains('mode-expert') && document.documentElement.dataset.ready === 'true'")
+        page.wait_for_timeout(50)
+        assert page.evaluate(f"!document.querySelector('{sel}').dataset.counting")
+        assert page.locator(sel).inner_text().strip() == f"{round(k['value']):,}"
+        assert not problems, problems
+    finally:
+        ctx.close()

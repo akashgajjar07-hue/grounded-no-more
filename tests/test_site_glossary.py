@@ -104,3 +104,70 @@ def test_glossary_readability_simple(site, browser, vp):  # noqa: F811
         assert r["maxSentenceWords"] <= 25, r["longSentences"]
     finally:
         ctx.close()
+
+
+# ----------------------------------------------------------------------------- v2.1 addendum: keyboard walk
+KB_TARGETS_JS = r"""() => {
+  const vis = (e) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && !e.closest('[hidden], details:not([open]) > :not(summary), [inert]'); };
+  const sel = 'a[href], button:not([disabled]), input:not([type=hidden]):not([disabled]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+  return [...document.querySelectorAll('#view ' + sel.split(', ').join(', #view '))].filter(vis).filter((e) => e.tabIndex >= 0).length;
+}"""
+KB_STEP_JS = r"""() => {
+  const a = document.activeElement;
+  if (!a || a === document.body) return { where: 'body' };
+  const inView = !!a.closest('#view');
+  if (!window.__kbSeen) window.__kbSeen = [];
+  let order = 'ok';
+  const last = window.__kbSeen.at(-1);
+  if (inView && last && last.isConnected && (last.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_PRECEDING)) order = 'back';
+  if (inView) window.__kbSeen.push(a);
+  const cs = getComputedStyle(a);
+  const ring = cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0 || cs.boxShadow !== 'none' || a.matches('g, svg *');
+  return { where: inView ? 'view' : 'shell', order, ring, tag: a.tagName, label: (a.getAttribute('aria-label') || a.textContent || '').trim().slice(0, 40) };
+}"""
+
+
+def keyboard_walk(page, max_tabs=400):
+    """Tab from the top through the whole page: focus never lost to <body> after entering the view, view controls
+    visited in document order, every visible view control reached, focus ring visible, and the walk leaves the view
+    (no trap). Returns (visited_in_view, expected)."""
+    expected = page.evaluate(KB_TARGETS_JS)
+    page.evaluate("window.__kbSeen = []; document.activeElement?.blur(); window.scrollTo(0, 0)")
+    seen_view, left_after_view, problems = 0, False, []
+    for _ in range(max_tabs):
+        page.keyboard.press("Tab")
+        st = page.evaluate(KB_STEP_JS)
+        if st["where"] == "view":
+            seen_view += 1
+            if st["order"] == "back":
+                problems.append(f"focus moved backwards to {st['tag']} {st['label']}")
+            if not st["ring"]:
+                problems.append(f"no visible focus ring on {st['tag']} {st['label']}")
+        elif seen_view and st["where"] in ("shell", "body"):
+            left_after_view = True
+            break
+    unique = page.evaluate("new Set(window.__kbSeen).size")
+    assert left_after_view, "keyboard focus trapped inside the view"
+    assert not problems, problems[:5]
+    assert unique >= expected, f"Tab reached {unique} of {expected} view controls"
+    return unique, expected
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_glossary_keyboard(site, browser, vp):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/glossary", vp)
+    try:
+        keyboard_walk(page)
+        chip = page.locator('.gl-jump[data-cat="Repair"]')
+        chip.focus()
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(300)
+        assert chip.get_attribute("aria-current") == "true"
+        assert page.evaluate("document.activeElement.classList.contains('gl-group-title')")
+        page.locator("#gl-search").focus()
+        page.keyboard.type("tat")
+        page.keyboard.press("Escape")
+        assert page.locator("#gl-search").input_value() == ""
+        assert not problems, problems
+    finally:
+        ctx.close()

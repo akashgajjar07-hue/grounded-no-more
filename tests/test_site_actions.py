@@ -212,3 +212,69 @@ def test_v21_csv_unchanged_in_simple(site, browser):  # noqa: F811
         assert not problems, problems
     finally:
         ctx.close()
+
+
+# ---- v2.1 addendum: keyboard and motion
+def test_v21_actions_keyboard(site, browser):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/actions", "1440")
+    try:
+        # chart rows are focusable buttons: Enter filters, Space toggles back
+        row = page.locator("g.pac-trow").first
+        row.focus()
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(200)
+        assert "type=" in page.url
+        page.locator("g.pac-trow").first.focus()
+        page.keyboard.press(" ")
+        page.wait_for_timeout(200)
+        assert "type=" not in page.url
+        # Tab walks forward through controls without getting stuck; focus stays in the document
+        page.locator('[data-action="export-csv"]').focus()
+        seen = []
+        for _ in range(12):
+            page.keyboard.press("Tab")
+            seen.append(page.evaluate("document.activeElement && (document.activeElement.id || document.activeElement.className || document.activeElement.tagName)"))
+        assert len(set(seen)) > 4 and "BODY" not in seen, seen
+        # an inbox row opens with Enter, Esc closes and focus returns to a real element
+        btn = page.locator(".pac-row").first
+        btn.focus()
+        page.keyboard.press("Enter")
+        page.locator(".drawer.is-open").wait_for()
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(400)
+        assert page.locator(".drawer.is-open").count() == 0
+        assert page.evaluate("document.activeElement !== document.body")
+        # walkthrough Next works from the keyboard
+        nxt = page.locator('[data-story="action-walkthrough"] button', has_text="Next")
+        nxt.focus()
+        page.keyboard.press("Enter")
+        assert "02 /" in page.locator(".pac-walk-step").inner_text()
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+def test_v21_actions_chart_keyed_update(site, browser):  # noqa: F811
+    """Filtering keeps the same SVG nodes (keyed join, no redraw from zero)."""
+    ctx, page, problems = open_page(browser, site + "#/actions", "1440")
+    try:
+        page.evaluate("window.__seg = document.querySelector('rect.pac-tseg')")
+        page.locator("g.pac-trow").nth(1).click()
+        page.wait_for_timeout(400)
+        assert page.evaluate("document.contains(window.__seg)")
+        assert page.evaluate("[...document.querySelectorAll('g.pac-trow')].length") == len({a['type'] for a in A})
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_v21_actions_chart_bars_visible(site, browser, vp):  # noqa: F811
+    """The draw-in must finish: every bar ends at full scale (an interrupted transition once left them at scaleX(0))."""
+    ctx, page, problems = open_page(browser, site + "#/actions", vp)
+    try:
+        widths = page.evaluate("[...document.querySelectorAll('rect.pac-tseg')].map((r) => r.getBoundingClientRect().width)")
+        assert widths and min(widths) > 0.5, widths
+        assert not problems, problems
+    finally:
+        ctx.close()

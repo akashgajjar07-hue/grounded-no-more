@@ -1,0 +1,901 @@
+{
+ "routes_chromium": {
+  "rows": [
+   {
+    "route": "mission",
+    "owner": "docs/js/views/mission-control.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "parts",
+    "owner": "docs/js/views/parts-intelligence.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "forecast",
+    "owner": "docs/js/views/forecast-lab.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "rotables",
+    "owner": "docs/js/views/rotable-repair.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "network",
+    "owner": "docs/js/views/network-positioning.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "capital",
+    "owner": "docs/js/views/capital-optimiser.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "aog",
+    "owner": "docs/js/views/aog-response-lab.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "actions",
+    "owner": "docs/js/views/planner-action-centre.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "method",
+    "owner": "docs/js/views/data-method.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "about",
+    "owner": "docs/js/views/about.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "glossary",
+    "owner": "docs/js/views/glossary.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "planner",
+    "owner": "docs/js/views/planner.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "mission?section=results",
+    "owner": "docs/js/views/mission-control.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "parts?pn=GN-21-R001",
+    "owner": "docs/js/views/parts-intelligence.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "parts?ata=32",
+    "owner": "docs/js/views/parts-intelligence.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "forecast?pn=GN-21-R001",
+    "owner": "docs/js/views/forecast-lab.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "rotables?pn=GN-21-R001",
+    "owner": "docs/js/views/rotable-repair.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "rotables?view=outstation",
+    "owner": "docs/js/views/rotable-repair.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "network?station=LHR",
+    "owner": "docs/js/views/network-positioning.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "capital?view=selection&point=I125",
+    "owner": "docs/js/views/capital-optimiser.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "aog?incident=AOG-0001",
+    "owner": "docs/js/views/aog-response-lab.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "actions?id=EX-103-001",
+    "owner": "docs/js/views/planner-action-centre.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "actions?severity=urgent",
+    "owner": "docs/js/views/planner-action-centre.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "glossary?term=tat",
+    "owner": "docs/js/views/glossary.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "about?section=mro",
+    "owner": "docs/js/views/about.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "method?section=next",
+    "owner": "docs/js/views/data-method.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   }
+  ],
+  "problems": []
+ },
+ "generated": "2026-11-26T19:08:46",
+ "routes_webkit": {
+  "rows": [
+   {
+    "route": "mission",
+    "owner": "docs/js/views/mission-control.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "parts",
+    "owner": "docs/js/views/parts-intelligence.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "forecast",
+    "owner": "docs/js/views/forecast-lab.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "rotables",
+    "owner": "docs/js/views/rotable-repair.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "network",
+    "owner": "docs/js/views/network-positioning.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "capital",
+    "owner": "docs/js/views/capital-optimiser.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "aog",
+    "owner": "docs/js/views/aog-response-lab.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "actions",
+    "owner": "docs/js/views/planner-action-centre.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "method",
+    "owner": "docs/js/views/data-method.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "about",
+    "owner": "docs/js/views/about.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "glossary",
+    "owner": "docs/js/views/glossary.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "planner",
+    "owner": "docs/js/views/planner.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "mission?section=results",
+    "owner": "docs/js/views/mission-control.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "parts?pn=GN-21-R001",
+    "owner": "docs/js/views/parts-intelligence.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "parts?ata=32",
+    "owner": "docs/js/views/parts-intelligence.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "forecast?pn=GN-21-R001",
+    "owner": "docs/js/views/forecast-lab.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "rotables?pn=GN-21-R001",
+    "owner": "docs/js/views/rotable-repair.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "rotables?view=outstation",
+    "owner": "docs/js/views/rotable-repair.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "network?station=LHR",
+    "owner": "docs/js/views/network-positioning.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "capital?view=selection&point=I125",
+    "owner": "docs/js/views/capital-optimiser.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "aog?incident=AOG-0001",
+    "owner": "docs/js/views/aog-response-lab.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "actions?id=EX-103-001",
+    "owner": "docs/js/views/planner-action-centre.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "actions?severity=urgent",
+    "owner": "docs/js/views/planner-action-centre.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "glossary?term=tat",
+    "owner": "docs/js/views/glossary.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "about?section=mro",
+    "owner": "docs/js/views/about.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   },
+   {
+    "route": "method?section=next",
+    "owner": "docs/js/views/data-method.js",
+    "load": "ok",
+    "reload": "ok",
+    "cold": "ok"
+   }
+  ],
+  "problems": []
+ },
+ "internal_links": {
+  "checked": [
+   {
+    "href": "#/about",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/about?section=mro",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/about?section=next-experiments",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/about?section=real-data",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/actions",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/actions?id=EX-103-001",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/actions?id=EX-103-002",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/actions?id=EX-103-003",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/actions?id=EX-103-006",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/actions?id=EX-103-009",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/actions?id=EX-103-024",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/aog",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/capital",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/forecast",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/forecast?class=intermittent&part=R&pn=GN-21-R001",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/glossary",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/method",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/mission",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/mission?section=results",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/network",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/network?station=AUH",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?ata=21",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?ata=24",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?ata=27",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?ata=29",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?ata=32&pn=GN-32-R014",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?ata=34",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?ata=36",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?ata=49",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?pn=GN-20-C038",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?pn=GN-21-E001",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?pn=GN-21-R001",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?pn=GN-27-R009",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?pn=GN-29-R012",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?pn=GN-30-C016",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?pn=GN-32-C008",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?pn=GN-32-C029",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?pn=GN-35-E032",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?pn=GN-36-C012",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?pn=GN-49-C014",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?pn=GN-49-C032",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?pn=GN-49-E015",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/parts?station=LHR",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/planner",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/rotables",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/rotables?pn=GN-21-R001",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#gl-cat-downtime-and-urgency",
+    "kind": "anchor"
+   },
+   {
+    "href": "#gl-cat-forecasting",
+    "kind": "anchor"
+   },
+   {
+    "href": "#gl-cat-parts",
+    "kind": "anchor"
+   },
+   {
+    "href": "#gl-cat-plans-and-money",
+    "kind": "anchor"
+   },
+   {
+    "href": "#gl-cat-repair",
+    "kind": "anchor"
+   },
+   {
+    "href": "#gl-cat-stock-and-network",
+    "kind": "anchor"
+   },
+   {
+    "href": "#gl-cat-testing-and-results",
+    "kind": "anchor"
+   },
+   {
+    "href": "#view",
+    "kind": "anchor"
+   },
+   {
+    "href": "../index.html",
+    "kind": "file",
+    "status": 200,
+    "ok": true
+   },
+   {
+    "href": "downloads/case_study_deck.pdf",
+    "kind": "file",
+    "status": 200,
+    "ok": true
+   },
+   {
+    "href": "downloads/grounded_no_more_planner_workbook.xlsx",
+    "kind": "file",
+    "status": 200,
+    "ok": true
+   }
+  ],
+  "problems": []
+ },
+ "downloads_on_disk": {
+  "files": {
+   "case_study_deck.pdf": 1693301,
+   "grounded_no_more_planner_workbook.xlsx": 119589
+  },
+  "problems": {}
+ },
+ "downloads_linked": {
+  "rows": [
+   {
+    "href": "downloads/case_study_deck.pdf",
+    "bytes": 1693301,
+    "pages": [
+     "about:expert",
+     "about:simple",
+     "about?section=mro:expert",
+     "about?section=mro:simple"
+    ],
+    "problem": null
+   },
+   {
+    "href": "downloads/grounded_no_more_planner_workbook.xlsx",
+    "bytes": 119589,
+    "pages": [
+     "about:expert",
+     "about:simple",
+     "about?section=mro:expert",
+     "about?section=mro:simple"
+    ],
+    "problem": null
+   }
+  ],
+  "problems": []
+ },
+ "download_buttons": {
+  "files": {
+   "downloads/grounded_no_more_planner_workbook.xlsx": {
+    "bytes": 119589,
+    "problem": null
+   },
+   "downloads/case_study_deck.pdf": {
+    "bytes": 1693301,
+    "problem": null
+   },
+   "actions:export-csv": {
+    "file": "planner-exceptions-W103.csv",
+    "bytes": 36103,
+    "rows": 64,
+    "columns": [
+     "exception_id",
+     "week",
+     "type_label",
+     "severity_label",
+     "pn",
+     "station",
+     "summary",
+     "recommended_action",
+     "owner",
+     "due_week",
+     "on_hand",
+     "target",
+     "aog_h_52w",
+     "d0_req_52w",
+     "lead_time_ratio",
+     "weeks_overdue",
+     "type",
+     "severity",
+     "evidence_json"
+    ],
+    "problem": null
+   }
+  },
+  "problems": []
+ },
+ "external_links": {
+  "checked": 14,
+  "rows": [
+   {
+    "url": "https://akashgajjar07-hue.github.io/grounded-no-more/",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://akashgajjar07-hue.github.io/grounded-no-more/",
+    "ok": true,
+    "found_on": [
+     "README.md"
+    ]
+   },
+   {
+    "url": "https://davidmegginson.github.io/ourairports-data/airports.csv",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://davidmegginson.github.io/ourairports-data/airports.csv",
+    "ok": true,
+    "found_on": [
+     "method:expert",
+     "method:simple",
+     "method?section=next:simple"
+    ]
+   },
+   {
+    "url": "https://github.com/akashgajjar07-hue",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://github.com/akashgajjar07-hue",
+    "ok": true,
+    "found_on": [
+     "README.md",
+     "about:simple",
+     "about?section=mro:simple",
+     "method:simple"
+    ]
+   },
+   {
+    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/actions/workflows/ci.yml",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/actions/workflows/ci.yml",
+    "ok": true,
+    "found_on": [
+     "README.md"
+    ]
+   },
+   {
+    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/actions/workflows/ci.yml/badge.svg",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/actions/workflows/ci.yml/badge.svg",
+    "ok": true,
+    "found_on": [
+     "README.md"
+    ]
+   },
+   {
+    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/STUDY_GUIDE.md",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/STUDY_GUIDE.md",
+    "ok": true,
+    "found_on": [
+     "planner:expert",
+     "planner:simple"
+    ]
+   },
+   {
+    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/CHEAT_SHEET.md",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/CHEAT_SHEET.md",
+    "ok": true,
+    "found_on": [
+     "planner:expert",
+     "planner:simple"
+    ]
+   },
+   {
+    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/INTERVIEW_QA.md",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/INTERVIEW_QA.md",
+    "ok": true,
+    "found_on": [
+     "planner:expert",
+     "planner:simple"
+    ]
+   },
+   {
+    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/MASTERY_CHECKLIST.md",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/MASTERY_CHECKLIST.md",
+    "ok": true,
+    "found_on": [
+     "planner:expert",
+     "planner:simple"
+    ]
+   },
+   {
+    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/WALKTHROUGH_SCRIPT.md",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/WALKTHROUGH_SCRIPT.md",
+    "ok": true,
+    "found_on": [
+     "planner:expert",
+     "planner:simple"
+    ]
+   },
+   {
+    "url": "https://img.shields.io/badge/licence-MIT-B9C8D6",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://img.shields.io/badge/licence-MIT-B9C8D6",
+    "ok": true,
+    "found_on": [
+     "README.md"
+    ]
+   },
+   {
+    "url": "https://img.shields.io/badge/python-3.11%2B-22C7B8",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://img.shields.io/badge/python-3.11%2B-22C7B8",
+    "ok": true,
+    "found_on": [
+     "README.md"
+    ]
+   },
+   {
+    "url": "https://zenodo.org/records/4656021",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://zenodo.org/records/4656021",
+    "ok": true,
+    "found_on": [
+     "forecast:simple",
+     "forecast?pn=GN-21-R001:simple",
+     "method:simple"
+    ]
+   },
+   {
+    "url": "https://zenodo.org/records/4656021/files/car_parts_dataset_without_missing_values.zip",
+    "attempts": 1,
+    "status": 200,
+    "final": "https://zenodo.org/records/4656021/files/car_parts_dataset_without_missing_values.zip",
+    "ok": true,
+    "found_on": [
+     "method:expert",
+     "method:simple",
+     "method?section=next:simple"
+    ]
+   }
+  ],
+  "failed": []
+ }
+}

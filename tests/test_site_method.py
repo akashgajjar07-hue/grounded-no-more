@@ -182,3 +182,28 @@ def test_v21_next_section_deep_link(site, browser):  # noqa: F811
         assert not problems, problems
     finally:
         ctx.close()
+
+
+def test_v21_method_keyboard_and_expanders(site, browser):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/method", "1440")
+    try:
+        xp = page.locator('[data-role="av2-table"]')
+        assert not xp.evaluate("e => e.open")
+        xp.locator("summary").focus()
+        page.keyboard.press("Enter")
+        assert xp.evaluate("e => e.open")
+        page.keyboard.press(" ")
+        assert not xp.evaluate("e => e.open")
+        # the closed register opens and its search then works
+        reg = page.locator('[data-role="register"]')
+        reg.locator("summary").click()
+        page.fill(".dm-search[type=search]", "zzzz-no-such-key")
+        assert page.locator(".dm-showing").inner_text().startswith("Showing 0 of")
+        # charts inside a closed expander draw once opened
+        cal = page.locator('[data-role="calibration-note"] details.dm-xp')
+        cal.locator("summary").first.click()
+        page.wait_for_timeout(500)
+        assert cal.locator("svg circle").count() >= 1
+        assert not problems, problems
+    finally:
+        ctx.close()

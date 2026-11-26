@@ -28,3 +28,4 @@ tests/e2e/reports/
 reports/audit/screens/
 # bulk design/audit screenshots stay local; final compressed set lives in reports/final_screens/
 docs/design-review/*.png
+reports/audit/cells/

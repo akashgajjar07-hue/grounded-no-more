@@ -20,7 +20,7 @@ import { term, termText } from '../lib/glossary.js';
 import { displayName } from '../lib/names.js';
 import { escalationBlock, allocationFlagNote } from './parts-intelligence/flags.js';
 import { drawIn, focusTip } from './parts-intelligence/motion-helpers.js';
-import { chartTransition, throttleRAF, countUpOnce } from '../lib/motion.js';
+import { chartTransition, throttleRAF, countUpOnce, tx as txSel } from '../lib/motion.js';
 
 export const data = ['rotables', 'method', 'network', 'parts'];
 
@@ -432,7 +432,7 @@ function drawGantt(el, rows, now, w, animate = false) {
     G = el.__gantt = { w, right: m.right, svg, g, bands: g.append('g'), labels: g.append('g'), axis: g.append('g'), nowG: g.append('g'), rowsG: g.append('g') };
     animate = false;
   }
-  const T = (sel, o = {}) => (animate ? sel.transition(chartTransition(o)) : sel);
+  const T = (sel, o = {}) => (animate ? txSel(sel, o) : sel);
   G.svg.attr('height', hgt).attr('viewBox', `0 0 ${w} ${hgt}`);
   const lo = d3().min(rows, (o) => o.inH ?? o.start);
   const hi = d3().max(rows, (o) => Math.max(o.end ?? 0, o.due ?? 0, now ?? 0));
@@ -487,7 +487,7 @@ function drawGantt(el, rows, now, w, animate = false) {
       return rg;
     },
     (up) => up,
-    (exit) => (animate ? exit.transition(chartTransition({ ease: 'exit' })).style('opacity', 0).remove() : exit.remove()));
+    (exit) => (animate ? txSel(exit, { ease: 'exit' }).style('opacity', 0).remove() : exit.remove()));
   function placeRow(sel, Tr) {
     sel.selectAll('.rr-row-hl, .rr-focus').attr('x', -labelW + 6).attr('width', iw + labelW - 8);
     Tr(sel.select('.rr-bar')).attr('x', bx).attr('width', (o) => Math.max(2, (o.overdue && o.due != null ? lateX(o) : ex(o)) - bx(o)));
@@ -1036,7 +1036,7 @@ function makePmf(frame) {
       }
       W = w; animate = false;
     }
-    const T = (sel) => (animate ? sel.transition(chartTransition()) : sel);
+    const T = (sel) => (animate ? txSel(sel) : sel);
     L.svg.attr('aria-label', `Poisson pipeline distribution, mean ${fmtNum(mu, 2)}, spares ${S}`);
     const x = d3().scaleBand().domain(series.map((d) => d.k)).range([0, iw]).padding(0.18);
     const y = d3().scaleLinear().domain([0, d3().max(series, (d) => d.p) * 1.15]).nice().range([ih, 0]);
@@ -1051,7 +1051,7 @@ function makePmf(frame) {
     const bars = L.bars.selectAll('rect').data(series, (d) => d.k).join(
       (en) => en.append('rect').attr('y', 0).attr('height', 1).attr('width', x.bandwidth()).attr('transform', (d) => `translate(${x(d.k)},${ih}) scale(1,0)`),
       (up) => up,
-      (ex) => (animate ? ex.transition(chartTransition({ ease: 'exit' })).style('opacity', 0).remove() : ex.remove()));
+      (ex) => (animate ? txSel(ex, { ease: 'exit' }).style('opacity', 0).remove() : ex.remove()));
     bars.attr('fill', (d) => (d.k < S ? SR.recommended : SR.urgent)).attr('fill-opacity', (d) => (d.k < S ? 0.75 : 0.8));
     T(bars).attr('width', x.bandwidth()).attr('transform', tf).style('opacity', 1);
     withTooltip(bars, (d) => ({ title: `${d.k} unit${d.k === 1 ? '' : 's'} in the pipeline`, rows: [['P(X = k)', fmtPct(d.p, 2)], ['Zone', d.k < S ? 'Covered by spares' : 'Shortage']] }));

@@ -15,6 +15,8 @@ import { nameTag, displayName } from '../lib/names.js';
 import { chartFrame, responsive, svgIn, axisBottom, axisLeft, gridY, theme, annotate, withTooltip, directLabel, refLine, dodge, markerRect, labelBox, truncate, fmtAED, fmtInt, fmtNum, fmtPct, fmtPts, fmtWeek } from '../charts/theme.js';
 import { assetURL } from '../data.js';
 import { demandStrip, demandStats } from './parts-intelligence/strip.js';
+import { morphStore, morph, morphAxis, drawIn, liveDraw } from './forecast-lab/morph.js';
+import { countUpOnce, MOTION } from '../lib/motion.js';
 
 /** View stylesheet loader (same contract as parts-intelligence.js; kept local so this view does not import another view). */
 function ensureCSS(path) {
@@ -66,6 +68,7 @@ const PC_BTN = () => (isSimple() ? { R: 'Repairable', E: 'Throw-away', C: 'Consu
 const MASE = () => byMode('error score', 'MASE');
 const ordinal = (n) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] || 'th')}`;
 /** A median absolute log error of 0.07 reads as "about 7% off" (|ln(est/true)| ≈ relative error when small). */
+const cap1 = (t) => String(t).charAt(0).toUpperCase() + String(t).slice(1);
 const offPct = (v) => (v == null ? null : `${Math.round(v * 100)}%`);
 const ciOf = (r, k = 'mase') => (Array.isArray(r[`${k}_ci`]) ? r[`${k}_ci`] : [r[`${k}_ci_lo`], r[`${k}_ci_hi`]]);
 const champOf = (c) => c?.champion ?? c?.method;
@@ -128,6 +131,7 @@ export async function render(el, ctx) {
   }));
 
   const cleanups = [];
+  const MS = morphStore(); // v2.1 motion: previous mark positions per chart, for keyed transitions
 
   // ================================================================== 0. the honest result (v2.1): three findings, stated plainly
   {
@@ -135,10 +139,13 @@ export async function render(el, ctx) {
     const ir = check.find((r) => r.demand_class === 'intermittent' && r.part_class === 'R');
     const tr = (F.truth_recovery || []).find((t) => t.vendor_quoted != null && /mtbur/i.test(t.param) && /\+/.test(t.param))
       || (F.truth_recovery || []).find((t) => t.vendor_quoted != null && /mtbur/i.test(t.param));
+    // v2.1 motion: the headline numbers count up ONCE per session (countUpOnce, 600 ms), never on re-render
+    const cu = (v, fmt, key) => { const sp = h('span', { class: 'fl-cu' }, fmt(v)); countUpOnce(sp, v, fmt, { key }); return sp; };
+    const pctF = (v) => `${Math.round(v)}%`;
     const stat = (big, text, extra) => h('div', { class: 'fl-find' }, h('div', { class: 'fl-find-v' }, big), h('p', { class: 'fl-find-t' }, text), extra || null);
     const items = [];
     if (check.length) {
-      items.push(stat(`${fmtInt(held)} of ${fmtInt(check.length)}`, S
+      items.push(stat([cu(held, (v) => fmtInt(Math.round(v)), 'forecast-held'), ` of ${fmtInt(check.length)}`], S
         ? `The method chosen in advance was best in only ${fmtInt(held)} of ${fmtInt(check.length)} groups of parts on the fresh test runs.`
         : `Frozen champions held rank 1 on the holdout in ${fmtInt(held)} of ${fmtInt(check.length)} demand × part-class cells.`));
     }
@@ -149,7 +156,7 @@ export async function render(el, ctx) {
         h('p', { class: 'fl-find-n' }, S ? 'The stocking plans size repairable parts on the flying-hours rate, not on this forecast.' : 'The policies size rotables on the reliability-exposure rate, not on this champion.')));
     }
     if (tr) {
-      items.push(stat(`${offPct(tr.estimated)} vs ${offPct(tr.vendor_quoted)}`, S
+      items.push(stat([cu(Math.round(tr.estimated * 100), pctF, 'forecast-truth-est'), ' vs ', cu(Math.round(tr.vendor_quoted * 100), pctF, 'forecast-truth-quoted')], S
         ? ['Removal rates worked out from our own history were about ', offPct(tr.estimated), ' off the truth. Supplier quotes were about ', offPct(tr.vendor_quoted), ' off.']
         : `MTBUR fitted to removals: median abs log error ${fmtNum(tr.estimated, 3)} vs ${fmtNum(tr.vendor_quoted, 3)} vendor-quoted (${fmtInt(tr.n_parts)} PNs; estimate closer for ${fmtPct(tr.share_estimate_closer, 0)}).`,
         h('p', { class: 'fl-find-n' }, S ? 'The true values are hidden. Only the scoring step reads them.' : 'Truth is read only by the evaluation step, never by forecasting or policy code.')));
@@ -210,14 +217,25 @@ export async function render(el, ctx) {
   el.append(h('div', { class: 'grid-12' }, boardCard, champCard));
   let boardStop = null;
 
-  function buildSegs() {
-    dcSegHost.replaceChildren(segmented({ label: 'Demand class', value: dc, options: classes.map((c) => ({ value: c, label: dcName(c) })), onChange: (v) => { dc = v; if (!pcsFor(dc).includes(pc)) pc = pcsFor(dc)[0]; buildSegs(); ctx.setParams({ class: dc, part: pc }); drawBoard(); } }));
+  // v2.1 motion: the controls persist across changes so their thumbs slide; the part-type control is rebuilt only
+  // when its option set changes
+  let pcKeys = '';
+  function buildPcSeg() {
+    const keys = pcsFor(dc).join(',');
+    if (keys === pcKeys) { pcSegHost.querySelectorAll('[role="radio"]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.value === pc))); return; }
+    pcKeys = keys;
     pcSegHost.replaceChildren(segmented({ label: 'Part class', value: pc, options: pcsFor(dc).map((x) => ({ value: x, label: PC_BTN()[x] })), onChange: (v) => { pc = v; ctx.setParams({ part: v }); drawBoard(); } }));
   }
+  function buildSegs() {
+    dcSegHost.replaceChildren(segmented({ label: 'Demand class', value: dc, options: classes.map((c) => ({ value: c, label: dcName(c) })), onChange: (v) => { dc = v; if (!pcsFor(dc).includes(pc)) pc = pcsFor(dc)[0]; buildPcSeg(); ctx.setParams({ class: dc, part: pc }); drawBoard(); } }));
+    buildPcSeg();
+  }
 
+  // v2.1 addendum: the leaderboard frame is built once; a control change updates its headline, key line, table and
+  // marks in place (the marks morph), so nothing in the frame (e.g. its More button) is torn down under the pointer
+  let boardF = null;
   function drawBoard() {
     boardStop?.();
-    boardCard.replaceChildren();
     const src = win === 'holdout' ? lbHold : lbSel;
     const rows = src.filter((r) => r.demand_class === dc && r.part_class === pc && Number.isFinite(r.mase));
     const champ = champs.find((c) => c.demand_class === dc && c.part_class === pc);
@@ -244,23 +262,34 @@ export async function render(el, ctx) {
         ? (rank === 1 ? fit(`On fresh data, the method chosen in advance is still best for ${cellName}`, 'On fresh data, the method chosen in advance is still best') : fit(`On fresh data, the method chosen in advance ranks ${ordinal(rank)} of ${eligible.length} for ${cellName}`, `On fresh data, the method chosen in advance ranks ${ordinal(rank)} of ${eligible.length}`))
         : rank === 1 ? fit(`On the holdout the frozen champion ${mName(champRow.method)} is still best for ${dcLabel(dc)} ${PC_NAME[pc]}`, `On the holdout the frozen champion ${mName(champRow.method)} is still best`) : fit(`On the holdout the frozen champion ${mName(champRow.method)} ranks ${rank} of ${eligible.length}; ${mName(best.method)} would have won`, `On the holdout the frozen champion ${mName(champRow.method)} ranks ${rank} of ${eligible.length}`);
     } else headline = S ? fit(`"${mName(best.method)}" has the lowest error for ${cellName}`, `"${mName(best.method)}" has the lowest error`) : fit(`${mName(best.method)} has the lowest eligible MASE for ${dcLabel(dc)} ${PC_NAME[pc]} (${fmtNum(best.mase)})`, `${mName(best.method)} has the lowest eligible MASE (${fmtNum(best.mase)})`);
-    const f = chartFrame(boardCard, {
+    const fresh = !boardF;
+    if (fresh) boardF = chartFrame(boardCard, {
       implication: byMode('No method wins everywhere. Base stock on rates that hold up, not on this league table.', 'No method wins everywhere: size stock on rates that hold up, not on the error league table.'),
       headline,
       subtitle: S
-        ? `Forecast error compared with a simple guess, averaged over ${n != null ? `${fmtInt(n)} parts` : 'the parts'} on the ${winLabel}. Lower is better. Lines show the likely range. The dashed line is the simple guess.`
-        : `MASE, mean over parts with 95% bootstrap CI · ${winLabel} · ${n != null ? `${fmtInt(n)} PNs in cell` : 'cell size not exported'} · lower is better · dashed = naive scale (1.0)`,
+        ? 'Forecast error compared with a simple guess, averaged over the parts in this group. Lower is better. Lines show the likely range; the dashed line is the simple guess.'
+        : 'MASE, mean over the PNs in the cell with 95% bootstrap CI · lower is better · dashed = naive scale (1.0)',
       provenance: fprov, source: 'forecast.json (leaderboard)',
       table: { columns: [{ key: 'method', label: 'Method', format: mName }, { key: 'mase', label: S ? 'Error score' : 'MASE', num: true, format: (v) => fmtNum(v, 3) }, { key: 'lo', label: S ? 'Range low' : 'CI low', num: true, format: (v) => fmtNum(v, 3) }, { key: 'hi', label: S ? 'Range high' : 'CI high', num: true, format: (v) => fmtNum(v, 3) }, { key: 'bias', label: S ? 'High or low' : 'Bias', num: true, format: (v) => fmtNum(v, 3) }, { key: 'coverage', label: S ? 'Range caught it' : 'Coverage', num: true, format: (v) => fmtPct(v, 0) }], rows: rows.map((r) => ({ ...r, lo: ciOf(r)[0], hi: ciOf(r)[1] })) },
     });
+    const f = boardF;
+    if (!fresh) {
+      f.root.querySelector('.chart-headline').textContent = headline;
+      const tb = { columns: [{ key: 'method', label: 'Method', format: mName }, { key: 'mase', label: S ? 'Error score' : 'MASE', num: true, format: (v) => fmtNum(v, 3) }, { key: 'lo', label: S ? 'Range low' : 'CI low', num: true, format: (v) => fmtNum(v, 3) }, { key: 'hi', label: S ? 'Range high' : 'CI high', num: true, format: (v) => fmtNum(v, 3) }, { key: 'bias', label: S ? 'High or low' : 'Bias', num: true, format: (v) => fmtNum(v, 3) }, { key: 'coverage', label: S ? 'Range caught it' : 'Coverage', num: true, format: (v) => fmtPct(v, 0) }], rows: rows.map((r) => ({ ...r, lo: ciOf(r)[0], hi: ciOf(r)[1] })) };
+      f.setTable(tb.columns, tb.rows);
+      f.root.querySelector('[data-role="board-key"]')?.remove();
+      f.body.replaceChildren();
+    }
     if (!rows.length) { f.body.append(stateBlock('empty', 'not run')); drawChamp(champ, null, null, null); return; }
     // wave 5: a one-line key, so the starred champion and the teal policy rate never compete for "the answer"
-    f.body.before(h('p', { class: 'fl-key t-12 faint' }, h('span', { class: 'fl-key-i' }, '★'), byMode(' chosen in advance (best on the tuning weeks)', ' frozen champion (best MASE on selection weeks)'), pc === 'R' ? [h('span', { class: 'fl-key-sw' }), byMode(' teal = the rate the repairable-part plans use', ' teal = the rate the rotable policies use')] : null));
+    // v2.1: the cell-specific facts (window, cell size) live in this key line, so the subtitle (and its More button)
+    // stays the same when the controls change
+    f.body.before(h('p', { class: 'fl-key t-12 faint', dataset: { role: 'board-key' } }, h('span', { class: 'fl-key-w' }, `${n != null ? `${fmtInt(n)} ${S ? 'parts' : 'PNs'}` : ''} · ${winLabel}`), ' · ', h('span', { class: 'fl-key-i' }, '★'), byMode(' chosen in advance (best on the tuning weeks)', ' frozen champion (best MASE on selection weeks)'), pc === 'R' ? [h('span', { class: 'fl-key-sw' }), byMode(' teal = the rate the repairable-part plans use', ' teal = the rate the rotable policies use')] : null));
     const ordered = eligible.concat(zero ? [zero] : []);
     // teal = the method the stocking policies actually use for this part class (rotables: the reliability-exposure
     // rate, per forecast.json meta); the frozen champion is marked with ★ + neutral strong, not the recommendation colour
     const policyKey = pc === 'R' && /reliability rate/i.test(F.meta?.notes || '') ? 'reliability' : null;
-    boardStop = responsive(f.body, (w) => {
+    boardStop = liveDraw(f.body, (w) => {
       const small = w < 480;
       const rowH = 34, labelW = small ? 104 : 190;
       const m = { top: 22, right: small ? 44 : 64, bottom: 30, left: labelW };
@@ -271,7 +300,7 @@ export async function render(el, ctx) {
       const vals = ordered.flatMap((r) => [ciOf(r)[0] ?? r.mase, ciOf(r)[1] ?? r.mase, r.mase]).concat([1]);
       const x = d3().scaleLinear().domain([Math.max(0, d3().min(vals) * 0.92), d3().max(vals) * 1.04]).nice().range([0, iw]);
       const yPos = (i) => i * rowH + rowH / 2 + (zero && i === ordered.length - 1 ? 10 : 0);
-      axisBottom(g.append('g'), x, { height: ih, ticks: small ? 3 : 6, format: (v) => fmtNum(v, 1) });
+      morphAxis(MS, 'board-x', w, g.append('g'), x, (ga, sc) => axisBottom(ga, sc, { height: ih, ticks: small ? 3 : 6, format: (v) => fmtNum(v, 1) }));
       refLine(g, { x1: x(1), y1: ih, x2: x(1), y2: -10, label: S ? (small ? 'guess = 1' : 'simple guess = 1.0') : small ? 'naive = 1' : 'naive scale = 1.0', dx: 4, dy: -2, anchor: x(1) > iw * 0.7 ? 'end' : 'start' });
       if (zero) g.append('line').attr('class', 'fl-sep').attr('x1', -labelW + 8).attr('x2', iw).attr('y1', yPos(ordered.length - 1) - rowH / 2 - 2).attr('y2', yPos(ordered.length - 1) - rowH / 2 - 2);
       const rowsG = g.selectAll('g.fl-row').data(ordered).join('g').attr('class', (r) => `fl-row ${mKey(r.method) === champKey ? 'is-champ' : ''} ${mKey(r.method) === policyKey ? 'is-policy' : ''} ${isZero(r.method) ? 'is-zero' : ''}`).attr('transform', (r, i) => `translate(0,${yPos(i)})`);
@@ -289,6 +318,12 @@ export async function render(el, ctx) {
       rowsG.append('text').attr('class', 'fl-mlabel').attr('x', -12).attr('dy', (r) => (subOf(r) ? '-0.18em' : '0.32em')).attr('text-anchor', 'end').text((r) => truncate(isZero(r.method) ? (S ? (small ? 'zero (excl.)' : 'Always zero · yardstick') : small ? 'zero (excl.)' : 'Zero · benchmark only') : `${mKey(r.method) === champKey ? '★ ' : ''}${mNameS(r.method, small)}`, labelW - 16));
       rowsG.filter((r) => !!subOf(r)).append('text').attr('class', 'fl-msub').attr('x', -12).attr('y', 11).attr('text-anchor', 'end').text((r) => subOf(r));
       rowsG.append('text').attr('class', 'fl-vlabel').attr('x', iw + 10).attr('dy', '0.32em').text((r) => fmtNum(r.mase));
+      // v2.1 motion: rows re-sort and dots / ranges slide to their new values (keyed by method), never redrawn from zero
+      const rk = (r) => mKey(r.method);
+      morph(MS, 'board', w, rowsG, rk, { transform: (r, i) => `translate(0,${yPos(i)})` });
+      morph(MS, 'board', w, rowsG.selectAll('line.fl-ci'), (r, i) => `${rk(r)}#${i}`, { x1: function () { return this.getAttribute('x1'); }, x2: function () { return this.getAttribute('x2'); } }, { drawIn: false });
+      morph(MS, 'board', w, rowsG.selectAll('circle.fl-dot'), rk, { cx: (r) => x(r.mase) }, { drawIn: false });
+      morph(MS, 'board', w, rowsG.selectAll('text.fl-vlabel'), rk, { x: iw + 10 }, { drawIn: false });
       withTooltip(rowsG, (r) => ({ title: mName(r.method), rows: [[S ? 'Error score' : 'MASE', fmtNum(r.mase, 3)], [termText('ci', { cap: true }), `${fmtNum(ciOf(r)[0], 3)} – ${fmtNum(ciOf(r)[1], 3)}`], [S ? 'High or low (units/wk)' : 'Bias (units/wk)', fmtNum(r.bias, 3)], [S ? 'Range caught it' : 'Coverage', fmtPct(r.coverage, 0)]], note: isZero(r.method) ? byMode('Yardstick only: not allowed to win.', 'Benchmark only: excluded from champion eligibility.') : mKey(r.method) === champKey ? byMode('Chosen in advance (tuning weeks).', 'Frozen champion (selection weeks).') : '' }));
     });
     drawChamp(champ, champRow, zero, eligible);
@@ -361,6 +396,7 @@ export async function render(el, ctx) {
         const rowLabel = (r) => (S ? `${small ? DCS[r.demand_class] || r.demand_class : dcName(r.demand_class)} · ${PCS[r.part_class] || r.part_class}` : `${mNameS(r.champion, small)} · ${small ? ({ intermittent: 'interm.', insufficient_data: 'insuff.' }[r.demand_class] || r.demand_class) : dcLabel(r.demand_class)} ${r.part_class}`);
         rg.append('text').attr('class', 'fl-mlabel').attr('x', -12).attr('dy', '0.32em').attr('text-anchor', 'end').text((r) => truncate(rowLabel(r), labelW - 14));
         rg.append('text').attr('class', 'fl-vlabel').attr('x', iw + 14).attr('dy', '0.32em').text((r) => (small ? `${r.champion_rank}/${r.n_methods}` : `${r.champion_rank}/${r.n_methods}${r.champion_rank > 1 ? ` · best: ${mName(r.best_in_hindsight)}` : ' · ★ held'}`));
+        drawIn(MS, 'check', w, rg);
         withTooltip(rg, (r) => ({ title: S ? `${dcName(r.demand_class)} · ${pcName(r.part_class)}` : `${dcLabel(r.demand_class)} · ${r.part_class}`, rows: [[S ? 'Chosen in advance' : 'Champion', mName(r.champion)], [S ? 'Rank on fresh data' : 'Holdout rank', `${r.champion_rank} of ${r.n_methods}`], [S ? 'Its error score' : 'Champion MASE', fmtNum(r.champion_mase, 3)], [S ? 'Best on fresh data' : 'Best in hindsight', `${mName(r.best_in_hindsight)} ${fmtNum(r.best_mase, 3)}`], [S ? 'Parts' : 'PNs', fmtInt(r.n_parts)]] }));
         const wi = rows.indexOf(worst);
         annotate(g, { x: x(worst.champion_rank), y: wi * rowH + rowH / 2, dx: -48, dy: wi === rows.length - 1 ? 26 : -14, anchor: 'end', title: S ? `"${mName(worst.champion)}" did not hold up` : mKey(worst.champion) === 'naive' ? 'Naive: a MASE artefact on 0/1 series' : `${mName(worst.champion)} did not hold up`, sub: small ? undefined : S ? `${fmtInt(worst.n_parts)} parts in this group` : mKey(worst.champion) === 'naive' && worst.part_class === 'R' ? `${fmtInt(worst.n_parts)} PNs · rotable policies use the reliability rate` : `${fmtInt(worst.n_parts)} PNs in this cell` });
@@ -401,11 +437,14 @@ export async function render(el, ctx) {
         headline: rop != null && S ? fitN(HALF, `Holding ${fmtInt(rop)} spare${rop === 1 ? '' : 's'}${L.station ? ` at ${L.station}` : ''} covers ${fmtPct(sl, 0)} of resupply waits`, `${fmtInt(rop)} spare${rop === 1 ? '' : 's'} cover ${fmtPct(sl, 0)} of resupply waits`)
           : rop != null ? fitN(HALF, `${L.pn}'s ${fmtPct(sl, 0)} service-level quantile${L.station ? ` at ${L.station}` : ''} is ${fmtInt(rop)} units`, `${L.pn}: ${fmtPct(sl, 0)} service-level quantile ${fmtInt(rop)} units`, `Covering ${fmtPct(sl, 0)} of lead times at ${L.station || 'the hub'} takes ${fmtInt(rop)} units of ${L.pn} (mean demand ${fmtNum(mean, 1)})`, `${fmtPct(sl, 0)} service-level quantile: ${fmtInt(rop)} units (mean demand ${fmtNum(mean, 1)})`) : `${L.pn}: expected lead-time demand ${fmtNum(mean, 1)} units`,
         subtitle: S
-          ? `${L.pn}: chance of needing each number of units during the ${L.lead_time_days != null ? `${fmtNum(L.lead_time_days, 1)}-day ` : ''}wait for a resupply. Rate from "${mName(L.rate_source || L.champion)}".${sl != null ? ` Service target ${fmtPct(sl, 0)} (assumed).` : ''}`
-          : `P(demand = q) over ${L.lead_time_days != null ? `${fmtNum(L.lead_time_days, 0)} days` : 'the lead time'} · ${L.dist_kind || 'champion'} · rate from ${mName(L.rate_source || L.champion)}${sl != null ? ` · ${part?.deadline} service target ${fmtPct(sl, 0)} (${slA?.provenance || 'ASSUMED'})` : ' · service level not exported'}`,
+          ? 'Chance of needing each number of units during the wait for a resupply. The service target is an assumption.'
+          : 'P(demand = q) over the resupply lead time · stocking to the service-level quantile (reorder point) · service target ASSUMED',
         provenance: L.provenance || fprov, source: 'forecast.json (ltd_examples), method.json (service_targets)', story: 'forecast-ltd',
         table: { columns: [{ key: 'q', label: 'Units', num: true }, { key: 'p', label: S ? 'Chance of exactly this' : 'P(X = q)', num: true, format: (v) => fmtPct(v, 1) }, { key: 'cdf', label: S ? 'Chance of this or fewer' : 'P(X ≤ q)', num: true, format: (v) => fmtPct(v, 1) }], rows },
       });
+      f.body.before(h('p', { class: 'fl-key t-12 faint', dataset: { role: 'ltd-key' } }, S
+        ? `${L.pn} · ${L.lead_time_days != null ? `${fmtNum(L.lead_time_days, 1)}-day resupply · ` : ''}rate from "${mName(L.rate_source || L.champion)}"${sl != null ? ` · target ${fmtPct(sl, 0)}` : ''}`
+        : `${L.pn} · ${L.lead_time_days != null ? `${fmtNum(L.lead_time_days, 0)} days` : 'lead time'} · ${L.dist_kind || 'champion'} · rate from ${mName(L.rate_source || L.champion)}${sl != null ? ` · ${part?.deadline} target ${fmtPct(sl, 0)} (${slA?.provenance || 'ASSUMED'})` : ''}`));
       // C8 (wave 4): reconcile the quantile with what the plans actually position at this station
       const placed = L.station ? num(part?.stock_by_station?.[L.station]) : null;
       if (rop != null && placed != null && placed !== rop) {
@@ -413,7 +452,7 @@ export async function render(el, ctx) {
           ? h('span', {}, `The target level calls for ${fmtInt(rop)}. The ${displayName('P2')}, our core plan, places ${fmtInt(placed)} at ${L.station}. ${placed < rop ? 'It stops short, because one more spare saves less grounded time than it costs to hold.' : 'It adds more, because the cost of a grounded plane pays for the extra spare.'} See the Capital Optimiser.`)
           : h('span', {}, `Service-level quantile ${fmtInt(rop)} vs positioned ${fmtInt(placed)}: `, nameTag('P2', { tag: 'always' }), `, the core plan, places ${fmtInt(placed)} at ${L.station}. Its cost-based allocation ${placed < rop ? `stops short of the quantile because the next unit's modelled AOG saving is worth less than its holding cost` : `goes past the quantile because the D0 penalty pays for the extra unit`} (see Capital Optimiser).`)));
       }
-      stop = responsive(f.body, (w) => {
+      stop = liveDraw(f.body, (w) => {
         const hgt = 260, m = { top: 30, right: 16, bottom: 34, left: 44 };
         const iw = w - m.left - m.right, ih = hgt - m.top - m.bottom;
         const svg = svgIn(f.body, w, hgt, byMode('Chance of each demand level during the resupply wait', 'Lead-time demand distribution'));
@@ -428,7 +467,9 @@ export async function render(el, ctx) {
         const every = Math.ceil(shown.length / (w < 480 ? 8 : 14));
         xa.selectAll('.tick text').attr('opacity', (q, i) => (i % every ? 0 : 1));
         g.append('text').attr('class', 'pi-axis-t').attr('x', iw).attr('y', ih + 30).attr('text-anchor', 'end').text(byMode('units needed during the wait →', 'units demanded over the lead time →'));
-        const bars = g.selectAll('rect.fl-bar').data(shown).join('rect').attr('class', (r) => (rop != null && r.q <= rop ? 'fl-bar is-covered' : 'fl-bar')).attr('x', (r) => x(r.q)).attr('width', x.bandwidth()).attr('y', (r) => y(r.p)).attr('height', (r) => ih - y(r.p)).attr('rx', 2);
+        const bars = g.selectAll('rect.fl-bar').data(shown).join('rect').attr('class', (r) => (rop != null && r.q <= rop ? 'fl-bar is-covered' : 'fl-bar')).attr('rx', 2);
+        // v2.1 motion: bars keyed by unit count; switching example part slides heights, no redraw from zero
+        morph(MS, 'ltd', w, bars, (r) => r.q, { x: (r) => x(r.q), width: x.bandwidth(), y: (r) => y(r.p), height: (r) => ih - y(r.p) });
         withTooltip(bars, (r) => ({ title: `${fmtInt(r.q)} units`, rows: [[S ? 'Exactly this' : 'P(X = q)', fmtPct(r.p, 1)], [S ? 'This or fewer' : 'P(X ≤ q)', fmtPct(r.cdf, 1)]] }));
         if (rop != null && x(rop) != null) {
           const rx = x(rop) + x.bandwidth() + (x.step() * x.paddingInner()) / 2;
@@ -486,12 +527,13 @@ export async function render(el, ctx) {
       implication: byMode('Judge a forecast by the spares and money it leads to, not by its error score.', 'Judge forecasts by the fill and capital they produce, not by error scores.'),
         headline,
         subtitle: S
-          ? `Chance the part is on the shelf vs average money in stock, per method${spc ? `, ${pcName(spc)}` : ''}. Each part is stocked to its service target. Simple one-part test over the tuning weeks.`
-          : `Fill rate vs mean stock value per method · base stock at the deadline-class service target · single-item stand-in simulator over the selection weeks${spc ? ` · ${PC_NAME[spc]}` : ''}`,
+          ? 'Chance the part is on the shelf vs average money in stock, per method. Each part is stocked to its service target. Simple one-part test over the tuning weeks.'
+          : 'Fill rate vs mean stock value per method · base stock at the deadline-class service target · single-item stand-in simulator over the selection weeks',
         provenance: fprov, source: 'forecast.json (stock_eval) · unlabelled points: other methods (hover or View data)', story: 'forecast-stock-eval',
         table: { columns: [{ key: 'method', label: 'Method', format: mName }, { key: 'fill_rate', label: termText('fill_rate', { cap: true }), num: true, format: (v) => fmtPct(v) }, { key: 'capital', label: S ? 'Money in stock' : 'Capital', num: true, format: (v) => fmtAED(v) }, { key: 'backorder_units', label: S ? 'Units waited for' : 'Backorder units', num: true, format: fmtInt }], rows },
       });
-      stop = responsive(f.body, (w) => {
+      if (spc) f.body.before(h('p', { class: 'fl-key t-12 faint', dataset: { role: 'stock-key' } }, cap1(pcName(spc))));
+      stop = liveDraw(f.body, (w) => {
         const small = w < 480;
         const hgt = small ? 300 : 320, m = { top: 16, right: small ? 20 : 96, bottom: 36, left: 52 };
         const iw = w - m.left - m.right, ih = hgt - m.top - m.bottom;
@@ -518,7 +560,9 @@ export async function render(el, ctx) {
         if (cut !== Infinity) g.append('text').attr('class', 'pi-axis-t').attr('x', iw).attr('y', ih + 18).attr('text-anchor', 'end').text('⋯ off-scale');
         g.append('text').attr('class', 'pi-axis-t').attr('x', iw).attr('y', ih + 32).attr('text-anchor', 'end').text(byMode('money in stock →', 'capital (mean stock value) →'));
         g.append('text').attr('class', 'pi-axis-t').attr('x', 0).attr('y', -4).text(byMode('on the shelf ↑', 'fill rate ↑'));
-        const pts = g.selectAll('g.p').data(rows).join('g').attr('class', (r) => `fl-pt ${mKey(r.method) === polM ? 'is-key' : r === hi || mKey(r.method) === 'reliability' ? 'is-ref' : ''} ${champSet.has(mKey(r.method)) ? 'is-champ' : ''}`).attr('transform', (r) => `translate(${x(r.capital)},${y(r.fill_rate)})`);
+        const pts = g.selectAll('g.p').data(rows).join('g').attr('class', (r) => `fl-pt ${mKey(r.method) === polM ? 'is-key' : r === hi || mKey(r.method) === 'reliability' ? 'is-ref' : ''} ${champSet.has(mKey(r.method)) ? 'is-champ' : ''}`);
+        // v2.1 motion: points keyed by method glide to the new part class's values
+        morph(MS, 'stock', w, pts, (r) => mKey(r.method), { transform: (r) => `translate(${x(r.capital)},${y(r.fill_rate)})` });
         pts.append('circle').attr('r', (r) => (mKey(r.method) === 'reliability' ? 6 : 4.5));
         withTooltip(pts, (r) => ({ title: mName(r.method), rows: [[termText('fill_rate', { cap: true }), fmtPct(r.fill_rate)], [S ? 'Money in stock' : 'Capital', fmtAED(r.capital)], [S ? 'Units waited for' : 'Backorder units', fmtInt(r.backorder_units)]], note: champSet.has(mKey(r.method)) ? byMode('Chosen in advance for at least one group of these parts', 'MASE champion in at least one cell of this class') : '' }));
         // direct labels for the key methods: dodged against every dot and each other, flipping sides when needed
@@ -591,6 +635,7 @@ export async function render(el, ctx) {
         axisBottom(g.append('g'), x, { height: ih, ticks: small ? 3 : 5, format: (v) => fmtNum(v, 1) });
         if (x.domain()[0] <= 1 && x.domain()[1] >= 1) refLine(g, { x1: x(1), y1: 0, x2: x(1), y2: ih });
         const rg = g.selectAll('g.fl-row').data(ordered).join('g').attr('class', (r) => `fl-row ${r === best ? 'is-champ' : ''} ${isZero(r.method) ? 'is-zero' : ''}`).attr('transform', (r, i) => `translate(0,${yPos(i)})`);
+        drawIn(MS, 'monash', w, rg);
         rg.append('line').attr('class', 'fl-ci').attr('x1', (r) => x(r.mase_ci_lo ?? r.mase)).attr('x2', (r) => x(r.mase_ci_hi ?? r.mase));
         rg.append('circle').attr('class', 'fl-dot').attr('cx', (r) => x(r.mase)).attr('r', (r) => (r === best ? 5.5 : 4));
         rg.append('text').attr('class', 'fl-mlabel').attr('x', -10).attr('dy', '0.32em').attr('text-anchor', 'end').text((r) => truncate(isZero(r.method) ? (small ? 'Zero (excl.)' : byMode('Always zero · yardstick', 'Zero · not eligible')) : mNameS(r.method, small), labelW - 14));
@@ -649,6 +694,7 @@ export async function render(el, ctx) {
         rg.filter((t) => t.vendor_quoted != null).append('line').attr('class', 'fl-db').attr('x1', (t) => x(t.estimated)).attr('x2', (t) => x(t.vendor_quoted));
         rg.filter((t) => t.vendor_quoted != null).append('circle').attr('class', 'fl-db-q').attr('cx', (t) => x(t.vendor_quoted)).attr('r', 5);
         rg.append('circle').attr('class', 'fl-db-e').attr('cx', (t) => x(t.estimated)).attr('r', 5.5);
+        drawIn(MS, 'truth', w, rg);
         rg.append('text').attr('class', 'fl-db-t is-e').attr('x', (t) => x(t.estimated)).attr('y', 19).attr('text-anchor', 'middle').text((t) => fmtE(t, t.estimated));
         rg.filter((t) => t.vendor_quoted != null).append('text').attr('class', 'fl-db-t is-q').attr('x', (t) => x(t.vendor_quoted)).attr('y', -11).attr('text-anchor', 'middle').text((t) => fmtE(t, t.vendor_quoted));
         rg.filter((t) => t.vendor_quoted == null).append('text').attr('class', 'fl-db-t').attr('x', (t) => x(t.estimated) + 10).attr('dy', '0.32em').text(byMode('no supplier quote', 'no vendor quote'));

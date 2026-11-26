@@ -1,0 +1,132 @@
+{
+ "mission@1440": {
+  "cls": 0.1001,
+  "shifts": 2,
+  "largest": 0.0989
+ },
+ "mission@390": {
+  "cls": 0.1872,
+  "shifts": 2,
+  "largest": 0.1825
+ },
+ "parts@1440": {
+  "cls": 0.2619,
+  "shifts": 3,
+  "largest": 0.1618
+ },
+ "parts@390": {
+  "cls": 0.1873,
+  "shifts": 2,
+  "largest": 0.1825
+ },
+ "forecast@1440": {
+  "cls": 0.1001,
+  "shifts": 2,
+  "largest": 0.0989
+ },
+ "forecast@390": {
+  "cls": 0.1873,
+  "shifts": 2,
+  "largest": 0.1825
+ },
+ "rotables@1440": {
+  "cls": 0.1003,
+  "shifts": 5,
+  "largest": 0.0989
+ },
+ "rotables@390": {
+  "cls": 0.1874,
+  "shifts": 3,
+  "largest": 0.1825
+ },
+ "network@1440": {
+  "cls": 0.028,
+  "shifts": 2,
+  "largest": 0.0267
+ },
+ "network@390": {
+  "cls": 0.1873,
+  "shifts": 2,
+  "largest": 0.1825
+ },
+ "capital@1440": {
+  "cls": 0.1002,
+  "shifts": 8,
+  "largest": 0.0989
+ },
+ "capital@390": {
+  "cls": 0.1899,
+  "shifts": 3,
+  "largest": 0.1825
+ },
+ "aog@1440": {
+  "cls": 0.1001,
+  "shifts": 2,
+  "largest": 0.0989
+ },
+ "aog@390": {
+  "cls": 0.1873,
+  "shifts": 2,
+  "largest": 0.1825
+ },
+ "actions@1440": {
+  "cls": 0.1001,
+  "shifts": 2,
+  "largest": 0.0989
+ },
+ "actions@390": {
+  "cls": 0.1873,
+  "shifts": 2,
+  "largest": 0.1825
+ },
+ "method@1440": {
+  "cls": 0.1001,
+  "shifts": 2,
+  "largest": 0.0989
+ },
+ "method@390": {
+  "cls": 0.1873,
+  "shifts": 2,
+  "largest": 0.1825
+ },
+ "about@1440": {
+  "cls": 0.0397,
+  "shifts": 2,
+  "largest": 0.0384
+ },
+ "about@390": {
+  "cls": 0.1872,
+  "shifts": 2,
+  "largest": 0.1825
+ },
+ "glossary@1440": {
+  "cls": 0.1001,
+  "shifts": 2,
+  "largest": 0.0989
+ },
+ "glossary@390": {
+  "cls": 0.1872,
+  "shifts": 2,
+  "largest": 0.1825
+ },
+ "planner@1440": {
+  "cls": 0.1001,
+  "shifts": 2,
+  "largest": 0.0989
+ },
+ "planner@390": {
+  "cls": 0.1872,
+  "shifts": 2,
+  "largest": 0.1825
+ },
+ "lab/cutaway.html@1440": {
+  "cls": 0.0416,
+  "shifts": 2,
+  "largest": 0.0416
+ },
+ "lab/cutaway.html@390": {
+  "cls": 0.1762,
+  "shifts": 1,
+  "largest": 0.1762
+ }
+}

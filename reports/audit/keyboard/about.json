@@ -1,0 +1,329 @@
+{
+ "route": "about",
+ "owner": "docs/js/views/about.js",
+ "problems": [],
+ "warnings": [],
+ "expected": 33,
+ "reached": 33,
+ "presses": 35,
+ "cycled": true,
+ "activation": [
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "chart-update"
+   ],
+   "ms": 346.4,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k10",
+    "returned_to_invoker": true
+   },
+   "control": "60-second tourS",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "chart-update"
+   ],
+   "ms": 570.5,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k10",
+    "returned_to_invoker": true
+   },
+   "control": "60-second tourS",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "chart-update"
+   ],
+   "ms": 165.9,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k17",
+    "returned_to_invoker": true
+   },
+   "control": "Story",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "dom-mutation"
+   ],
+   "ms": 31.5,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k17",
+    "returned_to_invoker": true
+   },
+   "control": "Story",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "modal",
+    "dom-mutation"
+   ],
+   "ms": 52.4,
+   "esc": {
+    "opened": [
+     "modal"
+    ],
+    "closed": true,
+    "focus": "k18",
+    "returned_to_invoker": true
+   },
+   "control": "Keyboard shortcuts",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "modal",
+    "dom-mutation"
+   ],
+   "ms": 18.3,
+   "esc": {
+    "opened": [
+     "modal"
+    ],
+    "closed": true,
+    "focus": "k18",
+    "returned_to_invoker": true
+   },
+   "control": "Keyboard shortcuts",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "download",
+    "new-tab"
+   ],
+   "ms": 756.2,
+   "control": "GitHub",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "download"
+   ],
+   "ms": 10.4,
+   "control": "Excel planner workbook",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "download"
+   ],
+   "ms": 154.7,
+   "control": "Case-study deck (PDF)",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 123.0,
+   "control": "The Planner Behind the Project",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 55.4,
+   "control": "Results",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 15.4,
+   "control": "Glossary",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 5.3,
+   "control": "How this transfers to an MRO",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 112.4,
+   "control": "What real data would make this useful",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 22.3,
+   "control": "Next experiments",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 57.3,
+   "control": "What real data would make this useful",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 3.5,
+   "control": "Next experiments",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 95.1,
+   "control": "Next experiments",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 8.5,
+   "control": "How this transfers to an MRO",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 15.3,
+   "control": "What real data would make this useful",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  }
+ ],
+ "shell": [
+  {
+   "what": "help modal (?)",
+   "ok": true,
+   "invoker": "GitHub",
+   "focus_after": {
+    "id": "k19",
+    "label": "GitHub"
+   },
+   "returned_to_invoker": true,
+   "note": ""
+  },
+  {
+   "what": "tour (rail button)",
+   "ok": true,
+   "invoker": "60-second tourS",
+   "focus_after": {
+    "id": "k10",
+    "label": "60-second tourS"
+   },
+   "returned_to_invoker": true,
+   "note": ""
+  },
+  {
+   "what": "nav rail (390 menu)",
+   "ok": true,
+   "invoker": "Open navigation",
+   "focus_after": {
+    "id": "k16",
+    "label": "Simple"
+   },
+   "returned_to_invoker": false,
+   "note": ""
+  }
+ ]
+}

@@ -3,6 +3,7 @@ with play/pause/skip, Capital paired differences."""
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 
@@ -54,8 +55,11 @@ def test_fleet_filter_and_system_panel(site, browser):  # noqa: F811
 
 
 def test_action_fields_and_monday_walkthrough(site, browser):  # noqa: F811
+    # v2.1: Simple mode (the default) shows plain labels; Expert keeps the planner terms
     allowed = {"Exception trigger", "Quantity", "Source → destination", "Required by", "Expected availability", "Constraints",
-               "Expected benefit", "Owner", "Due", "Part"}
+               "Expected benefit", "Owner", "Due", "Part",
+               "What set it off", "How many", "From → to", "Needed by", "When it should be ready", "Limits to keep in mind",
+               "What it saves", "Who owns it", "Due by"}
     ctx, page, problems = open_page(browser, site + "#/actions", "1440")
     try:
         walk = page.locator('[data-story="action-walkthrough"]')
@@ -64,7 +68,7 @@ def test_action_fields_and_monday_walkthrough(site, browser):  # noqa: F811
         for _ in range(n - 1):
             walk.locator("button", has_text="Next").click()
         assert f"0{n} / 0{n}" in walk.locator(".pac-walk-step").inner_text()
-        walk.locator("button", has_text="Open the full exception").click()
+        walk.locator("button", has_text=re.compile(r"Open the full (exception|item)")).click()
         page.wait_for_selector(".drawer.is-open")
         labels = page.locator('.drawer [data-role="action-fields"] dt').evaluate_all("(els) => els.map((e) => e.textContent.trim())")
         assert labels and set(labels) <= allowed, labels

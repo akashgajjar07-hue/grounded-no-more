@@ -66,7 +66,7 @@ def test_leaderboard_is_dot_plot_with_champion_and_zero_excluded(site, browser):
         page.locator('.seg[aria-label="Evaluation window"] button[data-value="holdout"]').click()
         page.wait_for_timeout(400)
         assert "win=holdout" in page.url
-        assert "holdout" in board.locator(".chart-subtitle").inner_text()
+        assert "holdout" in board.locator('[data-role="board-key"]').inner_text()
         assert not problems, problems
     finally:
         ctx.close()
@@ -243,5 +243,100 @@ def test_v21_readability_simple(site, browser, vp):  # noqa: F811
         r = page.evaluate("import('./js/lib/readability.js').then((R) => R.readability())")
         assert r["grade"] <= 9, r
         assert r["maxSentenceWords"] <= 25, r["longSentences"]
+    finally:
+        ctx.close()
+
+
+# ----------------------------------------------------------------------------- v2.1 addendum: keyboard walk
+KB_TARGETS_JS = r"""() => {
+  const vis = (e) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && !e.closest('[hidden], details:not([open]) > :not(summary), [inert]'); };
+  const sel = 'a[href], button:not([disabled]), input:not([type=hidden]):not([disabled]), select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+  return [...document.querySelectorAll('#view ' + sel.split(', ').join(', #view '))].filter(vis).filter((e) => e.tabIndex >= 0).length;
+}"""
+KB_STEP_JS = r"""() => {
+  const a = document.activeElement;
+  if (!a || a === document.body) return { where: 'body' };
+  const inView = !!a.closest('#view');
+  if (!window.__kbSeen) window.__kbSeen = [];
+  let order = 'ok';
+  const last = window.__kbSeen.at(-1);
+  if (inView && last && last.isConnected && (last.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_PRECEDING)) order = 'back';
+  if (inView) window.__kbSeen.push(a);
+  const cs = getComputedStyle(a);
+  const ring = cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0 || cs.boxShadow !== 'none' || a.matches('g, svg *');
+  return { where: inView ? 'view' : 'shell', order, ring, tag: a.tagName, label: (a.getAttribute('aria-label') || a.textContent || '').trim().slice(0, 40) };
+}"""
+
+
+def keyboard_walk(page, max_tabs=400):
+    """Tab from the top through the whole page: focus never lost to <body> after entering the view, view controls
+    visited in document order, every visible view control reached, focus ring visible, and the walk leaves the view
+    (no trap). Returns (visited_in_view, expected)."""
+    expected = page.evaluate(KB_TARGETS_JS)
+    page.evaluate("window.__kbSeen = []; document.activeElement?.blur(); window.scrollTo(0, 0)")
+    seen_view, left_after_view, problems = 0, False, []
+    for _ in range(max_tabs):
+        page.keyboard.press("Tab")
+        st = page.evaluate(KB_STEP_JS)
+        if st["where"] == "view":
+            seen_view += 1
+            if st["order"] == "back":
+                problems.append(f"focus moved backwards to {st['tag']} {st['label']}")
+            if not st["ring"]:
+                problems.append(f"no visible focus ring on {st['tag']} {st['label']}")
+        elif seen_view and st["where"] in ("shell", "body"):
+            left_after_view = True
+            break
+    unique = page.evaluate("new Set(window.__kbSeen).size")
+    assert left_after_view, "keyboard focus trapped inside the view"
+    assert not problems, problems[:5]
+    assert unique >= expected, f"Tab reached {unique} of {expected} view controls"
+    return unique, expected
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_v21_keyboard(site, browser, vp):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/forecast", vp)
+    try:
+        keyboard_walk(page)
+        # Enter / Space on a segmented option switches it and the chart morphs (no console errors)
+        btn = page.locator('.seg[aria-label="Evaluation window"] button[data-value="holdout"]')
+        btn.focus()
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(400)
+        assert btn.get_attribute("aria-checked") == "true" and "win=holdout" in page.url
+        sel = page.locator('.seg[aria-label="Evaluation window"] button[data-value="selection"]')
+        sel.focus()
+        page.keyboard.press(" ")
+        page.wait_for_timeout(400)
+        assert sel.get_attribute("aria-checked") == "true"
+        # a term opens its tooltip on focus; Esc closes it and focus stays on the term
+        t = page.locator('#view .term').first
+        t.focus()
+        assert page.locator(".term-pop.is-on").count() == 1
+        page.keyboard.press("Escape")
+        assert page.locator(".term-pop.is-on").count() == 0
+        assert page.evaluate("document.activeElement.classList.contains('term')")
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+def test_v21_motion_keyed_transition(site, browser):  # noqa: F811
+    """Switching the window interpolates the leaderboard dots from old to new values (no redraw from zero)."""
+    ctx, page, problems = open_page(browser, site + "#/forecast?class=intermittent&part=R", "1440", reduced=False)
+    try:
+        js = "() => [...document.querySelectorAll('[data-story=forecast-leaderboard] circle.fl-dot')].map((c) => +c.getAttribute('cx'))"
+        before = page.evaluate(js)
+        page.locator('.seg[aria-label="Evaluation window"] button[data-value="holdout"]').click()
+        page.wait_for_timeout(60)
+        mid = page.evaluate(js)
+        page.wait_for_timeout(700)
+        after = page.evaluate(js)
+        assert len(before) == len(mid) == len(after)
+        assert min(mid) > 0, "dots restarted from zero"
+        moved = [i for i in range(len(after)) if abs(after[i] - before[i]) > 2]
+        assert moved and any(min(before[i], after[i]) - 0.5 <= mid[i] <= max(before[i], after[i]) + 0.5 and abs(mid[i] - after[i]) > 0.5 for i in moved), (before, mid, after)
+        assert not problems, problems
     finally:
         ctx.close()

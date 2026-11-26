@@ -11,10 +11,13 @@
 .gl-group-title { display: flex; align-items: baseline; gap: 10px; margin: 0 0 var(--s-2); font-family: var(--font-display); font-size: var(--fs-20); font-weight: 500; }
 .gl-group-n { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); }
 .gl-entries { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--s-2) var(--s-3); }
-.gl-entry { padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3); border-left: 2px solid var(--line-strong); border-radius: 0 var(--r-control) var(--r-control) 0; min-width: 0; scroll-margin-top: calc(var(--topbar-h, 56px) + 200px); transition: background-color 0.4s ease, border-color 0.4s ease; }
+.gl-entry { padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3); border-left: 2px solid var(--line-strong); border-radius: 0 var(--r-control) var(--r-control) 0; min-width: 0; scroll-margin-top: calc(var(--topbar-h, 56px) + 200px); position: relative; }
 .gl-entry:focus { outline: none; }
 .gl-entry:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.gl-entry.is-target { border-left-color: var(--primary); background: var(--c-teal-a08, rgba(34, 199, 184, 0.08)); box-shadow: inset 0 0 0 1px var(--c-teal-a24, rgba(34, 199, 184, 0.24)); }
+.gl-entry.is-target { border-left-color: var(--primary); }
+/* highlight = an opacity-animated overlay (motion rule: animate only transform / opacity) */
+.gl-entry::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--c-teal-a08, rgba(34, 199, 184, 0.08)); box-shadow: inset 0 0 0 1px var(--c-teal-a24, rgba(34, 199, 184, 0.24)); opacity: 0; pointer-events: none; transition: opacity var(--motion-slow, 450ms) var(--ease-standard, ease); }
+.gl-entry.is-target::before { opacity: 1; }
 .gl-term { margin: 0 0 6px; font-family: var(--font-ui); font-size: var(--fs-16, 16px); font-weight: 600; line-height: 1.35; color: var(--text); overflow-wrap: anywhere; }
 .gl-other { font-weight: 400; font-size: var(--fs-13, 13px); white-space: normal; }
 .gl-def { margin: 0 0 6px; font-size: var(--fs-14, 14px); line-height: 1.5; color: var(--text); }
@@ -27,4 +30,11 @@
   .gl-entries { grid-template-columns: minmax(0, 1fr); }
   .gl-entry { padding-left: var(--s-2); }
 }
-@media (prefers-reduced-motion: reduce) { .gl-entry { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .gl-entry::before { transition: none; } }
+.gl-jump[aria-current='true'] { border-color: var(--primary); color: var(--text); background: var(--c-teal-a08, rgba(34, 199, 184, 0.08)); }
+.gl-group { position: relative; }
+.gl-group::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--c-teal-a24, rgba(34, 199, 184, 0.24)); opacity: 0; pointer-events: none; transition: opacity var(--motion-slow, 450ms) var(--ease-standard, ease); }
+.gl-group.is-jumped::after { opacity: 1; }
+.gl-group-title:focus { outline: none; }
+.gl-group-title:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+.gl-tools, .gl-jump, .gl-search-input { scroll-margin-top: calc(var(--topbar-h, 56px) + 16px); }

@@ -1,0 +1,166 @@
+{
+ "site_capital_mission?section=results": [],
+ "generated": "2026-11-26T19:17:08",
+ "truth": {
+  "capital_rows": {
+   "bought": "+68 units ≈ AED 8.4M assumed value",
+   "removed": "−20 units ≈ AED 3.1M",
+   "net_inventory": "+AED 0.6M"
+  },
+  "note": "Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a discount.",
+  "scope": "across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part",
+  "names": {
+   "P0": "Simple Rulebook (naive reference)",
+   "P1": "Each Airport for Itself (simplified local comparator)",
+   "P2": "Network Plan",
+   "I125": "Network Plan + Extra Spares"
+  },
+  "aog_hours": {
+   "P0": 1690,
+   "P1": 565.9,
+   "P2": 210.2,
+   "I125": 76
+  }
+ },
+ "site_capital_capital": [],
+ "site_kpis": {
+  "rows": [
+   {
+    "page": "mission:simple",
+    "value": "210 h",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "mission:simple",
+    "value": "97.7 %",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "mission:simple",
+    "value": "8.6",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "capital:simple",
+    "value": "56.7M AED",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "capital:simple",
+    "value": "76 h",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "capital:simple",
+    "value": "32.4M AED",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "mission?section=results:simple",
+    "value": "210 h",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "mission?section=results:simple",
+    "value": "97.7 %",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "mission?section=results:simple",
+    "value": "8.6",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "mission:expert",
+    "value": "210 h",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "mission:expert",
+    "value": "97.7 %",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "mission:expert",
+    "value": "8.6",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "capital:expert",
+    "value": "56.7M AED",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "capital:expert",
+    "value": "76 h",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "capital:expert",
+    "value": "32.4M AED",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "mission?section=results:expert",
+    "value": "210 h",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "mission?section=results:expert",
+    "value": "97.7 %",
+    "label": "",
+    "ok": true
+   },
+   {
+    "page": "mission?section=results:expert",
+    "value": "8.6",
+    "label": "",
+    "ok": true
+   }
+  ],
+  "problems": []
+ },
+ "site_names": {
+  "seen": 87,
+  "problems": []
+ },
+ "readme": {
+  "problems": [],
+  "warnings_untraced_hour_figures": [
+   "1,181"
+  ]
+ },
+ "workbook": {
+  "problems": [],
+  "site_data_line": "docs/data/*.json, exported 2026-11-26T12:46:35Z (git f49a029)",
+  "kpis_meta": "2026-11-26T13:02:18Z",
+  "kpis_git": "390aee8"
+ },
+ "deck": {
+  "files": [
+   "presentations/linkedin_post.md",
+   "presentations/video_script.md",
+   "presentations/case_study_deck.pptx"
+  ],
+  "problems": [],
+  "warnings": [
+   "presentations/case_study_deck.pptx: hour figures not found in docs/data (check by hand): ['1,123']"
+  ]
+ }
+}

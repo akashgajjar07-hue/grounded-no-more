@@ -16,7 +16,7 @@ import { term } from '../lib/glossary.js';
 import { displayName, nameTag } from '../lib/names.js';
 import { demandStrip, demandStats } from './parts-intelligence/strip.js';
 import { drawIn, tweenNumber } from './parts-intelligence/motion-helpers.js';
-import { chartTransition, throttleRAF } from '../lib/motion.js';
+import { chartTransition, throttleRAF, tx as txSel } from '../lib/motion.js';
 import { escalationBlock, allocationFlagNote, flagsAt } from './parts-intelligence/flags.js';
 
 /** directLabel whose colour survives the .gnm-label CSS fill. */
@@ -602,7 +602,7 @@ export async function render(el, ctx) {
         animate = false;
       }
       const { g } = L;
-      const T = (sel) => (animate ? sel.transition(chartTransition()) : sel);
+      const T = (sel) => (animate ? txSel(sel) : sel);
       const xMax = Math.max(ADI_CUT * 3, (d3.max(pts, (p) => p.adi) || 1) * 1.15);
       const yMax = Math.max(CV2_CUT * 2.2, (d3.max(pts, (p) => p.cv2) || 0) * 1.1);
       const x = d3.scaleLog().domain([1, xMax]).range([0, iw]);
@@ -623,9 +623,9 @@ export async function render(el, ctx) {
       const dots = L.dots.selectAll('circle.pi-dot').data(pts, (p) => p.pn).join(
         (enter) => enter.append('circle').attr('class', 'pi-dot').attr('r', 3.5).attr('vector-effect', 'non-scaling-stroke').attr('transform', tf).style('opacity', 0)
           .style('cursor', 'pointer').on('click', (e, p) => openPart(p.pn)).on('keydown', (e, p) => { if (e.key === 'Enter') openPart(p.pn); })
-          .call((en) => (animate ? en.transition(chartTransition()).style('opacity', 1) : en.style('opacity', 1))),
+          .call((en) => (animate ? txSel(en).style('opacity', 1) : en.style('opacity', 1))),
         (update) => update,
-        (exit) => (animate ? exit.transition(chartTransition({ ease: 'exit' })).style('opacity', 0).remove() : exit.remove()));
+        (exit) => (animate ? txSel(exit, { ease: 'exit' }).style('opacity', 0).remove() : exit.remove()));
       dots.attr('class', (p) => `pi-dot${sel(p) ? ' is-sel' : ''}${p.pn === ctx.params.pn ? ' is-pn' : ''}`)
         .attr('tabindex', (p) => (sel(p) ? 0 : null))
         .attr('role', (p) => (sel(p) ? 'button' : null))
@@ -685,7 +685,7 @@ export async function render(el, ctx) {
         ag.append('circle').attr('cx', fx).attr('cy', fy).attr('r', 7).attr('fill', 'none').attr('stroke', theme.color.text).attr('stroke-width', 1.25);
         ag.append('text').attr('class', 'gnm-annot-text').attr('x', tx).attr('y', b.y + 11).attr('text-anchor', anchor).text(title);
         ag.append('text').attr('class', 'gnm-annot-sub').attr('x', tx).attr('y', b.y + 26).attr('text-anchor', anchor).text(sub);
-        if (animate) ag.style('opacity', 0).transition(chartTransition({ delay: 120 })).style('opacity', 1);
+        if (animate) txSel(ag.style('opacity', 0), { delay: 120 }).style('opacity', 1);
       }
       // each swatch + label is one nowrap item, so a swatch is never orphaned at a line end (wave 5)
       const item = (sw, t) => h('span', { class: 'pi-key-item' }, sw, t);
@@ -758,7 +758,7 @@ export async function render(el, ctx) {
         L = { svg, cg, tots, keyT, focus };
         W = w; animate = false;
       }
-      const T = (sel) => (animate ? sel.transition(chartTransition()) : sel);
+      const T = (sel) => (animate ? txSel(sel) : sel);
       const gs = L.cg.selectAll('g.pi-hm-cell').data(cells, (c) => c.key);
       T(gs.select('rect')).attr('fill-opacity', (c) => (c.n ? op(c.n) : 0));
       gs.select('rect').each(function (c) { withTooltip(window.d3.select(this).datum(c), (d) => ({ title: `${d.abc} · ${dcName(d.dc)}`, rows: [[byMode('Parts', 'PNs'), fmtInt(d.n)]] })); });

@@ -1,0 +1,508 @@
+{
+ "view": "data-method",
+ "generated": "2026-11-26T19:44:16",
+ "harness": "tests/e2e/audit_lib.py (effect within 1 s)",
+ "browsers_run": [
+  "chromium",
+  "webkit"
+ ],
+ "browsers_blocked": {
+  "firefox": "Playwright firefox-1572 (Nightly) exits at launch on this machine: \"Could not find profile folder\" (also with sandbox off and a custom TMPDIR). Not run."
+ },
+ "notes": [
+  "At 390 px the off-canvas shell nav (#app > nav, #menu-btn) is skipped: the harness finds its links outside the viewport and does not close the opened nav. Menu checked by hand: opens, links navigate, Esc closes.",
+  "Deep-link drawer states (?id=) audit the drawer only (skip #app): the page behind the scrim is inert by design; the base route covers it.",
+  "passed_by_hand = shell table regions (tabindex=0) the harness could not see change focus (it compares className; two table-wraps in a row look identical); verified in WebKit that document.activeElement is the region.",
+  "failed_foreign also counts one \"ResizeObserver loop completed\" page error raised after the key-3 shortcut opened #/forecast.",
+  "failed_foreign = page errors thrown by capital-optimiser.js drawIn (\"transition N not found\") after the 1-8 shortcut audit visited #/capital; reproduced with stack traces; not in this view."
+ ],
+ "fixes": [],
+ "totals": {
+  "tested": 840,
+  "passed": 823,
+  "passed_by_hand": 12,
+  "failed_own": 0,
+  "failed_foreign": 17,
+  "skipped": 8,
+  "fixed": 0,
+  "disabled": 0
+ },
+ "cells": [
+  {
+   "route": "method",
+   "browser": "chromium",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "tested": 88,
+   "passed": 87,
+   "passed_by_hand": 0,
+   "failed_own": 0,
+   "failed_foreign": 1,
+   "skipped": 1,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": [
+    {
+     "kind": "shortcut",
+     "label": "key 3",
+     "note": "",
+     "errors": [
+      "pageerror: transition 154 not found",
+      "pageerror: transition 155 not found"
+     ]
+    }
+   ]
+  },
+  {
+   "route": "method",
+   "browser": "chromium",
+   "mode": "expert",
+   "viewport": "390x844",
+   "tested": 66,
+   "passed": 65,
+   "passed_by_hand": 0,
+   "failed_own": 0,
+   "failed_foreign": 1,
+   "skipped": 1,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": [
+    {
+     "kind": "shortcut",
+     "label": "key 5",
+     "note": "",
+     "errors": [
+      "pageerror: transition 74 not found",
+      "pageerror: transition 75 not found"
+     ]
+    }
+   ]
+  },
+  {
+   "route": "method",
+   "browser": "chromium",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "tested": 45,
+   "passed": 44,
+   "passed_by_hand": 0,
+   "failed_own": 0,
+   "failed_foreign": 1,
+   "skipped": 1,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": [
+    {
+     "kind": "shortcut",
+     "label": "key 3",
+     "note": "",
+     "errors": [
+      "pageerror: transition 154 not found",
+      "pageerror: transition 155 not found"
+     ]
+    }
+   ]
+  },
+  {
+   "route": "method",
+   "browser": "chromium",
+   "mode": "simple",
+   "viewport": "390x844",
+   "tested": 31,
+   "passed": 28,
+   "passed_by_hand": 0,
+   "failed_own": 0,
+   "failed_foreign": 3,
+   "skipped": 1,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": [
+    {
+     "kind": "shortcut",
+     "label": "key 3",
+     "note": "",
+     "errors": [
+      "pageerror: transition 1 not found",
+      "pageerror: transition 2 not found"
+     ]
+    },
+    {
+     "kind": "shortcut",
+     "label": "key 4",
+     "note": "",
+     "errors": [
+      "pageerror: transition 73 not found",
+      "pageerror: transition 74 not found"
+     ]
+    },
+    {
+     "kind": "shortcut",
+     "label": "key 5",
+     "note": "",
+     "errors": [
+      "pageerror: transition 76 not found",
+      "pageerror: transition 77 not found"
+     ]
+    }
+   ]
+  },
+  {
+   "route": "method?section=next",
+   "browser": "chromium",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "tested": 78,
+   "passed": 78,
+   "passed_by_hand": 0,
+   "failed_own": 0,
+   "failed_foreign": 0,
+   "skipped": 0,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": []
+  },
+  {
+   "route": "method?section=next",
+   "browser": "chromium",
+   "mode": "expert",
+   "viewport": "390x844",
+   "tested": 56,
+   "passed": 56,
+   "passed_by_hand": 0,
+   "failed_own": 0,
+   "failed_foreign": 0,
+   "skipped": 0,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": []
+  },
+  {
+   "route": "method?section=next",
+   "browser": "chromium",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "tested": 35,
+   "passed": 34,
+   "passed_by_hand": 0,
+   "failed_own": 0,
+   "failed_foreign": 1,
+   "skipped": 0,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": [
+    {
+     "kind": "link",
+     "label": "Forecast Lab3",
+     "note": "",
+     "errors": [
+      "pageerror: transition 25 not found",
+      "pageerror: transition 26 not found"
+     ]
+    }
+   ]
+  },
+  {
+   "route": "method?section=next",
+   "browser": "chromium",
+   "mode": "simple",
+   "viewport": "390x844",
+   "tested": 21,
+   "passed": 21,
+   "passed_by_hand": 0,
+   "failed_own": 0,
+   "failed_foreign": 0,
+   "skipped": 0,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": []
+  },
+  {
+   "route": "method",
+   "browser": "webkit",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "tested": 88,
+   "passed": 84,
+   "passed_by_hand": 3,
+   "failed_own": 0,
+   "failed_foreign": 4,
+   "skipped": 1,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": [
+    {
+     "kind": "link",
+     "label": "Rotable & Repair4",
+     "note": "",
+     "errors": [
+      "pageerror: transition 97 not found",
+      "pageerror: transition 98 not found"
+     ]
+    },
+    {
+     "kind": "link",
+     "label": "Network Positioning5",
+     "note": "",
+     "errors": [
+      "pageerror: transition 100 not found",
+      "pageerror: transition 101 not found"
+     ]
+    },
+    {
+     "kind": "focusable",
+     "label": "Holdout borrowings per year (central, 2000–2019)",
+     "note": "",
+     "errors": []
+    },
+    {
+     "kind": "focusable",
+     "label": "Source manifest",
+     "note": "",
+     "errors": []
+    },
+    {
+     "kind": "focusable",
+     "label": "Licences",
+     "note": "",
+     "errors": []
+    },
+    {
+     "kind": "shortcut",
+     "label": "key 3",
+     "note": "",
+     "errors": [
+      "pageerror: transition 1 not found",
+      "pageerror: transition 2 not found"
+     ]
+    },
+    {
+     "kind": "shortcut",
+     "label": "key 7",
+     "note": "",
+     "errors": [
+      "pageerror: transition 125 not found",
+      "pageerror: transition 126 not found"
+     ]
+    }
+   ]
+  },
+  {
+   "route": "method",
+   "browser": "webkit",
+   "mode": "expert",
+   "viewport": "390x844",
+   "tested": 66,
+   "passed": 66,
+   "passed_by_hand": 3,
+   "failed_own": 0,
+   "failed_foreign": 0,
+   "skipped": 1,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": [
+    {
+     "kind": "focusable",
+     "label": "Holdout borrowings per year (central, 2000–2019)",
+     "note": "",
+     "errors": []
+    },
+    {
+     "kind": "focusable",
+     "label": "Source manifest",
+     "note": "",
+     "errors": []
+    },
+    {
+     "kind": "focusable",
+     "label": "Licences",
+     "note": "",
+     "errors": []
+    }
+   ]
+  },
+  {
+   "route": "method",
+   "browser": "webkit",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "tested": 45,
+   "passed": 43,
+   "passed_by_hand": 0,
+   "failed_own": 0,
+   "failed_foreign": 2,
+   "skipped": 1,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": [
+    {
+     "kind": "link",
+     "label": "Capital Optimiser6",
+     "note": "",
+     "errors": [
+      "pageerror: transition 148 not found",
+      "pageerror: transition 149 not found"
+     ]
+    },
+    {
+     "kind": "shortcut",
+     "label": "key 6",
+     "note": "",
+     "errors": [
+      "pageerror: transition 113 not found",
+      "pageerror: transition 114 not found"
+     ]
+    }
+   ]
+  },
+  {
+   "route": "method",
+   "browser": "webkit",
+   "mode": "simple",
+   "viewport": "390x844",
+   "tested": 31,
+   "passed": 31,
+   "passed_by_hand": 0,
+   "failed_own": 0,
+   "failed_foreign": 0,
+   "skipped": 1,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": []
+  },
+  {
+   "route": "method?section=next",
+   "browser": "webkit",
+   "mode": "expert",
+   "viewport": "1440x900",
+   "tested": 78,
+   "passed": 76,
+   "passed_by_hand": 3,
+   "failed_own": 0,
+   "failed_foreign": 2,
+   "skipped": 0,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": [
+    {
+     "kind": "link",
+     "label": "Network Positioning5",
+     "note": "",
+     "errors": [
+      "pageerror: transition 100 not found",
+      "pageerror: transition 101 not found"
+     ]
+    },
+    {
+     "kind": "link",
+     "label": "Capital Optimiser6",
+     "note": "",
+     "errors": [
+      "pageerror: transition 148 not found",
+      "pageerror: transition 149 not found"
+     ]
+    },
+    {
+     "kind": "focusable",
+     "label": "Holdout borrowings per year (central, 2000–2019)",
+     "note": "",
+     "errors": []
+    },
+    {
+     "kind": "focusable",
+     "label": "Source manifest",
+     "note": "",
+     "errors": []
+    },
+    {
+     "kind": "focusable",
+     "label": "Licences",
+     "note": "",
+     "errors": []
+    }
+   ]
+  },
+  {
+   "route": "method?section=next",
+   "browser": "webkit",
+   "mode": "expert",
+   "viewport": "390x844",
+   "tested": 56,
+   "passed": 56,
+   "passed_by_hand": 3,
+   "failed_own": 0,
+   "failed_foreign": 0,
+   "skipped": 0,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": [
+    {
+     "kind": "focusable",
+     "label": "Holdout borrowings per year (central, 2000–2019)",
+     "note": "",
+     "errors": []
+    },
+    {
+     "kind": "focusable",
+     "label": "Source manifest",
+     "note": "",
+     "errors": []
+    },
+    {
+     "kind": "focusable",
+     "label": "Licences",
+     "note": "",
+     "errors": []
+    }
+   ]
+  },
+  {
+   "route": "method?section=next",
+   "browser": "webkit",
+   "mode": "simple",
+   "viewport": "1440x900",
+   "tested": 35,
+   "passed": 33,
+   "passed_by_hand": 0,
+   "failed_own": 0,
+   "failed_foreign": 2,
+   "skipped": 0,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": [
+    {
+     "kind": "link",
+     "label": "Network Positioning5",
+     "note": "",
+     "errors": [
+      "pageerror: transition 100 not found",
+      "pageerror: transition 101 not found"
+     ]
+    },
+    {
+     "kind": "link",
+     "label": "Capital Optimiser6",
+     "note": "",
+     "errors": [
+      "pageerror: transition 148 not found",
+      "pageerror: transition 149 not found"
+     ]
+    }
+   ]
+  },
+  {
+   "route": "method?section=next",
+   "browser": "webkit",
+   "mode": "simple",
+   "viewport": "390x844",
+   "tested": 21,
+   "passed": 21,
+   "passed_by_hand": 0,
+   "failed_own": 0,
+   "failed_foreign": 0,
+   "skipped": 0,
+   "fixed": 0,
+   "disabled": 0,
+   "failures": []
+  }
+ ]
+}

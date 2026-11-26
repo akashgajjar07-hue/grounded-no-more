@@ -1,0 +1,639 @@
+{
+ "route": "capital",
+ "owner": "docs/js/views/capital-optimiser.js",
+ "problems": [],
+ "warnings": [
+  {
+   "type": "tab-stops-on-non-semantic-elements",
+   "count": 10,
+   "examples": [
+    "Faster repair on six parts (LEV_TAT10_TOP6): AED 4",
+    "Network Plan held to guardrails (P2_GUARD): AED 48",
+    "Reposition existing spares only (LEV_REPOS): AED 4",
+    "Simple Rulebook (naive reference) (P0): AED 48.4M,",
+    "Re-balanced spares + faster repair (COMBO_B100_TAT"
+   ]
+  },
+  {
+   "type": "upward-jump>400px",
+   "pairs": [
+    [
+     "View data",
+     "Test",
+     1063
+    ],
+    [
+     "View data",
+     "View data",
+     692
+    ]
+   ]
+  }
+ ],
+ "expected": 62,
+ "reached": 62,
+ "presses": 74,
+ "cycled": true,
+ "activation": [
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "chart-update"
+   ],
+   "ms": 230.1,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k10",
+    "returned_to_invoker": true
+   },
+   "control": "60-second tourS",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "dom-mutation"
+   ],
+   "ms": 44.3,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k10",
+    "returned_to_invoker": true
+   },
+   "control": "60-second tourS",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "dom-mutation"
+   ],
+   "ms": 14.0,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k17",
+    "returned_to_invoker": true
+   },
+   "control": "Story",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "story",
+    "chart-update"
+   ],
+   "ms": 48.7,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k17",
+    "returned_to_invoker": true
+   },
+   "control": "Story",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "modal",
+    "dom-mutation"
+   ],
+   "ms": 17.0,
+   "esc": {
+    "opened": [
+     "modal"
+    ],
+    "closed": true,
+    "focus": "k18",
+    "returned_to_invoker": true
+   },
+   "control": "Keyboard shortcuts",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "modal",
+    "dom-mutation"
+   ],
+   "ms": 12.2,
+   "esc": {
+    "opened": [
+     "modal"
+    ],
+    "closed": true,
+    "focus": "k18",
+    "returned_to_invoker": true
+   },
+   "control": "Keyboard shortcuts",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 38.5,
+   "control": "hours planes sat grounded waiting for a part (material AOG h",
+   "tag": "span",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 35.5,
+   "control": "Frontier point B015: AED 28.4M, 5,333 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 24.8,
+   "control": "Frontier point B015: AED 28.4M, 5,333 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 32.1,
+   "control": "Frontier point B020: AED 28.7M, 4,213 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 42.8,
+   "control": "Frontier point B020: AED 28.7M, 4,213 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 19.0,
+   "control": "Frontier point B030: AED 30.7M, 2,917 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 214.7,
+   "control": "Frontier point B030: AED 30.7M, 2,917 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 46.6,
+   "control": "Frontier point B040: AED 33M, 1,911 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 59.4,
+   "control": "Frontier point B040: AED 33M, 1,911 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 12.2,
+   "control": "Frontier point B050: AED 35.7M, 1,314 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 33.6,
+   "control": "Frontier point B050: AED 35.7M, 1,314 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 85.1,
+   "control": "Frontier point B060: AED 38.5M, 926 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 46.2,
+   "control": "Frontier point B060: AED 38.5M, 926 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 13.5,
+   "control": "Frontier point B070: AED 41M, 629 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 27.0,
+   "control": "Frontier point B070: AED 41M, 629 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 50.1,
+   "control": "Frontier point B080: AED 43.6M, 451 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 15.0,
+   "control": "Frontier point B080: AED 43.6M, 451 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 7.7,
+   "control": "Frontier point B090: AED 46.4M, 302 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 9.7,
+   "control": "Frontier point B090: AED 46.4M, 302 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 76.5,
+   "control": "Network Plan (P2): AED 49M, 210 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 30.4,
+   "control": "Network Plan (P2): AED 49M, 210 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 15.4,
+   "control": "Frontier point I110: AED 51.8M, 144 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 31.5,
+   "control": "Frontier point I110: AED 51.8M, 144 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 19.1,
+   "control": "Frontier point B110: AED 52M, 133 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 24.5,
+   "control": "Frontier point B110: AED 52M, 133 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 54.4,
+   "control": "Frontier point B150: AED 64.1M, 41 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 25.7,
+   "control": "Frontier point B150: AED 64.1M, 41 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 21.2,
+   "control": "Frontier point B250: AED 85.6M, 39 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 93.1,
+   "control": "Frontier point B250: AED 85.6M, 39 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 24.9,
+   "control": "Network Plan + Extra Spares (I125): AED 56.7M, 76 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 30.8,
+   "control": "Network Plan + Extra Spares (I125): AED 56.7M, 76 h per year",
+   "tag": "path",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 63.0,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 35.5,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 19.5,
+   "control": "Tuning",
+   "tag": "button",
+   "role": "radio",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 70.4,
+   "control": "Tuning",
+   "tag": "button",
+   "role": "radio",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 16.7,
+   "control": "Both",
+   "tag": "button",
+   "role": "radio",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 23.0,
+   "control": "Both",
+   "tag": "button",
+   "role": "radio",
+   "key": "Space"
+  }
+ ],
+ "shell": [
+  {
+   "what": "help modal (?)",
+   "ok": true,
+   "invoker": "Test",
+   "focus_after": {
+    "id": "k36",
+    "label": "Test"
+   },
+   "returned_to_invoker": true,
+   "note": ""
+  },
+  {
+   "what": "tour (rail button)",
+   "ok": true,
+   "invoker": "60-second tourS",
+   "focus_after": {
+    "id": "k10",
+    "label": "60-second tourS"
+   },
+   "returned_to_invoker": true,
+   "note": ""
+  },
+  {
+   "what": "nav rail (390 menu)",
+   "ok": true,
+   "invoker": "Open navigation",
+   "focus_after": {
+    "id": "k16",
+    "label": "Simple"
+   },
+   "returned_to_invoker": false,
+   "note": ""
+  }
+ ]
+}

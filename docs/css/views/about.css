@@ -41,3 +41,4 @@
   .ab-md .md-table { min-width: 640px; }
 }
 .ab-md .md-table th, .ab-md .md-table td { text-align: left; }
+.ab-doc:focus { outline: none; }

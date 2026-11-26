@@ -1,0 +1,5 @@
+{
+ "available": false,
+ "results": {},
+ "note": "Lighthouse unavailable (could not be fetched or run headless); fallback = Playwright + CDP metrics below."
+}

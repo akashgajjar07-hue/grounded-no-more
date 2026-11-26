@@ -226,3 +226,20 @@ a.mc-pr:hover { background: var(--c-teal-a08); }
   .mc-donor-table .mc-nr { white-space: normal; line-height: 1.35; padding: 6px 8px; }
   .mc-donor-table thead th { padding: 0 8px; white-space: normal; }
 }
+/* motion (addendum): the plan bars draw in once (transform only, slow token); reduced motion → tokens are 0 ms */
+.mc-bar-fill { transform-origin: left center; }
+.mc-bars.is-drawing .mc-bar-fill { animation: mc-grow var(--motion-slow, 450ms) var(--ease-enter, ease-out) both; }
+.mc-bars.is-drawing .mc-bar:nth-child(2) .mc-bar-fill { animation-delay: 40ms; }
+.mc-bars.is-drawing .mc-bar:nth-child(3) .mc-bar-fill { animation-delay: 80ms; }
+.mc-bars.is-drawing .mc-bar:nth-child(4) .mc-bar-fill { animation-delay: 120ms; }
+.mc-bars.is-drawing .mc-bar-ci { animation: mc-fade var(--motion-slow, 450ms) var(--ease-enter, ease-out) both; }
+@keyframes mc-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes mc-fade { from { opacity: 0; } to { opacity: 0.85; } }
+@media (prefers-reduced-motion: reduce) { .mc-bars.is-drawing .mc-bar-fill, .mc-bars.is-drawing .mc-bar-ci { animation: none; } }
+.mc-kpi-num { font-variant-numeric: tabular-nums; }
+/* audit (addendum): the callout sits under the drawing at every width, so it never covers a system hotspot */
+.mc-fig { height: 260px; }
+.mc-fault { position: relative; left: auto; top: auto; transform: none; max-width: none; align-self: stretch; margin-top: var(--s-2); }
+@media (max-width: 1279px) { .mc-fault { max-width: none; } }
+.mc-fig .ata-hotspot .hs-hit { pointer-events: all; stroke: none; }
+.mc-fig .ata-hotspot { cursor: pointer; }

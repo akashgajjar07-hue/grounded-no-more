@@ -126,3 +126,9 @@
 .dm-hist { padding: 10px 14px; border: 1px dashed var(--line-strong); border-radius: var(--r-control); }
 @media (max-width: 767px) { .dm-next-list { grid-template-columns: minmax(0, 1fr); } .dm-av2-counts { gap: var(--s-1); } .dm-av2-count { padding: 8px 10px; } }
 .dm-tests-sum p { overflow-wrap: anywhere; }
+
+/* v2.1 addendum (motion): charts draw in on load over the slow token (opacity + transform only; 0 ms under reduced motion) */
+@keyframes dm-draw-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+#view .dm-flow svg, #view .dm-stack figure svg { animation: dm-draw-in var(--motion-slow, 450ms) var(--ease-enter, ease-out) both; }
+.dm-xp-body { animation: dm-draw-in var(--motion-base, 250ms) var(--ease-standard, ease) both; }
+@media (prefers-reduced-motion: reduce) { #view .dm-flow svg, #view .dm-stack figure svg, .dm-xp-body { animation: none; } }

@@ -86,9 +86,11 @@ function codesExpertOnly(root) {
   });
 }
 
-function scrollToSection(id, smooth = true) {
-  const go = () => document.getElementById(`ab-${id}`)?.scrollIntoView({ behavior: smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'auto', block: 'start' });
-  requestAnimationFrame(() => setTimeout(go, 30));
+function scrollToSection(id, user = true) {
+  // instant jump (smooth scrolling fought later clicks while still moving; motion stays transform/opacity only).
+  // A user action (onParams) jumps synchronously and moves focus there; after a render, wait for the router's scroll reset.
+  const go = () => { const t = document.getElementById(`ab-${id}`); if (!t) return; t.scrollIntoView({ block: 'start' }); if (user) t.focus?.({ preventScroll: true }); };
+  if (user) go(); else requestAnimationFrame(() => setTimeout(go, 30));
 }
 
 /** #/about?section=… on the same route: scroll, no re-render. */
@@ -161,6 +163,7 @@ export async function render(el, ctx) {
     })));
     const sec = el.lastElementChild.querySelector('.card');
     sec.id = `ab-${c.id}`;
+    sec.tabIndex = -1;   // section jumps move focus here (keyboard users land on the section)
     sec.dataset.role = `about-${c.id}`;
   });
 

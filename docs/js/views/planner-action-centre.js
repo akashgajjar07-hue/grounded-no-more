@@ -9,6 +9,7 @@
 import { h, pageHead, card, provChip, pill, drawer, icon, segmented, intro3, scopeLine } from '../ui.js';
 import { chartFrame, responsive, svgIn, theme, fmtAED, fmtHours, fmtInt, fmtNum, fmtWeek, withTooltip, fmtEnum, plural } from '../charts/theme.js';
 import { isSimple, byMode } from '../lib/mode.js';
+import { chartTransition } from '../lib/motion.js';
 import { displayName, replaceCodes } from '../lib/names.js';
 import { term, termText } from '../lib/glossary.js';
 
@@ -168,12 +169,12 @@ export function shortTitle(a) {
 export function actionFields(a) {
   const out = [];
   const ea = a.expected_availability, eb = a.expected_benefit;
-  if (a.trigger) out.push(['Exception trigger', tidyEnums(a.trigger)]);
-  if (a.quantity != null) out.push(['Quantity', fmtInt(a.quantity)]);
-  if (a.source || a.destination) out.push(['Source → destination', `${a.source ? tidyEnums(a.source) : '—'} → ${a.destination ? tidyEnums(a.destination) : '—'}`, true]);
-  if (a.required_by_week != null) out.push(['Required by', fmtWeek(a.required_by_week), true]);
-  if (ea && (ea.week != null || ea.basis)) out.push(['Expected availability', `${ea.week != null ? fmtWeek(ea.week) : 'not known'}${ea.basis ? ` · ${ea.basis}` : ''}${ea.past_quote ? ' · already past quote' : ''}`]);
-  if (Array.isArray(a.constraints) && a.constraints.length) out.push(['Constraints', h('ul', { class: 'pac-list-inline' }, a.constraints.map((c) => h('li', {}, replaceCodes(tidyEnums(c)))))]);
+  if (a.trigger) out.push([byMode('What set it off', 'Exception trigger'), isSimple() ? SIMPLE_WHY[a.type] || tidyEnums(a.trigger) : tidyEnums(a.trigger)]);
+  if (a.quantity != null) out.push([byMode('How many', 'Quantity'), fmtInt(a.quantity)]);
+  if (a.source || a.destination) out.push([byMode('From → to', 'Source → destination'), `${a.source ? tidyEnums(a.source) : '—'} → ${a.destination ? tidyEnums(a.destination) : '—'}`, true]);
+  if (a.required_by_week != null) out.push([byMode('Needed by', 'Required by'), fmtWeek(a.required_by_week), true]);
+  if (ea && (ea.week != null || ea.basis)) out.push([byMode('When it should be ready', 'Expected availability'), `${ea.week != null ? fmtWeek(ea.week) : 'not known'}${ea.basis ? ` · ${ea.basis}` : ''}${ea.past_quote ? ' · already past quote' : ''}`]);
+  if (Array.isArray(a.constraints) && a.constraints.length) out.push([byMode('Limits to keep in mind', 'Constraints'), h('ul', { class: 'pac-list-inline' }, a.constraints.map((c) => h('li', {}, replaceCodes(tidyEnums(c)))))]);
   if (eb && typeof eb === 'object') {
     const bits = [];
     if (eb.observed_downtime_h_lookback != null) bits.push(`${fmtInt(eb.observed_downtime_h_lookback)} h downtime observed here in the lookback`);
@@ -181,10 +182,10 @@ export function actionFields(a) {
     if (eb.capital_above_26w_cover_aed != null) bits.push(`${fmtAED(eb.capital_above_26w_cover_aed)} capital above 26 weeks of cover`);
     if (eb.annual_carrying_cost_aed != null) bits.push(`${fmtAED(eb.annual_carrying_cost_aed)}/yr carrying cost`);
     if (eb.units_expired_in_history != null) bits.push(`${fmtInt(eb.units_expired_in_history)} units expired in history (${fmtAED(eb.value_expired_in_history_aed)})`);
-    if (bits.length) out.push(['Expected benefit', `${bits.join(', ')}${eb.note ? ` (${eb.note})` : ''}`]);
+    if (bits.length) out.push([byMode('What it saves', 'Expected benefit'), `${bits.join(', ')}${eb.note ? ` (${eb.note})` : ''}`]);
   }
-  if (a.owner) out.push(['Owner', a.owner]);
-  if (a.due_week != null) out.push(['Due', fmtWeek(a.due_week), true]);
+  if (a.owner) out.push([byMode('Who owns it', 'Owner'), a.owner]);
+  if (a.due_week != null) out.push([byMode('Due by', 'Due'), fmtWeek(a.due_week), true]);
   if (a.pn) out.push(['Part', a.pn, true]);
   return out;
 }
@@ -415,30 +416,58 @@ export async function render(el, ctx) {
   });
   frame.body.before(h('div', { class: 'pac-legend t-12', 'aria-hidden': 'true' }, SEV.filter((sv) => nSev[sv]).map((sv) => h('span', {}, h('i', { class: `pac-key pac-key--${sv}` }), `${SEV_LABEL[sv]} ${fmtInt(nSev[sv])}`))));
   const stopChart = responsive(frame.body, (w) => drawTypes(frame.body, w));
+  /**
+   * v2.1 addendum (motion): one persistent SVG per width with keyed joins (row per type, segment per severity).
+   * First draw: bars grow in over the slow token. Filter changes: opacity and label weight transition; nothing
+   * redraws from zero. A width change rebuilds (no animation needed for a resize).
+   */
   function drawTypes(body, w) {
+    // a late rAF after the route changed: d3 cannot inherit a transition on a detached node ("transition N not found")
+    if (!body.isConnected) return;
     const d3 = window.d3;
     const narrow = w < 520;
     const rowH = 30, lw = narrow ? 0 : Math.min(230, w * 0.34), top0 = narrow ? 0 : 4;
-    const H = byType.length * (narrow ? rowH + 16 : rowH) + 8;
-    const svg = svgIn(body, w, H, 'Exceptions by type and severity');
+    const step = narrow ? rowH + 16 : rowH;
+    const H = byType.length * step + 8;
+    let svg = d3.select(body).select('svg');
+    const fresh = svg.empty() || +svg.attr('width') !== w;
+    if (fresh) svg = svgIn(body, w, H, 'Exceptions by type and severity');
     const bw = Math.max(40, w - lw - 120);
     const x = d3.scaleLinear().domain([0, d3.max(byType, (r) => r.n) || 1]).range([0, bw]);
     const fill = { urgent: theme.series.urgent, review: theme.series.review, info: theme.color.neutral };
-    byType.forEach((r, i) => {
-      const y = top0 + i * (narrow ? rowH + 16 : rowH);
-      const g = svg.append('g').attr('transform', `translate(0,${y})`).style('cursor', 'pointer').attr('tabindex', 0).attr('role', 'button').attr('aria-label', `${r.label}: ${r.n} exceptions; filter`)
-        .on('click', () => { f.type = f.type === r.t ? '' : r.t; sync(); })
-        .on('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f.type = f.type === r.t ? '' : r.t; sync(); } });
-      const by = narrow ? 18 : 6;
-      g.append('text').attr('class', f.type === r.t ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 0).attr('y', narrow ? 10 : by + 9).text(r.label);
+    const by = narrow ? 18 : 6;
+    const toggle = (r) => { f.type = f.type === r.t ? '' : r.t; sync(); };
+    const rows = svg.selectAll('g.pac-trow').data(byType, (r) => r.t).join((enter) => {
+      const g = enter.append('g').attr('class', 'pac-trow').style('cursor', 'pointer').attr('tabindex', 0).attr('role', 'button')
+        .attr('transform', (r, i) => `translate(0,${top0 + i * step})`)
+        .attr('aria-label', (r) => `${r.label}: ${r.n} exceptions; filter`)
+        .on('click', (e, r) => toggle(r))
+        .on('keydown', (e, r) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(r); } });
+      // a full-row transparent hit target: the click area does not depend on bar length or the draw-in animation
+      g.append('rect').attr('class', 'pac-thit').attr('x', 0).attr('y', 0).attr('width', w).attr('height', step - 2).attr('fill', 'transparent');
+      g.append('text').attr('class', 'pac-tlabel gnm-label').attr('x', 0).attr('y', narrow ? 10 : by + 9).text((r) => r.label);
+      g.append('text').attr('class', 'pac-tval gnm-label').attr('font-family', theme.font.mono).attr('y', by + 10).text((r) => `${fmtInt(r.n)}${r.urgent ? ` · ${fmtInt(r.urgent)} urgent` : ''}`);
+      return g;
+    });
+    rows.select('text.pac-tlabel').attr('class', (r) => (f.type === r.t ? 'pac-tlabel gnm-label gnm-label--strong' : 'pac-tlabel gnm-label'));
+    rows.each(function (r) {
       let x0 = lw;
-      SEV.forEach((s) => {
-        if (!r[s]) return;
-        const seg = g.append('rect').attr('x', x0).attr('y', by).attr('width', Math.max(1, x(r[s]) - 1)).attr('height', 12).attr('rx', 2).attr('fill', fill[s]).attr('fill-opacity', f.type && f.type !== r.t ? 0.35 : 0.9);
-        withTooltip(seg, () => ({ title: r.label, rows: [[SEV_LABEL[s], fmtInt(r[s])], ['Total', fmtInt(r.n)]] }));
-        x0 += x(r[s]);
+      const segs = SEV.filter((sv) => r[sv]).map((sv) => { const d = { sv, x: x0, w: Math.max(1, x(r[sv]) - 1), n: r[sv], r }; x0 += x(r[sv]); return d; });
+      const g = d3.select(this);
+      const rect = g.selectAll('rect.pac-tseg').data(segs, (d) => d.sv).join((enter) => {
+        const e = enter.append('rect').attr('class', 'pac-tseg').attr('y', by).attr('height', 12).attr('rx', 2).attr('fill', (d) => fill[d.sv])
+          .attr('x', (d) => d.x).attr('width', (d) => d.w).style('transform-box', 'fill-box').style('transform-origin', 'left center');
+        withTooltip(e, (d) => ({ title: d.r.label, rows: [[SEV_LABEL[d.sv], fmtInt(d.n)], ['Total', fmtInt(d.r.n)]] }));
+        return e;
       });
-      g.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', x0 + 8).attr('y', by + 10).text(`${fmtInt(r.n)}${r.urgent ? ` · ${fmtInt(r.urgent)} urgent` : ''}`);
+      const op = f.type && f.type !== r.t ? 0.35 : 0.9;
+      if (fresh) {
+        // draw-in: scale each bar from its left edge (transform + opacity only)
+        rect.attr('fill-opacity', op).style('transform', 'scaleX(0)').transition(chartTransition({ duration: 'slow', ease: 'enter', name: 'draw-in' })).style('transform', 'scaleX(1)');
+        g.select('text.pac-tval').attr('x', x0 + 8).style('opacity', 0).transition(chartTransition({ duration: 'slow', ease: 'enter', name: 'draw-in' })).style('opacity', 1);
+      } else {
+        rect.transition(chartTransition({ name: 'filter' })).attr('fill-opacity', op);
+      }
     });
   }
   el.append(h('div', { class: 'grid-12' }, chartCard, summaryCard));
@@ -463,7 +492,7 @@ export async function render(el, ctx) {
           h('dt', {}, byMode('Why it came up', 'What triggered it')), h('dd', {}, whyText(a)),
           h('dt', {}, byMode('What we know', 'The evidence')), h('dd', {}, isSimple() ? simpleEvidence(a) : tidyEnums(a.summary || '')),
           h('dt', {}, 'What to do'), h('dd', {}, actionText(a))),
-        h('button', { type: 'button', class: 'btn btn--sm', onclick: () => open(a) }, icon('chevron-right'), 'Open the full exception'));
+        h('button', { type: 'button', class: 'btn btn--sm', onclick: () => open(a) }, icon('chevron-right'), byMode('Open the full item', 'Open the full exception')));
       [...dots.children].forEach((d, j) => d.classList.toggle('is-on', j <= wi));
       wBack.disabled = wi === 0; wNext.disabled = wi === walk.length - 1;
     }
@@ -495,7 +524,7 @@ export async function render(el, ctx) {
   const GROUP_PEEK = 3;
   const openGroups = new Set();
   let expanded = false;
-  const moreBtn = h('button', { type: 'button', class: 'btn btn--sm pac-more', dataset: { action: 'show-all' }, onclick: () => { expanded = !expanded; sync(); } });
+  const moreBtn = h('button', { type: 'button', class: 'btn btn--sm pac-more', dataset: { action: 'show-all' }, onclick: () => { if (moreBtn.dataset.clear === 'true') { Object.assign(f, { severity: 'all', type: '', station: '', owner: '' }); expanded = true; } else expanded = !expanded; sync(); } });
   const inbox = card({
     cls: 'mt-3', kicker: 'Exception inbox', title: byMode('Most urgent first, then by due week · grouped by part', 'Ranked by severity, then due week · grouped by part'), prov: metaProv, story: 'action-inbox',
     actions: csvBtn,
@@ -621,8 +650,14 @@ export async function render(el, ctx) {
     shown.replaceChildren(...[h('span', { class: 'pac-nw', dataset: { role: 'shown-count' } }, `Showing ${fmtInt(Math.min(visN, rows.length))} of ${fmtInt(rows.length)}`),
       rows.length < all.length ? h('span', { class: 'pac-nw' }, ` matching (${fmtInt(all.length)} in all)`) : null,
       visN < rows.length ? h('span', { class: 'pac-nw' }, ' (expand for all)') : null, ' · ', h('span', { class: 'pac-nw' }, `${fmtInt(nU)} urgent`)].filter((x) => x != null));
-    moreBtn.hidden = hiddenRows === 0;
-    moreBtn.replaceChildren(icon(expanded ? 'arrow-up' : 'arrow-down'), expanded ? 'Show the top of the list only' : `Show all ${fmtInt(rows.length)} exceptions (${fmtInt(hiddenRows)} more across ${fmtInt(gs.length - collapsedN)} parts)`);
+    // every filtered state keeps a working button: with nothing left to expand, it clears the filters and shows everything
+    const filtered = f.severity !== 'all' || !!f.type || !!f.station || !!f.owner;
+    const clearMode = hiddenRows === 0 && filtered;
+    moreBtn.hidden = hiddenRows === 0 && !filtered;
+    moreBtn.dataset.clear = String(clearMode);
+    const word = byMode('items', 'exceptions');
+    moreBtn.replaceChildren(icon(expanded && !clearMode ? 'arrow-up' : 'arrow-down'), clearMode ? `Clear filters and show all ${fmtInt(all.length)} ${word}`
+      : expanded ? 'Show the top of the list only' : `Show all ${fmtInt(rows.length)} ${word} (${fmtInt(hiddenRows)} more across ${fmtInt(gs.length - collapsedN)} parts)`);
     ctx.setParams({ severity: f.severity === 'all' ? '' : f.severity, type: f.type, station: f.station, owner: f.owner });
     drawTypes(frame.body, Math.floor(frame.body.clientWidth) || 600);
   }

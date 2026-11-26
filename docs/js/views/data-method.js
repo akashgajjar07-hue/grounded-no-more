@@ -10,6 +10,10 @@ import { h, pageHead, card, provChip, pill, icon, dataTable, sectionTitle, segme
 import { isSimple, byMode } from '../lib/mode.js';
 import { displayName, nameTag, replaceCodes } from '../lib/names.js';
 import { term } from '../lib/glossary.js';
+import { countUpOnce } from '../lib/motion.js';
+
+/** KPI number that counts up once per session (v2.1 addendum); re-renders print the final value. */
+function countEl(v, key) { const el = h('span', {}, fmtInt(v)); requestAnimationFrame(() => countUpOnce(el, v, fmtInt, { key })); return el; }
 import { chartFrame, responsive, svgIn, theme, truncate, refLine, fmtPct, fmtInt, fmtNum, fmtStamp } from '../charts/theme.js';
 import { assetURL } from '../data.js';
 
@@ -113,7 +117,7 @@ export async function render(el, ctx) {
     cls: 'dm-tests-card', prov: 'DERIVED', kicker: byMode('Automated tests and pipeline checks', 'Automated tests (pytest) and pipeline checks'),
     body: h('div', { class: 'dm-tests' },
       h('div', { class: 'dm-tests-sum' },
-        testsRun ? h('div', {}, h('div', { class: 'dm-big' }, fmtInt(V.tests_passed), h('small', {}, ` / ${fmtInt(V.tests_total)}`)), h('p', { class: 't-14 muted mt-1' }, 'tests verified passing')) : h('div', {}, h('div', { class: 'dm-big' }, h('small', {}, 'Tests: not run')), V.reason ? h('p', { class: 'faint t-12 mt-1' }, V.reason) : null),
+        testsRun ? h('div', {}, h('div', { class: 'dm-big' }, countEl(V.tests_passed, 'method-tests-passed'), h('small', {}, ` / ${fmtInt(V.tests_total)}`)), h('p', { class: 't-14 muted mt-1' }, 'tests verified passing')) : h('div', {}, h('div', { class: 'dm-big' }, h('small', {}, 'Tests: not run')), V.reason ? h('p', { class: 'faint t-12 mt-1' }, V.reason) : null),
         V.ran_at ? h('p', { class: 'dm-tests-at' }, `Run ${fmtTime(V.ran_at)}`) : null,
         testsRun && V.tests_failed ? (simple ? h('p', { class: 't-12 faint mt-1' }, `${fmtInt(V.tests_failed)} did not pass on the full run. Expert mode gives the reason.`) : h('p', { class: 't-12 faint mt-1', dataset: { readability: 'skip' } }, humanISO(V.summary_line || ''))) : null,
         h('p', { class: 't-14 muted mt-2' }, `${fmtInt(nPassChk)} of ${fmtInt(checks.length)} pipeline checks verified`)),

@@ -1,0 +1,155 @@
+{
+ "generated": "2026-11-26T19:47:39",
+ "routes": {
+  "about": {
+   "owner": "docs/js/views/about.js",
+   "expected": 33,
+   "reached": 33,
+   "cycled": true,
+   "problems": [],
+   "warnings": []
+  },
+  "actions": {
+   "owner": "docs/js/views/planner-action-centre.js",
+   "expected": 60,
+   "reached": 60,
+   "cycled": true,
+   "problems": [],
+   "warnings": []
+  },
+  "aog": {
+   "owner": "docs/js/views/aog-response-lab.js",
+   "expected": 39,
+   "reached": 39,
+   "cycled": true,
+   "problems": [],
+   "warnings": []
+  },
+  "capital": {
+   "owner": "docs/js/views/capital-optimiser.js",
+   "expected": 62,
+   "reached": 62,
+   "cycled": true,
+   "problems": [],
+   "warnings": [
+    "tab-stops-on-non-semantic-elements",
+    "upward-jump>400px"
+   ]
+  },
+  "forecast": {
+   "owner": "docs/js/views/forecast-lab.js",
+   "expected": 57,
+   "reached": 57,
+   "cycled": true,
+   "problems": [],
+   "warnings": [
+    "upward-jump>400px"
+   ]
+  },
+  "glossary": {
+   "owner": "docs/js/views/glossary.js",
+   "expected": 27,
+   "reached": 27,
+   "cycled": true,
+   "problems": [],
+   "warnings": []
+  },
+  "method": {
+   "owner": "docs/js/views/data-method.js",
+   "expected": 34,
+   "reached": 34,
+   "cycled": true,
+   "problems": [],
+   "warnings": []
+  },
+  "mission": {
+   "owner": "docs/js/views/mission-control.js",
+   "expected": 50,
+   "reached": 50,
+   "cycled": true,
+   "problems": [],
+   "warnings": [
+    "tab-stops-on-non-semantic-elements"
+   ]
+  },
+  "network": {
+   "owner": "docs/js/views/network-positioning.js",
+   "expected": 76,
+   "reached": 76,
+   "cycled": true,
+   "problems": [],
+   "warnings": [
+    "upward-jump>400px"
+   ]
+  },
+  "parts": {
+   "owner": "docs/js/views/parts-intelligence.js",
+   "expected": 125,
+   "reached": 125,
+   "cycled": true,
+   "problems": [
+    {
+     "type": "Space-no-effect",
+     "control": "GN-32-C009 steady, ADI 1.05, CV² 0.47",
+     "tag": "circle",
+     "role": "button",
+     "note": "",
+     "errors": []
+    },
+    {
+     "type": "Space-no-effect",
+     "control": "GN-32-C030 steady, ADI 1.01, CV² 0.48",
+     "tag": "circle",
+     "role": "button",
+     "note": "",
+     "errors": []
+    },
+    {
+     "type": "Space-no-effect",
+     "control": "GN-32-E011 now and then, ADI 2.61, CV² 0.16",
+     "tag": "circle",
+     "role": "button",
+     "note": "",
+     "errors": []
+    },
+    {
+     "type": "Space-no-effect",
+     "control": "GN-32-R014 now and then, ADI 2.38, CV² 0.20",
+     "tag": "circle",
+     "role": "button",
+     "note": "",
+     "errors": []
+    },
+    {
+     "type": "Space-no-effect",
+     "control": "GN-32-R036 now and then, ADI 1.44, CV² 0.27",
+     "tag": "circle",
+     "role": "button",
+     "note": "",
+     "errors": []
+    }
+   ],
+   "warnings": [
+    "upward-jump>400px"
+   ]
+  },
+  "planner": {
+   "owner": "docs/js/views/planner.js",
+   "expected": 27,
+   "reached": 27,
+   "cycled": true,
+   "problems": [],
+   "warnings": []
+  },
+  "rotables": {
+   "owner": "docs/js/views/rotable-repair.js",
+   "expected": 91,
+   "reached": 91,
+   "cycled": true,
+   "problems": [],
+   "warnings": [
+    "upward-jump>400px"
+   ]
+  }
+ }
+}
