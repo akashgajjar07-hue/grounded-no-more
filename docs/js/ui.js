@@ -457,11 +457,14 @@ export function fillLifecycle(svg, { counts = {}, flows = [] } = {}) {
  * Story-mode overlay: spotlight + step card. steps: [{route, selector, title, body}]
  * navigate(route) must return a Promise that resolves once the view has rendered.
  */
+let activeStory = null;
 export function storyMode({ steps, navigate, onExit }) {
   let i = 0;
+  let seq = 0; // guards against overlapping go() calls (fast ←/→)
+  let target = null;
   const root = h('div', { class: 'story', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Guided tour' });
   const spot = h('div', { class: 'story-spot' });
-  const stepEl = h('div', { class: 'story-step' });
+  const stepEl = h('div', { class: 'story-step', 'aria-live': 'polite' });
   const titleEl = h('h3', {});
   const bodyEl = h('p', {});
   const prog = h('div', { class: 'story-progress', 'aria-hidden': 'true' }, steps.map(() => h('span')));
@@ -469,42 +472,104 @@ export function storyMode({ steps, navigate, onExit }) {
   const next = h('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => (i < steps.length - 1 ? go(i + 1) : exit()) }, 'Next');
   const cardEl = h('div', { class: 'story-card' }, stepEl, titleEl, bodyEl, prog, h('div', { class: 'story-actions' }, h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => exit() }, 'Exit tour'), h('div', { class: 'row' }, back, next)));
   root.append(spot, cardEl);
-  const onKey = (e) => { if (e.key === 'Escape') exit(); if (e.key === 'ArrowRight') next.click(); if (e.key === 'ArrowLeft' && i > 0) back.click(); };
+  let opener = null;
+  const onKey = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); exit(); return; }
+    if (e.target.closest?.('input, textarea, select')) return;
+    if (e.key === 'ArrowRight') { e.preventDefault(); next.click(); }
+    if (e.key === 'ArrowLeft' && i > 0) { e.preventDefault(); back.click(); }
+    trapFocus(cardEl, e);
+  };
+  const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /** Wait (up to `ms`) for the step's target to exist and have a size: views render charts asynchronously. */
+  async function waitFor(selector, ms = 10000) {
+    const t0 = performance.now();
+    while (performance.now() - t0 < ms) {
+      const el = selector ? document.querySelector(selector) : null;
+      if (el && el.getBoundingClientRect().height > 0) return el;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return null;
+  }
+  function place() {
+    if (!target || !target.isConnected) {
+      Object.assign(spot.style, { left: '50%', top: '50%', width: '0px', height: '0px' });
+      Object.assign(cardEl.style, { left: `${(innerWidth - Math.min(380, innerWidth - 32)) / 2}px`, top: `${innerHeight / 3}px` });
+      return;
+    }
+    const r = target.getBoundingClientRect();
+    const pad = 8;
+    const top0 = Math.max(r.top - pad, 4), bot0 = Math.min(r.bottom + pad, innerHeight - 4);
+    Object.assign(spot.style, { left: `${r.left - pad}px`, top: `${top0}px`, width: `${r.width + pad * 2}px`, height: `${Math.max(0, bot0 - top0)}px` });
+    const cw = Math.min(380, innerWidth - 32), ch = cardEl.offsetHeight || 240, gap = 24;
+    let left, top;
+    if (r.right + gap + cw <= innerWidth - 16) { left = r.right + gap; top = r.top; }
+    else if (r.left - gap - cw >= 16) { left = r.left - gap - cw; top = r.top; }
+    else if (r.bottom + gap + ch <= innerHeight - 16) { left = Math.max(16, Math.min(r.left, innerWidth - cw - 16)); top = r.bottom + gap; }
+    else if (r.top - gap - ch >= 16) { left = Math.max(16, Math.min(r.left, innerWidth - cw - 16)); top = r.top - gap - ch; }
+    else { left = Math.max(16, innerWidth - cw - 16); top = innerHeight - ch - 16; }
+    top = Math.min(Math.max(16, top), innerHeight - ch - 16);
+    Object.assign(cardEl.style, { left: `${left}px`, top: `${Math.max(16, top)}px` });
+  }
+  let raf = 0;
+  const onViewport = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(place); };
 
   async function go(n) {
+    const my = ++seq;
     i = Math.max(0, Math.min(steps.length - 1, n));
     const s = steps[i];
-    if (s.route && location.hash.split('?')[0] !== s.route.split('?')[0]) await navigate(s.route);
-    const target = document.querySelector(s.selector);
     stepEl.textContent = `STEP ${String(i + 1).padStart(2, '0')} / ${String(steps.length).padStart(2, '0')}`;
     titleEl.textContent = s.title;
     bodyEl.textContent = s.body;
     [...prog.children].forEach((b, j) => b.classList.toggle('is-done', j <= i));
     back.disabled = i === 0;
     next.textContent = i === steps.length - 1 ? 'Finish' : 'Next';
-    if (target) {
-      target.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-      await new Promise((r) => setTimeout(r, 350));
-      const r = target.getBoundingClientRect();
-      const pad = 8;
-      Object.assign(spot.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px` });
-      const cw = Math.min(380, innerWidth - 32), ch = cardEl.offsetHeight || 240, gap = 24;
-      let left, top;
-      if (r.right + gap + cw <= innerWidth - 16) { left = r.right + gap; top = r.top; }
-      else if (r.left - gap - cw >= 16) { left = r.left - gap - cw; top = r.top; }
-      else if (r.bottom + gap + ch <= innerHeight - 16) { left = Math.max(16, Math.min(r.left, innerWidth - cw - 16)); top = r.bottom + gap; }
-      else if (r.top - gap - ch >= 16) { left = Math.max(16, Math.min(r.left, innerWidth - cw - 16)); top = r.top - gap - ch; }
-      else { left = Math.max(16, innerWidth - cw - 16); top = innerHeight - ch - 16; }
-      top = Math.min(Math.max(16, top), innerHeight - ch - 16);
-      Object.assign(cardEl.style, { left: `${left}px`, top: `${Math.max(16, top)}px` });
-    } else {
-      Object.assign(spot.style, { left: '50%', top: '50%', width: '0px', height: '0px' });
-      Object.assign(cardEl.style, { left: `${(innerWidth - Math.min(380, innerWidth - 32)) / 2}px`, top: `${innerHeight / 3}px` });
+    root.setAttribute('aria-busy', 'true');
+    if (s.route) {
+      const cur = location.hash, want = s.route;
+      const differs = cur.split('?')[0] !== want.split('?')[0] || (want.includes('?') && cur !== want);
+      if (differs) await navigate(want);
     }
-    next.focus();
+    if (my !== seq) return;
+    target = await waitFor(s.selector);
+    if (my !== seq) return;
+    if (target) {
+      target.scrollIntoView({ block: 'center', behavior: reduce() ? 'auto' : 'smooth' });
+      await new Promise((r) => setTimeout(r, reduce() ? 50 : 350));
+      if (my !== seq) return;
+    }
+    place();
+    root.removeAttribute('aria-busy');
+    next.focus({ preventScroll: true });
   }
-  function exit() { document.removeEventListener('keydown', onKey); root.remove(); onExit?.(); }
-  return { start() { document.body.append(root); document.addEventListener('keydown', onKey); go(0); }, exit };
+  function exit() {
+    seq++;
+    document.removeEventListener('keydown', onKey, true);
+    removeEventListener('resize', onViewport);
+    removeEventListener('scroll', onViewport, true);
+    root.remove();
+    if (activeStory === api) activeStory = null;
+    opener?.focus?.({ preventScroll: true });
+    onExit?.();
+  }
+  const api = {
+    start() {
+      if (activeStory) return activeStory;
+      if (!steps?.length) return api;
+      activeStory = api;
+      opener = document.activeElement;
+      document.body.append(root);
+      document.addEventListener('keydown', onKey, true);
+      addEventListener('resize', onViewport);
+      addEventListener('scroll', onViewport, true);
+      go(0);
+      return api;
+    },
+    exit,
+    go,
+    get index() { return i; },
+  };
+  return api;
 }
 
 // --------------------------------------------------------------------------- footer + states

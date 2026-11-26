@@ -1,0 +1,123 @@
+/* 01 · Mission Control — view styles (loaded once by js/views/mission-control.js).
+   Uses design-system tokens only; no new colours. */
+
+/* ------------------------------------------------------------------ hero */
+.mc-hero { position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--s-3); padding: var(--s-3) var(--s-4) var(--s-3) var(--s-6); overflow: hidden; min-height: 0; }
+.mc-hero::before { /* faint radial lift behind the drawing */
+  content: ''; position: absolute; right: -10%; top: -20%; width: 70%; height: 140%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(34, 199, 184, 0.10), transparent 70%);
+}
+.mc-copy { position: relative; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.mc-eyebrow { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.16em; text-transform: uppercase; color: var(--primary); }
+.mc-eyebrow .faint { color: var(--text-faint); }
+.mc-title { margin: var(--s-2) 0 0; font-family: var(--font-display); font-size: 60px; font-weight: 600; line-height: 0.98; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text); }
+.mc-title span { display: block; }
+.mc-title .mc-title-accent { color: var(--primary); }
+.mc-tagline { margin-top: var(--s-2); max-width: 44ch; font-family: var(--font-display); font-size: 18px; line-height: 1.4; color: var(--text); }
+.mc-story { margin-top: var(--s-2); max-width: 60ch; font-size: var(--fs-14); line-height: 1.6; color: var(--text-muted); }
+.mc-story b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.mc-cta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); margin-top: var(--s-3); }
+.mc-meta { display: flex; flex-wrap: wrap; gap: var(--s-1); margin-top: var(--s-2); }
+
+.mc-figwrap { position: relative; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.mc-fig { position: relative; height: 412px; }
+.mc-fig > svg { width: 100%; height: 100%; display: block; }
+.mc-fig .bp-gridfill { display: none; }
+/* the missing part: urgent red instead of the teal active glow (icon + text tag carries the meaning too) */
+.mc-fig .ata-hotspot.is-missing .hs-shape { stroke: var(--c-red); fill: var(--c-red); fill-opacity: 0.22; }
+.mc-fig .ata-hotspot.is-missing .hs-badge circle { stroke: var(--c-red); fill: var(--c-red); }
+.mc-fig .ata-hotspot.is-missing .hs-badge text { fill: var(--c-midnight); }
+.mc-fig .ata-hotspot.is-missing .hs-shape { animation: mc-blink 2.4s var(--ease) infinite; }
+@keyframes mc-blink { 0%, 100% { fill-opacity: 0.12; } 50% { fill-opacity: 0.38; } }
+@media (prefers-reduced-motion: reduce) { .mc-fig .ata-hotspot.is-missing .hs-shape { animation: none; } }
+
+.mc-fault {
+  position: absolute; left: 0; top: 0; display: flex; align-items: flex-start; gap: 10px; max-width: 228px;
+  padding: 12px 14px; border-radius: var(--r-control); background: rgba(15, 30, 46, 0.92); border: 1px solid rgba(231, 107, 100, 0.45);
+  box-shadow: var(--shadow-pop); text-decoration: none; color: inherit; transition: border-color var(--dur-fast) var(--ease);
+}
+.mc-fault:hover { border-color: var(--c-red); }
+.mc-fault .icon { flex: none; width: 18px; height: 18px; color: var(--c-red); margin-top: 1px; }
+.mc-fault-k { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.05em; white-space: nowrap; text-transform: uppercase; color: var(--c-red); }
+.mc-fault-pn { margin-top: 4px; font-family: var(--font-mono); font-size: var(--fs-14); font-weight: 600; color: var(--text); }
+.mc-fault-d { margin-top: 2px; font-size: var(--fs-12); color: var(--text-muted); line-height: 1.45; }
+
+/* ------------------------------------------------------------------ KPI row */
+.mc-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gutter); margin-top: var(--gutter); }
+.mc-kpis .kpi { gap: 8px; padding-top: var(--s-2); }
+.mc-kpis .kpi-spark { height: 32px; }
+.mc-kpis .kpi-label { min-height: 2.7em; }
+.mc-kpi-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.mc-kpis .kpi-top .chip-prov { display: none; }
+
+/* ------------------------------------------------------------------ main grid */
+.mc-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--gutter); margin-top: var(--gutter); align-items: start; }
+.mc-col { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
+.mc-grid .chart-frame { margin: 0; }
+
+/* priority actions */
+.mc-actions { display: flex; flex-direction: column; }
+.mc-action { display: grid; grid-template-columns: 28px auto minmax(0, 1fr) minmax(140px, 32%); gap: var(--s-2); align-items: center; padding: 14px 8px; margin: 0 -8px; border-bottom: 1px solid var(--line); border-radius: var(--r-control); color: inherit; text-decoration: none; transition: background var(--dur-fast) var(--ease); }
+.mc-action:last-child { border-bottom: 0; }
+.mc-action:hover { background: var(--c-teal-a08); }
+.mc-action-rank { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); }
+.mc-action-title { font-size: var(--fs-14); color: var(--text); overflow-wrap: anywhere; }
+.mc-action-meta { margin-top: 4px; font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); overflow-wrap: anywhere; }
+.mc-action-do { display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-size: var(--fs-12); line-height: 1.45; color: var(--text-muted); text-align: right; }
+.mc-action-do .icon { width: 16px; height: 16px; color: var(--primary); flex: none; }
+
+/* station list under the map */
+.mc-map { margin: 0 -8px; }
+.mc-stations { margin-top: var(--s-2); }
+
+/* ------------------------------------------------------------------ responsive */
+@media (max-width: 1279px) {
+  .mc-hero { padding: var(--s-4); gap: var(--s-3); }
+  .mc-title { font-size: 56px; }
+}
+@media (max-width: 1099px) {
+  .mc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mc-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 899px) {
+  .mc-hero { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .mc-fig { height: 320px; }
+  .mc-fault { position: relative; left: auto; bottom: auto; max-width: none; margin-top: var(--s-2); }
+}
+@media (max-width: 767px) {
+  .mc-hero { padding: var(--s-3) var(--s-2); }
+  .mc-title { font-size: 44px; }
+  .mc-tagline { font-size: var(--fs-16); margin-top: var(--s-2); }
+  .mc-fig { height: 280px; }
+  .mc-kpis { gap: var(--s-1); margin-top: var(--s-2); }
+  .mc-kpis .kpi-label { min-height: 0; }
+  .mc-kpis .kpi-delta { flex-wrap: wrap; font-size: var(--fs-12); }
+  .mc-kpis .kpi-foot { flex-direction: column; align-items: flex-start; }
+  .mc-kpis .kpi-foot > span { white-space: normal; }
+  .mc-kpis .kpi-spark { display: none; }
+  .mc-action { grid-template-columns: minmax(0, 1fr); gap: var(--s-1); }
+  .mc-action > .pill { justify-self: start; }
+  .mc-db-labels .is-ref { display: none; }
+  .mc-action-rank { display: none; }
+  .mc-action-do { grid-column: 1 / -1; justify-content: flex-start; text-align: left; }
+  .mc-grid { margin-top: var(--s-2); gap: var(--s-2); }
+  .mc-col { gap: var(--s-2); }
+}
+.mc-kpi-ref { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); margin-top: auto; }
+.mc-kpis .kpi-foot { margin-top: 0; }
+
+/* baseline → recommended dumbbell (replaces the sparkline when no time series is exported) */
+.mc-db { padding: 6px 0 0; }
+.mc-db-track { position: relative; height: 14px; }
+.mc-db-track::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line-strong); }
+.mc-db-ci { position: absolute; top: 3px; height: 8px; border-radius: 4px; min-width: 2px; }
+.mc-db-ci--base { background: var(--c-copper-a12); outline: 1px solid rgba(196, 127, 82, 0.35); }
+.mc-db-ci--rec { background: var(--c-teal-a24); }
+.mc-db-seg { position: absolute; top: calc(50% - 1px); height: 2px; background: linear-gradient(90deg, var(--c-copper), var(--primary)); opacity: 0.55; }
+.mc-db-dot { position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, -50%); border: 2px solid; background: var(--surface); }
+.mc-db-dot--base { border-color: var(--c-copper); }
+.mc-db-dot--rec { border-color: var(--primary); background: var(--primary); }
+.mc-db-labels { display: flex; justify-content: space-between; margin-top: 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; }
+.mc-db-labels .is-base { color: var(--c-copper); }
+.mc-db-labels .is-rec { color: var(--primary); }
+.mc-db-labels .is-ref { color: var(--text-faint); }
