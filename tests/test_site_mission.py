@@ -151,3 +151,46 @@ def test_wave2_story_targets_are_tight(site, browser):  # noqa: F811
             page.wait_for_timeout(300)
     finally:
         ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_wave3_consistency_colour_and_balance(site, browser, vp):  # noqa: F811
+    """Review 2: system level shown with the urgent part, canonical AOG metric, no teal on the station list,
+    KPI rulers read baseline → recommended left to right, columns end level, short policy names at 390."""
+    parts = json.loads((DOCS / "data/parts.json").read_text())
+    by_pn = {p["pn"]: p for p in parts["parts"]}
+    sys_by = {a["ata"]: a for a in parts["ata_systems"]}
+    ctx, page, problems = open_page(browser, site + "#/mission", vp)
+    try:
+        # hero callout: urgent PART + its system level as Parts rates it
+        pn = page.locator(".mc-fault-pn").inner_text().strip()
+        ata = pn.split("-")[1]
+        lvl = (sys_by[ata].get("status_label") or "").split(" · ")[0].lower() or sys_by[ata].get("system_level") or sys_by[ata]["risk_level"]
+        assert "part" in page.locator(".mc-fault-k").inner_text().lower()
+        assert f"system {'ok' if lvl == 'ok' else lvl}" in page.locator(".mc-fault-sys").inner_text().lower()
+        # priorities AOG column = parts.json aog_h_52w_max_station (same metric as the Action Centre)
+        rows = page.locator('[data-story="mission-actions"] a.mc-pr')
+        for i in range(rows.count()):
+            p = by_pn[rows.nth(i).locator(".mc-pr-pn").inner_text().strip()]
+            if "aog_h_52w_max_station" in p:
+                assert rows.nth(i).locator(".mc-pr-aog").inner_text().split()[-1].replace(",", "") == str(round(p["aog_h_52w_max_station"]))
+        # no "System OK" pill without its urgent-part count
+        for r in page.locator(".mc-sys-row").all():
+            t = r.inner_text()
+            assert not (t.strip().endswith("OK") and "urgent" in t), t
+        # station list carries no teal (teal = the recommended plan)
+        fills = page.evaluate("[...document.querySelectorAll('.mc-st-bar > span')].map(e => getComputedStyle(e).backgroundColor)")
+        assert fills and not any("34, 199, 184" in f for f in fills), fills
+        # every dumbbell: baseline dot left of the recommended dot
+        dbs = page.evaluate("""() => [...document.querySelectorAll('.mc-db-track')].map((t) => [
+          t.querySelector('.mc-db-dot--base').getBoundingClientRect().left, t.querySelector('.mc-db-dot--rec').getBoundingClientRect().left])""")
+        assert dbs and all(b < r for b, r in dbs), dbs
+        if vp == "1440":
+            cols = page.evaluate("[...document.querySelectorAll('.mc-grid > .mc-col')].map(c => Math.round(c.lastElementChild.getBoundingClientRect().bottom))")
+            assert max(cols) - min(cols) <= 24, cols
+        else:
+            labels = page.evaluate("[...document.querySelectorAll('[data-story=\"mission-compare\"] svg text')].map(t => t.textContent)")
+            assert not any("…" in t for t in labels), labels
+        assert not problems, problems
+    finally:
+        ctx.close()

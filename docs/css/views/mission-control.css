@@ -153,3 +153,58 @@ a.mc-pr:hover { background: var(--c-teal-a08); }
 .mc-sev .mc-db-labels .is-urgent { color: var(--c-red); }
 .mc-sev .mc-db-labels .is-review { color: var(--c-amber); }
 .mc-sev .mc-db-labels .is-info { color: var(--text-faint); }
+
+/* wave 3 ---------------------------------------------------------------- */
+.mc-fault-sys { margin-top: 2px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--text-muted); text-transform: none; }
+/* KPI dumbbell: baseline (copper) always on the left, recommended (teal) on the right */
+/* station list: neutral bars — no accent (teal = recommended plan; the hub is the highest-risk node) */
+.mc-st { display: flex; flex-direction: column; gap: 10px; }
+.mc-st-row { display: grid; grid-template-columns: minmax(0, 1fr) 48px; gap: 4px 12px; align-items: center; }
+.mc-st-l { font-size: var(--fs-12); color: var(--text-muted); text-decoration: none; }
+.mc-st-l .mono { color: var(--text); font-size: var(--fs-12); }
+.mc-st-l:hover .mono { text-decoration: underline; }
+.mc-st-bar { grid-column: 1; height: 6px; border-radius: 3px; background: var(--c-titanium-a10); overflow: hidden; }
+.mc-st-bar > span { display: block; height: 100%; border-radius: 3px; background: var(--c-titanium); opacity: 0.55; }
+.mc-st-row.is-focus .mc-st-bar > span { opacity: 1; background: var(--c-ice); }
+.mc-st-row.is-focus .mc-st-l .mono { font-weight: 600; }
+.mc-st-v { grid-column: 2; grid-row: 1 / span 2; text-align: right; font-size: var(--fs-12); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+/* systems at a glance */
+.mc-sys { display: flex; flex-direction: column; margin: 0 -8px; }
+.mc-sys-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 8px; border-bottom: 1px solid var(--line); border-radius: var(--r-control); color: inherit; text-decoration: none; }
+.mc-sys li:last-child .mc-sys-row { border-bottom: 0; }
+.mc-sys-row:hover { background: var(--c-titanium-a10); }
+.mc-sys-ata { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--line-strong); font-size: var(--fs-12); font-weight: 600; }
+.mc-sys-row.is-urgent .mc-sys-ata { border-color: var(--status-urgent); color: var(--status-urgent); }
+.mc-sys-row.is-review .mc-sys-ata { border-color: var(--status-review); color: var(--status-review); }
+.mc-sys-row.is-ok .mc-sys-ata { border-color: var(--status-ok); color: var(--status-ok); }
+.mc-sys-name { min-width: 0; font-size: var(--fs-14); line-height: 1.3; }
+.mc-sys-name .faint { font-size: var(--fs-12); }
+.mc-sys-st { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.mc-sys-urg { font-size: 11px; color: var(--c-red); white-space: nowrap; }
+@media (max-width: 480px) {
+  .mc-sys-row { grid-template-columns: 32px minmax(0, 1fr); }
+  .mc-sys-st { grid-column: 2; flex-direction: row; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
+}
+.mc-pr-aogh { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25; }
+.mc-pr-aogh > span + span { font-size: 10px; letter-spacing: 0.06em; }
+/* compact rows so the right column ends level with the left */
+.mc-st { gap: 6px; }
+.mc-st-row { grid-template-columns: 112px minmax(0, 1fr) 40px; gap: 12px; }
+.mc-st-bar { grid-column: 2; }
+.mc-st-v { grid-column: 3; grid-row: 1; }
+.mc-sys-row { padding: 8px; }
+.mc-sys-st { flex-direction: row; align-items: center; gap: 10px; }
+.mc-fault-sys { font-size: var(--fs-12); }
+/* columns end level: the last card in each column stretches, its footer pinned to the bottom */
+@media (min-width: 1100px) {
+  .mc-grid { align-items: stretch; }
+  .mc-col > .card:last-child { flex: 1 1 auto; display: flex; flex-direction: column; }
+  .mc-col > .card:last-child > .card-foot { margin-top: auto; }
+}
+/* fault callout: icon beside the kicker only, so the detail lines get the full width */
+.mc-fault { display: block; }
+.mc-fault > .icon { position: absolute; top: 12px; left: 14px; }
+.mc-fault-k { padding-left: 26px; }
+.mc-fault-sys { letter-spacing: 0; }
+@media (max-width: 899px) { .mc-fault > .icon { top: 12px; } }
+.mc-fault-sys { font-size: 11px; }

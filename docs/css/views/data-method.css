@@ -74,3 +74,14 @@
 @media (max-width: 767px) { .dm-filters .seg { flex: 1 1 100%; overflow-x: auto; } .dm-filters select.dm-search { flex: 1 1 100% !important; } }
 .dm-same { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); }
 .dm-flow .dm-gate-line { stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 3 3; }
+
+/* wave 3: tests card spans the row (no stretched empty card); checks flow in columns */
+.dm-tests { display: grid; grid-template-columns: minmax(200px, 240px) minmax(0, 1fr); gap: var(--s-2) var(--s-4); align-items: start; }
+.dm-tests .dm-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px var(--s-3); margin-top: 0; }
+.dm-tests-at { margin-top: var(--s-1); font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); }
+@media (max-width: 767px) { .dm-tests { grid-template-columns: minmax(0, 1fr); } .dm-tests .dm-checks { grid-template-columns: minmax(0, 1fr); } }
+/* wave 3: stacked register / manifest rows at ≤ 480 px — the key (primary datum) gets its own full-width line and never truncates */
+.dm-wrap .dts-row { grid-template-columns: minmax(0, 1fr); }
+.dm-wrap .dts-primary { white-space: normal; overflow: visible; overflow-wrap: anywhere; line-height: 1.35; }
+.dm-wrap .dts-metric { justify-self: start; height: auto; min-height: 24px; max-width: 100%; white-space: normal; overflow-wrap: anywhere; padding: 2px 10px; }
+.dm-wrap .dts-secondary > span { white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }

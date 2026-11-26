@@ -62,7 +62,10 @@ export async function render(el, ctx) {
     const ps = parts.filter((p) => p.ata === a);
     const lvl = ps.reduce((m, p) => ((LEVEL[p.risk_level]?.rank || 0) > (LEVEL[m]?.rank || 0) ? p.risk_level : m), 'unknown');
     const top = ps.slice().sort((x, y) => y.risk_score - x.risk_score)[0];
-    return [a, { ata: a, name: sysName(a), n: ps.length, urgent: ps.filter((p) => p.risk_level === 'urgent').length, review: ps.filter((p) => p.risk_level === 'review').length, level: sysRisk.get(a)?.risk_level || (ps.length ? lvl : 'unknown'), share: sysRisk.get(a)?.risk_share, top, max: top?.risk_score }];
+    return [a, { ata: a, name: sysName(a), n: ps.length, urgent: ps.filter((p) => p.risk_level === 'urgent').length, review: ps.filter((p) => p.risk_level === 'review').length, level: sysRisk.get(a)?.system_level || sysRisk.get(a)?.risk_level || (ps.length ? lvl : 'unknown'),
+      // display status (exporter): the system level, raised to WATCH when an OK chapter holds an urgent part
+      tone: sysRisk.get(a)?.status || sysRisk.get(a)?.system_level || sysRisk.get(a)?.risk_level || (ps.length ? lvl : 'unknown'),
+      word: String(sysRisk.get(a)?.status_label || '').split(' · ')[0] || null, share: sysRisk.get(a)?.risk_share, top, max: top?.risk_score }];
   }));
 
   let ata = ctx.params.ata === 'all' ? 'all' : ATAS.includes(ctx.params.ata) ? ctx.params.ata : null;
@@ -83,21 +86,26 @@ export async function render(el, ctx) {
   // ------------------------------------------------------------------ explorer: aircraft + list
   const worst = ATAS.map((a) => sysStat[a]).sort((a, b) => (LEVEL[b.level].rank - LEVEL[a.level].rank) || ((b.share ?? 0) - (a.share ?? 0)) || b.urgent - a.urgent || (b.max || 0) - (a.max || 0))[0];
   const airHost = h('div', { class: 'pi-aircraft', 'data-story': 'aircraft' });
-  const legend = h('div', { class: 'pi-legend', 'aria-hidden': 'true' }, ...['urgent', 'review', 'ok'].map((l) => h('span', { class: `pi-legend-item is-${l}` }, h('b', {}, LEVEL[l].glyph), LEVEL[l].text)), h('span', { class: 'pi-legend-item is-pip' }, h('b', { class: 'pi-legend-pip' }, 'n'), 'urgent PNs in system'), h('span', { class: 'faint' }, 'Badge = system share of fleet risk-hours'));
+  // phones: the selected system's top-part callout is an HTML line under the drawing (no room between badges)
+  const airNote = h('div', { class: 'pi-air-note', hidden: true });
+  const legend = h('div', { class: 'pi-legend', 'aria-hidden': 'true' }, ...['urgent', 'review', 'ok'].map((l) => h('span', { class: `pi-legend-item is-${l}` }, h('b', {}, LEVEL[l].glyph), l === 'review' ? 'Review / watch' : LEVEL[l].text)), h('span', { class: 'pi-legend-item is-pip' }, h('b', { class: 'pi-legend-pip' }, 'n'), 'urgent PNs in system'), h('span', { class: 'faint' }, 'Badge = system share of fleet risk-hours · WATCH = OK system holding an urgent part'));
   const explorerCard = card({
     cls: 'span-7 md-span-12 pi-explorer', bp: true, prov,
     kicker: 'Aircraft system explorer · plan view · generic twin, fictional',
     title: worst ? `ATA ${worst.ata} ${worst.name.toLowerCase()} carries the most risk: ${worst.share != null ? fmtPct(worst.share, 0) + ' of fleet risk-hours, ' : ''}${worst.urgent} urgent of ${worst.n} PNs` : 'No risk scores exported',
-    body: [airHost, legend],
+    body: [airHost, airNote, legend],
   });
 
   const sysList = h('ul', { class: 'pi-syslist list-reset', role: 'list', 'aria-label': 'ATA systems (list alternative to the aircraft diagram)' });
   const sysButtons = ATAS.map((a) => {
     const s = sysStat[a];
-    const b = h('button', { type: 'button', class: `pi-sys is-${s.level}`, 'aria-pressed': String(a === ata), dataset: { ata: a }, onclick: () => setAta(a) },
+    const b = h('button', { type: 'button', class: `pi-sys is-${s.tone}`, 'aria-pressed': String(a === ata), dataset: { ata: a }, onclick: () => setAta(a) },
       h('span', { class: 'pi-sys-ata mono' }, a),
-      h('span', { class: 'pi-sys-main' }, h('span', { class: 'pi-sys-name' }, s.name), h('span', { class: 'pi-sys-meta mono' }, `${fmtInt(s.n)} PNs · ${fmtInt(s.urgent)} urgent · max ${riskPct(s.max)}`)),
-      pill(s.level === 'unknown' ? 'unknown' : s.level, LEVEL[s.level].text));
+      h('span', { class: 'pi-sys-main' }, h('span', { class: 'pi-sys-name' }, s.name), h('span', { class: 'pi-sys-meta mono' }, `${fmtInt(s.n)} PNs · top risk ${riskPct(s.max)}`)),
+      // system level and urgent PARTS are separate facts: never a bare OK pill beside an urgent count
+      h('span', { class: 'pi-sys-status' },
+        pill(LEVEL[s.tone] && s.tone !== 'unknown' ? s.tone : 'unknown', s.word || LEVEL[s.level]?.text || LEVEL.unknown.text),
+        s.urgent ? h('span', { class: 'pi-sys-urg mono', title: 'Part numbers in this chapter at the urgent part-level band' }, `▲ ${fmtInt(s.urgent)} urgent PN${s.urgent === 1 ? '' : 's'}`) : null));
     sysList.append(h('li', {}, b));
     return b;
   });
@@ -176,16 +184,17 @@ export async function render(el, ctx) {
     svg.querySelectorAll('.ata-hotspot').forEach((g) => {
       const s = sysStat[g.dataset.ata];
       if (!s) return;
-      g.classList.add(`risk-${s.level}`);
+      g.classList.add(`risk-${LEVEL[s.tone] ? s.tone : s.level}`);
       g.dataset.story = `parts-hotspot-${s.ata}`;
-      g.setAttribute('aria-label', `ATA ${s.ata} ${s.name}: system ${LEVEL[s.level].text}. ${s.n} part numbers, ${s.urgent} urgent${s.top ? `; top part ${s.top.pn}, risk ${riskPct(s.top.risk_score)} (${LEVEL[s.top.risk_level]?.text || s.top.risk_level})` : ''}.`);
+      g.setAttribute('aria-label', `ATA ${s.ata} ${s.name}: ${s.word || LEVEL[s.level].text} (system level ${LEVEL[s.level].text}). ${s.n} part numbers, ${s.urgent} urgent${s.top ? `; top part ${s.top.pn}, risk ${riskPct(s.top.risk_score)} (${LEVEL[s.top.risk_level]?.text || s.top.risk_level})` : ''}.`);
       const badge = g.querySelector('.hs-badge');
       const c = badge?.querySelector('circle');
       if (!c) return;
       const cx = +c.getAttribute('cx'), cy = +c.getAttribute('cy');
       g._hs = { cx, cy };
       c.before(svgEl('circle', { cx, cy, r: 19, class: 'hs-pulse' }));
-      svgEl('text', { x: cx, y: cy + 34, class: `hs-risk hs-risk--${s.level}` }, badge).textContent = `${LEVEL[s.level].glyph} ${LEVEL[s.level].text.toUpperCase()}`;
+      const tn = LEVEL[s.tone] ? s.tone : s.level;
+      svgEl('text', { x: cx, y: cy + 34, class: `hs-risk hs-risk--${tn}` }, badge).textContent = `${LEVEL[tn].glyph} ${(s.word || LEVEL[tn].text).toUpperCase()}`;
       if (s.urgent) {
         const pip = svgEl('g', { class: 'hs-pip', 'aria-hidden': 'true' }, badge);
         svgEl('circle', { cx, cy, r: 8 }, pip);
@@ -241,12 +250,21 @@ export async function render(el, ctx) {
   /** Part-level callout for the selected system: its top-risk PN, placed clear of the other badges. */
   function drawHotspotCallout(svg, u, wpx) {
     svg.querySelectorAll('.pi-hs-callout').forEach((e) => e.remove());
+    airNote.hidden = true;
     if (ata === 'all') return;
     const g = svg.querySelector(`.ata-hotspot[data-ata="${ata}"]`);
     const top = sysStat[ata]?.top;
     if (!g?._hs || !top) return;
     const lv = LEVEL[top.risk_level] ? top.risk_level : 'unknown';
     const small = wpx < 480;
+    if (small) {
+      const sl = sysStat[ata].level;
+      airNote.replaceChildren(h('button', { type: 'button', class: `pi-air-note-btn is-${lv}`, onclick: () => openPart(top.pn), 'aria-label': `Top-risk part in ATA ${ata}: ${top.pn}, risk ${riskPct(top.risk_score)}, ${LEVEL[lv].text}. Open the part drill-down.` },
+        h('span', { class: 'pi-air-note-k mono' }, `ATA ${ata} · ${(sysStat[ata].word || LEVEL[sl]?.text || sl).toLowerCase()} system · top part`),
+        h('span', { class: 'pi-air-note-v mono' }, `${LEVEL[lv].glyph} ${top.pn} · risk ${riskPct(top.risk_score)} · ${LEVEL[lv].text.toUpperCase()}`), icon('chevron-right')));
+      airNote.hidden = false;
+      return;
+    }
     const text = small ? `${LEVEL[lv].glyph} ${top.pn} · ${riskPct(top.risk_score)}` : `${LEVEL[lv].glyph} ${top.pn} · risk ${riskPct(top.risk_score)} · ${LEVEL[lv].text.toUpperCase()}`;
     const grp = svgEl('g', { class: `pi-hs-callout is-${lv}`, role: 'button', tabindex: '0', 'aria-label': `Top-risk part in ATA ${ata}: ${top.pn}, risk ${riskPct(top.risk_score)}, ${LEVEL[lv].text}. Open the part drill-down.` }, g);
     const lead = svgEl('path', { class: 'pi-hs-leader' }, grp);
@@ -263,13 +281,18 @@ export async function render(el, ctx) {
       { x: cx + R + gap, y: cy - bh / 2 }, { x: cx - R - gap - bw, y: cy - bh / 2 },
       { x: cx + R * 0.4, y: cy + R + lblBelow + 8 * u }, { x: cx - R * 0.4 - bw, y: cy + R + lblBelow + 8 * u },
       { x: cx + R * 0.4, y: cy - R - gap - bh }, { x: cx - R * 0.4 - bw, y: cy - R - gap - bh },
+      { x: cx - bw / 2, y: cy + R + lblBelow + 8 * u }, { x: cx - bw / 2, y: cy - R - gap - bh },
     ];
-    const obstacles = [...svg.querySelectorAll('.ata-hotspot')].filter((o) => o !== g).map((o) => { try { return o.querySelector('.hs-badge').getBBox(); } catch { return null; } }).filter(Boolean);
-    try { obstacles.push(g.querySelector('.hs-badge').getBBox()); } catch { /* not rendered */ }
+    // extra candidates: beside the badge, stepped up / down, so a free slot is found between neighbouring badges
+    [-3, -2, -1, 1, 2, 3].forEach((k) => [cx + R + gap, cx - R - gap - bw].forEach((xx) => cands.push({ x: xx, y: cy - bh / 2 + k * bh * 0.75 })));
+    // obstacles: every badge circle, risk word and urgent pip (own system included) so the callout never sits on a label
+    const bb = (e) => { try { return e.getBBox(); } catch { return null; } };
+    const obstacles = [...svg.querySelectorAll('.ata-hotspot .hs-badge > circle, .ata-hotspot .hs-risk, .ata-hotspot .hs-pip circle')].map(bb).filter(Boolean)
+      .map((b) => ({ x: b.x - 4 * u, y: b.y - 4 * u, width: b.width + 8 * u, height: b.height + 8 * u }));
     const vb = svg.viewBox.baseVal;
     const ov = (a, b) => Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
     const out = (b) => Math.max(0, vb.x - b.x) + Math.max(0, b.x + b.width - vb.x - vb.width) + Math.max(0, vb.y - b.y) + Math.max(0, b.y + b.height - vb.y - vb.height);
-    const best = cands.map((c, i) => ({ ...c, cost: obstacles.reduce((s, o) => s + ov({ ...c, width: bw, height: bh }, o), 0) + out({ ...c, width: bw, height: bh }) * 400 + i })).sort((a, b) => a.cost - b.cost)[0];
+    const best = cands.map((c, i) => ({ ...c, cost: obstacles.reduce((s, o) => s + ov({ ...c, width: bw, height: bh }, o), 0) * 50 + out({ ...c, width: bw, height: bh }) * 1e6 + Math.hypot(c.x + bw / 2 - cx, c.y + bh / 2 - cy) * 0.5 + i })).sort((a, b) => a.cost - b.cost)[0];
     rect.setAttribute('x', best.x); rect.setAttribute('y', best.y); rect.setAttribute('width', bw); rect.setAttribute('height', bh);
     rect.style.strokeWidth = `${1.25 * u}px`;
     t.setAttribute('x', best.x + padX); t.setAttribute('y', best.y + bh / 2);
@@ -349,10 +372,18 @@ export async function render(el, ctx) {
       return { ...s, p: best };
     });
     const rest = pool.filter((p) => !used.has(p.pn)).sort((a, b) => b.risk_score - a.risk_score);
-    return out.map((s) => {
+    const res = out.map((s) => {
       const p = s.p || rest.shift();
-      return { slot: s.slot, role: s.role, pn: p?.pn, desc: p?.desc };
+      return { slot: s.slot, role: s.role, pn: p?.pn, desc: p?.desc, risk: p?.risk_score ?? -1 };
     });
+    // the chapter's top-risk PN (the one the aircraft callout names) must be among the drawn parts:
+    // if no slot matched it, it replaces the lowest-risk drawn part
+    const top = ps.slice().sort((a, b) => (b.risk_score ?? 0) - (a.risk_score ?? 0))[0];
+    if (top && res.length && !res.some((r) => r.pn === top.pn)) {
+      const low = res.slice().sort((a, b) => a.risk - b.risk)[0];
+      Object.assign(low, { pn: top.pn, desc: top.desc, risk: top.risk_score });
+    }
+    return res.map(({ risk, ...r }) => r);
   }
 
   // ------------------------------------------------------------------ ADI / CV² matrix
@@ -456,7 +487,7 @@ export async function render(el, ctx) {
         ag.append('text').attr('class', 'gnm-annot-sub').attr('x', tx).attr('y', b.y + 26).attr('text-anchor', anchor).text(sub);
       }
     });
-    keyEl.replaceChildren(h('span', { class: 'pi-key-dot is-sel' }), ata === 'all' ? 'All systems shown in neutral' : `ATA ${ata} parts`, h('span', { class: 'pi-key-dot' }), 'other PNs', h('span', { class: 'pi-key-sw' }), `Croston-family zone (ADI ≥ ${ADI_CUT})`);
+    keyEl.replaceChildren(h('span', { class: 'pi-key-dot is-sel' }), ata === 'all' ? 'All systems shown in neutral' : `ATA ${ata} parts`, h('span', { class: 'pi-key-dot' }), 'other PNs', h('span', { class: 'pi-key-sw' }), `intermittent / lumpy zone (ADI ≥ ${ADI_CUT})`);
     return stop;
   }
 
@@ -507,7 +538,7 @@ export async function render(el, ctx) {
       const ky = topH + abcs.length * rowH + 14;
       const kg = svg.append('g').attr('transform', `translate(${labW},${ky})`);
       [0.1, 0.3, 0.5, 0.7, 0.85].forEach((o, i) => kg.append('rect').attr('x', i * 18).attr('y', -6).attr('width', 16).attr('height', 10).attr('rx', 2).attr('fill', theme.color.accent).attr('fill-opacity', o));
-      lab(kg, { x: 5 * 18 + 8, y: 0, text: `fewer → more PNs (max ${fmtInt(max)} per cell)`, color: theme.color.faint });
+      lab(kg, { x: 5 * 18 + 8, y: 0, text: small ? `fewer → more PNs (max ${fmtInt(max)})` : `fewer → more PNs (max ${fmtInt(max)} per cell)`, color: theme.color.faint });
       if (topA) {
         const i = dcs.indexOf(topA.dc);
         const r = abcs.indexOf('A');
@@ -569,6 +600,8 @@ export async function render(el, ctx) {
       ['Demand class', `${dcLabel(p.demand_class)} · ADI ${fmtNum(p.adi)} · CV² ${fmtNum(p.cv2)}`], ['ABC', p.abc], ['Unit cost', fmtAED(p.unit_cost)],
       ['Grounding risk', p.risk_hours != null ? `${fmtNum(p.risk_hours, 1)} AOG h / yr (history + modelled residual)` : riskPct(p.risk_score)],
       ['Stock (all stations)', `${fmtInt(p.stock_total)} units`],
+      // canonical per-PN AOG metrics, labelled exactly as on Mission and the Action Centre
+      ...['aog_h_52w', 'aog_h_52w_max_station'].filter((k) => Number.isFinite(p[k])).map((k) => [P.aog_metric_labels?.[k]?.label || k, `${fmtInt(p[k])} h${k === 'aog_h_52w_max_station' && p.aog_h_52w_max_station_id ? ` (${p.aog_h_52w_max_station_id})` : ''}`]),
     ].flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])));
     const st = Object.entries(p.stock_by_station || {});
     const maxSt = Math.max(1, ...st.map(([, q]) => q));

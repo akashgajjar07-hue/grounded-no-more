@@ -7,7 +7,7 @@
  * Story hooks: method-provenance, method-assumptions, method-validation.
  */
 import { h, pageHead, card, provChip, pill, icon, dataTable, sectionTitle, segmented, DISCLAIMER } from '../ui.js';
-import { chartFrame, responsive, svgIn, theme, truncate, refLine, fmtPct, fmtInt, fmtNum } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, theme, truncate, refLine, fmtPct, fmtInt, fmtNum, fmtStamp } from '../charts/theme.js';
 import { assetURL } from '../data.js';
 
 export const data = ['method', 'kpis'];
@@ -34,7 +34,11 @@ function ensureCSS() {
 const up = (p) => String(p || '').toUpperCase();
 const num = (v) => typeof v === 'number' && Number.isFinite(v);
 const stripMd = (s) => String(s ?? '').replace(/`([^`]*)`/g, '$1').replace(/\*([^*]+)\*/g, '$1');
-const fmtTime = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? String(iso || '—') : `${d.toISOString().slice(0, 10)} ${d.toISOString().slice(11, 19)} UTC`; };
+/** REAL build timestamps → shared fmtStamp ("26 Nov 02:25 UTC"; critic: no raw ISO on screen). */
+const fmtTime = (iso) => (Number.isFinite(Date.parse(iso)) ? fmtStamp(iso) : String(iso || '—'));
+const fmtDate = (iso) => fmtStamp(iso, { year: true }).replace(/ \d{2}:\d{2} UTC$/, '');
+/** Replace ISO timestamps embedded in exported prose with the readable form. */
+const humanISO = (s) => String(s ?? '').replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})/g, (m) => fmtTime(m));
 
 export async function render(el, ctx) {
   await ensureCSS();
@@ -48,7 +52,7 @@ export async function render(el, ctx) {
   el.append(pageHead({
     eyebrow: 'Reference · Data & Method', title: 'Where every number comes from',
     lede: 'Every value on this site carries a provenance tag. Models run offline in Python; the site only loads their exported results. Falcon Hub Airways (fictional) and its fleet do not exist.',
-    meta: [provChip(M.meta?.provenance || 'DERIVED'), M.meta?.git_sha ? h('span', { class: 'chip chip-mono' }, `build ${String(M.meta.git_sha).slice(0, 7)}`) : null, M.meta?.generated_at ? h('span', { class: 'chip chip-mono' }, String(M.meta.generated_at).slice(0, 10)) : null].filter(Boolean),
+    meta: [provChip(M.meta?.provenance || 'DERIVED'), M.meta?.git_sha ? h('span', { class: 'chip chip-mono' }, `build ${String(M.meta.git_sha).slice(0, 7)}`) : null, M.meta?.generated_at ? h('span', { class: 'chip chip-mono', title: `Exported ${fmtTime(M.meta.generated_at)}` }, `exported ${fmtDate(M.meta.generated_at)}`) : null].filter(Boolean),
   }));
 
   // ---------------------------------------------------------------- legend
@@ -124,13 +128,15 @@ export async function render(el, ctx) {
   const V = M.validation || {};
   const checks = V.checks || [];
   const testsRun = num(V.tests_total) && V.tests_total > 0;
+  const nPassChk = checks.filter((c) => c.status === 'pass').length;
   const testsCard = card({
-    cls: 'dm-span-4', prov: 'DERIVED', kicker: 'Automated tests (pytest)',
-    body: [
-      testsRun ? h('div', { class: 'dm-big' }, fmtInt(V.tests_passed), h('small', {}, ` / ${fmtInt(V.tests_total)} passed`)) : h('div', {}, h('div', { class: 'dm-big' }, h('small', {}, 'pytest: not run')), V.reason ? h('p', { class: 'faint t-12 mt-1' }, V.reason) : null),
-      h('p', { class: 't-14 muted mt-2' }, `${fmtInt(checks.filter((c) => c.status === 'pass').length)} of ${fmtInt(checks.length)} pipeline checks pass`),
-      h('div', { class: 'dm-checks' }, checks.map((c) => h('div', { class: 'dm-check' }, pill(c.status === 'pass' ? 'ok' : c.status === 'fail' ? 'urgent' : c.status === 'warn' ? 'review' : 'unknown', c.status === 'pass' ? 'Pass' : c.status === 'fail' ? 'Fail' : c.status === 'warn' ? 'Warn' : 'Not run'), h('span', {}, c.name), c.detail ? h('span', { class: 'faint' }, c.detail) : null))),
-    ],
+    cls: 'dm-tests-card', prov: 'DERIVED', kicker: 'Automated tests (pytest) and pipeline checks',
+    body: h('div', { class: 'dm-tests' },
+      h('div', { class: 'dm-tests-sum' },
+        testsRun ? h('div', { class: 'dm-big' }, fmtInt(V.tests_passed), h('small', {}, ` / ${fmtInt(V.tests_total)} passed`)) : h('div', {}, h('div', { class: 'dm-big' }, h('small', {}, 'pytest: not run')), V.reason ? h('p', { class: 'faint t-12 mt-1' }, V.reason) : null),
+        V.ran_at ? h('p', { class: 'dm-tests-at' }, `Run ${fmtTime(V.ran_at)}`) : null,
+        h('p', { class: 't-14 muted mt-2' }, `${fmtInt(nPassChk)} of ${fmtInt(checks.length)} pipeline checks pass`)),
+      h('div', { class: 'dm-checks' }, checks.map((c) => h('div', { class: 'dm-check' }, pill(c.status === 'pass' ? 'ok' : c.status === 'fail' ? 'urgent' : c.status === 'warn' ? 'review' : 'unknown', c.status === 'pass' ? 'Pass' : c.status === 'fail' ? 'Fail' : c.status === 'warn' ? 'Warn' : 'Not run'), h('span', {}, humanISO(c.name)), c.detail ? h('span', { class: 'faint' }, humanISO(c.detail)) : null)))),
   });
   const calCard = h('section', { class: 'card' });
   cleanups.push(calibration(calCard, M.calibration));
@@ -144,13 +150,13 @@ export async function render(el, ctx) {
     prov: 'DERIVED', kicker: 'Freeze and holdout log',
     title: freeze.frozen_at ? `Selection frozen ${fmtTime(freeze.frozen_at)}${nArt != null ? ` · ${fmtInt(nArt)} artefacts hashed${freeze.verified ? ', verified unchanged' : ''}` : ''}` : 'Freeze not exported',
     body: [
-      forced.length ? h('div', { class: 'dm-callout', role: 'note' }, icon('alert'), h('div', {}, h('b', {}, `Disclosed: ${forced.length} forced rerun${forced.length > 1 ? 's' : ''} (${forced.map((r) => `${r.run}, ${fmtTime(r.at)}`).join('; ')}). `), stripMd(freeze.forced_rerun_note || forced.map((r) => r.note).filter(Boolean).join(' ')))) : null,
-      freeze.note ? h('p', { class: 't-14 muted mb-2' }, freeze.note) : null,
-      freeze.reporting_note ? h('p', { class: 't-14 muted mb-2' }, stripMd(freeze.reporting_note)) : null,
-      log.length ? h('div', { class: 'dm-log' }, log.map((r) => h('div', { class: `dm-log-item ${r.forced ? 'is-forced' : ''}` }, h('span', { class: 'dm-log-dot', 'aria-hidden': 'true' }), h('div', { style: { minWidth: 0 } }, h('div', { class: 'dm-log-run' }, r.run), h('div', { class: 'dm-log-at' }, fmtTime(r.at)), r.note ? h('div', { class: 'dm-log-note' }, r.note) : null), pill(r.forced ? 'review' : 'ok', r.forced ? 'Forced rerun' : 'Single run')))) : h('p', { class: 'faint t-14' }, 'Holdout log not exported.'),
+      forced.length ? h('div', { class: 'dm-callout', role: 'note' }, icon('alert'), h('div', {}, h('b', {}, `Disclosed: ${forced.length} forced rerun${forced.length > 1 ? 's' : ''} (${forced.map((r) => `${r.run}, ${fmtTime(r.at)}`).join('; ')}). `), humanISO(stripMd(freeze.forced_rerun_note || forced.map((r) => r.note).filter(Boolean).join(' '))))) : null,
+      freeze.note ? h('p', { class: 't-14 muted mb-2' }, humanISO(freeze.note)) : null,
+      freeze.reporting_note ? h('p', { class: 't-14 muted mb-2' }, humanISO(stripMd(freeze.reporting_note))) : null,
+      log.length ? h('div', { class: 'dm-log' }, log.map((r) => h('div', { class: `dm-log-item ${r.forced ? 'is-forced' : ''}` }, h('span', { class: 'dm-log-dot', 'aria-hidden': 'true' }), h('div', { style: { minWidth: 0 } }, h('div', { class: 'dm-log-run' }, r.run), h('div', { class: 'dm-log-at' }, fmtTime(r.at)), r.note ? h('div', { class: 'dm-log-note' }, humanISO(r.note)) : null), pill(r.forced ? 'review' : 'ok', r.forced ? 'Forced rerun' : 'Single run')))) : h('p', { class: 'faint t-14' }, 'Holdout log not exported.'),
     ],
   });
-  el.append(h('div', { class: 'dm-grid', dataset: { story: 'method-validation' } }, testsCard, h('div', { class: 'dm-span-8 dm-stack' }, calCard, conCard, logCard)));
+  el.append(h('div', { class: 'dm-stack', dataset: { story: 'method-validation' } }, testsCard, calCard, conCard, logCard));
 
   // ---------------------------------------------------------------- limitations
   el.append(sectionTitle('Limitations'));
@@ -164,9 +170,10 @@ export async function render(el, ctx) {
   const initials = A.name.split(/\s+/).map((s) => s[0]).join('').slice(0, 2);
   const authorCard = card({ cls: 'dm-span-5', kicker: 'Author', body: h('div', { class: 'dm-author' }, h('div', { class: 'dm-avatar', 'aria-hidden': 'true' }, initials), h('div', {}, h('h3', {}, A.name), h('p', { class: 'muted' }, A.degree), h('div', { class: 'dm-links' },
     A.github ? h('a', { class: 'btn btn--sm', href: A.github, target: '_blank', rel: 'noopener noreferrer' }, 'GitHub', icon('chevron-right')) : null,
-    A.linkedin ? h('a', { class: 'btn btn--sm', href: A.linkedin, target: '_blank', rel: 'noopener noreferrer' }, 'LinkedIn', icon('chevron-right')) : h('span', { class: 'chip chip-mono', title: 'LinkedIn link to be added' }, 'LinkedIn: add link')))) });
+    // LinkedIn is shown only once a real URL exists (no placeholder chip)
+    A.linkedin ? h('a', { class: 'btn btn--sm', href: A.linkedin, target: '_blank', rel: 'noopener noreferrer' }, 'LinkedIn', icon('chevron-right')) : null))) });
   const licCard = card({ cls: 'dm-span-12', kicker: 'Third-party licences', title: `${fmtInt((M.licences || []).length)} vendored packages and fonts`, prov: 'REAL',
-    body: dataTable({ caption: 'Licences', bare: true, dense: true, rows: M.licences || [], mobileColumns: ['name', 'licence', 'version'], columns: [{ key: 'name', label: 'Package' }, { key: 'version', label: 'Version', mono: true }, { key: 'licence', label: 'Licence' }] }) });
+    body: h('div', { class: 'dm-wrap' }, dataTable({ caption: 'Licences', bare: true, dense: true, rows: (M.licences || []).map((r) => ({ ...r, name: stripMd(r.name) })), mobileColumns: ['name', 'licence', 'version'], columns: [{ key: 'name', label: 'Package' }, { key: 'version', label: 'Version', mono: true }, { key: 'licence', label: 'Licence' }] })) });
   const discCard = card({ cls: 'dm-span-7', bp: true, kicker: 'Disclaimer', body: [h('p', { class: 'dm-disclaimer' }, M.disclaimer || DISCLAIMER), h('p', {}, 'Falcon Hub Airways, its tails and its part numbers are fictional; no real airline names, logos or liveries are used. Simulated rates are not measured reliability. Deadline classes D0/D3/D10 are hypothetical and are not MEL categories.')] });
   el.append(h('div', { class: 'dm-grid' }, authorCard, discCard, licCard));
 

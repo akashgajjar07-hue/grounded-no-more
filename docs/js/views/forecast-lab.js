@@ -36,6 +36,9 @@ const ciOf = (r, k = 'mase') => (Array.isArray(r[`${k}_ci`]) ? r[`${k}_ci`] : [r
 const champOf = (c) => c?.champion ?? c?.method;
 /** First headline candidate that fits the 90-character cap (DESIGN_SYSTEM: one finding, ≤ 90 chars). */
 const fit = (...c) => c.filter(Boolean).find((t) => t.length <= 90) || c.filter(Boolean).at(-1);
+/** Same, with a tighter cap for half-width cards so the headline stays on ≤ 2 lines (critic: 3-line wraps). */
+const fitN = (max, ...c) => c.filter(Boolean).find((t) => t.length <= max) || c.filter(Boolean).at(-1);
+const HALF = 64;
 
 export async function render(el, ctx) {
   await ensureCSS('css/views/parts-intelligence.css');
@@ -153,6 +156,9 @@ export async function render(el, ctx) {
     });
     if (!rows.length) { f.body.append(stateBlock('empty', 'not run')); drawChamp(champ, null, null, null); return; }
     const ordered = eligible.concat(zero ? [zero] : []);
+    // teal = the method the stocking policies actually use for this part class (rotables: the reliability-exposure
+    // rate, per forecast.json meta); the frozen champion is marked with ★ + neutral strong, not the recommendation colour
+    const policyKey = pc === 'R' && /reliability rate/i.test(F.meta?.notes || '') ? 'reliability' : null;
     boardStop = responsive(f.body, (w) => {
       const small = w < 480;
       const rowH = 34, labelW = small ? 104 : 190;
@@ -167,22 +173,22 @@ export async function render(el, ctx) {
       axisBottom(g.append('g'), x, { height: ih, ticks: small ? 3 : 6, format: (v) => fmtNum(v, 1) });
       refLine(g, { x1: x(1), y1: ih, x2: x(1), y2: -10, label: small ? 'naive = 1' : 'naive scale = 1.0', dx: 4, dy: -2, anchor: x(1) > iw * 0.7 ? 'end' : 'start' });
       if (zero) g.append('line').attr('class', 'fl-sep').attr('x1', -labelW + 8).attr('x2', iw).attr('y1', yPos(ordered.length - 1) - rowH / 2 - 2).attr('y2', yPos(ordered.length - 1) - rowH / 2 - 2);
-      const rowsG = g.selectAll('g.fl-row').data(ordered).join('g').attr('class', (r) => `fl-row ${mKey(r.method) === champKey ? 'is-champ' : ''} ${isZero(r.method) ? 'is-zero' : ''}`).attr('transform', (r, i) => `translate(0,${yPos(i)})`);
+      const rowsG = g.selectAll('g.fl-row').data(ordered).join('g').attr('class', (r) => `fl-row ${mKey(r.method) === champKey ? 'is-champ' : ''} ${mKey(r.method) === policyKey ? 'is-policy' : ''} ${isZero(r.method) ? 'is-zero' : ''}`).attr('transform', (r, i) => `translate(0,${yPos(i)})`);
       rowsG.append('rect').attr('class', 'fl-row-bg').attr('x', -labelW + 4).attr('y', -rowH / 2 + 2).attr('width', labelW + iw + m.right - 8).attr('height', rowH - 4).attr('rx', 6);
       rowsG.append('line').attr('class', 'fl-ci').attr('x1', (r) => x(ciOf(r)[0] ?? r.mase)).attr('x2', (r) => x(ciOf(r)[1] ?? r.mase));
       rowsG.append('line').attr('class', 'fl-ci').attr('x1', (r) => x(ciOf(r)[0] ?? r.mase)).attr('x2', (r) => x(ciOf(r)[0] ?? r.mase)).attr('y1', -4).attr('y2', 4);
       rowsG.append('line').attr('class', 'fl-ci').attr('x1', (r) => x(ciOf(r)[1] ?? r.mase)).attr('x2', (r) => x(ciOf(r)[1] ?? r.mase)).attr('y1', -4).attr('y2', 4);
       rowsG.append('circle').attr('class', 'fl-dot').attr('cx', (r) => x(r.mase)).attr('r', (r) => (mKey(r.method) === champKey ? 6 : 4.5));
-      rowsG.append('text').attr('class', 'fl-mlabel').attr('x', -12).attr('dy', '0.32em').attr('text-anchor', 'end').text((r) => truncate(isZero(r.method) ? (small ? 'zero (excl.)' : 'Zero · benchmark only') : `${mKey(r.method) === champKey ? '★ ' : ''}${mNameS(r.method, small)}`, labelW - 16));
+      const subOf = (r) => {
+        if (small) return null;
+        if (mKey(r.method) === champKey) return win === 'selection' ? 'frozen champion' : `frozen champion · rank ${eligible.indexOf(r) + 1}/${eligible.length}`;
+        if (mKey(r.method) === policyKey) return 'used by rotable policies';
+        return null;
+      };
+      rowsG.append('text').attr('class', 'fl-mlabel').attr('x', -12).attr('dy', (r) => (subOf(r) ? '-0.18em' : '0.32em')).attr('text-anchor', 'end').text((r) => truncate(isZero(r.method) ? (small ? 'zero (excl.)' : 'Zero · benchmark only') : `${mKey(r.method) === champKey ? '★ ' : ''}${mNameS(r.method, small)}`, labelW - 16));
+      rowsG.filter((r) => !!subOf(r)).append('text').attr('class', 'fl-msub').attr('x', -12).attr('y', 11).attr('text-anchor', 'end').text((r) => subOf(r));
       rowsG.append('text').attr('class', 'fl-vlabel').attr('x', iw + 10).attr('dy', '0.32em').text((r) => fmtNum(r.mase));
       withTooltip(rowsG, (r) => ({ title: mName(r.method), rows: [['MASE', fmtNum(r.mase, 3)], ['95% CI', `${fmtNum(ciOf(r)[0], 3)} – ${fmtNum(ciOf(r)[1], 3)}`], ['Bias (units/wk)', fmtNum(r.bias, 3)], ['Coverage', fmtPct(r.coverage, 0)]], note: isZero(r.method) ? 'Benchmark only: excluded from champion eligibility.' : mKey(r.method) === champKey ? 'Frozen champion (selection weeks).' : '' }));
-      const ci = ordered.findIndex((r) => mKey(r.method) === champKey);
-      if (ci >= 0 && !small) {
-        const r = ordered[ci];
-        const hx = x(ciOf(r)[1] ?? r.mase), lx = x(ciOf(r)[0] ?? r.mase);
-        const right = hx < iw * 0.62;
-        annotate(g, { x: right ? hx : lx, y: yPos(ci), dx: right ? 20 : -20, dy: 0, title: win === 'selection' ? 'Frozen champion' : `Champion, holdout rank ${eligible.indexOf(r) + 1}/${eligible.length}`, sub: champ?.basis && champ.basis !== 'cell' ? `basis: ${String(champ.basis).replace(/_/g, ' ')}` : undefined });
-      }
     });
     drawChamp(champ, champRow, zero, eligible);
   }
@@ -276,7 +282,7 @@ export async function render(el, ctx) {
       const rop = L.reorder_point ?? (sl != null ? rows.find((r) => r.cdf >= sl - 1e-9)?.q ?? rows.at(-1).q : null);
       const mean = L.mean ?? rows.reduce((s2, r) => s2 + r.q * r.p, 0);
       const f = chartFrame(frameHost, {
-        headline: rop != null ? fit(`To cover ${fmtPct(sl, 0)} of lead times at ${L.station || 'the hub'}, ${L.pn} needs ${fmtInt(rop)} units against a mean demand of ${fmtNum(mean, 1)}`, `To cover ${fmtPct(sl, 0)} of lead times, ${L.pn} needs ${fmtInt(rop)} units (mean demand ${fmtNum(mean, 1)})`) : `${L.pn}: expected lead-time demand ${fmtNum(mean, 1)} units`,
+        headline: rop != null ? fitN(HALF, `${L.pn} needs ${fmtInt(rop)} units to cover ${fmtPct(sl, 0)} of lead times${L.station ? ` at ${L.station}` : ''}`, `${L.pn} needs ${fmtInt(rop)} units to cover ${fmtPct(sl, 0)} of lead times`, `To cover ${fmtPct(sl, 0)} of lead times at ${L.station || 'the hub'}, ${L.pn} needs ${fmtInt(rop)} units against a mean demand of ${fmtNum(mean, 1)}`, `To cover ${fmtPct(sl, 0)} of lead times, ${L.pn} needs ${fmtInt(rop)} units (mean demand ${fmtNum(mean, 1)})`) : `${L.pn}: expected lead-time demand ${fmtNum(mean, 1)} units`,
         subtitle: `P(demand = q) over ${L.lead_time_days != null ? `${fmtNum(L.lead_time_days, 0)} days` : 'the lead time'} · ${L.dist_kind || 'champion'} · rate from ${mName(L.rate_source || L.champion)}${sl != null ? ` · ${part?.deadline} service target ${fmtPct(sl, 0)} (${slA?.provenance || 'ASSUMED'})` : ' · service level not exported'}`,
         provenance: L.provenance || fprov, source: 'forecast.json (ltd_examples), method.json (service_targets)', story: 'forecast-ltd',
         table: { columns: [{ key: 'q', label: 'Units', num: true }, { key: 'p', label: 'P(X = q)', num: true, format: (v) => fmtPct(v, 1) }, { key: 'cdf', label: 'P(X ≤ q)', num: true, format: (v) => fmtPct(v, 1) }], rows },
@@ -340,11 +346,11 @@ export async function render(el, ctx) {
       const cheap = rows.slice().sort((a, b) => a.capital - b.capital)[0];
       const rel = rows.find((r) => mKey(r.method) === 'reliability');
       const champSet = new Set(champs.filter((c) => !spc || c.part_class === spc).map((c) => mKey(champOf(c))));
-      let headline = `${mName(hi.method)} buys the highest fill rate (${fmtPct(hi.fill_rate)}) for ${fmtAED(hi.capital)}, ${fmtPct(hi.capital / cheap.capital - 1, 0)} more capital than ${mName(cheap.method)}`;
+      let headline = fitN(HALF, `${mName(hi.method)} buys the top fill rate (${fmtPct(hi.fill_rate)}) for ${fmtPct(hi.capital / cheap.capital - 1, 0)} more capital`, `${mNameS(hi.method, true)} buys the top fill rate for ${fmtPct(hi.capital / cheap.capital - 1, 0)} more capital`);
       if (rel && rel !== hi) {
         const peers = rows.filter((r) => r !== rel && r !== hi);
         const near = peers.sort((a, b) => Math.abs(a.capital - rel.capital) - Math.abs(b.capital - rel.capital))[0];
-        if (near && rel.fill_rate > near.fill_rate) headline = `Reliability-exposure adds ${fmtPts(rel.fill_rate - near.fill_rate)} of fill over ${mName(near.method)} for ${fmtPct(rel.capital / near.capital - 1, 0)} more capital`;
+        if (near && rel.fill_rate > near.fill_rate) headline = fitN(HALF, `Reliability-exposure adds ${fmtPts(rel.fill_rate - near.fill_rate)} of fill over ${mName(near.method)} for ${fmtPct(rel.capital / near.capital - 1, 0)} more capital`, `Reliability adds ${fmtPts(rel.fill_rate - near.fill_rate)} of fill over ${mName(near.method)} for ${fmtPct(rel.capital / near.capital - 1, 0)} more capital`, `Reliability adds ${fmtPts(rel.fill_rate - near.fill_rate)} of fill over ${mNameS(near.method, true)}`);
       }
       const f = chartFrame(frameHost, {
         headline,
@@ -358,6 +364,8 @@ export async function render(el, ctx) {
         const iw = w - m.left - m.right, ih = hgt - m.top - m.bottom;
         const svg = svgIn(f.body, w, hgt, 'Fill rate versus capital');
         const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+        // teal only for the rate the rotable policies use; other key methods are labelled in neutral
+        const polM = spc === 'R' && /reliability rate/i.test(F.meta?.notes || '') ? 'reliability' : null;
         const xe = d3().extent(rows, (r) => r.capital), ye = d3().extent(rows, (r) => r.fill_rate);
         const xp = (xe[1] - xe[0]) * 0.12 || xe[0] * 0.1, yp = (ye[1] - ye[0]) * 0.15 || 0.01;
         const x = d3().scaleLinear().domain([xe[0] - xp, xe[1] + xp]).nice().range([0, iw]);
@@ -367,7 +375,7 @@ export async function render(el, ctx) {
         axisBottom(g.append('g'), x, { height: ih, ticks: small ? 3 : 5, format: (v) => fmtAED(v) });
         g.append('text').attr('class', 'pi-axis-t').attr('x', iw).attr('y', ih + 32).attr('text-anchor', 'end').text('capital (mean stock value) →');
         g.append('text').attr('class', 'pi-axis-t').attr('x', 0).attr('y', -4).text('fill rate ↑');
-        const pts = g.selectAll('g.p').data(rows).join('g').attr('class', (r) => `fl-pt ${mKey(r.method) === 'reliability' || r === hi ? 'is-key' : ''} ${champSet.has(mKey(r.method)) ? 'is-champ' : ''}`).attr('transform', (r) => `translate(${x(r.capital)},${y(r.fill_rate)})`);
+        const pts = g.selectAll('g.p').data(rows).join('g').attr('class', (r) => `fl-pt ${mKey(r.method) === polM ? 'is-key' : r === hi || mKey(r.method) === 'reliability' ? 'is-ref' : ''} ${champSet.has(mKey(r.method)) ? 'is-champ' : ''}`).attr('transform', (r) => `translate(${x(r.capital)},${y(r.fill_rate)})`);
         pts.append('circle').attr('r', (r) => (mKey(r.method) === 'reliability' ? 6 : 4.5));
         withTooltip(pts, (r) => ({ title: mName(r.method), rows: [['Fill rate', fmtPct(r.fill_rate)], ['Capital', fmtAED(r.capital)], ['Backorder units', fmtInt(r.backorder_units)]], note: champSet.has(mKey(r.method)) ? 'MASE champion in at least one cell of this class' : '' }));
         // direct labels for the key methods: dodged against every dot and each other, flipping sides when needed
@@ -375,7 +383,7 @@ export async function render(el, ctx) {
         const obstacles = rows.map((r) => markerRect(x(r.capital), y(r.fill_rate), mKey(r.method) === 'reliability' ? 6 : 4.5, 3));
         const labels = keyM.map((r) => {
           const cx = x(r.capital), cy = y(r.fill_rate);
-          const text = small ? `${mNameS(r.method, true)}${r === hi && r !== rel ? ' · top fill' : ''}` : r === hi && r !== rel ? `${mName(r.method)} · highest fill` : r === cheap && r !== rel && r !== hi ? `${mName(r.method)} · least capital` : mName(r.method);
+          const text = small ? `${mNameS(r.method, true)}${r === hi && r !== rel ? ' · top fill' : ''}` : r === hi && r !== rel ? `${mName(r.method)} · highest fill` : r === cheap && r !== rel && r !== hi ? `${mName(r.method)} · least capital` : `${mName(r.method)}${mKey(r.method) === polM ? ' · policy rate' : ''}`;
           const right = cx < iw * 0.6;
           return { r, text, x: cx + (right ? 10 : -10), flipX: cx + (right ? -10 : 10), y: cy, anchor: right ? 'start' : 'end' };
         });
@@ -383,7 +391,7 @@ export async function render(el, ctx) {
         labels.forEach((l) => {
           const cx = x(l.r.capital), cy = y(l.r.fill_rate);
           if (Math.abs(l.y - cy) > 10) g.append('line').attr('class', 'fl-leader').attr('x1', cx).attr('y1', cy).attr('x2', l.anchor === 'start' ? l.x - 3 : l.x + 3).attr('y2', l.y);
-          lab(g, { x: l.x, y: l.y, text: l.text, anchor: l.anchor, color: mKey(l.r.method) === 'reliability' ? theme.color.accent : theme.color.text, strong: mKey(l.r.method) === 'reliability' });
+          lab(g, { x: l.x, y: l.y, text: l.text, anchor: l.anchor, color: mKey(l.r.method) === polM ? theme.series.recommended : theme.color.text, strong: mKey(l.r.method) === polM });
         });
       });
     };
@@ -461,7 +469,7 @@ export async function render(el, ctx) {
     } else {
       const main = TR.find((t) => t.vendor_quoted != null && /mtbur/i.test(t.param)) || TR.find((t) => t.vendor_quoted != null) || TR[0];
       const f = chartFrame(truthCard, {
-        headline: main.vendor_quoted != null ? fit(`Estimating ${main.param} from removals cuts the error from ${fmtE(main, main.vendor_quoted)} (vendor-quoted) to ${fmtE(main, main.estimated)}`, `Fitting ${main.param} to removals cuts its error from ${fmtE(main, main.vendor_quoted)} to ${fmtE(main, main.estimated)}`, `Fitting ${String(main.param).split(' (')[0]} to removals cuts its error from ${fmtE(main, main.vendor_quoted)} to ${fmtE(main, main.estimated)}`) : `${main.param}: estimate error ${fmtE(main, main.estimated)}`,
+        headline: main.vendor_quoted != null ? fitN(HALF, `Fitting ${String(main.param).split(' (')[0]} to removals cuts its error from ${fmtE(main, main.vendor_quoted)} to ${fmtE(main, main.estimated)}`, `Estimating ${main.param} from removals cuts the error from ${fmtE(main, main.vendor_quoted)} (vendor-quoted) to ${fmtE(main, main.estimated)}`, `Fitting ${main.param} to removals cuts its error from ${fmtE(main, main.vendor_quoted)} to ${fmtE(main, main.estimated)}`, `Fitting ${String(main.param).split(' (')[0]} to removals cuts its error from ${fmtE(main, main.vendor_quoted)} to ${fmtE(main, main.estimated)}`) : `${main.param}: estimate error ${fmtE(main, main.estimated)}`,
         subtitle: `${main.metric || 'error'} against the simulator's hidden truth, estimated vs vendor-quoted · lower is better · estimates use history weeks only`,
         provenance: 'DERIVED', source: 'forecast.json (truth_recovery)', story: 'forecast-truth',
         table: { columns: [{ key: 'param', label: 'Parameter' }, { key: 'metric', label: 'Metric' }, { key: 'vendor_quoted', label: 'Vendor-quoted', num: true, format: (v) => (v == null ? 'not quoted' : fmtNum(v, 3)) }, { key: 'estimated', label: 'Estimated', num: true, format: (v) => fmtNum(v, 3) }, { key: 'n_parts', label: 'PNs', num: true, format: (v) => (v == null ? '—' : fmtInt(v)) }], rows: TR },
@@ -492,7 +500,7 @@ export async function render(el, ctx) {
         rg.filter((t) => t.vendor_quoted == null).append('text').attr('class', 'fl-db-t').attr('x', (t) => x(t.estimated) + 10).attr('dy', '0.32em').text('no vendor quote');
         withTooltip(rg, (t) => ({ title: t.param, rows: [['Vendor-quoted error', fmtE(t, t.vendor_quoted)], ['Estimated error', fmtE(t, t.estimated)], ...(t.n_parts != null ? [['PNs', fmtInt(t.n_parts)]] : []), ...(t.share_estimate_closer != null ? [['Estimate closer', fmtPct(t.share_estimate_closer, 0)]] : [])] }));
         lab(g, { x: 0, y: -8, text: '● estimated', dy: '0', color: theme.color.accent });
-        lab(g, { x: 86, y: -8, text: '● vendor-quoted', dy: '0', color: theme.series.baseline });
+        lab(g, { x: 86, y: -8, text: '○ vendor-quoted', dy: '0', color: theme.color.muted });
       }));
       truthCard.append(h('div', { class: 'fl-honest mt-2', role: 'note' }, icon('shield'), h('div', {}, h('strong', {}, 'Evaluated against hidden truth'), h('p', {}, 'The simulator draws true reliability and repair parameters that the planner never sees. Estimates are fitted on the demand and repair history only; the true values are read by this evaluation step alone, never by the forecasting or policy code.'))));
     }

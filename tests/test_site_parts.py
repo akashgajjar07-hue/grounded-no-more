@@ -134,6 +134,17 @@ def test_urgent_part_pip_and_callout(site, browser, vp):  # noqa: F811
     in32 = sorted([p for p in parts if p["ata"] == "32"], key=lambda p: -p["risk_score"])
     ctx, page, problems = open_page(browser, site + "#/parts?ata=32", vp)
     try:
+        # phones (< 480 px drawing): the top-part callout is an HTML line under the drawing (no room between badges)
+        if vp == "390":
+            page.wait_for_selector(".pi-air-note-btn")
+            note = page.locator(".pi-air-note-btn")
+            assert in32[0]["pn"] in note.inner_text() and f"is-{in32[0]['risk_level']}" in note.get_attribute("class")
+            assert page.locator(".pi-aircraft .pi-hs-callout").count() == 0
+            note.click()
+            page.locator(".drawer.is-open").wait_for()
+            assert in32[0]["pn"] in page.locator(".drawer.is-open").inner_text()
+            assert not problems, problems
+            return
         page.wait_for_selector(".pi-aircraft .pi-hs-callout")
         # a red pip with the urgent-PN count on every system that holds an urgent part, whatever the system level
         assert page.locator(".pi-aircraft .hs-pip").count() == len(with_urgent)
@@ -205,6 +216,37 @@ def test_matrix_labels_clear_and_reference_lines_neutral(site, browser, vp):  # 
         assert not page.evaluate(OVERLAP_JS, '[data-story="parts-adi-matrix"] .pi-quad-t, [data-story="parts-adi-matrix"] .gnm-ref-label, [data-story="parts-adi-matrix"] .gnm-annot-text, [data-story="parts-adi-matrix"] .gnm-annot-sub, [data-story="parts-adi-matrix"] .pi-axis-t')
         heads = page.evaluate("() => [...document.querySelectorAll('#view .chart-headline')].map((e) => e.textContent.trim())")
         assert heads and all(len(h) <= 90 for h in heads), heads
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_wave3_system_status_exploded_top_pn_and_neutral_zone(site, browser, vp):  # noqa: F811
+    """Review 2: never a bare OK pill beside urgent PNs; exploded view draws the chapter's top-risk PN; the
+    Croston/sparse zone is not teal; the callout never sits on another badge or risk word."""
+    data = _parts()
+    parts = data["parts"]
+    ctx, page, problems = open_page(browser, site + "#/parts?ata=34", vp)
+    try:
+        for b in page.locator(".pi-sys").all():
+            a = b.get_attribute("data-ata")
+            n_urg = sum(p["ata"] == a and p["risk_level"] == "urgent" for p in parts)
+            pill_t = b.locator(".pill").inner_text().strip().upper()
+            if n_urg:
+                assert pill_t != "OK", (a, pill_t)
+                assert f"{n_urg} urgent" in b.locator(".pi-sys-urg").inner_text()
+        top = sorted([p for p in parts if p["ata"] == "34"], key=lambda p: -p["risk_score"])[0]
+        page.wait_for_selector(".pi-exploded .pi-xlabel")
+        assert top["pn"] in page.locator(".pi-exploded").inner_text()
+        fill = page.evaluate("getComputedStyle(document.querySelector('.pi-quad--sparse')).fill")
+        assert "34, 199, 184" not in fill, fill
+        if vp == "1440":
+            hit = page.evaluate("""() => { const box = document.querySelector('.pi-hs-box'); if (!box) return 'none';
+              const b = box.getBoundingClientRect();
+              return [...document.querySelectorAll('.ata-hotspot .hs-badge > circle, .ata-hotspot .hs-risk')].filter((e) => {
+                const r = e.getBoundingClientRect(); return r.left < b.right && b.left < r.right && r.top < b.bottom && b.top < r.bottom; }).length; }""")
+            assert hit == 0, hit
         assert not problems, problems
     finally:
         ctx.close()

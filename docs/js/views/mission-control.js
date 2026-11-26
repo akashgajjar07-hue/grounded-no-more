@@ -10,7 +10,7 @@
  * Story hooks: mission-hero, mission-aircraft, mission-kpis, mission-compare, mission-actions, mission-map.
  */
 import { h, card, kpiTile, provChip, pill, icon, inlineSVG, storyMode } from '../ui.js';
-import { chartFrame, responsive, svgIn, axisBottom, styleAxis, barList, withTooltip, truncate, theme, sparkline, fmtByUnit, fmtPct, fmtPts, fmtHours, fmtAED, fmtInt, fmtWeek, HEADLINE_MAX } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, axisBottom, styleAxis, withTooltip, truncate, theme, sparkline, fmtByUnit, fmtPct, fmtPts, fmtHours, fmtAED, fmtInt, fmtWeek, HEADLINE_MAX } from '../charts/theme.js';
 import { renderNetworkMap } from '../charts/map.js';
 import { assetURL } from '../data.js';
 
@@ -78,6 +78,11 @@ export async function render(el, ctx) {
   const hot = ranked.find((a) => a.severity === 'urgent' && HOTSPOTS.includes(ataOf(a.pn))) || ranked.find((a) => HOTSPOTS.includes(ataOf(a.pn)));
   const hotAta = hot ? ataOf(hot.pn) : null;
   const hotPart = hot ? partBy[hot.pn] : null;
+  const sysOf = Object.fromEntries((parts.ata_systems || []).map((a) => [a.ata, a]));
+  const sysLevel = (a) => sysOf[a]?.system_level || sysOf[a]?.risk_level || null;
+  const hotSys = hotAta ? sysLevel(hotAta) : null;
+  // the system's display status as Parts prints it (exporter status_label: URGENT / REVIEW / WATCH / OK)
+  const hotSysWord = (() => { const w = String(sysOf[hotAta]?.status_label || '').split(' · ')[0]; const v = w || hotSys || ''; return v.toUpperCase() === 'OK' ? 'OK' : v.toLowerCase(); })();
 
   const startTour = async () => {
     try {
@@ -91,7 +96,8 @@ export async function render(el, ctx) {
     ? h('a', { class: 'mc-fault', href: ctx.buildHash('actions', { id: hot.exception_id }), 'aria-label': `Urgent: ${hot.summary}. Open action ${hot.exception_id}` },
       icon('alert'),
       h('div', {},
-        h('div', { class: 'mc-fault-k' }, `${cap(hot.severity)} · ATA ${hotAta}`),
+        h('div', { class: 'mc-fault-k' }, `${cap(hot.severity)} part`),
+        h('div', { class: 'mc-fault-sys', title: `System level = the chapter's share of fleet risk-hours${num(sysOf[hotAta]?.risk_share) ? ` (${fmtPct(sysOf[hotAta].risk_share, 0)})` : ''}, as on Parts Intelligence` }, `ATA ${hotAta}${hotSys ? ` · system ${hotSysWord}` : ''}`),
         h('div', { class: 'mc-fault-pn' }, hot.pn),
         h('div', { class: 'mc-fault-at' }, h('span', {}, hot.station), num(hotPart?.risk_score) ? h('span', { class: 'mc-fault-risk', title: 'Part-level risk score, 0–100 (log-scaled AOG hours)' }, `risk ${Math.round(hotPart.risk_score * 100)}`) : null),
         h('div', { class: 'mc-fault-d' }, [hotPart?.desc, hot.evidence?.deadline ? `deadline class ${hot.evidence.deadline} (hypothetical)` : null].filter(Boolean).join(' · ') || hot.summary)))
@@ -133,6 +139,19 @@ export async function render(el, ctx) {
     });
     fig.classList.add('bp-figure');
     fig.replaceChildren(svg);
+    // keep ATA badge numerals ≥ 11 screen px however small the drawing is scaled (critic: ~8 px at 390)
+    const sizeBadges = () => {
+      const vb = svg.viewBox.baseVal, wpx = svg.getBoundingClientRect().width, hpx = svg.getBoundingClientRect().height;
+      if (!vb?.width || !wpx) return;
+      const u = Math.max(vb.width / wpx, vb.height / hpx);
+      svg.querySelectorAll('.hs-badge').forEach((b) => {
+        const c = b.querySelector('circle'); const t = b.querySelector('text');
+        if (c) { c.dataset.r0 = c.dataset.r0 || c.getAttribute('r'); c.setAttribute('r', Math.max(+c.dataset.r0, 10 * u)); }
+        if (t) t.style.fontSize = `${Math.max(17, 11.5 * u)}px`;
+      });
+    };
+    sizeBadges();
+    const ro = new ResizeObserver(() => requestAnimationFrame(sizeBadges)); ro.observe(fig); cleanups.push(() => ro.disconnect());
   }).catch(() => fig.replaceChildren(h('p', { class: 'faint t-12' }, 'Aircraft drawing unavailable.')));
 
   // ================================================================ KPI instruments
@@ -163,8 +182,13 @@ export async function render(el, ctx) {
   const nUrg = all.filter((a) => a.severity === 'urgent').length;
   const nUrgPn = new Set(all.filter((a) => a.severity === 'urgent').map((a) => a.pn)).size;
   const lookback = all.find((a) => num(a.evidence?.lookback_weeks) && a.type === 'OUTSTATION_DEPLETION')?.evidence.lookback_weeks;
+  // canonical per-PN AOG metric shared with the Action Centre: the largest single-station total in the last 52 weeks
+  // (exporter field aog_h_52w_max_station when present, else the max over the PN's actions), with the exporter's label
+  const aogMeta = parts.aog_metric_labels?.aog_h_52w_max_station;
+  const aogLabel = (typeof aogMeta === 'string' ? aogMeta : aogMeta?.label) || `AOG h · last ${lookback || 52} wk · worst station`;
+  groups.forEach((g) => { const pv = partBy[g.pn]?.aog_h_52w_max_station; if (num(pv)) g.aog = pv; });
   const head = h('div', { class: 'mc-pr mc-pr--head', 'aria-hidden': 'true' },
-    h('span', {}, 'Severity'), h('span', {}, 'Part · where'), h('span', {}, 'Signal · next step'), h('span', { class: 'num' }, lookback ? `AOG h ${lookback}w` : 'AOG h'), h('span', { class: 'num' }, 'Due'), h('span', {}));
+    h('span', {}, 'Severity'), h('span', {}, 'Part · where'), h('span', {}, 'Signal · next step'), h('span', { class: 'num mc-pr-aogh', title: aogLabel }, h('span', {}, 'AOG h'), h('span', {}, 'worst stn')), h('span', { class: 'num' }, 'Due'), h('span', {}));
   const rowsEl = groups.map((g) => {
     const a = g.lead;
     const sig = signalOf(a);
@@ -174,7 +198,7 @@ export async function render(el, ctx) {
       h('span', { class: 'mc-pr-sev' }, pill(SEV_RANK[a.severity] != null ? a.severity : 'unknown')),
       h('span', { class: 'mc-pr-part' }, h('span', { class: 'mc-pr-pn' }, a.pn), h('span', { class: 'mc-pr-where', title: g.stations.join(', ') }, where)),
       h('span', { class: 'mc-pr-sig', title: sig.k }, h('span', { class: 'mc-pr-v' }, sig.v), h('span', { class: 'mc-pr-step' }, TYPE_STEP[a.type] || 'Review')),
-      h('span', { class: 'mc-pr-aog num' }, h('span', { class: 'mc-pr-ml' }, 'AOG h '), g.aog != null ? fmtInt(g.aog) : '—'),
+      h('span', { class: 'mc-pr-aog num', title: aogLabel }, h('span', { class: 'mc-pr-ml' }, 'AOG h worst stn '), g.aog != null ? fmtInt(g.aog) : '—'),
       h('span', { class: 'mc-pr-due num' }, h('span', { class: 'mc-pr-ml' }, 'Due '), num(g.due) ? fmtWeek(g.due) : '—'),
       h('span', { class: 'mc-pr-do', 'aria-hidden': 'true' }, icon('chevron-right')));
   });
@@ -182,7 +206,7 @@ export async function render(el, ctx) {
     story: 'mission-actions', kicker: 'Planner priorities', prov: actions.meta?.provenance || 'DERIVED',
     title: all.length ? `${fmtInt(nUrg)} urgent actions on ${fmtInt(nUrgPn)} part numbers; top ${fmtInt(groups.length)} shown` : 'No open actions exported',
     body: h('div', { class: 'mc-prio', role: 'list' }, head, rowsEl.map((r) => { r.setAttribute('role', 'listitem'); return r; })),
-    foot: [h('span', {}, `Grouped by part number, ranked by severity then risk${lookback ? ` · AOG h = last ${lookback} weeks of history` : ''}`), h('a', { class: 'card-link', href: '#/actions' }, 'Open Planner Action Centre', icon('chevron-right'))],
+    foot: [h('span', { title: aogMeta?.definition || aogLabel }, `Ranked by severity then risk · ${aogLabel}, as in the Action Centre`), h('a', { class: 'card-link', href: '#/actions' }, 'Open Planner Action Centre', icon('chevron-right'))],
   }));
 
   // ---- network mini-map
@@ -210,7 +234,34 @@ export async function render(el, ctx) {
     stations, arcs: network.arcs || [], selected: topS?.station, inset: false, aspect: 0.62, label: 'Network map: hub and outstations',
     onSelect: (id) => ctx.navigate(ctx.buildHash('network', { station: id })),
   }).then((m) => { map = m; }).catch((e) => { console.warn('map unavailable', e); mapHost.replaceChildren(h('p', { class: 'faint t-12' }, 'Map unavailable.')); });
-  cleanups.push(barList(listHost, { rows: byRisk.map((s, i) => ({ label: `${s.station} · ${s.role === 'hub' ? 'hub' : 'outstation'}`, value: s.risk, highlight: i === 0 })), format: (v) => fmtPct(v, 0), max: 1, barHeight: 6 }));
+  listHost.append(h('ul', { class: 'mc-st list-reset', 'aria-label': 'Station risk, share of the worst station' }, byRisk.map((s) => h('li', { class: `mc-st-row${s === topOut ? ' is-focus' : ''}${s.role === 'hub' ? ' is-hub' : ''}` },
+    h('a', { href: ctx.buildHash('network', { station: s.station }), class: 'mc-st-l' }, h('span', { class: 'mono' }, s.station), h('span', { class: 'faint' }, s.role === 'hub' ? ' · hub' : ' · outstation')),
+    h('span', { class: 'mc-st-bar', 'aria-hidden': 'true' }, h('span', { style: { width: `${Math.max(1, s.risk * 100)}%` } })),
+    h('span', { class: 'mc-st-v mono' }, fmtPct(s.risk, 0))))));
+
+  const sysRows = (parts.ata_systems || []).filter((a) => num(a.risk_share)).sort((a, b) => b.risk_share - a.risk_share);
+  if (sysRows.length) {
+    const nShow = Math.min(4, sysRows.length);
+    const lvWord = (l) => (l === 'ok' ? 'OK' : cap(l));
+    const nUrgSys = sysRows.filter((a) => (a.system_level || a.risk_level) === 'urgent').length;
+    const nWatch = sysRows.filter((a) => (a.system_level || a.risk_level) !== 'urgent' && (a.has_urgent_part ?? a.n_urgent > 0)).length;
+    right.append(card({
+      story: 'mission-systems', kicker: 'Aircraft systems', prov: 'DERIVED',
+      title: `${fmtInt(nUrgSys)} system${nUrgSys === 1 ? '' : 's'} rate urgent; ${fmtInt(nWatch)} more hold an urgent part`,
+      body: h('ul', { class: 'mc-sys list-reset' }, sysRows.slice(0, nShow).map((a) => {
+        const lv = a.system_level || a.risk_level || 'unknown';
+        const nU = a.n_urgent ?? 0;
+        // exporter status: system level, raised to WATCH when an OK chapter holds an urgent part (same pill as Parts)
+        const tone = a.status || lv;
+        const word = String(a.status_label || '').split(' · ')[0] || lvWord(lv);
+        return h('li', {}, h('a', { class: `mc-sys-row is-${lv}`, href: ctx.buildHash('parts', { ata: a.ata }), 'aria-label': `ATA ${a.ata} ${a.name}: ${word}, system level ${lvWord(lv)}, ${fmtPct(a.risk_share, 0)} of fleet risk-hours, ${nU} urgent part numbers` },
+          h('span', { class: 'mc-sys-ata mono' }, a.ata),
+          h('span', { class: 'mc-sys-name' }, a.name, h('span', { class: 'faint mono' }, ` · ${fmtPct(a.risk_share, 0)}`)),
+          h('span', { class: 'mc-sys-st', title: `System level ${lvWord(lv)} (share of fleet risk-hours)${nU ? `; ${nU} urgent part number${nU === 1 ? '' : 's'}` : ''}` }, pill(['urgent', 'review', 'ok'].includes(tone) ? tone : 'unknown', word), nU ? h('span', { class: 'mc-sys-urg mono' }, `▲ ${fmtInt(nU)} urgent PN${nU === 1 ? '' : 's'}`) : null)));
+      })),
+      foot: [h('span', {}, `Top ${fmtInt(nShow)} of ${fmtInt(sysRows.length)} by share of fleet risk-hours · system level and urgent parts are rated separately`), h('a', { class: 'card-link', href: '#/parts' }, 'Parts Intelligence', icon('chevron-right'))],
+    }));
+  }
 
   return () => { cleanups.forEach((f) => { try { f?.(); } catch { /* ignore */ } }); map?.destroy(); };
 }
@@ -234,7 +285,7 @@ function groupByPn(ranked) {
     const aogs = g.list.map((a) => a.evidence?.aog_hours_lookback).filter(num);
     const st = g.list.filter((a) => a.station).sort((x, y) => (y.evidence?.aog_hours_lookback ?? 0) - (x.evidence?.aog_hours_lookback ?? 0)).map((a) => a.station);
     const dues = g.list.map((a) => a.due_week).filter(num);
-    return { ...g, n: g.list.length, stations: [...new Set(st)], aog: aogs.length ? aogs.reduce((s, v) => s + v, 0) : null, due: dues.length ? Math.min(...dues) : null };
+    return { ...g, n: g.list.length, stations: [...new Set(st)], aog: aogs.length ? Math.max(...aogs) : null, due: dues.length ? Math.min(...dues) : null };
   });
 }
 
@@ -315,10 +366,13 @@ function dumbbell(k, fmt, baseLabel, recLabel) {
   const all = [...bci, ...rci, k.baseline, k.value].filter(num);
   let lo = Math.min(...all), hi = Math.max(...all);
   const pad = (hi - lo) * 0.08 || Math.abs(hi) * 0.05 || 1; lo -= pad; hi += pad;
-  const pct = (v) => `${((v - lo) / (hi - lo)) * 100}%`;
-  const span = (a, b, cls) => h('span', { class: cls, style: { left: pct(Math.min(a, b)), width: `calc(${pct(Math.max(a, b))} - ${pct(Math.min(a, b))})` } });
-  const recLeft = k.value < k.baseline;
-  return h('div', { class: 'mc-db', role: 'img', 'aria-label': `${baseLabel} ${fmt(k.baseline)} to ${recLabel} ${fmt(k.value)}${k.reference && num(k.reference.value) ? `; ${k.reference.id || 'reference'} ${fmt(k.reference.value)}` : ''}` },
+  // every tile reads baseline → recommended from left to right; for lower-is-better KPIs the axis runs high → low
+  const flip = k.value < k.baseline;
+  const frac = (v) => (flip ? (hi - v) / (hi - lo) : (v - lo) / (hi - lo));
+  const pct = (v) => `${frac(v) * 100}%`;
+  const span = (a, b, cls) => { const l = Math.min(frac(a), frac(b)), r = Math.max(frac(a), frac(b)); return h('span', { class: cls, style: { left: `${l * 100}%`, width: `${(r - l) * 100}%` } }); };
+  const recLeft = false;
+  return h('div', { class: 'mc-db', role: 'img', title: flip ? 'Axis runs high → low so the baseline sits on the left on every tile' : undefined, 'aria-label': `${baseLabel} ${fmt(k.baseline)} to ${recLabel} ${fmt(k.value)}${k.reference && num(k.reference.value) ? `; ${k.reference.id || 'reference'} ${fmt(k.reference.value)}` : ''}` },
     h('div', { class: 'mc-db-track' },
       span(bci[0], bci[1], 'mc-db-ci mc-db-ci--base'), span(rci[0], rci[1], 'mc-db-ci mc-db-ci--rec'), span(k.baseline, k.value, 'mc-db-seg'),
       h('span', { class: 'mc-db-dot mc-db-dot--base', style: { left: pct(k.baseline) } }), h('span', { class: 'mc-db-dot mc-db-dot--rec', style: { left: pct(k.value) } })),
@@ -329,6 +383,8 @@ function dumbbell(k, fmt, baseLabel, recLabel) {
 }
 
 // ------------------------------------------------------------------ P0 / P1 / P2 / recommended strip
+/** 'Legacy rules (baseline)' → 'Legacy', 'Network (multi-echelon)' → 'Network' (phones: no truncated policy names). */
+const shortPol = (l) => String(l || '').split(/[\s(]/)[0] || String(l || '');
 function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
   const P = policies.policies || [];
   const get = (id) => P.find((p) => p.policy_id === id);
@@ -410,7 +466,7 @@ function compareStrip(host, { policies, frontier, seedText, baseLabel }) {
       row.append('rect').attr('x', narrow ? 0 : -m.left).attr('y', y0 + 2).attr('width', narrow ? iw : w).attr('height', rowH - 4).attr('rx', 6).attr('fill', r.role === 'rec' ? 'rgba(34,199,184,0.06)' : 'transparent');
       // labels
       if (narrow) {
-        row.append('text').attr('class', r.role === 'rec' ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 8).attr('y', y0 + 16).attr('dy', '0.32em').text(truncate(r.role === 'rec' ? r.name : `${r.name} · ${r.label}`, iw * 0.58));
+        row.append('text').attr('class', r.role === 'rec' ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 8).attr('y', y0 + 16).attr('dy', '0.32em').text(truncate(r.role === 'rec' ? r.name : `${r.name} · ${shortPol(r.label)}`, iw * 0.58));
         row.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', iw - 8).attr('y', y0 + 16).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', r.role === 'rec' ? theme.color.text : theme.color.muted).text(`${fmtHours(r.value)}${num(r.capital) ? ` · ${fmtAED(r.capital)}` : ''}`);
       } else {
         row.append('text').attr('class', r.role === 'rec' ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', -m.left + 16).attr('y', cy - 8).attr('dy', '0.32em').attr('fill', r.role === 'rec' ? theme.color.text : null).text(r.name);

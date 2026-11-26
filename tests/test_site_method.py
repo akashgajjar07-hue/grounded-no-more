@@ -18,7 +18,8 @@ def test_method_renders_clean(site, browser, vp):  # noqa: F811
         text = page.locator("#view").inner_text()
         assert "Akash Gajjar" in text and "University of Liverpool" in text
         assert page.locator('a[href="https://github.com/akashgajjar07-hue"]').count() == 1
-        assert "LinkedIn: add link" in text
+        # wave 3: no placeholder chip; LinkedIn appears only once a real URL exists
+        assert "add link" not in text
         assert "Independent educational simulation" in text
         assert page.locator('[data-story="method-provenance"] svg .dm-box').count() == 6
     finally:
@@ -81,5 +82,30 @@ def test_wave2_validation_no_clamping(site, browser, vp):  # noqa: F811
         if vp == "1440":
             assert page.locator('[data-story="method-assumptions"] .dm-same').count() >= 1
         assert not [p for p in problems if "pageerror" in p], problems
+    finally:
+        ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_wave3_no_raw_iso_tests_card_and_register_keys(site, browser, vp):  # noqa: F811
+    """Review 2: no raw ISO timestamps, the pytest card is not a stretched empty column, register keys never truncate."""
+    import re
+    ctx, page, problems = open_page(browser, site + "#/method", vp)
+    try:
+        text = page.locator("#view").inner_text()
+        # config values (e.g. calendar.epoch) are data; build timestamps outside the register must be humanised
+        outside = page.evaluate("""() => { const v = document.querySelector('#view').cloneNode(true);
+          v.querySelectorAll('[data-story="method-assumptions"]').forEach((e) => e.remove()); return v.innerText; }""")
+        assert not re.search(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", outside), re.findall(r"\S*\d{4}-\d{2}-\d{2}T\S*", outside)[:3]
+        assert "UTC" in text
+        # tests card: little empty space below its content
+        gap = page.evaluate("""() => { const c = document.querySelector('.dm-tests-card'); const last = c.querySelector('.dm-checks').getBoundingClientRect();
+          return c.getBoundingClientRect().bottom - last.bottom; }""")
+        assert gap < 80, gap
+        if vp == "390":
+            bad = page.evaluate("""() => [...document.querySelectorAll('.dm-wrap .dts-primary')].slice(0, 40)
+              .filter((e) => e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent)""")
+            assert not bad, bad
+        assert not problems, problems
     finally:
         ctx.close()

@@ -140,3 +140,28 @@ def test_forecast_labels_clear_of_marks(site, browser, vp):  # noqa: F811
         assert not problems, problems
     finally:
         ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_wave3_colour_discipline(site, browser, vp):  # noqa: F811
+    """Review 2: vendor-quoted is not copper, the frozen champion is not teal, at most one teal series per chart,
+    half-width headlines stay short enough for two lines."""
+    ctx, page, problems = open_page(browser, site + "#/forecast", vp)
+    try:
+        res = page.evaluate("""() => {
+          const col = (e) => getComputedStyle(e).fill;
+          const q = [...document.querySelectorAll('.fl-db-q')].map(col);
+          const champ = [...document.querySelectorAll('.fl-row.is-champ .fl-dot')].map(col);
+          const tealPts = [...document.querySelectorAll('.fl-pt circle')].filter((c) => /34, 199, 184/.test(getComputedStyle(c).fill)).length;
+          const lbTeal = [...document.querySelectorAll('[data-story="forecast-leaderboard"] .fl-dot')].filter((c) => /34, 199, 184/.test(col(c))).length;
+          const heads = ['forecast-ltd', 'forecast-stock-eval', 'forecast-truth'].map((s) => document.querySelector(`[data-story="${s}"] .chart-headline`)?.textContent.trim() || '');
+          return { q, champ, tealPts, lbTeal, heads };
+        }""")
+        assert res["q"] and not any("196, 127, 82" in c for c in res["q"]), res["q"]
+        assert res["champ"] and not any("34, 199, 184" in c for c in res["champ"]), res["champ"]
+        assert res["tealPts"] <= 1 and res["lbTeal"] <= 1, res
+        assert all(0 < len(h) <= 72 for h in res["heads"]), res["heads"]
+        assert page.locator(".gnm-annot-text", has_text="Frozen champion").count() == 0
+        assert not problems, problems
+    finally:
+        ctx.close()
