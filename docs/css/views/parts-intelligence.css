@@ -36,6 +36,21 @@
 .pi-legend-item.is-review b { color: var(--status-review); }
 .pi-legend-item.is-ok b { color: var(--status-ok); }
 .pi-legend .faint { text-transform: none; letter-spacing: 0.02em; margin-left: auto; }
+.pi-legend-pip { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--status-urgent); color: var(--bg); font-size: 11px; letter-spacing: 0; }
+
+/* urgent-PN pip + part-level callout (sizes set in screen px by layoutAircraft) */
+.pi-aircraft svg .hs-pip circle { fill: var(--status-urgent); stroke: var(--bg); }
+.pi-aircraft svg .hs-pip text { font-family: var(--font-mono); font-weight: 700; fill: var(--bg) !important; text-anchor: middle; dominant-baseline: central; letter-spacing: 0; }
+.pi-aircraft svg .pi-hs-callout { cursor: pointer; }
+.pi-aircraft svg .pi-hs-callout:focus { outline: none; }
+.pi-aircraft svg .pi-hs-box { fill: var(--panel); stroke: var(--c-titanium); stroke-opacity: 0.6; }
+.pi-aircraft svg .pi-hs-leader { fill: none; stroke: var(--c-titanium); stroke-opacity: 0.8; }
+.pi-aircraft svg .pi-hs-text { font-family: var(--font-mono); font-weight: 600; letter-spacing: 0.02em; fill: var(--text); dominant-baseline: central; }
+.pi-aircraft svg .pi-hs-callout.is-urgent .pi-hs-box, .pi-aircraft svg .pi-hs-callout.is-urgent .pi-hs-leader { stroke: var(--status-urgent); stroke-opacity: 1; }
+.pi-aircraft svg .pi-hs-callout.is-urgent .pi-hs-text { fill: var(--status-urgent); }
+.pi-aircraft svg .pi-hs-callout.is-review .pi-hs-box, .pi-aircraft svg .pi-hs-callout.is-review .pi-hs-leader { stroke: var(--status-review); stroke-opacity: 1; }
+.pi-aircraft svg .pi-hs-callout.is-review .pi-hs-text { fill: var(--status-review); }
+.pi-aircraft svg .pi-hs-callout:hover .pi-hs-box, .pi-aircraft svg .pi-hs-callout:focus-visible .pi-hs-box { fill: var(--c-titanium-a10); stroke-width: 2px; }
 
 /* ---------- system list (accessible alternative) ---------- */
 .pi-syslist { display: flex; flex-direction: column; gap: 6px; }
@@ -57,9 +72,39 @@
 
 /* ---------- exploded view ---------- */
 .pi-exploded { margin-top: var(--s-2); }
-.pi-exploded .pi-slot { cursor: pointer; }
-.pi-exploded .pi-slot:focus { outline: none; }
-.pi-exploded .pi-slot:hover .bp-pn, .pi-exploded .pi-slot:focus-visible .bp-pn { fill: var(--c-teal-hi); text-decoration: underline; }
+.pi-exploded-stage { position: relative; }
+.pi-exploded-stage svg { display: block; width: 100%; height: auto; }
+/* the SVG's own label text and sheet frame render at 6–7 px at card width: hidden, replaced by the HTML overlay */
+.pi-exploded svg .bp-label, .pi-exploded svg .bp-frameset { display: none; }
+.pi-xlabels { position: absolute; inset: 0; pointer-events: none; }
+.pi-xlabel {
+  position: absolute; transform: translate(-50%, 0); display: flex; flex-direction: column; align-items: center; gap: 1px;
+  width: max-content; max-width: 150px; padding: 2px 6px; border-radius: 6px; background: color-mix(in srgb, var(--surface, #0B1826) 82%, transparent);
+  text-align: center; color: var(--text); pointer-events: auto; line-height: 1.25;
+}
+.pi-xlabel.is-above { transform: translate(-50%, -100%); }
+.pi-xlabel:hover .pi-xlabel-pn, .pi-xlabel:focus-visible .pi-xlabel-pn { color: var(--c-teal-hi); text-decoration: underline; }
+.pi-xlabel:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.pi-xlabel-pn { font-size: 12px; font-weight: 500; letter-spacing: 0.02em; white-space: nowrap; }
+.pi-xlabel-desc { font-size: 11px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pi-xlabel-risk { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.pi-xlabel.is-hot { border: 1px solid var(--risk-c, var(--line-strong)); }
+.pi-xlabel.is-hot.risk-urgent { --risk-c: var(--status-urgent); }
+.pi-xlabel.is-hot.risk-review { --risk-c: var(--status-review); }
+.pi-xlabel.is-hot .pi-xlabel-risk { color: var(--risk-c); }
+.pi-exploded svg .bp-part.pi-hot.risk-urgent .bp-face-t, .pi-exploded svg .bp-part.pi-hot.risk-urgent .bp-face-l, .pi-exploded svg .bp-part.pi-hot.risk-urgent .bp-face-r { stroke: var(--status-urgent); stroke-width: 1.8; }
+.pi-exploded svg .bp-part.pi-hot.risk-review .bp-face-t, .pi-exploded svg .bp-part.pi-hot.risk-review .bp-face-l, .pi-exploded svg .bp-part.pi-hot.risk-review .bp-face-r { stroke: var(--status-review); stroke-width: 1.8; }
+.pi-exploded svg .bp-part.pi-hot.risk-urgent .bp-face-t { fill: var(--status-urgent); fill-opacity: 0.16; }
+.pi-exploded svg .bp-part.pi-hot.risk-review .bp-face-t { fill: var(--status-review); fill-opacity: 0.16; }
+.pi-exploded svg .bp-callout.pi-hot.risk-urgent .bp-bubble { stroke: var(--status-urgent); stroke-width: 2; }
+.pi-exploded svg .bp-callout.pi-hot.risk-urgent .bp-bubble-t { fill: var(--status-urgent); }
+.pi-exploded svg .bp-callout.pi-hot.risk-review .bp-bubble { stroke: var(--status-review); stroke-width: 2; }
+.pi-exploded svg .bp-callout.pi-hot.risk-review .bp-bubble-t { fill: var(--status-review); }
+.pi-exploded-cap { margin-top: 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); text-align: right; }
+@media (max-width: 560px) {
+  .pi-xlabel-desc { display: none; }
+  .pi-xlabel { max-width: 120px; padding: 1px 4px; }
+}
 .pi-slotkey { display: grid; grid-template-columns: 1fr; gap: 4px; margin-top: var(--s-2); }
 .pi-slotkey-btn { width: 100%; display: grid; grid-template-columns: 24px auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 8px; border-radius: var(--r-control); text-align: left; font-size: var(--fs-12); color: var(--text); }
 .pi-slotkey-btn:hover { background: var(--c-titanium-a10); }
@@ -69,9 +114,7 @@
 
 /* ---------- ADI/CV² matrix ---------- */
 .pi-quad--sparse { fill: var(--c-teal-a08); }
-.pi-cut { stroke: var(--c-amber); stroke-dasharray: 4 3; stroke-width: 1; }
-.pi-cut-t { fill: var(--c-amber); font-family: var(--font-mono); font-size: 11px; }
-.pi-quad-t { fill: var(--text-muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; font-weight: 500; }
+.pi-quad-t { fill: var(--text-muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; font-weight: 500; paint-order: stroke; stroke: var(--halo, var(--surface)); stroke-width: 4px; stroke-linejoin: round; }
 .pi-quad-n { fill: var(--text); font-weight: 600; }
 .pi-axis-t { fill: var(--text-faint); font-family: var(--font-mono); font-size: 11px; }
 .pi-dot { fill: var(--bg); stroke: var(--c-titanium); stroke-opacity: 0.55; stroke-width: 1.2; }
@@ -80,7 +123,7 @@
 .pi-matrix-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: var(--fs-12); color: var(--text-faint); margin-top: calc(-1 * var(--s-1)); }
 .pi-key-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.2px solid var(--c-titanium); display: inline-block; }
 .pi-key-dot.is-sel { background: var(--primary); border-color: var(--c-teal-hi); }
-.pi-key-sw { width: 14px; height: 10px; background: var(--c-teal-a14); border: 1px dashed var(--c-amber); display: inline-block; }
+.pi-key-sw { width: 14px; height: 10px; background: var(--c-teal-a14); border: 1px dashed rgba(185, 200, 214, 0.5); display: inline-block; }
 
 /* ---------- table ---------- */
 .pi-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-1) var(--s-2); margin-bottom: var(--s-2); }
@@ -89,7 +132,7 @@
 .pi-desc { display: inline-block; max-width: 280px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
 .pi-cls { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; font-family: var(--font-mono); font-size: 12px; font-weight: 600; border: 1px solid var(--line-strong); color: var(--text-muted); }
 .pi-cls--R { color: var(--c-teal-hi); border-color: rgba(34, 199, 184, 0.5); }
-.pi-planted { height: 18px; padding: 0 6px; font-size: 11px; color: var(--c-amber); border-color: rgba(245, 185, 66, 0.5); background: var(--c-amber-a12); }
+.pi-planted { height: 18px; padding: 0 6px; font-size: 11px; color: var(--text); border-color: var(--line-strong); background: var(--c-titanium-a10); } /* neutral: amber is review status only */
 
 /* ---------- heatmap ---------- */
 .pi-hm-col { fill: var(--text-muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -97,6 +140,8 @@
 .pi-hm-n { fill: var(--text); font-family: var(--font-mono); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .pi-hm-n.is-dark { fill: var(--bg); }
 .pi-hm-tot { fill: var(--text-faint); font-family: var(--font-mono); font-size: 13px; }
+.pi-hm-key { margin-top: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
+.pi-hm-key[hidden] { display: none; }
 .pi-hm-focus { fill: none; stroke: var(--c-ice); stroke-width: 1.5; pointer-events: none; }
 
 /* ---------- planted list ---------- */
@@ -110,7 +155,7 @@
 
 /* ---------- drawer ---------- */
 .pi-drawer .chart-headline { font-size: var(--fs-16); }
-.pi-planted-banner { display: flex; gap: 12px; padding: 12px; border-radius: var(--r-control); border: 1px solid rgba(245, 185, 66, 0.45); background: var(--c-amber-a12); color: var(--c-amber); }
+.pi-planted-banner { display: flex; gap: 12px; padding: 12px; border-radius: var(--r-control); border: 1px solid var(--line-strong); background: var(--c-titanium-a10); color: var(--text); }
 .pi-planted-banner .icon { flex: none; }
 .pi-planted-banner strong { font-size: var(--fs-14); }
 .pi-planted-banner p { margin-top: 2px; color: var(--text-muted); }
@@ -122,7 +167,7 @@
 
 /* ---------- demand strip (shared with Forecast Lab) ---------- */
 .strip-sel { fill: rgba(34, 199, 184, 0.06); }
-.strip-split { stroke: var(--c-amber); stroke-dasharray: 3 3; stroke-width: 1; }
+.strip-split { stroke: var(--c-titanium); stroke-opacity: 0.5; stroke-dasharray: 4 4; stroke-width: 1; }
 .strip-zone { fill: var(--text-faint); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.1em; }
 .strip-zone--sel { fill: var(--c-teal-hi); }
 .strip-zero { stroke: var(--c-titanium); stroke-opacity: 0.25; stroke-width: 1; }

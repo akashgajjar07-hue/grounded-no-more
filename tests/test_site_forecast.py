@@ -108,3 +108,35 @@ def test_ltd_marks_reorder_point_and_truth_note(site, browser):  # noqa: F811
         assert not problems, problems
     finally:
         ctx.close()
+
+
+# ----------------------------------------------------------------------------- design wave 2 (agent B)
+HITS_JS = r"""([labels, marks]) => {
+  const R = (s) => [...document.querySelectorAll(s)].map((e) => e.getBoundingClientRect()).filter((r) => r.width && r.height);
+  const L = R(labels), M = marks ? R(marks) : L;
+  const hits = [];
+  L.forEach((a, i) => M.forEach((b, j) => { if (marks || j > i) if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1) hits.push([i, j]); }));
+  return hits;
+}"""
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_forecast_labels_clear_of_marks(site, browser, vp):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/forecast", vp)
+    try:
+        se = '[data-story="forecast-stock-eval"]'
+        assert page.locator(f"{se} .gnm-label").count() >= 1
+        assert not page.evaluate(HITS_JS, [f"{se} .gnm-label", f"{se} .fl-pt circle"])
+        assert not page.evaluate(HITS_JS, [f"{se} .gnm-label", None])
+        ltd = '[data-story="forecast-ltd"]'
+        assert not page.evaluate(HITS_JS, [f"{ltd} .gnm-label", f"{ltd} rect.fl-bar"])
+        # reference lines are neutral (no amber .fl-ref), copper only on the vendor-quoted baseline
+        assert page.locator(".fl-ref").count() == 0
+        assert page.locator('[data-story="forecast-leaderboard"] .gnm-ref-line').count() == 1
+        copper = page.evaluate("() => [...document.querySelectorAll('#view svg *')].filter((e) => /196, 127, 82/.test(getComputedStyle(e).fill + getComputedStyle(e).stroke)).map((e) => `${e.getAttribute('class')} ${e.textContent}`)")
+        assert all("fl-db" in c or "vendor" in c for c in copper), copper
+        heads = page.evaluate("() => [...document.querySelectorAll('#view .chart-headline')].map((e) => e.textContent.trim())")
+        assert heads and all(len(h) <= 90 for h in heads), heads
+        assert not problems, problems
+    finally:
+        ctx.close()

@@ -9,7 +9,7 @@
  * Every number on screen comes from the JSON exports.
  */
 import { h, icon, pageHead, card, provChip, pill, segmented, dataTable, drawer, inlineSVG, fillExploded, blueprintAircraft } from '../ui.js';
-import { chartFrame, responsive, svgIn, axisBottom, axisLeft, theme, annotate, withTooltip, directLabel, fmtAED, fmtInt, fmtNum, fmtPct, fmtWeek } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, axisBottom, axisLeft, theme, annotate, withTooltip, directLabel, refLine, markerRect, labelBox, fmtAED, fmtInt, fmtNum, fmtPct, fmtWeek } from '../charts/theme.js';
 import { assetURL } from '../data.js';
 import { demandStrip, demandStats } from './parts-intelligence/strip.js';
 
@@ -31,6 +31,9 @@ const LEVEL = {
 const CLS_NAME = { R: 'Rotable', E: 'Expendable', C: 'Consumable' };
 export const dcLabel = (c) => String(c || 'unclassified').replace('_', ' ');
 const riskPct = (v) => (v == null ? '—' : String(Math.round(v * 100)));
+const SVG_NS = 'http://www.w3.org/2000/svg';
+/** createElementNS + attributes (+ append to parent). */
+const svgEl = (tag, attrs = {}, parent) => { const e = document.createElementNS(SVG_NS, tag); Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v)); parent?.append(e); return e; };
 
 /** Inject a view stylesheet once; resolves when it has loaded (avoids measuring unstyled charts). */
 export function ensureCSS(path) {
@@ -80,7 +83,7 @@ export async function render(el, ctx) {
   // ------------------------------------------------------------------ explorer: aircraft + list
   const worst = ATAS.map((a) => sysStat[a]).sort((a, b) => (LEVEL[b.level].rank - LEVEL[a.level].rank) || ((b.share ?? 0) - (a.share ?? 0)) || b.urgent - a.urgent || (b.max || 0) - (a.max || 0))[0];
   const airHost = h('div', { class: 'pi-aircraft', 'data-story': 'aircraft' });
-  const legend = h('div', { class: 'pi-legend', 'aria-hidden': 'true' }, ...['urgent', 'review', 'ok'].map((l) => h('span', { class: `pi-legend-item is-${l}` }, h('b', {}, LEVEL[l].glyph), LEVEL[l].text)), h('span', { class: 'faint' }, 'System level = share of fleet risk-hours'));
+  const legend = h('div', { class: 'pi-legend', 'aria-hidden': 'true' }, ...['urgent', 'review', 'ok'].map((l) => h('span', { class: `pi-legend-item is-${l}` }, h('b', {}, LEVEL[l].glyph), LEVEL[l].text)), h('span', { class: 'pi-legend-item is-pip' }, h('b', { class: 'pi-legend-pip' }, 'n'), 'urgent PNs in system'), h('span', { class: 'faint' }, 'Badge = system share of fleet risk-hours'));
   const explorerCard = card({
     cls: 'span-7 md-span-12 pi-explorer', bp: true, prov,
     kicker: 'Aircraft system explorer · plan view · generic twin, fictional',
@@ -121,15 +124,15 @@ export async function render(el, ctx) {
     { key: 'deadline', label: 'Deadline', mono: true },
     { key: 'demand_class', label: 'Demand', format: (v) => dcLabel(v) },
     { key: 'abc', label: 'ABC', mono: true },
-    { key: 'stock_total', label: 'Stock', num: true, format: fmtInt },
+    { key: 'stock_total', label: 'Stock', short: 'Stock', num: true, format: fmtInt },
     { key: 'unit_cost', label: 'Unit cost', num: true, format: (v) => fmtAED(v) },
-    { key: 'risk_score', label: 'Risk', num: true, render: (r) => h('span', { title: riskTitle(r) }, pill(r.risk_level, riskPct(r.risk_score))) },
+    { key: 'risk_score', label: 'Risk', short: 'Risk', num: true, render: (r) => h('span', { title: riskTitle(r) }, pill(r.risk_level, riskPct(r.risk_score))) },
   ];
   function riskTitle(r) {
     return `${r.risk_hours != null ? `${fmtNum(r.risk_hours, 1)} AOG h/yr = ${fmtNum(r.aog_hours_hist_per_yr, 1)} history + ${fmtNum(r.residual_aog_h_per_yr, 1)} modelled residual. ` : ''}Score = ln(1 + AOG h) / ln(1 + fleet max), × 100.`;
   }
   const rowsFor = () => parts.filter((p) => (ata === 'all' || p.ata === ata) && (cls === 'all' || p.cls === cls) && (!query || p.pn.toLowerCase().includes(query) || String(p.desc).toLowerCase().includes(query)));
-  const table = dataTable({ columns, rows: rowsFor(), sort: { key: 'risk_score', dir: 'desc' }, onRowClick: (r) => openPart(r.pn), caption: 'Parts for the selected ATA system', maxHeight: 520 });
+  const table = dataTable({ columns, rows: rowsFor(), sort: { key: 'risk_score', dir: 'desc' }, onRowClick: (r) => openPart(r.pn), caption: 'Parts for the selected ATA system', maxHeight: 520, mobileColumns: ['pn', 'risk_score', 'stock_total', 'desc'], stickyFirst: true });
   const tableCount = h('span', { class: 'chip' });
   const tableTitle = h('h3', { class: 'card-title' });
   const tableCard = h('section', { class: 'card span-12', dataset: { story: 'parts-table' } },
@@ -159,27 +162,124 @@ export async function render(el, ctx) {
   // ------------------------------------------------------------------ aircraft
   const air = await blueprintAircraft(airHost, { active: ata === 'all' ? null : ata, onSelect: (a) => setAta(a), compactBelow: 1e6, label: 'Plan view of a generic twin-engine aircraft (fictional) with ATA system hotspots' });
   decorateAircraft(air.svg);
-  cleanups.push(air.destroy);
+  const airRO = new ResizeObserver(() => requestAnimationFrame(layoutAircraft));
+  airRO.observe(airHost);
+  cleanups.push(air.destroy, () => airRO.disconnect());
 
+  /**
+   * Hotspot decoration. Badge colour + word = SYSTEM level (chapter share of fleet risk-hours). A red pip with a
+   * count marks every system that contains urgent PART numbers, so a "review" chapter holding an urgent part never
+   * reads as calm, and the selected system gets a part-level callout for its top-risk PN. All text is sized in
+   * screen pixels (≥ 11 px) by layoutAircraft(), not by the viewBox scale.
+   */
   function decorateAircraft(svg) {
-    const NS = 'http://www.w3.org/2000/svg';
     svg.querySelectorAll('.ata-hotspot').forEach((g) => {
       const s = sysStat[g.dataset.ata];
       if (!s) return;
       g.classList.add(`risk-${s.level}`);
       g.dataset.story = `parts-hotspot-${s.ata}`;
-      g.setAttribute('aria-label', `ATA ${s.ata} ${s.name}: ${LEVEL[s.level].text}. ${s.n} part numbers, ${s.urgent} urgent.`);
-      const c = g.querySelector('.hs-badge circle');
+      g.setAttribute('aria-label', `ATA ${s.ata} ${s.name}: system ${LEVEL[s.level].text}. ${s.n} part numbers, ${s.urgent} urgent${s.top ? `; top part ${s.top.pn}, risk ${riskPct(s.top.risk_score)} (${LEVEL[s.top.risk_level]?.text || s.top.risk_level})` : ''}.`);
+      const badge = g.querySelector('.hs-badge');
+      const c = badge?.querySelector('circle');
       if (!c) return;
       const cx = +c.getAttribute('cx'), cy = +c.getAttribute('cy');
-      const ring = document.createElementNS(NS, 'circle');
-      ring.setAttribute('cx', cx); ring.setAttribute('cy', cy); ring.setAttribute('r', '19'); ring.setAttribute('class', 'hs-pulse');
-      c.before(ring);
-      const t = document.createElementNS(NS, 'text');
-      t.setAttribute('x', cx); t.setAttribute('y', cy + 34); t.setAttribute('class', `hs-risk hs-risk--${s.level}`);
-      t.textContent = `${LEVEL[s.level].glyph} ${s.level === 'urgent' ? `${s.urgent} URG` : LEVEL[s.level].text.toUpperCase()}`;
-      g.querySelector('.hs-badge').append(t);
+      g._hs = { cx, cy };
+      c.before(svgEl('circle', { cx, cy, r: 19, class: 'hs-pulse' }));
+      svgEl('text', { x: cx, y: cy + 34, class: `hs-risk hs-risk--${s.level}` }, badge).textContent = `${LEVEL[s.level].glyph} ${LEVEL[s.level].text.toUpperCase()}`;
+      if (s.urgent) {
+        const pip = svgEl('g', { class: 'hs-pip', 'aria-hidden': 'true' }, badge);
+        svgEl('circle', { cx, cy, r: 8 }, pip);
+        svgEl('text', { x: cx, y: cy }, pip).textContent = fmtInt(s.urgent);
+      }
     });
+    layoutAircraft();
+  }
+
+  function layoutAircraft() {
+    const svg = air?.svg;
+    if (!svg?.isConnected) return;
+    const vb = svg.viewBox.baseVal;
+    const wpx = svg.getBoundingClientRect().width;
+    if (!vb?.width || !wpx) return;
+    const u = vb.width / wpx; // user units per screen px
+    svg.querySelectorAll('.ata-hotspot').forEach((g) => {
+      if (!g._hs) return;
+      const { cx, cy } = g._hs;
+      const R = Math.max(19, 12 * u);
+      g.querySelectorAll('.hs-badge > circle, .hs-pulse').forEach((c) => c.setAttribute('r', R));
+      const num = g.querySelector('.hs-badge > text:not(.hs-risk)');
+      if (num) num.style.fontSize = `${Math.max(17, 12 * u)}px`;
+      const lbl = g.querySelector('.hs-risk');
+      if (lbl) { lbl.setAttribute('x', cx); lbl.setAttribute('y', cy + R + 9 * u); lbl.style.textAnchor = 'middle'; lbl.style.fontSize = `${11 * u}px`; lbl.style.strokeWidth = `${4 * u}px`; }
+      const pip = g.querySelector('.hs-pip');
+      if (pip) {
+        const pd = (R + 6 * u) * 0.8, px = cx + pd, py = cy - pd;
+        pip.querySelector('circle').setAttribute('cx', px); pip.querySelector('circle').setAttribute('cy', py); pip.querySelector('circle').setAttribute('r', 8 * u);
+        pip.querySelector('circle').style.strokeWidth = `${1.5 * u}px`;
+        const t = pip.querySelector('text'); t.setAttribute('x', px); t.setAttribute('y', py); t.style.fontSize = `${11 * u}px`;
+      }
+    });
+    // risk words that would leave the drawing or sit on another badge/pip move beside their own badge
+    const spots = [...svg.querySelectorAll('.ata-hotspot')].filter((g) => g._hs);
+    const ov = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+    const marks = (g) => [...g.querySelectorAll('.hs-badge > circle, .hs-pip circle')].map((c) => { try { return c.getBBox(); } catch { return null; } }).filter(Boolean);
+    spots.forEach((g) => {
+      const lbl = g.querySelector('.hs-risk');
+      if (!lbl) return;
+      const others = spots.filter((o) => o !== g).flatMap(marks);
+      const bad = () => { const b = lbl.getBBox(); return b.y + b.height > vb.y + vb.height || others.some((o) => ov(b, o)); };
+      if (!bad()) return;
+      const { cx, cy } = g._hs, R = Math.max(19, 12 * u);
+      for (const side of [-1, 1]) {
+        lbl.setAttribute('x', cx + side * (R + 6 * u)); lbl.setAttribute('y', cy + (side > 0 ? 8 * u : 0)); lbl.style.textAnchor = side < 0 ? 'end' : 'start';
+        if (!bad()) return;
+      }
+    });
+    drawHotspotCallout(svg, u, wpx);
+  }
+
+  /** Part-level callout for the selected system: its top-risk PN, placed clear of the other badges. */
+  function drawHotspotCallout(svg, u, wpx) {
+    svg.querySelectorAll('.pi-hs-callout').forEach((e) => e.remove());
+    if (ata === 'all') return;
+    const g = svg.querySelector(`.ata-hotspot[data-ata="${ata}"]`);
+    const top = sysStat[ata]?.top;
+    if (!g?._hs || !top) return;
+    const lv = LEVEL[top.risk_level] ? top.risk_level : 'unknown';
+    const small = wpx < 480;
+    const text = small ? `${LEVEL[lv].glyph} ${top.pn} · ${riskPct(top.risk_score)}` : `${LEVEL[lv].glyph} ${top.pn} · risk ${riskPct(top.risk_score)} · ${LEVEL[lv].text.toUpperCase()}`;
+    const grp = svgEl('g', { class: `pi-hs-callout is-${lv}`, role: 'button', tabindex: '0', 'aria-label': `Top-risk part in ATA ${ata}: ${top.pn}, risk ${riskPct(top.risk_score)}, ${LEVEL[lv].text}. Open the part drill-down.` }, g);
+    const lead = svgEl('path', { class: 'pi-hs-leader' }, grp);
+    const rect = svgEl('rect', { class: 'pi-hs-box', rx: 4 * u }, grp);
+    const t = svgEl('text', { class: 'pi-hs-text' }, grp);
+    t.textContent = text;
+    t.style.fontSize = `${11.5 * u}px`;
+    const tw = t.getComputedTextLength();
+    const padX = 8 * u, bh = 24 * u, bw = tw + padX * 2;
+    const { cx, cy } = g._hs;
+    const R = Math.max(19, 12 * u), gap = 16 * u;
+    const lblBelow = 9 * u + 14 * u; // risk word under the badge
+    const cands = [
+      { x: cx + R + gap, y: cy - bh / 2 }, { x: cx - R - gap - bw, y: cy - bh / 2 },
+      { x: cx + R * 0.4, y: cy + R + lblBelow + 8 * u }, { x: cx - R * 0.4 - bw, y: cy + R + lblBelow + 8 * u },
+      { x: cx + R * 0.4, y: cy - R - gap - bh }, { x: cx - R * 0.4 - bw, y: cy - R - gap - bh },
+    ];
+    const obstacles = [...svg.querySelectorAll('.ata-hotspot')].filter((o) => o !== g).map((o) => { try { return o.querySelector('.hs-badge').getBBox(); } catch { return null; } }).filter(Boolean);
+    try { obstacles.push(g.querySelector('.hs-badge').getBBox()); } catch { /* not rendered */ }
+    const vb = svg.viewBox.baseVal;
+    const ov = (a, b) => Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+    const out = (b) => Math.max(0, vb.x - b.x) + Math.max(0, b.x + b.width - vb.x - vb.width) + Math.max(0, vb.y - b.y) + Math.max(0, b.y + b.height - vb.y - vb.height);
+    const best = cands.map((c, i) => ({ ...c, cost: obstacles.reduce((s, o) => s + ov({ ...c, width: bw, height: bh }, o), 0) + out({ ...c, width: bw, height: bh }) * 400 + i })).sort((a, b) => a.cost - b.cost)[0];
+    rect.setAttribute('x', best.x); rect.setAttribute('y', best.y); rect.setAttribute('width', bw); rect.setAttribute('height', bh);
+    rect.style.strokeWidth = `${1.25 * u}px`;
+    t.setAttribute('x', best.x + padX); t.setAttribute('y', best.y + bh / 2);
+    const ex = Math.max(best.x, Math.min(cx, best.x + bw)), ey = Math.max(best.y, Math.min(cy, best.y + bh));
+    const ang = Math.atan2(ey - cy, ex - cx);
+    lead.setAttribute('d', `M${cx + Math.cos(ang) * R},${cy + Math.sin(ang) * R}L${ex},${ey}`);
+    lead.style.strokeWidth = `${1.25 * u}px`;
+    const open = (e) => { e.stopPropagation(); e.preventDefault(); openPart(top.pn); };
+    grp.addEventListener('click', open);
+    grp.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') open(e); });
   }
 
   // ------------------------------------------------------------------ exploded view
@@ -194,18 +294,33 @@ export async function render(el, ctx) {
     const ps = parts.filter((p) => p.ata === ata);
     const labels = matchSlots(svg, ps);
     fillExploded(svg, labels);
-    svg.querySelectorAll('.bp-label').forEach((lg) => {
-      const l = labels.find((x) => String(x.slot) === lg.dataset.slot);
-      if (!l?.pn) return;
-      lg.classList.add('pi-slot', `risk-${byPn.get(l.pn)?.risk_level || 'unknown'}`);
-      lg.setAttribute('tabindex', '0');
-      lg.setAttribute('role', 'button');
-      lg.setAttribute('aria-label', `${l.pn} ${l.desc}: open part drill-down`);
-      const open = () => openPart(l.pn);
-      lg.addEventListener('click', open);
-      lg.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    // HTML label overlay: the SVG's own label text renders at 6–7 px once the 960-wide sheet is scaled to card width,
+    // so the PN / description labels are drawn in HTML (12 / 11 px) at the slot bubble positions instead.
+    const vb = svg.viewBox.baseVal;
+    const hot = labels.map((l) => byPn.get(l.pn)).filter(Boolean).sort((a, b) => (b.risk_score ?? 0) - (a.risk_score ?? 0))[0];
+    const hotSlot = hot && ['urgent', 'review'].includes(hot.risk_level) ? labels.find((l) => l.pn === hot.pn)?.slot : null;
+    const overlay = h('div', { class: 'pi-xlabels' });
+    svg.querySelectorAll('.bp-callout').forEach((co) => {
+      const bub = co.querySelector('.bp-bubble');
+      const slot = co.querySelector('.bp-bubble-t')?.textContent?.trim();
+      const l = labels.find((x) => String(x.slot) === slot);
+      if (!bub || !l) return;
+      const bx = +bub.getAttribute('cx'), by = +bub.getAttribute('cy'), br = +bub.getAttribute('r') || 14;
+      const above = by < vb.y + vb.height / 2;
+      const p = byPn.get(l.pn);
+      const isHot = String(l.slot) === String(hotSlot);
+      const btn = h('button', {
+        type: 'button', class: `pi-xlabel ${above ? 'is-above' : 'is-below'}${isHot ? ` is-hot risk-${p.risk_level}` : ''}`, disabled: !p, 'aria-label': p ? `${l.pn} ${p.desc}, risk ${riskPct(p.risk_score)}: open part drill-down` : `Slot ${l.slot}: no part`,
+        style: { left: `${((bx - vb.x) / vb.width) * 100}%`, top: `${(((above ? by - br - 6 : by + br + 6) - vb.y) / vb.height) * 100}%` },
+        onclick: () => p && openPart(p.pn),
+      }, isHot ? h('span', { class: 'pi-xlabel-risk' }, `${LEVEL[p.risk_level].glyph} risk ${riskPct(p.risk_score)}`) : null, h('span', { class: 'pi-xlabel-pn mono' }, l.pn || '—'), h('span', { class: 'pi-xlabel-desc' }, p ? p.desc : l.role));
+      overlay.append(btn);
+      if (isHot) {
+        svg.querySelector(`.bp-part[data-slot="${l.slot}"]`)?.classList.add('pi-hot', `risk-${p.risk_level}`);
+        co.classList.add('pi-hot', `risk-${p.risk_level}`);
+      }
     });
-    figHost.replaceChildren(svg);
+    figHost.replaceChildren(h('div', { class: 'pi-exploded-stage' }, svg, overlay), h('p', { class: 'pi-exploded-cap' }, 'Schematic · not engineering data'));
     const matched = labels.filter((l) => l.pn);
     explodedTitle.textContent = `ATA ${ata} · ${sysName(ata)}: ${matched.length} of ${ps.length} PNs drawn`;
     slotKey.replaceChildren(...labels.map((l) => {
@@ -248,8 +363,8 @@ export async function render(el, ctx) {
     const counts = Object.fromEntries(['smooth', 'erratic', 'intermittent', 'lumpy'].map((c) => [c, pts.filter((p) => p.demand_class === c).length]));
     const sparse = counts.intermittent + counts.lumpy;
     const f = chartFrame(matrixCard, {
-      headline: `${fmtInt(sparse)} of ${fmtInt(pts.length)} classified PNs average at least ${ADI_CUT} weeks between demands: intermittent or lumpy`,
-      subtitle: `ADI (weeks between demands, log scale) × CV² of demand sizes · training weeks ${fmtWeek(weeks[0])}–${fmtWeek(trainEnd)} only · Syntetos–Boylan cut-offs ${ADI_CUT} / ${CV2_CUT}${nIns ? ` · ${nIns} PNs with < 3 demands not plotted` : ''}`,
+      headline: sparse * 2 > pts.length ? `Most PNs demand rarely: ${fmtInt(sparse)} of ${fmtInt(pts.length)} are intermittent or lumpy` : `${fmtInt(sparse)} of ${fmtInt(pts.length)} classified PNs are intermittent or lumpy`,
+      subtitle: `ADI (weeks between demands, log) × CV² of demand sizes · training weeks ${fmtWeek(weeks[0])}–${fmtWeek(trainEnd)} · Syntetos–Boylan cut-offs ${ADI_CUT} / ${CV2_CUT}${nIns ? ` · ${nIns} PNs with < 3 demands not plotted` : ''}`,
       provenance: 'DERIVED', source: 'parts.json (adi, cv2, demand_class)', story: 'parts-adi-matrix',
       table: { columns: [{ key: 'pn', label: 'PN', mono: true }, { key: 'adi', label: 'ADI', num: true, format: (v) => fmtNum(v) }, { key: 'cv2', label: 'CV²', num: true, format: (v) => fmtNum(v) }, { key: 'demand_class', label: 'Class', format: dcLabel }], rows: pts },
     });
@@ -258,7 +373,7 @@ export async function render(el, ctx) {
     const stop = responsive(f.body, (w) => {
       const small = w < 480;
       const hgt = small ? 300 : 340;
-      const m = { top: 12, right: 16, bottom: 36, left: 44 };
+      const m = { top: 20, right: 16, bottom: 36, left: 44 };
       const iw = w - m.left - m.right, ih = hgt - m.top - m.bottom;
       const svg = svgIn(f.body, w, hgt, 'ADI versus CV squared scatter');
       const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
@@ -267,30 +382,20 @@ export async function render(el, ctx) {
       const yMax = Math.max(CV2_CUT * 2.2, d3.max(pts, (p) => p.cv2) * 1.1);
       const x = d3.scaleLog().domain([1, xMax]).range([0, iw]);
       const y = d3.scaleLinear().domain([0, yMax]).nice().range([ih, 0]);
-      // quadrants
+      // quadrants + Syntetos–Boylan cut-offs (reference lines, not amber: amber = review status)
       const qx = x(ADI_CUT), qy = y(CV2_CUT);
       g.append('rect').attr('class', 'pi-quad pi-quad--sparse').attr('x', qx).attr('y', 0).attr('width', iw - qx).attr('height', ih);
-      g.append('line').attr('class', 'pi-cut').attr('x1', qx).attr('x2', qx).attr('y1', 0).attr('y2', ih);
-      g.append('line').attr('class', 'pi-cut').attr('x1', 0).attr('x2', iw).attr('y1', qy).attr('y2', qy);
-      g.append('text').attr('class', 'pi-cut-t').attr('x', qx + 4).attr('y', ih - 6).text(`ADI ${ADI_CUT}`);
-      g.append('text').attr('class', 'pi-cut-t').attr('x', iw - 2).attr('y', qy - 5).attr('text-anchor', 'end').text(`CV² ${CV2_CUT}`);
-      const ql = [
-        ['smooth', 6, ih - 22, 'start'], ['erratic', 6, 14, 'start'],
-        ['intermittent', iw - 6, ih - 22, 'end'], ['lumpy', iw - 6, 14, 'end'],
-      ];
-      ql.forEach(([c, xx, yy, a]) => {
-        const t = g.append('text').attr('class', 'pi-quad-t').attr('x', xx).attr('y', yy).attr('text-anchor', a);
-        t.append('tspan').text(c.toUpperCase());
-        t.append('tspan').attr('class', 'pi-quad-n').attr('dx', 6).text(fmtInt(counts[c]));
-      });
       axisBottom(g.append('g'), x, { height: ih, format: (v) => (Number.isInteger(v) && [1, 2, 5, 10, 20, 50, 100].includes(v) ? v : '') });
       axisLeft(g.append('g'), y, { ticks: 4, format: (v) => fmtNum(v, 1) });
+      refLine(g, { x1: qx, y1: 0, x2: qx, y2: ih });
+      refLine(g, { x1: 0, y1: qy, x2: iw, y2: qy });
       g.append('text').attr('class', 'pi-axis-t').attr('x', iw).attr('y', ih + 30).attr('text-anchor', 'end').text('ADI · weeks between demands →');
-      g.append('text').attr('class', 'pi-axis-t').attr('x', 0).attr('y', -2).text('CV² ↑');
+      g.append('text').attr('class', 'pi-axis-t').attr('x', -m.left + 2).attr('y', -2).text('CV² ↑');
       const sel = (p) => ata !== 'all' && p.ata === ata;
       const ordered = pts.slice().sort((a, b) => sel(a) - sel(b));
+      const px = (p) => x(Math.min(p.adi, xMax)), py = (p) => y(Math.min(p.cv2, yMax));
       const dots = g.append('g').selectAll('circle').data(ordered).join('circle')
-        .attr('cx', (p) => x(Math.min(p.adi, xMax))).attr('cy', (p) => y(Math.min(p.cv2, yMax)))
+        .attr('cx', px).attr('cy', py)
         .attr('r', (p) => (sel(p) ? 5 : 3.5))
         .attr('class', (p) => (sel(p) ? 'pi-dot is-sel' : 'pi-dot'))
         .attr('tabindex', (p) => (sel(p) ? 0 : null))
@@ -300,13 +405,58 @@ export async function render(el, ctx) {
         .on('click', (e, p) => openPart(p.pn))
         .on('keydown', (e, p) => { if (e.key === 'Enter') openPart(p.pn); });
       withTooltip(dots, (p) => ({ title: p.pn, rows: [['Description', p.desc], ['ADI', fmtNum(p.adi)], ['CV²', fmtNum(p.cv2)], ['Class', dcLabel(p.demand_class)], ['Risk', riskPct(p.risk_score)]] }));
+      const obstacles = ordered.map((p) => markerRect(px(p), py(p), sel(p) ? 5 : 3.5, 1));
+      const ov = (a, b) => Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+      const placed = [];
+      // cut-off labels at the plot edge, clear of points
+      [{ text: `ADI ${ADI_CUT}`, x: qx + 4, ys: [-8, ih - 8, 12], anchor: 'start' }, { text: `CV² ${CV2_CUT}`, x: iw - 2, ys: [qy - 8, qy + 10], anchor: 'end' }].forEach((c) => {
+        const best = c.ys.map((yy) => ({ yy, cost: obstacles.concat(placed).reduce((s2, o) => s2 + ov(labelBox({ x: c.x, y: yy, text: c.text, anchor: c.anchor, mono: true }), o), 0) })).sort((a, b) => a.cost - b.cost)[0];
+        g.append('text').attr('class', 'gnm-ref-label').attr('x', c.x).attr('y', best.yy).attr('dy', '0.32em').attr('text-anchor', c.anchor).text(c.text);
+        placed.push(labelBox({ x: c.x, y: best.yy, text: c.text, anchor: c.anchor, mono: true }));
+      });
+      // quadrant names: pinned to a corner of their own quadrant (inset 8 px), the corner with the fewest points under it
+      const Q = {
+        smooth: { x0: 0, x1: qx, y0: qy, y1: ih }, erratic: { x0: 0, x1: qx, y0: 0, y1: qy },
+        intermittent: { x0: qx, x1: iw, y0: qy, y1: ih }, lumpy: { x0: qx, x1: iw, y0: 0, y1: qy },
+      };
+      Object.entries(Q).forEach(([c, q]) => {
+        const text = `${c.toUpperCase()} ${fmtInt(counts[c])}`;
+        const cands = [
+          { x: q.x0 + 8, y: q.y0 + 12, anchor: 'start' }, { x: q.x1 - 8, y: q.y0 + 12, anchor: 'end' },
+          { x: q.x0 + 8, y: q.y1 - 10, anchor: 'start' }, { x: q.x1 - 8, y: q.y1 - 10, anchor: 'end' },
+        ];
+        const best = cands.map((cd, i) => {
+          const box = labelBox({ ...cd, text, mono: true, width: text.length * 7.6 });
+          return { cd, box, cost: obstacles.reduce((s2, o) => s2 + ov(box, o), 0) + placed.reduce((s2, o) => s2 + ov(box, o), 0) * 3 + Math.max(0, -box.x) * 50 + Math.max(0, box.x + box.width - iw) * 50 + i * 0.5 };
+        }).sort((a, b) => a.cost - b.cost)[0];
+        const t = g.append('text').attr('class', 'pi-quad-t').attr('x', best.cd.x).attr('y', best.cd.y).attr('dy', '0.32em').attr('text-anchor', best.cd.anchor);
+        t.append('tspan').text(c.toUpperCase());
+        t.append('tspan').attr('class', 'pi-quad-n').attr('dx', 6).text(fmtInt(counts[c]));
+        placed.push(best.box);
+      });
+      // one annotation: the selected system's top-risk PN, placed away from the point cloud
       const focus = pts.filter(sel).sort((a, b) => b.risk_score - a.risk_score)[0];
       if (focus) {
-        const fx = x(Math.min(focus.adi, xMax)), fy = y(Math.min(focus.cv2, yMax));
-        annotate(g, { x: fx, y: fy, dx: fx > iw * 0.55 ? -30 : 30, dy: fy < 60 ? 30 : -26, title: focus.pn, sub: `top risk in ATA ${ata} · ${dcLabel(focus.demand_class)}` });
+        const fx = px(focus), fy = py(focus);
+        const title = focus.pn, sub = small ? `top risk · ATA ${ata}` : `top risk in ATA ${ata} · ${dcLabel(focus.demand_class)}`;
+        const bw = Math.max(title.length * 7.2, sub.length * 6.4) + 8, bh = 32;
+        const cands = [];
+        [28, 44, 64, 88].forEach((d) => [[1, -1], [1, 1], [-1, -1], [-1, 1], [1, 0], [-1, 0], [0, -1], [0, 1]].forEach(([sx, sy]) => cands.push({ sx, sy, d })));
+        const box = (c) => { const ax = fx + c.sx * c.d, ay = fy + c.sy * c.d * 0.8; return { x: c.sx < 0 ? ax - bw : c.sx === 0 ? ax - bw / 2 : ax, y: ay - bh / 2, width: bw, height: bh, ax, ay }; };
+        const best = cands.map((c, i) => { const b = box(c); return { c, b, cost: obstacles.reduce((s2, o) => s2 + ov(b, o), 0) + placed.reduce((s2, o) => s2 + ov(b, o), 0) * 3 + (Math.max(0, -b.x) + Math.max(0, b.x + b.width - iw) + Math.max(0, -b.y) + Math.max(0, b.y + b.height - ih)) * 60 + i * 0.4 }; }).sort((a, b) => a.cost - b.cost)[0];
+        const b = best.b;
+        const anchor = best.c.sx < 0 ? 'end' : best.c.sx === 0 ? 'middle' : 'start';
+        const tx = anchor === 'end' ? b.x + b.width - 4 : anchor === 'middle' ? b.x + b.width / 2 : b.x + 4;
+        const ex = Math.max(b.x, Math.min(fx, b.x + b.width)), ey = Math.max(b.y, Math.min(fy, b.y + b.height));
+        const ag = g.append('g').attr('class', 'gnm-annot');
+        const ang = Math.atan2(ey - fy, ex - fx);
+        ag.append('path').attr('class', 'gnm-annot-line').attr('d', `M${fx + Math.cos(ang) * 7},${fy + Math.sin(ang) * 7}L${ex},${ey}`);
+        ag.append('circle').attr('cx', fx).attr('cy', fy).attr('r', 7).attr('fill', 'none').attr('stroke', theme.color.text).attr('stroke-width', 1.25);
+        ag.append('text').attr('class', 'gnm-annot-text').attr('x', tx).attr('y', b.y + 11).attr('text-anchor', anchor).text(title);
+        ag.append('text').attr('class', 'gnm-annot-sub').attr('x', tx).attr('y', b.y + 26).attr('text-anchor', anchor).text(sub);
       }
     });
-    keyEl.replaceChildren(h('span', { class: 'pi-key-dot is-sel' }), ata === 'all' ? 'All systems shown in neutral' : `ATA ${ata} parts`, h('span', { class: 'pi-key-dot' }), 'other PNs', h('span', { class: 'pi-key-sw' }), 'Croston-family zone (ADI ≥ 1.32)');
+    keyEl.replaceChildren(h('span', { class: 'pi-key-dot is-sel' }), ata === 'all' ? 'All systems shown in neutral' : `ATA ${ata} parts`, h('span', { class: 'pi-key-dot' }), 'other PNs', h('span', { class: 'pi-key-sw' }), `Croston-family zone (ADI ≥ ${ADI_CUT})`);
     return stop;
   }
 
@@ -319,26 +469,28 @@ export async function render(el, ctx) {
     const nA = aCells.reduce((s, c) => s + c.n, 0);
     const topA = aCells.slice().sort((a, b) => b.n - a.n)[0];
     const f = chartFrame(heatCard, {
-      headline: topA && nA ? `${fmtInt(topA.n)} of ${fmtInt(nA)} A-class PNs have ${dcLabel(topA.dc)} demand: the high-value items are the hard-to-forecast ones` : 'ABC × demand class',
-      subtitle: `Count of PNs · ABC by annual usage value (A = top 80%, B = next 15%) · demand class from training weeks ${fmtWeek(weeks[0])}–${fmtWeek(trainEnd)}`,
+      headline: topA && nA ? (['intermittent', 'lumpy', 'erratic'].includes(topA.dc) ? `${fmtInt(topA.n)} of ${fmtInt(nA)} A-class PNs have ${dcLabel(topA.dc)} demand: costly items are the hardest to forecast` : `${fmtInt(topA.n)} of ${fmtInt(nA)} A-class PNs have ${dcLabel(topA.dc)} demand`) : 'ABC × demand class',
+      subtitle: `Count of PNs · ABC by annual usage value (A = top 80%, B = next 15%) · demand class from ${fmtWeek(weeks[0])}–${fmtWeek(trainEnd)}`,
       provenance: 'DERIVED', source: 'parts.json (abc, demand_class)',
       table: { columns: [{ key: 'abc', label: 'ABC' }, { key: 'dc', label: 'Demand class', format: dcLabel }, { key: 'n', label: 'PNs', num: true }], rows: cells },
     });
+    const ABBR = { smooth: 'S', erratic: 'E', intermittent: 'I', lumpy: 'L', insufficient_data: 'ID' };
+    const hmKey = h('p', { class: 'pi-hm-key' }, dcs.map((c) => `${ABBR[c]} ${dcLabel(c)}`).join(' · '));
+    f.body.after(hmKey);
     return responsive(f.body, (w) => {
       const small = w < 520;
-      const labW = 44, topH = small ? 46 : 30, rowH = small ? 48 : 56, totW = 48;
+      hmKey.hidden = !small;
+      const labW = small ? 32 : 44, topH = 30, rowH = small ? 48 : 56, totW = small ? 40 : 48;
       const cw = (w - labW - totW) / dcs.length;
       const hgt = topH + abcs.length * rowH + 30;
       const svg = svgIn(f.body, w, hgt, 'ABC by demand class heatmap');
       const max = Math.max(1, ...cells.map((c) => c.n));
       const op = window.d3.scaleLinear().domain([0, max]).range([0.04, 0.85]);
       dcs.forEach((c, i) => {
-        const t = svg.append('text').attr('class', 'pi-hm-col').attr('x', labW + i * cw + cw / 2).attr('y', small ? 16 : 18).attr('text-anchor', 'middle');
-        const SHORT = { smooth: 'smooth', erratic: 'erratic', intermittent: 'intermitt.', lumpy: 'lumpy', insufficient_data: 'insuff. data' };
-        const words = small ? SHORT[c].split(' ') : [dcLabel(c)];
-        words.forEach((wd, j) => t.append('tspan').attr('x', labW + i * cw + cw / 2).attr('dy', j ? 13 : 0).text(wd));
+        const t = svg.append('text').attr('class', 'pi-hm-col').attr('x', labW + i * cw + cw / 2).attr('y', 18).attr('text-anchor', 'middle').text(small ? ABBR[c] : dcLabel(c));
+        t.append('title').text(dcLabel(c));
       });
-      svg.append('text').attr('class', 'pi-hm-col').attr('x', w - totW / 2).attr('y', small ? 16 : 18).attr('text-anchor', 'middle').text('Σ');
+      svg.append('text').attr('class', 'pi-hm-col').attr('x', w - totW / 2).attr('y', 18).attr('text-anchor', 'middle').text('Σ');
       abcs.forEach((a, r) => {
         const yy = topH + r * rowH;
         svg.append('text').attr('class', 'pi-hm-row').attr('x', 8).attr('y', yy + rowH / 2).attr('dy', '0.32em').text(a);
@@ -382,6 +534,7 @@ export async function render(el, ctx) {
     sysButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.ata === a)));
     allBtn.setAttribute('aria-pressed', String(a === 'all'));
     air.setActive(a === 'all' ? null : a);
+    layoutAircraft();
     refreshTable();
     cleanups[0]?.(); cleanups[0] = drawMatrix();
     ctx.setParams({ ata: a, pn: '' });

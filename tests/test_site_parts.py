@@ -45,7 +45,7 @@ def test_select_system_filters_and_deep_links(site, browser):  # noqa: F811
         page.wait_for_timeout(500)
         assert "ata=29" in page.url
         assert page.locator('[data-story="parts-table"] tbody tr').count() == n29
-        assert page.locator(".pi-exploded svg .pi-slot").count() >= 1
+        assert page.locator(".pi-exploded .pi-xlabel").count() >= 1
         # hotspot click also selects
         page.locator('.pi-aircraft .ata-hotspot[data-ata="21"]').click()
         page.wait_for_timeout(400)
@@ -109,6 +109,102 @@ def test_hotspots_keyboard_reachable(site, browser):  # noqa: F811
         page.keyboard.press("Enter")
         page.wait_for_timeout(400)
         assert "ata=34" in page.url
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+# ----------------------------------------------------------------------------- design wave 2 (agent B)
+OVERLAP_JS = r"""(sel) => {
+  const els = [...document.querySelectorAll(sel)].map((e) => e.getBoundingClientRect()).filter((r) => r.width && r.height);
+  const hits = [];
+  for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
+    const a = els[i], b = els[j];
+    if (a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1) hits.push([i, j]);
+  }
+  return hits;
+}"""
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_urgent_part_pip_and_callout(site, browser, vp):  # noqa: F811
+    parts = _parts()["parts"]
+    atas = ["21", "24", "27", "29", "32", "34", "36", "49"]
+    with_urgent = [a for a in atas if any(p["ata"] == a and p["risk_level"] == "urgent" for p in parts)]
+    in32 = sorted([p for p in parts if p["ata"] == "32"], key=lambda p: -p["risk_score"])
+    ctx, page, problems = open_page(browser, site + "#/parts?ata=32", vp)
+    try:
+        page.wait_for_selector(".pi-aircraft .pi-hs-callout")
+        # a red pip with the urgent-PN count on every system that holds an urgent part, whatever the system level
+        assert page.locator(".pi-aircraft .hs-pip").count() == len(with_urgent)
+        for a in with_urgent:
+            n = sum(p["ata"] == a and p["risk_level"] == "urgent" for p in parts)
+            assert page.locator(f'.ata-hotspot[data-ata="{a}"] .hs-pip text').text_content() == str(n)
+        # the selected system names its top-risk part with the part's own level
+        call = page.locator('[data-story="parts-hotspot-32"] .pi-hs-callout')
+        assert call.count() == 1 and in32[0]["pn"] in call.text_content()
+        assert f"is-{in32[0]['risk_level']}" in call.get_attribute("class")
+        # every aircraft label renders at >= 11 px on screen
+        sizes = page.evaluate("""() => { const svg = document.querySelector('.pi-aircraft svg'); const k = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+          return [...svg.querySelectorAll('.hs-risk, .hs-pip text, .pi-hs-text')].map((t) => parseFloat(t.style.fontSize) * k); }""")
+        assert sizes and min(sizes) >= 10.9, sizes
+        # risk words do not sit on other badges or leave the drawing
+        assert not page.evaluate(OVERLAP_JS, ".pi-aircraft .hs-risk, .pi-aircraft .pi-hs-box")
+        call.focus()
+        page.keyboard.press("Enter")  # keyboard-operable (role=button, tabindex 0)
+        page.locator(".drawer.is-open").wait_for()
+        assert in32[0]["pn"] in page.locator(".drawer.is-open").inner_text()
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_exploded_labels_html_and_hot_part(site, browser, vp):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/parts?ata=32", vp)
+    try:
+        page.wait_for_selector(".pi-exploded .pi-xlabel")
+        fs = page.evaluate("() => [...document.querySelectorAll('.pi-xlabel-pn, .pi-xlabel-desc, .pi-xlabel-risk')].filter((e) => e.offsetParent).map((e) => parseFloat(getComputedStyle(e).fontSize))")
+        assert fs and min(fs) >= 11, fs
+        assert page.locator(".pi-exploded svg .bp-label").first.is_hidden()
+        assert not page.evaluate(OVERLAP_JS, ".pi-exploded .pi-xlabel")
+        hot = page.locator(".pi-exploded .pi-xlabel.is-hot")
+        if hot.count():
+            assert page.locator(".pi-exploded svg .bp-part.pi-hot").count() == 1
+            assert "risk" in hot.inner_text().lower()
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+def test_mobile_table_keeps_risk_and_heatmap_headers_clear(site, browser):  # noqa: F811
+    n32 = sum(p["ata"] == "32" for p in _parts()["parts"])
+    ctx, page, problems = open_page(browser, site + "#/parts?ata=32", "390")
+    try:
+        stack = page.locator('[data-story="parts-table"] .data-table-stack')
+        assert stack.is_visible()
+        metrics = stack.locator(".dts-metric")
+        assert metrics.count() == n32
+        assert "risk" in metrics.first.inner_text().lower()
+        assert not page.evaluate(OVERLAP_JS, ".pi-hm-col")
+        assert page.locator(".pi-hm-key").is_visible()
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_matrix_labels_clear_and_reference_lines_neutral(site, browser, vp):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/parts?ata=32", vp)
+    try:
+        frame = page.locator('[data-story="parts-adi-matrix"]')
+        assert frame.locator(".pi-cut").count() == 0  # no amber cut lines
+        assert frame.locator(".gnm-ref-line").count() == 2
+        assert frame.locator(".pi-quad-t").count() == 4
+        # quadrant labels, cut-off labels and the annotation never overlap each other
+        assert not page.evaluate(OVERLAP_JS, '[data-story="parts-adi-matrix"] .pi-quad-t, [data-story="parts-adi-matrix"] .gnm-ref-label, [data-story="parts-adi-matrix"] .gnm-annot-text, [data-story="parts-adi-matrix"] .gnm-annot-sub, [data-story="parts-adi-matrix"] .pi-axis-t')
+        heads = page.evaluate("() => [...document.querySelectorAll('#view .chart-headline')].map((e) => e.textContent.trim())")
+        assert heads and all(len(h) <= 90 for h in heads), heads
         assert not problems, problems
     finally:
         ctx.close()

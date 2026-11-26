@@ -9,7 +9,7 @@
  * Every number on screen comes from the JSON exports; missing blocks show "not run".
  */
 import { h, icon, pageHead, card, provChip, pill, segmented, sectionTitle, stateBlock } from '../ui.js';
-import { chartFrame, responsive, svgIn, axisBottom, axisLeft, gridY, theme, annotate, withTooltip, directLabel, truncate, fmtAED, fmtInt, fmtNum, fmtPct, fmtPts, fmtWeek } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, axisBottom, axisLeft, gridY, theme, annotate, withTooltip, directLabel, refLine, dodge, markerRect, labelBox, truncate, fmtAED, fmtInt, fmtNum, fmtPct, fmtPts, fmtWeek } from '../charts/theme.js';
 import { ensureCSS, dcLabel } from './parts-intelligence.js';
 import { demandStrip, demandStats } from './parts-intelligence/strip.js';
 
@@ -29,8 +29,13 @@ const METHOD = {
 const mKey = (m) => String(m || '').toLowerCase().split(/[\s(]/)[0].replace(/[^a-z0-9-]/g, '');
 const mName = (m) => METHOD[mKey(m)] || String(m);
 const isZero = (m) => mKey(m) === 'zero';
+const SHORT = { ma: 'Moving avg', bootstrap: 'Bootstrap', reliability: 'Reliability' };
+/** Method name, shortened for narrow charts. */
+const mNameS = (m, small) => (small && SHORT[mKey(m)]) || mName(m);
 const ciOf = (r, k = 'mase') => (Array.isArray(r[`${k}_ci`]) ? r[`${k}_ci`] : [r[`${k}_ci_lo`], r[`${k}_ci_hi`]]);
 const champOf = (c) => c?.champion ?? c?.method;
+/** First headline candidate that fits the 90-character cap (DESIGN_SYSTEM: one finding, ≤ 90 chars). */
+const fit = (...c) => c.filter(Boolean).find((t) => t.length <= 90) || c.filter(Boolean).at(-1);
 
 export async function render(el, ctx) {
   await ensureCSS('css/views/parts-intelligence.css');
@@ -135,14 +140,14 @@ export async function render(el, ctx) {
     const winLabel = win === 'holdout' ? `holdout${winText(holdWin) ? ` ${winText(holdWin)}` : ''}` : `selection weeks${winText(selWin) ? ` ${winText(selWin)}` : ''}`;
     let headline;
     if (!rows.length) headline = `No ${win} leaderboard rows for ${dcLabel(dc)} ${PC_NAME[pc]}`;
-    else if (champRow && win === 'selection') headline = `${mName(champRow.method)} is the frozen champion for ${dcLabel(dc)} ${PC_NAME[pc]} (MASE ${fmtNum(champRow.mase)})${zero && zero.mase < champRow.mase ? `, yet the zero forecast scores lower (${fmtNum(zero.mase)})` : ''}`;
+    else if (champRow && win === 'selection') headline = fit(zero && zero.mase < champRow.mase ? `${mName(champRow.method)} is the frozen champion for ${dcLabel(dc)} ${PC_NAME[pc]} (MASE ${fmtNum(champRow.mase)}); zero scores lower (${fmtNum(zero.mase)})` : null, `${mName(champRow.method)} is the frozen champion for ${dcLabel(dc)} ${PC_NAME[pc]} (MASE ${fmtNum(champRow.mase)})`, `${mName(champRow.method)} is the frozen champion (MASE ${fmtNum(champRow.mase)})`);
     else if (champRow) {
       const rank = eligible.indexOf(champRow) + 1;
-      headline = rank === 1 ? `On the holdout the frozen champion ${mName(champRow.method)} is still best for ${dcLabel(dc)} ${PC_NAME[pc]}` : `On the holdout the frozen champion ${mName(champRow.method)} ranks ${rank} of ${eligible.length}; ${mName(best.method)} would have won (MASE ${fmtNum(best.mase)})`;
-    } else headline = `${mName(best.method)} has the lowest eligible MASE for ${dcLabel(dc)} ${PC_NAME[pc]} (${fmtNum(best.mase)})`;
+      headline = rank === 1 ? fit(`On the holdout the frozen champion ${mName(champRow.method)} is still best for ${dcLabel(dc)} ${PC_NAME[pc]}`, `On the holdout the frozen champion ${mName(champRow.method)} is still best`) : fit(`On the holdout the frozen champion ${mName(champRow.method)} ranks ${rank} of ${eligible.length}; ${mName(best.method)} would have won`, `On the holdout the frozen champion ${mName(champRow.method)} ranks ${rank} of ${eligible.length}`);
+    } else headline = fit(`${mName(best.method)} has the lowest eligible MASE for ${dcLabel(dc)} ${PC_NAME[pc]} (${fmtNum(best.mase)})`, `${mName(best.method)} has the lowest eligible MASE (${fmtNum(best.mase)})`);
     const f = chartFrame(boardCard, {
       headline,
-      subtitle: `MASE · mean over parts and 95% bootstrap CI · ${winLabel} · ${n != null ? `${fmtInt(n)} PNs in cell` : 'cell size not exported'} · lower is better · dashed = naive scale (1.0)`,
+      subtitle: `MASE, mean over parts with 95% bootstrap CI · ${winLabel} · ${n != null ? `${fmtInt(n)} PNs in cell` : 'cell size not exported'} · lower is better · dashed = naive scale (1.0)`,
       provenance: fprov, source: 'forecast.json (leaderboard)',
       table: { columns: [{ key: 'method', label: 'Method', format: mName }, { key: 'mase', label: 'MASE', num: true, format: (v) => fmtNum(v, 3) }, { key: 'lo', label: 'CI low', num: true, format: (v) => fmtNum(v, 3) }, { key: 'hi', label: 'CI high', num: true, format: (v) => fmtNum(v, 3) }, { key: 'bias', label: 'Bias', num: true, format: (v) => fmtNum(v, 3) }, { key: 'coverage', label: 'Coverage', num: true, format: (v) => fmtPct(v, 0) }], rows: rows.map((r) => ({ ...r, lo: ciOf(r)[0], hi: ciOf(r)[1] })) },
     });
@@ -160,8 +165,7 @@ export async function render(el, ctx) {
       const x = d3().scaleLinear().domain([Math.max(0, d3().min(vals) * 0.92), d3().max(vals) * 1.04]).nice().range([0, iw]);
       const yPos = (i) => i * rowH + rowH / 2 + (zero && i === ordered.length - 1 ? 10 : 0);
       axisBottom(g.append('g'), x, { height: ih, ticks: small ? 3 : 6, format: (v) => fmtNum(v, 1) });
-      g.append('line').attr('class', 'fl-ref').attr('x1', x(1)).attr('x2', x(1)).attr('y1', -10).attr('y2', ih);
-      lab(g, { x: x(1) + 4, y: -12, text: 'naive scale = 1.0', color: theme.color.review, dy: '0' });
+      refLine(g, { x1: x(1), y1: ih, x2: x(1), y2: -10, label: small ? 'naive = 1' : 'naive scale = 1.0', dx: 4, dy: -2, anchor: x(1) > iw * 0.7 ? 'end' : 'start' });
       if (zero) g.append('line').attr('class', 'fl-sep').attr('x1', -labelW + 8).attr('x2', iw).attr('y1', yPos(ordered.length - 1) - rowH / 2 - 2).attr('y2', yPos(ordered.length - 1) - rowH / 2 - 2);
       const rowsG = g.selectAll('g.fl-row').data(ordered).join('g').attr('class', (r) => `fl-row ${mKey(r.method) === champKey ? 'is-champ' : ''} ${isZero(r.method) ? 'is-zero' : ''}`).attr('transform', (r, i) => `translate(0,${yPos(i)})`);
       rowsG.append('rect').attr('class', 'fl-row-bg').attr('x', -labelW + 4).attr('y', -rowH / 2 + 2).attr('width', labelW + iw + m.right - 8).attr('height', rowH - 4).attr('rx', 6);
@@ -169,7 +173,7 @@ export async function render(el, ctx) {
       rowsG.append('line').attr('class', 'fl-ci').attr('x1', (r) => x(ciOf(r)[0] ?? r.mase)).attr('x2', (r) => x(ciOf(r)[0] ?? r.mase)).attr('y1', -4).attr('y2', 4);
       rowsG.append('line').attr('class', 'fl-ci').attr('x1', (r) => x(ciOf(r)[1] ?? r.mase)).attr('x2', (r) => x(ciOf(r)[1] ?? r.mase)).attr('y1', -4).attr('y2', 4);
       rowsG.append('circle').attr('class', 'fl-dot').attr('cx', (r) => x(r.mase)).attr('r', (r) => (mKey(r.method) === champKey ? 6 : 4.5));
-      rowsG.append('text').attr('class', 'fl-mlabel').attr('x', -12).attr('dy', '0.32em').attr('text-anchor', 'end').text((r) => truncate(isZero(r.method) ? (small ? 'zero (excl.)' : 'Zero · benchmark, not eligible') : `${mKey(r.method) === champKey ? '★ ' : ''}${mName(r.method)}`, labelW - 16));
+      rowsG.append('text').attr('class', 'fl-mlabel').attr('x', -12).attr('dy', '0.32em').attr('text-anchor', 'end').text((r) => truncate(isZero(r.method) ? (small ? 'zero (excl.)' : 'Zero · benchmark only') : `${mKey(r.method) === champKey ? '★ ' : ''}${mNameS(r.method, small)}`, labelW - 16));
       rowsG.append('text').attr('class', 'fl-vlabel').attr('x', iw + 10).attr('dy', '0.32em').text((r) => fmtNum(r.mase));
       withTooltip(rowsG, (r) => ({ title: mName(r.method), rows: [['MASE', fmtNum(r.mase, 3)], ['95% CI', `${fmtNum(ciOf(r)[0], 3)} – ${fmtNum(ciOf(r)[1], 3)}`], ['Bias (units/wk)', fmtNum(r.bias, 3)], ['Coverage', fmtPct(r.coverage, 0)]], note: isZero(r.method) ? 'Benchmark only: excluded from champion eligibility.' : mKey(r.method) === champKey ? 'Frozen champion (selection weeks).' : '' }));
       const ci = ordered.findIndex((r) => mKey(r.method) === champKey);
@@ -214,14 +218,14 @@ export async function render(el, ctx) {
       const held = rows.filter((r) => r.champion_rank === 1).length;
       const worst = rows.slice().sort((a, b) => b.champion_rank / b.n_methods - a.champion_rank / a.n_methods || b.n_parts - a.n_parts)[0];
       const f = chartFrame(host, {
-        headline: `The frozen champion stayed best on the holdout in ${held} of ${rows.length} cells; ${mName(worst.champion)} for ${dcLabel(worst.demand_class)} ${PC_NAME[worst.part_class]} fell to ${worst.champion_rank} of ${worst.n_methods}`,
+        headline: `${held * 2 < rows.length ? 'Only ' : ''}${fmtInt(held)} of ${fmtInt(rows.length)} frozen champions stayed best when re-scored on the holdout`,
         subtitle: `Holdout rank of each frozen champion among eligible methods (1 = best) · MASE${winText(holdWin) ? ` · ${winText(holdWin)}` : ''} · cells sized by PNs · champions were frozen before the holdout was scored`,
         provenance: fprov, source: 'forecast.json (champion_check)', story: 'forecast-holdout-check',
         table: { columns: [{ key: 'cell', label: 'Cell' }, { key: 'champion', label: 'Champion', format: mName }, { key: 'champion_rank', label: 'Rank', num: true }, { key: 'n_methods', label: 'of', num: true }, { key: 'best_in_hindsight', label: 'Best in hindsight', format: mName }, { key: 'n_parts', label: 'PNs', num: true }], rows: rows.map((r) => ({ ...r, cell: `${dcLabel(r.demand_class)} · ${r.part_class}` })) },
       });
       cleanups.push(responsive(f.body, (w) => {
         const small = w < 520;
-        const rowH = 32, labelW = small ? 116 : 220;
+        const rowH = 32, labelW = small ? 136 : 220;
         const nMax = d3().max(rows, (r) => r.n_methods);
         const m = { top: 20, right: small ? 52 : 250, bottom: 44, left: labelW };
         const hgt = m.top + m.bottom + rows.length * rowH;
@@ -235,7 +239,7 @@ export async function render(el, ctx) {
         rg.append('line').attr('class', 'fl-rank-track').attr('x1', 0).attr('x2', (r) => x(r.n_methods));
         rg.each(function (r) { d3().select(this).selectAll('circle.t').data(d3().range(1, r.n_methods + 1)).join('circle').attr('class', 't fl-rank-tick').attr('cx', (k) => x(k)).attr('r', 2); });
         rg.append('circle').attr('class', 'fl-rank-dot').attr('cx', (r) => x(r.champion_rank)).attr('r', (r) => 4 + Math.min(4, Math.sqrt(r.n_parts || 1)));
-        rg.append('text').attr('class', 'fl-mlabel').attr('x', -12).attr('dy', '0.32em').attr('text-anchor', 'end').text((r) => truncate(`${mName(r.champion)} · ${small ? ({ intermittent: 'interm.', insufficient_data: 'insuff.' }[r.demand_class] || r.demand_class) : dcLabel(r.demand_class)} ${r.part_class}`, labelW - 14));
+        rg.append('text').attr('class', 'fl-mlabel').attr('x', -12).attr('dy', '0.32em').attr('text-anchor', 'end').text((r) => truncate(`${mNameS(r.champion, small)} · ${small ? ({ intermittent: 'interm.', insufficient_data: 'insuff.' }[r.demand_class] || r.demand_class) : dcLabel(r.demand_class)} ${r.part_class}`, labelW - 14));
         rg.append('text').attr('class', 'fl-vlabel').attr('x', iw + 14).attr('dy', '0.32em').text((r) => (small ? `${r.champion_rank}/${r.n_methods}` : `${r.champion_rank}/${r.n_methods}${r.champion_rank > 1 ? ` · best: ${mName(r.best_in_hindsight)}` : ' · held'}`));
         withTooltip(rg, (r) => ({ title: `${dcLabel(r.demand_class)} · ${r.part_class}`, rows: [['Champion', mName(r.champion)], ['Holdout rank', `${r.champion_rank} of ${r.n_methods}`], ['Champion MASE', fmtNum(r.champion_mase, 3)], ['Best in hindsight', `${mName(r.best_in_hindsight)} ${fmtNum(r.best_mase, 3)}`], ['PNs', fmtInt(r.n_parts)]] }));
         const wi = rows.indexOf(worst);
@@ -272,7 +276,7 @@ export async function render(el, ctx) {
       const rop = L.reorder_point ?? (sl != null ? rows.find((r) => r.cdf >= sl - 1e-9)?.q ?? rows.at(-1).q : null);
       const mean = L.mean ?? rows.reduce((s2, r) => s2 + r.q * r.p, 0);
       const f = chartFrame(frameHost, {
-        headline: rop != null ? `To cover ${fmtPct(sl, 0)} of lead times at ${L.station || 'the hub'}, ${L.pn} needs ${fmtInt(rop)} units against a mean demand of ${fmtNum(mean, 1)}` : `${L.pn}: expected lead-time demand ${fmtNum(mean, 1)} units`,
+        headline: rop != null ? fit(`To cover ${fmtPct(sl, 0)} of lead times at ${L.station || 'the hub'}, ${L.pn} needs ${fmtInt(rop)} units against a mean demand of ${fmtNum(mean, 1)}`, `To cover ${fmtPct(sl, 0)} of lead times, ${L.pn} needs ${fmtInt(rop)} units (mean demand ${fmtNum(mean, 1)})`) : `${L.pn}: expected lead-time demand ${fmtNum(mean, 1)} units`,
         subtitle: `P(demand = q) over ${L.lead_time_days != null ? `${fmtNum(L.lead_time_days, 0)} days` : 'the lead time'} · ${L.dist_kind || 'champion'} · rate from ${mName(L.rate_source || L.champion)}${sl != null ? ` · ${part?.deadline} service target ${fmtPct(sl, 0)} (${slA?.provenance || 'ASSUMED'})` : ' · service level not exported'}`,
         provenance: L.provenance || fprov, source: 'forecast.json (ltd_examples), method.json (service_targets)', story: 'forecast-ltd',
         table: { columns: [{ key: 'q', label: 'Units', num: true }, { key: 'p', label: 'P(X = q)', num: true, format: (v) => fmtPct(v, 1) }, { key: 'cdf', label: 'P(X ≤ q)', num: true, format: (v) => fmtPct(v, 1) }], rows },
@@ -298,10 +302,18 @@ export async function render(el, ctx) {
           const rx = x(rop) + x.bandwidth() + (x.step() * x.paddingInner()) / 2;
           const leftSide = rx > iw * 0.55;
           g.append('line').attr('class', 'fl-rop').attr('x1', rx).attr('x2', rx).attr('y1', -16).attr('y2', ih);
-          lab(g, { x: rx + (leftSide ? -6 : 6), y: -20, text: `Reorder point ${fmtInt(rop)} · ${fmtPct(sl, 0)} quantile`, color: theme.color.text, anchor: leftSide ? 'end' : 'start', strong: true, dy: '0' });
+          const ropText = `Reorder point ${fmtInt(rop)} · ${fmtPct(sl, 0)} quantile`;
+          lab(g, { x: rx + (leftSide ? -6 : 6), y: -20, text: ropText, color: theme.color.text, anchor: leftSide ? 'end' : 'start', strong: true, dy: '0' });
           const tail = rows.filter((r) => r.q > rop).reduce((s2, r) => s2 + r.p, 0);
-          const tq = shown.find((r) => r.q > rop);
-          if (tq) annotate(g, { x: x(tq.q) + x.bandwidth() / 2, y: y(tq.p), dx: leftSide ? -24 : 24, dy: -Math.min(ih * 0.55, 90), anchor: leftSide ? 'end' : 'start', title: `${fmtPct(tail, 1)} chance of a shortfall`, sub: w < 480 ? undefined : 'demand beyond the reorder point' });
+          if (shown.some((r) => r.q > rop)) {
+            // shortfall label beside the reorder line, clear of every bar (dodge against bar rects, flips sides if needed)
+            const barRects = shown.map((r) => ({ x: x(r.q) - 2, y: y(r.p) - 3, width: x.bandwidth() + 4, height: ih - y(r.p) + 3 }));
+            const text = `${fmtPct(tail, 1)} chance of a shortfall`;
+            const l = { x: rx + (leftSide ? -8 : 8), flipX: rx + (leftSide ? 8 : -8), y: 10, text, anchor: leftSide ? 'end' : 'start' };
+            dodge([l], { gap: 14, obstacles: barRects, bounds: { x: 0, y: 0, width: iw, height: ih - 4 }, flip: true, maxShift: ih - 20 });
+            lab(g, { ...l, color: theme.color.text });
+            if (w >= 480) lab(g, { x: l.x, y: l.y + 15, text: 'demand beyond the reorder point', color: theme.color.faint, anchor: l.anchor, mono: true });
+          }
         }
       });
     };
@@ -337,7 +349,7 @@ export async function render(el, ctx) {
       const f = chartFrame(frameHost, {
         headline,
         subtitle: `Fill rate vs mean stock value per method · base stock at the deadline-class service target · single-item stand-in simulator over the selection weeks${spc ? ` · ${PC_NAME[spc]}` : ''}`,
-        provenance: fprov, source: 'forecast.json (stock_eval)', story: 'forecast-stock-eval',
+        provenance: fprov, source: 'forecast.json (stock_eval) · unlabelled points: other methods (hover or View data)', story: 'forecast-stock-eval',
         table: { columns: [{ key: 'method', label: 'Method', format: mName }, { key: 'fill_rate', label: 'Fill rate', num: true, format: (v) => fmtPct(v) }, { key: 'capital', label: 'Capital', num: true, format: (v) => fmtAED(v) }, { key: 'backorder_units', label: 'Backorder units', num: true, format: fmtInt }], rows },
       });
       stop = responsive(f.body, (w) => {
@@ -358,15 +370,21 @@ export async function render(el, ctx) {
         const pts = g.selectAll('g.p').data(rows).join('g').attr('class', (r) => `fl-pt ${mKey(r.method) === 'reliability' || r === hi ? 'is-key' : ''} ${champSet.has(mKey(r.method)) ? 'is-champ' : ''}`).attr('transform', (r) => `translate(${x(r.capital)},${y(r.fill_rate)})`);
         pts.append('circle').attr('r', (r) => (mKey(r.method) === 'reliability' ? 6 : 4.5));
         withTooltip(pts, (r) => ({ title: mName(r.method), rows: [['Fill rate', fmtPct(r.fill_rate)], ['Capital', fmtAED(r.capital)], ['Backorder units', fmtInt(r.backorder_units)]], note: champSet.has(mKey(r.method)) ? 'MASE champion in at least one cell of this class' : '' }));
-        const labels = rows.map((r) => ({ r, x: x(r.capital) + 12, y: y(r.fill_rate), text: mName(r.method) }));
-        if (!small) {
-          const keyM = new Set([rel, hi, cheap].filter(Boolean));
-          const sorted = labels.filter((l) => keyM.has(l.r)).sort((a, b) => a.y - b.y);
-          for (let i = 1; i < sorted.length; i++) if (Math.abs(sorted[i].y - sorted[i - 1].y) < 13 && Math.abs(sorted[i].x - sorted[i - 1].x) < 110) sorted[i].y = sorted[i - 1].y + 13;
-          sorted.forEach((l) => lab(g, { x: l.x, y: l.y, text: l.text, color: mKey(l.r.method) === 'reliability' ? theme.color.accent : theme.color.muted, strong: mKey(l.r.method) === 'reliability' }));
-        } else if (rel) lab(g, { x: x(rel.capital) + 9, y: y(rel.fill_rate), text: 'Reliability', color: theme.color.accent, strong: true });
-        if (!small && hi) annotate(g, { x: x(hi.capital), y: y(hi.fill_rate), dx: -30, dy: 26, title: 'Highest fill', sub: `${fmtPct(hi.fill_rate)} at ${fmtAED(hi.capital)}` });
-        if (!small) lab(g, { x: iw, y: ih - 10, text: 'Unlabelled points: other methods (hover or View data)', color: theme.color.faint, anchor: 'end' });
+        // direct labels for the key methods: dodged against every dot and each other, flipping sides when needed
+        const keyM = small ? [...new Set([rel, hi].filter(Boolean))] : [...new Set([rel, hi, cheap].filter(Boolean))];
+        const obstacles = rows.map((r) => markerRect(x(r.capital), y(r.fill_rate), mKey(r.method) === 'reliability' ? 6 : 4.5, 3));
+        const labels = keyM.map((r) => {
+          const cx = x(r.capital), cy = y(r.fill_rate);
+          const text = small ? `${mNameS(r.method, true)}${r === hi && r !== rel ? ' · top fill' : ''}` : r === hi && r !== rel ? `${mName(r.method)} · highest fill` : r === cheap && r !== rel && r !== hi ? `${mName(r.method)} · least capital` : mName(r.method);
+          const right = cx < iw * 0.6;
+          return { r, text, x: cx + (right ? 10 : -10), flipX: cx + (right ? -10 : 10), y: cy, anchor: right ? 'start' : 'end' };
+        });
+        dodge(labels, { gap: 14, obstacles, bounds: { x: -m.left + 4, y: 0, width: iw + m.left + m.right - 8, height: ih }, flip: true, maxShift: 48 });
+        labels.forEach((l) => {
+          const cx = x(l.r.capital), cy = y(l.r.fill_rate);
+          if (Math.abs(l.y - cy) > 10) g.append('line').attr('class', 'fl-leader').attr('x1', cx).attr('y1', cy).attr('x2', l.anchor === 'start' ? l.x - 3 : l.x + 3).attr('y2', l.y);
+          lab(g, { x: l.x, y: l.y, text: l.text, anchor: l.anchor, color: mKey(l.r.method) === 'reliability' ? theme.color.accent : theme.color.text, strong: mKey(l.r.method) === 'reliability' });
+        });
       });
     };
     if (pcs.length > 1) {
@@ -398,7 +416,7 @@ export async function render(el, ctx) {
       const setup = Mo.setup || {};
       monCard.append(chips);
       const f = chartFrame(monCard, {
-        headline: `On ${fmtInt(info.n_series)} real car-parts series, ${mName(best.method)} is the best eligible method (MASE ${fmtNum(best.mase)})${zero ? `, and the zero forecast again scores lowest (${fmtNum(zero.mase)})` : ''}`,
+        headline: fit(`On ${fmtInt(info.n_series)} real car-parts series, ${mName(best.method)} is the best eligible method (MASE ${fmtNum(best.mase)})`, `${mName(best.method)} is the best eligible method on real car-parts data (MASE ${fmtNum(best.mase)})`),
         subtitle: `MASE (m = ${setup.mase_seasonality ?? 1}) · mean and 95% CI over series · ${setup.frequency || 'monthly'}, last ${setup.horizon ?? '—'} ${setup.frequency === 'monthly' ? 'months' : 'periods'} held out · ${fmtInt(info.n_mase_undefined)} series with zero training scale excluded`,
         provenance: 'DERIVED', source: `${Mo.dataset || 'Monash Car Parts'} · Zenodo v${Mo.zenodo_version ?? '—'} · downloaded ${Mo.download_date || '—'}`,
         table: { columns: [{ key: 'method', label: 'Method', format: mName }, { key: 'mase', label: 'MASE', num: true, format: (v) => fmtNum(v, 3) }, { key: 'mase_ci_lo', label: 'CI low', num: true, format: (v) => fmtNum(v, 3) }, { key: 'mase_ci_hi', label: 'CI high', num: true, format: (v) => fmtNum(v, 3) }, { key: 'cov_q90', label: 'Coverage q90', num: true, format: (v) => fmtPct(v, 1) }], rows: res },
@@ -415,11 +433,11 @@ export async function render(el, ctx) {
         const x = d3().scaleLinear().domain([Math.max(0, d3().min(ordered, (r) => r.mase_ci_lo ?? r.mase) * 0.9), d3().max(ordered, (r) => r.mase_ci_hi ?? r.mase) * 1.03]).nice().range([0, iw]);
         const yPos = (i) => i * rowH + rowH / 2 + (zero && i === ordered.length - 1 ? 8 : 0);
         axisBottom(g.append('g'), x, { height: ih, ticks: small ? 3 : 5, format: (v) => fmtNum(v, 1) });
-        if (x.domain()[0] <= 1 && x.domain()[1] >= 1) g.append('line').attr('class', 'fl-ref').attr('x1', x(1)).attr('x2', x(1)).attr('y1', 0).attr('y2', ih);
+        if (x.domain()[0] <= 1 && x.domain()[1] >= 1) refLine(g, { x1: x(1), y1: 0, x2: x(1), y2: ih });
         const rg = g.selectAll('g.fl-row').data(ordered).join('g').attr('class', (r) => `fl-row ${r === best ? 'is-champ' : ''} ${isZero(r.method) ? 'is-zero' : ''}`).attr('transform', (r, i) => `translate(0,${yPos(i)})`);
         rg.append('line').attr('class', 'fl-ci').attr('x1', (r) => x(r.mase_ci_lo ?? r.mase)).attr('x2', (r) => x(r.mase_ci_hi ?? r.mase));
         rg.append('circle').attr('class', 'fl-dot').attr('cx', (r) => x(r.mase)).attr('r', (r) => (r === best ? 5.5 : 4));
-        rg.append('text').attr('class', 'fl-mlabel').attr('x', -10).attr('dy', '0.32em').attr('text-anchor', 'end').text((r) => truncate(isZero(r.method) ? 'Zero · not eligible' : mName(r.method), labelW - 14));
+        rg.append('text').attr('class', 'fl-mlabel').attr('x', -10).attr('dy', '0.32em').attr('text-anchor', 'end').text((r) => truncate(isZero(r.method) ? (small ? 'Zero (excl.)' : 'Zero · not eligible') : mNameS(r.method, small), labelW - 14));
         rg.append('text').attr('class', 'fl-vlabel').attr('x', iw + 8).attr('dy', '0.32em').text((r) => fmtNum(r.mase));
         withTooltip(rg, (r) => ({ title: mName(r.method), rows: [['MASE', fmtNum(r.mase, 3)], ['95% CI', `${fmtNum(r.mase_ci_lo, 3)} – ${fmtNum(r.mase_ci_hi, 3)}`], ['Median MASE', fmtNum(r.mase_median, 3)], ['Coverage q90', fmtPct(r.cov_q90, 1)]] }));
         if (best && !small) annotate(g, { x: x(best.mase), y: yPos(0), dx: 28, dy: 4, title: 'Best eligible' });
@@ -443,8 +461,8 @@ export async function render(el, ctx) {
     } else {
       const main = TR.find((t) => t.vendor_quoted != null && /mtbur/i.test(t.param)) || TR.find((t) => t.vendor_quoted != null) || TR[0];
       const f = chartFrame(truthCard, {
-        headline: main.vendor_quoted != null ? `Estimating ${main.param} from removals cuts the error from ${fmtE(main, main.vendor_quoted)} (vendor-quoted) to ${fmtE(main, main.estimated)}` : `${main.param}: estimate error ${fmtE(main, main.estimated)}`,
-        subtitle: `${main.metric || 'error'} against the simulator's hidden truth · lower is better · estimates use history weeks only`,
+        headline: main.vendor_quoted != null ? fit(`Estimating ${main.param} from removals cuts the error from ${fmtE(main, main.vendor_quoted)} (vendor-quoted) to ${fmtE(main, main.estimated)}`, `Fitting ${main.param} to removals cuts its error from ${fmtE(main, main.vendor_quoted)} to ${fmtE(main, main.estimated)}`, `Fitting ${String(main.param).split(' (')[0]} to removals cuts its error from ${fmtE(main, main.vendor_quoted)} to ${fmtE(main, main.estimated)}`) : `${main.param}: estimate error ${fmtE(main, main.estimated)}`,
+        subtitle: `${main.metric || 'error'} against the simulator's hidden truth, estimated vs vendor-quoted · lower is better · estimates use history weeks only`,
         provenance: 'DERIVED', source: 'forecast.json (truth_recovery)', story: 'forecast-truth',
         table: { columns: [{ key: 'param', label: 'Parameter' }, { key: 'metric', label: 'Metric' }, { key: 'vendor_quoted', label: 'Vendor-quoted', num: true, format: (v) => (v == null ? 'not quoted' : fmtNum(v, 3)) }, { key: 'estimated', label: 'Estimated', num: true, format: (v) => fmtNum(v, 3) }, { key: 'n_parts', label: 'PNs', num: true, format: (v) => (v == null ? '—' : fmtInt(v)) }], rows: TR },
       });
@@ -474,7 +492,7 @@ export async function render(el, ctx) {
         rg.filter((t) => t.vendor_quoted == null).append('text').attr('class', 'fl-db-t').attr('x', (t) => x(t.estimated) + 10).attr('dy', '0.32em').text('no vendor quote');
         withTooltip(rg, (t) => ({ title: t.param, rows: [['Vendor-quoted error', fmtE(t, t.vendor_quoted)], ['Estimated error', fmtE(t, t.estimated)], ...(t.n_parts != null ? [['PNs', fmtInt(t.n_parts)]] : []), ...(t.share_estimate_closer != null ? [['Estimate closer', fmtPct(t.share_estimate_closer, 0)]] : [])] }));
         lab(g, { x: 0, y: -8, text: '● estimated', dy: '0', color: theme.color.accent });
-        lab(g, { x: 86, y: -8, text: '● vendor-quoted', dy: '0', color: theme.color.accent2 });
+        lab(g, { x: 86, y: -8, text: '● vendor-quoted', dy: '0', color: theme.series.baseline });
       }));
       truthCard.append(h('div', { class: 'fl-honest mt-2', role: 'note' }, icon('shield'), h('div', {}, h('strong', {}, 'Evaluated against hidden truth'), h('p', {}, 'The simulator draws true reliability and repair parameters that the planner never sees. Estimates are fitted on the demand and repair history only; the true values are read by this evaluation step alone, never by the forecasting or policy code.'))));
     }
