@@ -6,9 +6,13 @@
     python scripts/record_demo.py --url https://akashgajjar07-hue.github.io/grounded-no-more/   # the live site instead
 
 Outputs
-* presentations/demo.webm      1440x900, 60-90 s: Mission Control -> "Start the story" -> a manual "next" press every
-                               ~9 s through every story step (the step count is read from docs/data/story.json; v2 has
-                               six) -> a pass over the Capital Optimiser (budget-slider sweep).
+* presentations/demo.webm      1440x900, ~75 s, following presentations/video_script.md: the landing (Mission Control,
+                               Simple mode) -> the 60-second tour started from its own button and run in the tour's
+                               Play mode (auto-advance, no manual presses; the step count is read from
+                               docs/data/story.json, six in v2.1) -> Pause at the last step -> Skip tour -> a pass over
+                               the Readiness Frontier budget slider -> back to the landing.
+                               The step length is the tour's own clock (MOTION.tourStep) unless --step-ms sets the
+                               tour's window.__gnmTourStepMs hook; the default here is 9 s so the narration fits.
 * docs/assets/readme/hero.png  1440x900 screenshot of Mission Control above the fold.
 * docs/assets/readme/demo.gif  ~10 s GIF of the Capital Optimiser budget slider (Pillow, no ffmpeg needed), <= 6 MB.
 
@@ -33,7 +37,8 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 LIVE = "https://akashgajjar07-hue.github.io/grounded-no-more/"
 VIEW = {"width": 1440, "height": 900}
-STEP_S = 9.0  # seconds per story step (manual next presses ~8-10 s apart)
+STEP_MS = 9000  # tour step length for the video (the narration in presentations/video_script.md is timed to it)
+INTRO_MS = 6000  # landing hold before the tour starts
 
 
 @contextlib.contextmanager
@@ -69,17 +74,33 @@ def n_story_steps():
     return len(json.loads((DOCS / "data" / "story.json").read_text())["steps"])
 
 
-def story_next(page):
-    """Advance the story the way a viewer would: click a visible Next button, else press the right arrow."""
-    for sel in (".story-card .story-actions button:has-text('Next')", "[data-story-next]", ".story-next"):
-        loc = page.locator(sel)
-        try:
-            if loc.count() and loc.first.is_visible():
-                loc.first.click()
-                return
-        except Exception:
-            pass
-    page.keyboard.press("ArrowRight")
+def tour_play(page):
+    """Press the tour's own Play button (auto-advance). Falls back to the Space key, which toggles Play in the tour."""
+    loc = page.locator(".story-card .story-play")
+    try:
+        if loc.count() and loc.first.is_visible():
+            loc.first.click()
+            return
+    except Exception:
+        pass
+    page.keyboard.press("Space")
+
+
+def tour_state(page):
+    """{index, playing, elapsed, stepMs, ...} from the tour's test API (window.__gnmStory.state())."""
+    return page.evaluate("() => window.__gnmStory && window.__gnmStory.state ? window.__gnmStory.state() : null")
+
+
+def tour_exit(page):
+    """Leave the tour with its Skip button (Esc as a fallback)."""
+    loc = page.locator(".story-card .story-skip")
+    try:
+        if loc.count() and loc.first.is_visible():
+            loc.first.click()
+            return
+    except Exception:
+        pass
+    page.keyboard.press("Escape")
 
 
 def capital_slider(page):
@@ -113,8 +134,9 @@ def sweep_slider(page, sl, steps, dwell_ms, on_frame=None):
 
 
 def start_story(page):
-    """Open the guided tour: the header Story button (wave B), else a 'Start the story' button."""
-    for loc in (page.locator("#story-btn"), page.get_by_role("button", name="Start the story")):
+    """Open the guided tour from the landing's own '60-second tour' button, else the top-bar Story button."""
+    for loc in (page.locator("[data-story='mission-start']"), page.locator("#story-btn"),
+                page.get_by_role("button", name="60-second tour")):
         try:
             if loc.count() and loc.first.is_visible():
                 loc.first.click()
@@ -129,34 +151,47 @@ def story_state(page):
         return c ? {hash: location.hash, text: c.innerText.split(String.fromCharCode(10)).slice(0, 3).join(' | ')} : null; }""")
 
 
-def record_video(base, out, stills_dir=None):
+def record_video(base, out, stills_dir=None, step_ms=STEP_MS):
     from playwright.sync_api import sync_playwright
     tmp = Path(tempfile.mkdtemp(prefix="gnm-video-"))
     t0 = time.time()
     with sync_playwright() as p:
         b = p.chromium.launch()
         ctx = b.new_context(viewport=VIEW, record_video_dir=str(tmp), record_video_size=VIEW, device_scale_factor=1)
+        if step_ms:
+            ctx.add_init_script(f"window.__gnmTourStepMs = {int(step_ms)};")
         page = ctx.new_page()
+        errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
         page.goto(base + "#/mission", wait_until="networkidle")
         wait_ready(page, "[data-story='mission-hero']")
         n = n_story_steps()
-        page.wait_for_timeout(3000)  # let the viewer see Mission Control
-        errors = []
-        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.wait_for_timeout(INTRO_MS)  # the landing: title, subtitle, stat strip
         start_story(page)
-        log = []
-        for i in range(n):
-            if i:
-                story_next(page)
-            page.wait_for_timeout(int(STEP_S * 1000))
-            log.append(story_state(page))
-            if stills_dir:
-                page.screenshot(path=str(Path(stills_dir) / f"step-{i + 1}.png"))
-        for i, s in enumerate(log, 1):
-            print(f"  step {i}: {s}")
-        if errors:
-            print(f"  ! page errors: {errors}")
-        page.keyboard.press("Escape")
+        page.wait_for_timeout(800)
+        tour_play(page)  # Play mode: the tour advances itself
+        st = tour_state(page) or {}
+        per = int(st.get("stepMs") or step_ms or 7000)
+        log, seen, deadline = [], set(), time.time() + n * per / 1000 + 30
+        while time.time() < deadline:
+            st = tour_state(page)
+            if st is None:
+                break
+            if st["index"] not in seen:
+                seen.add(st["index"])
+                page.wait_for_timeout(1500)  # let the step settle before logging / stills
+                log.append(story_state(page))
+                if stills_dir:
+                    page.screenshot(path=str(Path(stills_dir) / f"step-{st['index'] + 1}.png"))
+            if st["index"] == n - 1 and not st["playing"]:
+                break  # the last step's bar filled and the tour stopped itself (Play resets)
+            page.wait_for_timeout(250)
+        for i, s_ in enumerate(log, 1):
+            print(f"  step {i}: {s_}")
+        if len(seen) != n:
+            print(f"  ! tour showed {len(seen)} of {n} steps in Play mode")
+        page.wait_for_timeout(1200)
+        tour_exit(page)
         page.wait_for_timeout(600)
         page.goto(base + "#/capital")
         wait_ready(page, "[data-story='frontier-chart']")
@@ -166,6 +201,11 @@ def record_video(base, out, stills_dir=None):
         if stills_dir:
             page.screenshot(path=str(Path(stills_dir) / "capital.png"))
         page.wait_for_timeout(1500)
+        page.goto(base + "#/mission")
+        wait_ready(page, "[data-story='mission-hero']")
+        page.wait_for_timeout(3000)  # closing frame on the landing
+        if errors:
+            print(f"  ! page errors: {errors}")
         video = page.video
         ctx.close()
         src = Path(video.path())
@@ -173,7 +213,8 @@ def record_video(base, out, stills_dir=None):
     out.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(src), out)
     shutil.rmtree(tmp, ignore_errors=True)
-    print(f"video: {out} ({out.stat().st_size / 1e6:.1f} MB, ~{time.time() - t0:.0f} s wall clock, {n} story steps)")
+    print(f"video: {out} ({out.stat().st_size / 1e6:.1f} MB, ~{time.time() - t0:.0f} s wall clock, {n} tour steps "
+          f"at {per / 1000:g} s)")
 
 
 def hero(base, out):
@@ -235,6 +276,8 @@ def main():
     ap.add_argument("--url", default=None, help=f"site to record (default: local server of docs/; live: {LIVE})")
     ap.add_argument("--only", choices=["video", "hero", "gif"])
     ap.add_argument("--stills", default=None, help="directory for per-step stills taken during the video")
+    ap.add_argument("--step-ms", type=int, default=STEP_MS,
+                    help="tour step length in Play mode (0 = the tour's own MOTION.tourStep); default %(default)s")
     a = ap.parse_args()
     ctx = local_server() if a.url is None else contextlib.nullcontext(a.url)
     with ctx as url:
@@ -245,7 +288,7 @@ def main():
         if a.only in (None, "gif"):
             gif(base, ROOT / "docs" / "assets" / "readme" / "demo.gif")
         if a.only in (None, "video"):
-            record_video(base, ROOT / "presentations" / "demo.webm", a.stills)
+            record_video(base, ROOT / "presentations" / "demo.webm", a.stills, a.step_ms)
 
 
 if __name__ == "__main__":

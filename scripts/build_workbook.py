@@ -31,6 +31,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 from gnm.config import load_config
+from gnm.export import v21
 from gnm.policy import analytic
 from gnm.policy.policies import reorder_point_from_row
 
@@ -153,12 +154,13 @@ def load_inputs() -> dict:
     kpis = json.loads((dd / "kpis.json").read_text())
     frontier = json.loads((dd / "frontier.json").read_text())
     manifest = json.loads((dd / "manifest.json").read_text())
+    method = json.loads((dd / "method.json").read_text())
     actions = json.loads((ROOT / "outputs" / "actions" / "actions.json").read_text())
     incidents = json.loads((ROOT / "outputs" / "aog_lab" / "incidents.json").read_text())
     ff = pd.read_parquet(ROOT / "outputs" / "forecasting" / "final_forecasts.parquet")
     p1 = pd.read_csv(ROOT / "outputs" / "policies" / "P1_stock_params.csv")
     return dict(cfg=cfg, pcfg=pcfg, parts=parts, rot=rot, kpis=kpis, frontier=frontier, manifest=manifest,
-                actions=actions, incidents=incidents, ff=ff, p1=p1)
+                actions=actions, incidents=incidents, ff=ff, p1=p1, method=method)
 
 
 def order_cost(pcfg: dict) -> float:
@@ -337,31 +339,62 @@ def sheet_readme(wb, d):
     section(ws, f"B{r}", f"Headline (v2 holdout, seeds {seeds[0]}–{seeds[-1]}, central world)")
     r += 1
     osr = core["outstation_rotables"]
+    dn = k["display_names"]
+    nm = lambda c: f"{dn[c]['display_name']} ({c})"  # noqa: E731  A3 display name + code tag
+    put(ws, f"C{r}", k["scope_line"], f=font("slate", 10, italic=True), align=Alignment(wrap_text=True))
+    r += 1
+    cap_t, sw, ins = k["capital_table"], k["stress_worlds"], k["frontier_insight"]
     lines = [
-        ("Core finding: P2",
-         f"Network positioning ({osr['P2']} vs {osr['P0']} outstation rotables) cuts expected material-related downtime "
-         f"by {_fmt_ci(core['aog_reduction'])} h/yr vs {core['baseline_label']}, for "
-         f"AED {core['capital_aed']['mean'] / 1e6:+.1f}M capital (paired 95% CI). It holds in all three worlds and "
-         "across the ×0.5–×2 hourly-rate range."),
-        ("Frontier option: I125",
-         f"If you invest an additional AED {fo['extra_capital_aed']['mean'] / 1e6:.1f}M, I125 cuts a further "
-         f"{_fmt_ci(fo['aog_reduction'], fmt='{:,.0f}')} h/yr vs P2 (paired 95% CI). Its lead over P2 is not significant "
-         "in cost if repair is 25% faster, and the rule's pick shifts to "
+        ("Plans compared",
+         " · ".join(nm(c) for c in POLICIES)
+         + ". The Simple Rulebook is a deliberately simplified starting point, not a model of a competent "
+         "airline."),
+        (f"Core finding: {dn['P2']['display_name']}",
+         f"The {nm('P2')} ({osr['P2']} vs {osr['P0']} outstation rotables) cuts expected downtime of aircraft waiting "
+         f"for a part by {_fmt_ci(core['aog_reduction'])} h/yr vs the {nm('P0')} (paired 95% CI). It holds in all three "
+         "stress worlds and across the ×0.5–×2 hourly-rate range. It is not a free move of stock: see the capital "
+         "table below."),
+        (f"Frontier option: {dn['I125']['display_name']}",
+         f"If you invest an additional AED {fo['extra_capital_aed']['mean'] / 1e6:.1f}M, the {nm('I125')} cuts a further "
+         f"{_fmt_ci(fo['aog_reduction'], fmt='{:,.0f}')} h/yr vs the {dn['P2']['display_name']} (paired 95% CI). Its "
+         "cost lead is not significant if repair is 25% faster, and the rule's pick shifts to "
          + " / ".join(f"{s['recommended']} at {s['setting'].replace('x', '×')}" for s in fo["rule_shifts"])
          + " the hourly rate."),
+        ("Insight", f"{ins['text']} Levers: {ins['levers_text']}."),
         ("Honest trade-off",
-         f"P2 has {abs(core['immediate_fill_pts']['mean']):.2f} pts lower immediate fill than P0 "
-         f"({core['immediate_fill_pts']['ci'][0]:.2f} to {core['immediate_fill_pts']['ci'][1]:.2f} pts); results "
-         "depend heavily on the AOG recovery routes (see the 'AOG recovery routes' sheet)."),
+         f"The {dn['P2']['display_name']} has {abs(core['immediate_fill_pts']['mean']):.2f} pts lower immediate fill "
+         f"than the {dn['P0']['short_name']} ({core['immediate_fill_pts']['ci'][0]:.2f} to "
+         f"{core['immediate_fill_pts']['ci'][1]:.2f} pts); results depend heavily on the AOG recovery routes (see the "
+         "'AOG recovery routes' sheet)."),
+        ("Stress worlds", f"The three simulated worlds differ only in {sw['text']}. {sw['ranges_note']}"),
+        ("Calibration", d["method"]["calibration_note"]["text"]),
+        ("How to read", k["reading_note"]),
         ("Archive note", "A v1 world was archived after a domain review; see archive/v1."),
     ]
     for a, b in lines:
-        put(ws, f"B{r}", a, f=font("ice", 11, bold=True))
+        put(ws, f"B{r}", a, f=font("ice", 11, bold=True), align=Alignment(wrap_text=True, vertical="top"))
         put(ws, f"C{r}", b, align=Alignment(wrap_text=True, vertical="top"))
-        ws.row_dimensions[r].height = 48
+        ws.row_dimensions[r].height = 64 if len(b) > 300 else 48
         r += 1
     r += 1
-    header_row(ws, r, 2, ["KPI", "Note", "P0 legacy", "P2 core", "I125 frontier option", "Provenance"])
+    section(ws, f"B{r}", f"Capital change, {nm(cap_t['from'])} → {nm(cap_t['to'])}")
+    r += 1
+    header_row(ws, r, 2, ["Line", "Amount", "Units", "AED (assumed value)", "", "Provenance"])
+    r += 1
+    for row_ in cap_t["rows"]:
+        put(ws, f"B{r}", row_["label"], f=font("ice", 11, bold=True), align=Alignment(wrap_text=True))
+        put(ws, f"C{r}", row_["text"], f=font("aero_teal", 11, bold=True))
+        if row_["units"] is not None:
+            put(ws, f"D{r}", row_["units"], fmt='+#,##0;-#,##0;0')
+        put(ws, f"E{r}", row_["aed"], fmt=AED)
+        prov(ws, f"G{r}", cap_t["provenance"])
+        r += 1
+    put(ws, f"C{r}", cap_t["note"], f=font("amber", 10, italic=True), align=Alignment(wrap_text=True))
+    r += 1
+    put(ws, f"C{r}", "Basis: " + cap_t["basis"], f=font("slate", 9, italic=True), align=Alignment(wrap_text=True))
+    ws.row_dimensions[r].height = 30
+    r += 2
+    header_row(ws, r, 2, ["KPI", "Note", nm("P0"), nm("P2"), nm("I125"), "Provenance"])
     r += 1
     labels = {"immediate_fill_rate": ("Immediate fill rate", PCT),
               "aog_hours": ("Expected material-related downtime h / year", INT),
@@ -372,7 +405,9 @@ def sheet_readme(wb, d):
             continue
         lab, fmt = labels[kp["id"]]
         put(ws, f"B{r}", lab, f=font("ice"))
-        put(ws, f"C{r}", f"mean over {kp['n_seeds']} holdout seeds (docs/data/kpis.json)", f=font("slate", 10, italic=True))
+        put(ws, f"C{r}", f"mean over {kp['n_seeds']} holdout seeds (docs/data/kpis.json)"
+            + (f" · {kp['scope']}" if kp.get("scope") else ""), f=font("slate", 10, italic=True),
+            align=Alignment(wrap_text=True))
         put(ws, f"D{r}", kp["baseline"], fmt=fmt)
         put(ws, f"E{r}", kp["value"], fmt=fmt, f=font("aero_teal", 11, bold=True))
         put(ws, f"F{r}", kp["reference"]["value"], fmt=fmt)
@@ -435,7 +470,8 @@ def sheet_parts(wb, d):
     paint(ws, n + 8, last_col + 1)
     ws.column_dimensions["A"].width = 3
     title(ws, f"Part list ({n} fictional PNs, v2 catalogue)",
-          "docs/data/parts.json · units: P0 legacy OEM-quote, P2 network (core finding), I125 frontier option "
+          "docs/data/parts.json · units: P0 = Simple Rulebook (naive reference), P2 = Network Plan (core finding), "
+          "I125 = Network Plan + Extra Spares (frontier option) "
           "(targets across all stations). Row 4 shows each column's provenance. " + WINDOW_NOTE)
     for i, (h, _, w, _, tag) in enumerate(cols):
         col = get_column_letter(i + 2)
@@ -529,7 +565,8 @@ def sheet_float(wb, d, n_ex):
     put(ws, "B6", "Policy for the base stock", f=font("ice", 11, bold=True))
     as_input(put(ws, "C6", "I125"))
     put(ws, "D5", f"=VLOOKUP($C$5,{exr},2,FALSE)", f=font("titanium", 11, italic=True))
-    put(ws, "D6", "P0 legacy OEM-quote · P1 local · P2 network (core) · I125 frontier option", f=font("slate", 9, italic=True))
+    put(ws, "D6", "P0 Simple Rulebook (naive reference) · P1 Each Airport for Itself (simplified local comparator) · "
+                  "P2 Network Plan · I125 Network Plan + Extra Spares", f=font("slate", 9, italic=True))
     dv = DataValidation(type="list", formula1=f"={pncol}", allow_blank=False)
     dv2 = DataValidation(type="list", formula1='"' + ",".join(POLICIES) + '"', allow_blank=False)
     ws.add_data_validation(dv)
@@ -1129,14 +1166,31 @@ def sheet_routes(wb, d):
     txt = ("Results depend heavily on these routes. ")
     if dep.get("p0_aog_hours") is not None:
         txt += (f"With the routes switched off (a structural stress, selection seeds), expected material-related "
-                f"downtime rises to about {dep['p0_aog_hours']:,.0f} h/yr for P0, {dep['base_aog_hours']:,.0f} for P2 and "
-                f"{dep['rec_aog_hours']:,.0f} for I125, against {dep['central_p0_aog_hours']:,.0f} / "
+                f"downtime rises to about {dep['p0_aog_hours']:,.0f} h/yr for the Simple Rulebook (P0), "
+                f"{dep['base_aog_hours']:,.0f} for the Network Plan (P2) and "
+                f"{dep['rec_aog_hours']:,.0f} for the Network Plan + Extra Spares (I125), against {dep['central_p0_aog_hours']:,.0f} / "
                 f"{dep['central_base_aog_hours']:,.0f} / {dep['central_rec_aog_hours']:,.0f} with them "
                 "(docs/data/frontier.json aog_desk_dependence).")
     put(ws, f"B{r}", txt, f=font("titanium", 10), align=Alignment(wrap_text=True, vertical="top"))
     ws.merge_cells(f"B{r}:H{r}")
     ws.row_dimensions[r].height = 48
     prov(ws, f"B{r + 1}", "SIMULATED")
+
+
+def text_gate(wb) -> None:
+    """v2.1 text rules (docs/agent_notes/v21_brief.md): scrub every text cell with the exporter's scrub (narrowbody /
+    widebody archetype names, forbidden words), then fail the build if anything is left."""
+    bad = []
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for c in row:
+                if isinstance(c.value, str) and not c.value.startswith("="):
+                    c.value = v21.scrub_text(c.value)
+                    for kind, pat in v21.FORBIDDEN_PATTERNS.items():
+                        if pat.search(c.value):
+                            bad.append((kind, ws.title, c.coordinate, c.value[:80]))
+    if bad:
+        raise SystemExit(f"workbook text gate failed: {bad[:5]}")
 
 
 def build(out: Path = OUT) -> Path:
@@ -1153,6 +1207,7 @@ def build(out: Path = OUT) -> Path:
     sheet_aog(wb, d)
     sheet_routes(wb, d)
     wb._sheets = [wb[n] for n in SHEETS]
+    text_gate(wb)
     for ws in wb.worksheets:
         ws.sheet_properties.tabColor = HEX["aero_teal"] if "calculator" in ws.title else HEX["deep_steel"]
     wb.properties.title = "GROUNDED NO MORE planner workbook (v2)"

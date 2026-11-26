@@ -9,7 +9,7 @@ cells = [
 **Why this notebook exists.** Every later result (forecasts, policies, the capital frontier) is only as credible as the simulated world it runs on. A hiring manager, or a sceptical materials planner, should be able to check five things before trusting any of it:
 
 1. the v2 realism corrections are really in the data (type-specific parts, hypothetical rectification windows, planned brake changes, no-fault-found, AOG recovery routes instead of an outright AOG buy);
-2. the legacy policy P0 was calibrated against a band fixed **before** any P1/P2 result existed, and we can see how that band was chosen;
+2. the starting-point policy, the Simple Rulebook (naive reference) `P0`, was calibrated against a band fixed **before** any P1/P2 result existed, and we can see how that band was chosen;
 3. P0 sits where it should in each of the three worlds (central, low stress, high stress);
 4. the books balance: stock, owned serials, borrowed units, robbery donors, requests and material AOG hours are conserved;
 5. the four *planted situations* (PS1–PS4) can be found in the public history without opening the hidden truth.
@@ -125,7 +125,7 @@ After calibration the vendor quotes are only mildly optimistic on average, with 
 ("md", """
 ## 3. Calibration: diagnosis, band and the V1 choice
 
-**Diagnosis first.** Before calibrating, a gap diagnosis compared P0's own on-paper availability with the simulated rotable fill (`outputs/calibration/v2_p0_gap_diagnosis.md`). It found two design mismatches and one bug, fixed as non-calibration corrections (V2-SIM-10..12). The main one: P0 sized its protection level on P(N ≤ S) while the engine measures immediate fill as P(N ≤ S − 1). Every other remaining gap was intended realism: optimistic quotes, outstation D0 demand that the legacy rule does not stock, and no-fault-found, which works in P0's favour.
+**Diagnosis first.** Before calibrating, a gap diagnosis compared P0's own on-paper availability with the simulated rotable fill (`outputs/calibration/v2_p0_gap_diagnosis.md`). It found two design mismatches and one bug, fixed as non-calibration corrections (V2-SIM-10..12). The main one: P0 sized its protection level on P(N ≤ S) while the engine measures immediate fill as P(N ≤ S − 1). Every other remaining gap was intended realism: optimistic quotes, outstation D0 demand that the Simple Rulebook does not stock, and no-fault-found, which works in P0's favour.
 """),
 ("code", '''
 gap = load_json("outputs/calibration/v2_p0_gap_diagnosis.json")
@@ -138,7 +138,9 @@ ex["fill_change_vs_as_built"] = ex.rotable_fill - base.rotable_fill
 print("One-factor-at-a-time counterfactuals (diagnostic runs, after the fixes, before calibration and before V2-SIM-13..15):")
 display(ex.sort_values("fill_change_vs_as_built", ascending=False).round(3))'''),
 ("md", """
-**The band (ASSUMED, chosen by the user after the diagnosis and before any P1/P2 result).** P0 network rotable immediate fill 0.78–0.85, material AOG 1,200–2,700 h/yr, 60–100 AOG events/yr: a legacy OEM-quote provisioning policy with no line-station units for low-volume D0 parts. Four candidate settings were measured in memory; the user's rule was *fewest changes that land inside the band*.
+**The band (ASSUMED, chosen by the user after the diagnosis and before any P1/P2 result).** P0 network rotable immediate fill 0.78–0.85, material AOG 1,200–2,700 h/yr, 60–100 AOG events/yr: a deliberately simple quote-based provisioning policy with no line-station units for low-volume D0 parts. Four candidate settings were measured in memory; the user's rule was *fewest changes that land inside the band*.
+
+The target range for the starting-point policy was an exploratory assumption chosen after diagnosing the model, not benchmarked against real airline KPIs. A line-kit variant (≈1,052 h) was measured but not adopted because it fell outside that range. All results are conditional on this choice.
 """),
 ("code", '''
 T = cfg_cal["targets"]
@@ -324,7 +326,7 @@ Four realistic problems were planted so that a good planning process should *fin
 ps1 = sqlf("07_d0_outstation_no_stock.sql")
 display(ps1[ps1.pn == PS["PS1"]][["station", "d0_requests", "d0_without_local_stock", "aog_events", "aog_hours", "p0_base_stock"]])'''),
 ("md", """
-Every D0 request for the nose wheel steering actuator at BOM found an empty shelf. P0 holds none there, because the *quoted* removal rate at BOM is below the legacy rule's threshold of 4 a year. Each request became material-related downtime while a unit flew in from AUH or came through a local borrow. This is exactly the gap that network positioning (P2) closes in notebook 03.
+Every D0 request for the nose wheel steering actuator at BOM found an empty shelf. P0 holds none there, because the *quoted* removal rate at BOM is below the Simple Rulebook's threshold of 4 a year. Each request became material-related downtime while a unit flew in from AUH or came through a local borrow. This is exactly the gap that network positioning (P2) closes in notebook 03.
 
 ### PS2: repair orders stuck at the EU vendor
 """),

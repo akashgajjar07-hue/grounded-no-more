@@ -8,13 +8,17 @@ cells = [
 
 **The decision.** How should Falcon Hub Airways position its spare parts across the AUH hub and six outstations? Three policies were frozen before the holdout:
 
-* **P0, legacy:** OEM-recommended provisioning on quoted data. A Poisson protection level at AUH, plus a line-station unit only where a D0 part has at least 4 quoted removals a year at that station. In practice this is **a legacy OEM-quote policy holding only 8 outstation rotables**.
-* **P1, local:** each station optimised on its own, from the history-based forecasts.
-* **P2, network:** the same forecasts, but positioned as a network: a pooled hub float plus outstation units where the value of avoiding a D0 miss (hub transfer, local borrow, exchange/loan odds, the hourly rate and the fixed cost per event) justifies the holding cost.
+* **Simple Rulebook (naive reference) `P0`:** provisioning on the supplier's quoted data. A Poisson protection level at AUH, plus a line-station unit only where a D0 part has at least 4 quoted removals a year at that station. It holds only 8 outstation rotables: a deliberately simplified starting point, not a model of a competent airline.
+* **Each Airport for Itself (simplified local comparator) `P1`:** each station sized on its own, from the history-based forecasts.
+* **Network Plan `P2`:** the same forecasts, but positioned as a network: a pooled hub float plus outstation units where the value of avoiding a D0 miss (hub transfer, local borrow, exchange/loan odds, the hourly rate and the fixed cost per event) justifies the holding cost.
 
-**Core finding: P2.** Network positioning cuts material AOG hours against P0 by a large, significant amount for a small amount of extra capital, in all three worlds and across the ×0.5–×2 hourly-rate range (section 1). **Frontier option: I125.** If the airline invests an additional AED 7.6M, the optimiser's recommended point cuts downtime further, with sensitivities that are shown, not hidden (sections 3–6).
+**Core finding: Network Plan `P2`.** Network positioning cuts material AOG hours against the Simple Rulebook `P0` by a large, significant amount for a small amount of extra capital, in all three worlds and across the ×0.5–×2 hourly-rate range (section 1). **Frontier option: Network Plan + Extra Spares `I125`.** If the airline invests an additional AED 7.6M, the optimiser's recommended point cuts downtime further, with sensitivities that are shown, not hidden (sections 3–6).
 
 Headline numbers come from the **v2 holdout** (seeds 2000–2019, never used for any choice), central world unless stated. Selection-seed numbers (100–119) are labelled as such. A v1 world was archived after a domain review; see `archive/v1`.
+
+*across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part*
+
+> How to read these numbers: simulated downtime of the aircraft waiting for the part, across 120 modelled part numbers. Downtime of aircraft that donated a part (cannibalisation) is shown separately, not included. The Simple Rulebook is a deliberately simplified starting point, not a model of a competent airline. Part costs, reliability and sourcing are assumed. These are not forecasts of achievable airline savings.
 """),
 ("code", SETUP + '''
 ps = load_json("outputs/holdout/policy_summary.json")
@@ -31,7 +35,7 @@ print("outstation rotable units at target (central plans):", out)
 assert out == kp["headline"]["core"]["outstation_rotables"]'''),
 
 ("md", """
-## 1. Core finding: P2 against the legacy baseline, on the holdout
+## 1. Core finding: Network Plan `P2` against the Simple Rulebook `P0`, on the holdout
 
 Means over 20 holdout seeds with 95% intervals; the paired differences use the same seeds and the same per-request random numbers for every policy, so they are much tighter than the raw intervals.
 """),
@@ -315,9 +319,9 @@ The ranking survives (P2 and I125 still beat P0 by a wide margin), but the absol
 
 ## Summary
 
-* **Core finding: P2.** Network positioning, with 44 instead of 8 outstation rotables, cuts material AOG hours sharply against a legacy OEM-quote policy holding only 8 outstation rotables, for a small capital increase. It holds in all three worlds and across the ×0.5–×2 hourly-rate range (section 1). The cost is a slightly lower immediate fill on cheap count parts.
-* **Frontier option: I125.** If you invest an additional AED 7.6M, I125 cuts downtime further, significantly on paired holdout seeds. Its lead over P2 is not significant in cost if repair is 25% faster, and the rule's pick shifts to I110 / B150 at ×0.5 / ×2 the hourly rate. The post-plan stress check keeps its advantage in both stress worlds.
-* Selection and holdout agree, the guardrails cost little, spares beat TAT cuts on most rotables, and every result depends on the AOG recovery routes being available.
+* **Core finding: Network Plan `P2`.** Network positioning, with 44 instead of 8 outstation rotables, cuts material AOG hours sharply against the Simple Rulebook (naive reference) `P0`. It is not a free move of stock: new rotables bought +68 units ≈ AED 8.4M assumed value; rotables removed −20 units ≈ AED 3.1M; net change in average simulated spare inventory +AED 0.6M. Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a discount. It holds in all three worlds and across the ×0.5–×2 hourly-rate range (section 1). The cost is a slightly lower immediate fill on cheap count parts.
+* **Frontier option: Network Plan + Extra Spares `I125`.** If you invest an additional AED 7.6M, I125 cuts downtime further, significantly on paired holdout seeds. Its lead over P2 is not significant in cost if repair is 25% faster, and the rule's pick shifts to I110 / B150 at ×0.5 / ×2 the hourly rate. The post-plan stress check keeps its advantage in both stress worlds.
+* Selection and holdout agree, the guardrails cost little, spares beat TAT cuts on most rotables (yet faster repair can beat buying spares: with 25% shorter repair time, the extra-investment option loses its clear cost advantage), and every result depends on the AOG recovery routes being available.
 
 *Independent educational simulation. Not an airline system or an approved maintenance, airworthiness or dispatch tool.*
 """),

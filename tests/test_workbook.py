@@ -103,12 +103,32 @@ def test_wording_rules_and_v2_framing(wb, inputs):
     for inc_id in {i["id"] for i in inputs["incidents"]["incidents"]} - used:
         assert f"Worked incident {inc_id}" not in txt
     assert "simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions" in txt
-    assert "a legacy OEM-quote policy holding only 8 outstation rotables" in txt
+    k = inputs["kpis"]
+    for code in ("P0", "P1", "P2", "I125"):
+        assert k["display_names"][code]["display_name"] in txt, code
+    assert "legacy OEM-quote" not in txt and "P0 legacy" not in txt
+    assert k["scope_line"] in txt and k["reading_note"] in txt
+    for row in k["capital_table"]["rows"]:
+        assert row["text"] in txt, row["id"]
+    assert k["capital_table"]["note"] in txt
+    assert k["stress_worlds"]["text"] in txt and k["stress_worlds"]["ranges_note"] in txt
+    assert k["frontier_insight"]["text"] in txt
     assert "if you invest an additional aed" in low
     assert txt.count("A v1 world was archived after a domain review; see archive/v1") == 1
     assert "material shortage exposure" in low and "simulated planning snapshot" in low
     seeds = inputs["kpis"]["seeds"]
     assert f"seeds {seeds[0]}–{seeds[-1]}" in txt
+
+
+def test_v21_text_gate(wb):
+    """No OEM names, airline brand or forbidden words anywhere in the workbook text (v2.1 brief)."""
+    from gnm.export import v21
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for c in row:
+                if isinstance(c.value, str) and not c.value.startswith("="):
+                    for kind, pat in v21.FORBIDDEN_PATTERNS.items():
+                        assert not pat.search(c.value), (kind, ws.title, c.coordinate, c.value[:80])
 
 
 def test_design_tokens_applied(wb):
