@@ -1,0 +1,30 @@
+pn,description,part_class,kit_lines,aircraft,qty_due,first_due_week,last_due_week,auh_on_hand,auh_after_kits,status
+GN-34-C023,Connector backshell kit – variant B,C,6,6,15,100,102,0,-15,SHORT
+GN-24-C020,Fuse (5 A),C,2,2,5,100,102,9,4,covered
+GN-21-C002,Recirculation air filter element,C,5,5,10,100,102,17,7,covered
+GN-29-C028,Hydraulic filter element – variant B,C,7,7,14,100,102,22,8,covered
+GN-33-C030,Cabin lighting lamp,C,7,7,20,100,102,29,9,covered
+GN-33-C025,Reading light lamp,C,9,9,26,100,101,38,12,covered
+GN-30-C037,Rain repellent cartridge,C,2,2,5,100,101,18,13,covered
+GN-27-C021,Grease cartridge (flight controls),C,7,7,17,100,101,32,15,covered
+GN-21-C032,Duct gasket set,C,2,2,6,100,101,22,16,covered
+GN-34-C014,Pitot probe cover seal – variant B,C,8,8,22,100,101,41,19,covered
+GN-36-C042,Pneumatic duct seal ring – variant B,C,6,6,10,100,102,31,21,covered
+GN-24-C045,Indicator lamp,C,3,3,6,101,102,28,22,covered
+GN-35-C041,Crew mask hose seal,C,1,1,1,100,100,34,33,covered
+GN-29-C007,Hydraulic O-ring kit,C,4,4,13,101,102,49,36,covered
+GN-49-C008,APU oil filter element,C,3,3,5,100,100,41,36,covered
+GN-34-C001,Pitot probe cover seal,C,3,3,5,100,102,43,38,covered
+GN-28-C044,Fuel pump seal kit,C,3,3,6,100,101,49,43,covered
+GN-29-C035,Hydraulic O-ring kit – variant B,C,2,2,2,100,100,47,45,covered
+GN-32-C005,Wheel bearing grease,C,6,6,16,100,101,62,46,covered
+GN-21-C003,Water extractor coalescer bag,C,4,4,9,100,102,56,47,covered
+GN-21-C038,Recirculation air filter element – variant B,C,10,10,26,100,102,77,51,covered
+GN-33-C031,Light lens gasket,C,6,6,16,100,101,70,54,covered
+GN-32-C043,Axle nut lock kit,C,9,9,26,100,102,82,56,covered
+GN-34-C011,Connector backshell kit,C,1,1,4,102,102,62,58,covered
+GN-36-C029,Pneumatic gasket kit,C,8,8,24,100,102,101,77,covered
+GN-30-C024,Wiper blade,C,4,4,8,100,101,113,105,covered
+GN-28-C034,Fuel filter element,C,4,4,11,100,101,133,122,covered
+GN-29-C006,Hydraulic filter element,C,5,5,13,100,102,139,126,covered
+GN-21-C010,Duct clamp seal kit,C,7,7,12,100,102,466,454,covered
