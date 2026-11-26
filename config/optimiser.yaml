@@ -1,50 +1,76 @@
-# GROUNDED NO MORE — optimiser (Aviation Readiness Frontier) parameters.
-# Economics (AOG penalty, carrying cost, repair acceleration cost) are NOT duplicated here:
-# they are read from config/assumptions.yaml (locked). Everything below is ASSUMED, chosen
-# before any frontier result was seen, and documented in docs/agent_notes/optimiser.md.
+# GROUNDED NO MORE — optimiser (Aviation Readiness Frontier) parameters, v2.
+# Economics (hourly downtime rate, fixed cost per event, carrying cost, AOG-route terms, fitting hours) are
+# NOT duplicated here: they are read from the locked config/assumptions.yaml. Everything below is ASSUMED
+# and was written BEFORE any v2 frontier result was computed (V2-OPT-1..). See docs/agent_notes/optimiser.md.
 
 demand_inputs:
   source: forecasts                # forecasts (outputs/forecasting/final_forecasts.parquet) | history | <path>
-  history_weeks: [0, 103]          # rate window (history only; never weeks >= 104)
-  pipeline_ro_removed_before_week: 78   # ROs removed before this week are (nearly) all closed by week 103
-  lead_time_recent_from_week: 52   # C/E hub lead time = mean of reorder POs placed from this week (>= 2 POs), else quoted
-  base_policy: P2                  # P0 | P1 | P2 — starting allocation (C/E params + network rules); greedy reallocates rotables
+  history_weeks: [0, 103]          # history window (work-days estimate only in v2; never weeks >= 104)
+  pipeline_ro_removed_before_week: 78   # OPT-8 completed-RO window (work days for the TAT lever)
+  lead_time_recent_from_week: 52   # history C/E lead time (history source only)
+  base_policy: P2                  # starting allocation (C/E params + network rules); greedy re-allocates rotables
   reference_policies: [P0, P1, P2] # evaluated and frozen as labelled reference points (kind = policy)
   provenance: ASSUMED
 
 model:
-  include_count_parts: true        # also offer C/E (s,S) +1 safety-stock increments (D0/D3 demand only)
+  include_count_parts: true        # also offer C/E (s,S) +1 increments (D0/D3 demand only)
   count_part_classes_with_value: [D0, D3]
-  rotable_min_hub_ready_rate: 0.10 # planner floor: rotable hub float >= smallest S with P(pipeline < S) >= 0.10
-                                   # (the AOG desk's 5-day expedite buy is for exceptions, not routine supply)
-  max_outstation_units: 4          # rotable base-stock ceiling at an outstation
-  hub_ceiling_sd: 6                # rotable hub ceiling = ceil(mu + k*sqrt(mu)) + 2
-  count_part_max_increments_sd: 3  # C/E increments per station <= ceil(k*sqrt(mu)) + 2
+  expedite_self_healing: false     # v1 drift model; v2 has no outright AOG buy (loans never join the pool)
+  rotable_min_hub_ready_rate: 0.10 # planner floor on Palm's TOTAL hub level: P(pipeline <= S-1) >= 0.10
+  max_outstation_units: 4          # technical ceiling before the guardrails
+  hub_ceiling_sd: 6
+  count_part_max_increments_sd: 3
+  provenance: ASSUMED
+
+guardrails:                        # AV-09 (user scope). Stated before computing; applied as hard greedy ceilings.
+  enabled: true
+  # G1 stocking-point cap: at each stocking point the Palm TOTAL (hub: base_stock + engine loop units;
+  # outstation: base_stock) may not exceed the 99.5 % fill quantile of that point's own pipeline,
+  # smallest S with P(Poisson(mu) <= S-1) >= 0.995. Hub mu = network pipeline mean (sum_j lambda_j T_j);
+  # outstation mu = station rate x routine resupply days.
+  fill_quantile: 0.995
+  # G2 low-rate outstation cap: a station whose annual demand for the PN is <= 6/yr holds at most 1 unit.
+  low_rate_per_year: 6.0
+  low_rate_max_units: 1
+  # Overrides need a written reason: {"PN@STATION": {max_units: n, reason: "..."}}. None are set.
+  overrides: {}
+  rationale: >-
+    A planner does not stack stock far beyond the pipeline a stocking point actually sees: above the 99.5 %
+    quantile the stock-out tail is cheaper to cover by exchange/loan, robbery or local borrow (the v2 routes)
+    than by owning idle units that need shelf space, inspection and shelf-life checks. One unit at a
+    low-volume line station covers the first failure; the rest comes from AUH or the AOG desk (review AV-09).
+    Applied to rotables only; C/E (s,S) levels are lead-time quantities of cheap items and keep their caps.
   provenance: ASSUMED
 
 frontier:
-  rotable_start: zero              # zero = re-optimise the rotable float from 0; base = only add/remove vs the base policy
-  budget_fractions: [0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5]   # x base (P2) allocation capital; rotable floor ~0.13
-  incremental_fractions: [1.1, 1.25]   # extra "base + greedy additions" candidates (no reallocation)
+  rotable_start: zero              # zero = re-optimise the rotable float from its floor
+  budget_fractions: [0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5]   # x base (P2) allocation capital
+  incremental_fractions: [1.1, 1.25]   # "P2 + greedy additions only" candidates
   scenario_weeks: [78, 155]
   kpi_weeks: [104, 155]
   ci_level: 0.95
   variants: [central, low_stress, high_stress]
-  full_variant_sweeps: true        # evaluate every candidate on the stress variants (engine is fast)
+  full_variant_sweeps: false       # lead's scope: the recommended point + P2 + P0 on the stress worlds
   processes: null                  # null = cpu_count - 1
+  # Recommendation rule (unchanged in form, stated before computing): walk the lower convex hull of the
+  # non-dominated capital-only candidates; stop at the first segment whose downtime-hour reduction per extra
+  # AED 1 M falls below the break-even h* = carrying % x AED 1 M / (AED per downtime hour). v2 cost structure:
+  # AED per downtime hour = the base policy's (P2) realised (hourly rate x hours + fixed cost per event)
+  # / downtime hours on the selection seeds, i.e. the fixed per-event cost is spread over the hours it comes
+  # with. Route fees are not part of the penalty and are not in h*.
   provenance: ASSUMED
 
 levers:
   tat_cut_days: 10
   extra_spares: [1, 2]
-  max_cut_share_of_work: 0.5       # a TAT cut may remove at most half of the shop work time
-  tat_top_n: 8                     # "TAT -10 d on top-N" lever candidate
+  max_cut_share_of_work: 0.5
+  tat_top_n: 8
   provenance: ASSUMED
 
-tornado:
-  aog_penalty_factors: [0.5, 2.0]
-  tat_factors: [0.75, 1.25]        # applied in the engine via repair_tat_multiplier (all rotables), NOT costed as acceleration
-  lead_time_factors: [0.75, 1.25]  # applied by scaling the Scenario's pre-sampled lead-time draws (copy; sim code untouched)
+tornado:                           # one-at-a-time sensitivities on the recommended point vs P2 and vs P0
+  aog_penalty_factors: [0.5, 2.0]  # hourly rate only; the fixed per-event cost stays x1 (V2-POL-5)
+  tat_factors: [0.75, 1.25]        # repair_tat_multiplier on all rotables, every policy
+  lead_time_factors: [0.75, 1.25]  # Scenario lead-time draws scaled on a copy (sim code untouched)
   carrying_cost: [0.15, 0.25]
-  expedite_off: true               # stress test: no AOG-desk expedite buying (PolicySpec flag), both policies
+  expedite_off: true               # structural stress: PolicySpec.expedite_purchase_on_aog=False disables the v2 AOG routes
   provenance: ASSUMED

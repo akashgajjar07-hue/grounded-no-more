@@ -161,45 +161,50 @@ FORECASTS = ROOT / "outputs" / "forecasting" / "final_forecasts.parquet"
 
 
 def forecast_demand_inputs(path: Path | str = FORECASTS, history_dir: Path | str = HISTORY) -> pd.DataFrame:
-    """Demand inputs from the frozen champion-forecast table (outputs/forecasting/final_forecasts.parquet).
+    """v2 demand inputs from the frozen champion-forecast table (outputs/forecasting/final_forecasts.parquet).
 
-    * Rotables: the reliability-exposure removal rate per station (``removal_rate_day``), as P1/P2 use (POL-3).
-    * C/E: the champion's weekly rate per station / 7 (hub row = hub-local demand; network demand at the hub
-      is rebuilt by the model as the sum over stations).
-    * Deadline split per row: D0 = p_d0, D10 = p_d10, D3 = the rest.
-    * Rotable pipeline / work days: the OPT-8 robust history estimate (10%-trimmed mean of COMPLETED ROs);
-      PNs without completed ROs fall back to the forecast table's t_eff (rotable_pipeline.csv).
-    * C/E lead time: the hub row's planner lead-time estimate (catches PS4).
+    * Rotables: the reliability-exposure removal rate per station (``removal_rate_day``), as P1/P2 (POL-3).
+    * C/E: the champion's weekly rate per station / 7 (the model rebuilds the hub's network demand).
+    * Window split per row: D0 = p_d0, D10 = p_d10, D3 = the rest. Class NONE (servicing fluids) is dropped:
+      it never drives downtime (V2-SIM-2, V2-POL-2).
+    * Rotable pipeline: the forecast table's ``pipeline_days`` per station (the v2 / P1-P2 definition: hub
+      T_eff at AUH, T_eff_out at outstations; V2-SIM-10/11, V2-POL-3). Work days (TAT lever): OPT-8 history
+      estimate (10%-trimmed mean of completed ROs), quoted TAT if none.
+    * Extra columns carried to the model: aog_penalty_aed_h, aog_event_cost_aed, nb_share (single archetype
+      for type-exclusive PNs).
     """
     ff = pd.read_parquet(path)
     hist = history_demand_inputs(history_dir)
-    per_pn = hist.groupby("pn")[["pipeline_days", "work_days"]].first()
+    work = hist.groupby("pn").work_days.first()
     hub = load_config_hub()
     lt_hub = ff[ff.station == hub].set_index("pn").lead_time_d
-    teff = ff[ff.station == hub].set_index("pn").get("t_eff_hub_d")
     pm = _read("part_master", history_dir).set_index("pn")
     rows = []
     for r in ff.itertuples(index=False):
         pc = r.part_class
+        if r.deadline_class == "NONE":
+            continue
         rate = float(r.removal_rate_day) if pc == "R" else float(r.weekly_rate) / 7.0
         if not np.isfinite(rate) or rate <= 0:
             continue
         p0 = float(np.nan_to_num(r.p_d0))
         p10 = float(np.nan_to_num(r.p_d10))
         split = {"D0": p0, "D10": p10, "D3": max(0.0, 1.0 - p0 - p10)}
-        pipe = per_pn.pipeline_days.get(r.pn, np.nan)
-        work = per_pn.work_days.get(r.pn, np.nan)
-        if pc == "R" and (pipe is None or not np.isfinite(pipe)):
-            pipe = float(teff.get(r.pn)) if teff is not None else float(pm.loc[r.pn, "repair_tat_mean_d"])
-            work = float(pm.loc[r.pn, "repair_tat_mean_d"])
+        wd = work.get(r.pn, np.nan)
+        if pc == "R" and not np.isfinite(wd):
+            wd = float(pm.loc[r.pn, "repair_tat_mean_d"])
         for dc, sh in split.items():
             if sh <= 0:
                 continue
             rows.append({"pn": r.pn, "station": r.station, "deadline_class": dc, "rate_per_day": rate * sh,
-                         "pipeline_days": pipe if pc == "R" else np.nan, "work_days": work if pc == "R" else np.nan,
+                         "pipeline_days": float(r.pipeline_days) if pc == "R" else np.nan,
+                         "work_days": wd if pc == "R" else np.nan,
                          "lead_time_days": float(lt_hub.get(r.pn, pm.loc[r.pn, "lead_time_mean_d"])),
-                         "unit_cost": float(pm.loc[r.pn, "unit_cost_aed"]), "part_class": pc})
-    return pd.DataFrame(rows)[COLUMNS].sort_values(["pn", "station", "deadline_class"]).reset_index(drop=True)
+                         "unit_cost": float(pm.loc[r.pn, "unit_cost_aed"]), "part_class": pc,
+                         "aog_penalty_aed_h": float(r.aog_penalty_aed_h),
+                         "aog_event_cost_aed": float(r.aog_event_cost_aed), "nb_share": float(r.nb_share)})
+    extra = ["aog_penalty_aed_h", "aog_event_cost_aed", "nb_share"]
+    return pd.DataFrame(rows)[COLUMNS + extra].sort_values(["pn", "station", "deadline_class"]).reset_index(drop=True)
 
 
 def load_config_hub() -> str:

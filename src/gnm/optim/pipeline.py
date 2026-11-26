@@ -16,11 +16,13 @@ from gnm.optim.frontier import (OUT_DIR, RECOMMENDATION_RULE, build_candidates, 
 from gnm.optim.inputs import load_demand_inputs, load_opt_config
 
 
-AOG_DESK_NOTE = ("Every policy here, P0/P1/P2 included, leans on the engine's AOG-desk emergency buy (SIM-5: an "
-                 "expedited rotable arrives in at most 5 days at a 15% premium), which in practice means access to "
-                 "an AOG exchange/loan market; with that switched off, material AOG rises by one to two orders of "
-                 "magnitude for every policy (tornado row 'aog_desk_expedite off'), so the frontier is conditional on "
-                 "such a market existing for each PN.")
+AOG_DESK_NOTE = ("Every policy here, P0/P1/P2 included, relies on the v2 AOG-desk routes (V2-SIM-5/14, config "
+                 "aog_sourcing, ASSUMED): robbery at AUH (engineering/quality approval required), local borrow at "
+                 "outstations and exchange/loan by fleet, retried every 72 h for rotables, plus local buy for C/E; "
+                 "in practice this means access to an AOG exchange/loan market and to borrow agreements. Borrowed "
+                 "units never join the owned pool. With the routes switched off (tornado row 'aog_desk_expedite off'), "
+                 "expected material-related downtime rises sharply for every policy, so the frontier is conditional "
+                 "on those markets existing at the assumed availability.")
 
 
 def _points(long, cands, base_id, level, p0_id=None):
@@ -176,7 +178,7 @@ def run_frontier(out_dir: Path | str = OUT_DIR, base_policy: PolicySpec | None =
         var_long.append(lv)
         pv["variant"] = v
         var_pts.append(pv)
-        vr = recommend(pv, ctx.carry, _aed_per_h(lv, base_id)) if len(vp) > 2 else None
+        vr = recommend(pv, ctx.carry, _aed_per_h(lv, base_id)) if fc.get("full_variant_sweeps", True) else None
         var_summary[v] = {"recommended_point_vs_base_policy": _net_benefit(lv, base_id, rid, level),
                           "recommended_point_vs_P0": _net_benefit(lv, p0_id, rid, level),
                           "references": {i: {"capital_mean": float(pv.set_index("id").loc[i, "capital_mean"]),
@@ -199,7 +201,8 @@ def run_frontier(out_dir: Path | str = OUT_DIR, base_policy: PolicySpec | None =
     tornado.to_csv(out / "tornado.csv", index=False)
     allocs = {c.cid: allocation_rows(ctx, c) for c in cands if c.kind != "policy"}
     (out / "allocations.json").write_text(json.dumps({"provenance": "SIMULATED", "base_policy_id": base_policy.policy_id,
-                                                      "note": "rows only where proposed != current (base policy). "
+                                                      "note": "rows only where proposed != current (base policy). Rotable rows show total spares = "
+                                                              "base stock + engine loop units (hub) next to every base stock. "
                                                               "modelled_aog_hour_reduction = leave-one-out on the "
                                                               "analytic model, not simulated.",
                                                       "allocations": allocs}, indent=1, default=float))
@@ -210,6 +213,11 @@ def run_frontier(out_dir: Path | str = OUT_DIR, base_policy: PolicySpec | None =
                       + [{"direction": "up", "pn": s.pn, "station": s.station, "capital_aed": s.capital,
                           "model_aog_hours": s.aog_hours, "ratio": s.ratio} for s in ctx.path.up])
     gp.to_csv(out / "greedy_path.csv", index=False)
+    from gnm.optim.frontier import rotable_totals
+    rt = pd.DataFrame([r for c in cands for r in rotable_totals(ctx, c)])
+    rt.to_csv(out / "rotable_totals.csv", index=False)
+    guard_viol = {c.cid: sorted(set(rt[(rt.candidate == c.cid) & (rt.exceeds_guardrail_at != "")].pn))
+                  for c in cands}
 
     rp = pts_c.set_index("id")
     tat_label = f"tat_cut_{int(round(float(oc['levers']['tat_cut_days'])))}d"
@@ -238,6 +246,10 @@ def run_frontier(out_dir: Path | str = OUT_DIR, base_policy: PolicySpec | None =
                                          "rule": "rotable PN whose proposed network units > 2 x P0 units (or >= 2 "
                                                  "when P0 holds 0); reason recorded per row in allocations.json"},
         "aog_desk_dependence": AOG_DESK_NOTE,
+        "guardrails": {"config": ctx.guard, "pns_exceeding_by_candidate": guard_viol},
+        "break_even": {"formula": "h* = carrying % x AED 1M / (P2 realised (hourly penalty + fixed per-event "
+                                  "cost) per downtime hour)", "aed_per_downtime_hour": aed_h,
+                       "h_star_per_aed_1m": ctx.carry * 1e6 / aed_h},
         "lever_findings": {"tat_vs_buy_1": lever_findings(ctx.levers, tat_label, "buy_1"),
                            "tat_vs_buy_2": lever_findings(ctx.levers, tat_label, "buy_2")},
         "model_vs_sim_corr_aog": float(np.corrcoef(pts_c.model_aog_hours, pts_c.aog_hours_mean)[0, 1]),

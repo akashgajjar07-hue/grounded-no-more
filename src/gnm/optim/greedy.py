@@ -119,12 +119,52 @@ def allocation_capital(items: dict[str, ItemModel], levels: dict[str, np.ndarray
     return tot
 
 
+def guardrail_caps(it: ItemModel, guard: dict) -> tuple[np.ndarray, list[str]]:
+    """AV-09 planner guardrails for one rotable PN, in engine base_stock units per station.
+
+    G1 (stocking-point cap): Palm total at each stocking point <= the 99.5 % fill quantile of its own
+       pipeline, i.e. the smallest S with P(Poisson(mu) <= S-1) >= q. Hub: total = base_stock + loop units,
+       mu = network pipeline mean; outstation j: mu = lambda_j x routine resupply days.
+    G2 (low-rate outstation cap): an outstation whose annual rate <= `low_rate_per_year` holds <= 1 unit.
+    Overrides: guard["overrides"]["PN@STATION"] = {"max_units": n, "reason": "..."} (a reason is required).
+    Returns (caps, reasons-per-station)."""
+    from gnm.optim.model import poisson_fill_quantile
+    J = len(it.stations)
+    q = float(guard.get("fill_quantile", 0.995))
+    lam = it.rates.sum(axis=1)
+    caps = np.zeros(J, dtype=int)
+    why = [""] * J
+    mu0 = it.hub_mu()
+    caps[0] = max(0, poisson_fill_quantile(mu0, q) - int(it.loop_units))
+    why[0] = f"G1: total {caps[0] + it.loop_units} = Q{q:.3f}(mu {mu0:.2f})"
+    for j in range(1, J):
+        if lam[j] <= 0:
+            caps[j], why[j] = 0, "no demand"
+            continue
+        caps[j] = poisson_fill_quantile(lam[j] * it.route_days, q)
+        why[j] = f"G1: Q{q:.3f}(mu {lam[j] * it.route_days:.3f})"
+        if lam[j] * 365.0 <= float(guard.get("low_rate_per_year", 6.0)):
+            lim = int(guard.get("low_rate_max_units", 1))
+            if caps[j] > lim:
+                caps[j], why[j] = lim, f"G2: station rate {lam[j] * 365:.1f}/yr <= {guard.get('low_rate_per_year', 6.0)}"
+    for key, ov in (guard.get("overrides") or {}).items():
+        pn, st = key.split("@")
+        if pn == it.pn and st in it.stations:
+            if not str(ov.get("reason", "")).strip():
+                raise ValueError(f"guardrail override {key} needs a written reason")
+            j = it.stations.index(st)
+            caps[j], why[j] = int(ov["max_units"]), f"override: {ov['reason']}"
+    return caps, why
+
+
 def default_bounds(items: dict[str, ItemModel], base: dict[str, np.ndarray], start: dict[str, np.ndarray],
-                   max_out: int = 4, hub_sd: float = 6.0, ce_sd: float = 3.0, min_hub_ready: float = 0.0):
+                   max_out: int = 4, hub_sd: float = 6.0, ce_sd: float = 3.0, min_hub_ready: float = 0.0,
+                   guard: dict | None = None):
     """(floor, ceiling) per PN. Rotable floor 0 (hub: `min_hub_ready` ready-rate floor if > 0), C/E floor =
     base (C/E are only ever increased).
     Ceilings: rotable hub ceil(mu + k sd) + 2, outstations `max_out` where there is demand; C/E base +
-    ceil(k sqrt(mu)) + 2. Ceilings never cut below the base or start level."""
+    ceil(k sqrt(mu)) + 2. Without `guard`, ceilings never cut below the base or start level; with `guard`
+    the rotable AV-09 caps (guardrail_caps) bind strictly."""
     floors, ceils = {}, {}
     for pn, it in items.items():
         J = len(it.stations)
@@ -143,7 +183,11 @@ def default_bounds(items: dict[str, ItemModel], base: dict[str, np.ndarray], sta
             for j in range(J):
                 mu = lam[j] * (it.resupply_days if j == 0 else it.route_days)
                 ce[j] = base[pn][j] + (int(math.ceil(ce_sd * math.sqrt(mu))) + 2 if lam[j] > 0 else 0)
-        ce = np.maximum(ce, np.maximum(base[pn], start[pn]))
+        if it.is_rotable and guard:
+            # AV-09 guardrails bind strictly (even below the base policy); never below the floor
+            ce = np.maximum(np.minimum(ce, guardrail_caps(it, guard)[0]), fl)
+        else:
+            ce = np.maximum(ce, np.maximum(base[pn], start[pn]))
         floors[pn], ceils[pn] = fl, ce
     return floors, ceils
 
@@ -220,7 +264,8 @@ def greedy_path(items: dict[str, ItemModel], start: dict[str, np.ndarray], floor
     return path
 
 
-def reposition_only(items: dict[str, ItemModel], levels: dict[str, np.ndarray]) -> tuple[dict, list]:
+def reposition_only(items: dict[str, ItemModel], levels: dict[str, np.ndarray],
+                    ceils: dict | None = None) -> tuple[dict, list]:
     """Zero-capital lever: move existing rotable units hub -> outstation while the model says it
     reduces delay cost (best move first, per PN). Returns new levels and the list of moves."""
     out = {k: v.copy() for k, v in levels.items()}
@@ -235,7 +280,7 @@ def reposition_only(items: dict[str, ItemModel], levels: dict[str, np.ndarray]) 
             cur_h = it.aog_hours(lv)
             best = None
             for j in range(1, len(lv)):
-                if it.rates[j].sum() <= 0:
+                if it.rates[j].sum() <= 0 or (ceils is not None and lv[j] >= ceils[pn][j]):
                     continue
                 lv[0] -= 1
                 lv[j] += 1

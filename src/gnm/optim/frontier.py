@@ -26,7 +26,7 @@ from scipy import stats
 
 from gnm.config import OUTPUTS, load_config, seeds as cfg_seeds
 from gnm.contracts import PolicySpec, World
-from gnm.optim.greedy import allocation_capital, default_bounds, greedy_path, reposition_only
+from gnm.optim.greedy import allocation_capital, default_bounds, greedy_path, guardrail_caps, reposition_only
 from gnm.optim.inputs import load_demand_inputs, load_opt_config, penalty_per_hour_by_pn
 from gnm.optim.levers import best_actions, lever_findings, lever_table, tat_multiplier
 from gnm.optim.model import ItemModel, base_levels, build_items
@@ -104,6 +104,9 @@ class Context:
     ref_levels: dict = field(default_factory=dict)     # id -> {pn: levels}
     p0_levels: dict = field(default_factory=dict)
     ref_model_aog: dict = field(default_factory=dict)
+    guard: dict | None = None
+    ceils: dict = field(default_factory=dict)
+    base_guarded: dict = field(default_factory=dict)
 
 
 def reference_policies(world: World, ids=("P0", "P1", "P2"), forecasts: pd.DataFrame | None = None) -> dict:
@@ -141,14 +144,17 @@ def prepare(world: World, base_policy: PolicySpec, demand: pd.DataFrame | None =
         return build_items(demand, world, pol, pen, include_count_parts=bool(mc["include_count_parts"]),
                            value_classes=tuple(mc["count_part_classes_with_value"]),
                            warmup_weeks=float(cal["warmup_weeks"]),
-                           kpi_weeks=float(fc["kpi_weeks"][1] - fc["kpi_weeks"][0] + 1), loop_units=loops)
+                           kpi_weeks=float(fc["kpi_weeks"][1] - fc["kpi_weeks"][0] + 1), loop_units=loops,
+                           heal=bool(mc.get("expedite_self_healing", False)))
     items = _items(base_policy)
+    gcfg = ocfg.get("guardrails") or {}
+    guard = gcfg if gcfg.get("enabled", False) else None
     base = base_levels(items, base_policy)
     cap0 = allocation_capital(items, base)
     fr = sorted(fc["budget_fractions"])
     floors, ceils = default_bounds(items, base, base, max_out=int(mc["max_outstation_units"]),
                                    hub_sd=float(mc["hub_ceiling_sd"]), ce_sd=float(mc["count_part_max_increments_sd"]),
-                                   min_hub_ready=float(mc.get("rotable_min_hub_ready_rate", 0.0)))
+                                   min_hub_ready=float(mc.get("rotable_min_hub_ready_rate", 0.0)), guard=guard)
     # zero start = re-optimise the rotable float from its floor; base start = only add/remove vs the base
     start = {pn: (floors[pn].copy() if items[pn].is_rotable and fc["rotable_start"] == "zero" else v.copy())
              for pn, v in base.items()}
@@ -157,11 +163,16 @@ def prepare(world: World, base_policy: PolicySpec, demand: pd.DataFrame | None =
     path = greedy_path(items, start, floors, ceils, budget_max=max(fr) * cap0 * 1.001,
                        budget_min=min(fr) * cap0 * 0.999)
     inc = max(fc.get("incremental_fractions") or [1.0])
-    incr = greedy_path(items, base, base_floors, ceils, budget_max=inc * cap0 * 1.001, budget_min=cap0)
+    # the base policy clipped to the guardrails ("P2 within guardrails"); the incremental path, reposition and
+    # TAT levers start from it, so every non-reference candidate respects the AV-09 caps
+    base_g = {pn: (np.minimum(v, ceils[pn]) if (guard and items[pn].is_rotable) else v.copy()) for pn, v in base.items()}
+    gfloors = {pn: np.minimum(floors[pn], base_g[pn]) for pn in base}
+    incr = greedy_path(items, base_g, gfloors, ceils, budget_max=inc * cap0 * 1.001, budget_min=cap0)
     eco = world.cfg["economics"]
     carry, accel = float(eco["carrying_cost_pct_per_year"]), float(eco["repair_acceleration_cost_aed_per_day_per_unit"])
-    lev = lever_table(items, base, carry, accel, tat_cut_days=float(lc["tat_cut_days"]),
-                      extra_spares=tuple(lc["extra_spares"]), max_cut_share=float(lc["max_cut_share_of_work"]))
+    lev = lever_table(items, base_g, carry, accel, tat_cut_days=float(lc["tat_cut_days"]),
+                      extra_spares=tuple(lc["extra_spares"]), max_cut_share=float(lc["max_cut_share_of_work"]),
+                      ceils=ceils if guard else None)
     refs = dict(references or {})
     refs.setdefault(base_policy.policy_id, base_policy)
     if "P0" not in refs:
@@ -170,7 +181,7 @@ def prepare(world: World, base_policy: PolicySpec, demand: pd.DataFrame | None =
     else:
         p0 = refs["P0"]
     return Context(world=world, base=base_policy, items=items, base_levels=base, base_capital=cap0, path=path,
-                   incr_path=incr, levers=lev, best=best_actions(lev), carry=carry, accel=accel, ocfg=ocfg,
+                   guard=guard, ceils=ceils, base_guarded=base_g, incr_path=incr, levers=lev, best=best_actions(lev), carry=carry, accel=accel, ocfg=ocfg,
                    references=refs, ref_levels={k: base_levels(items, v) for k, v in refs.items()},
                    p0_levels=base_levels(items, p0),
                    # each reference policy is modelled with its OWN (s,S) order quantities
@@ -202,14 +213,20 @@ def build_candidates(ctx: Context) -> list[Candidate]:
         lab = f"Re-optimised allocation, budget {f:.2f} x base allocation capital"
         out.append(Candidate(cid, "budget", lab, policy_from_levels(ctx.base, items, lv, cid, lab), f * cap0, cap,
                              model_aog(items, lv), lv))
+    bg = ctx.base_guarded or base
+    gid = f"{ctx.base.policy_id}_GUARD"
+    if ctx.guard and any(not np.array_equal(bg[k], base[k]) for k in base):
+        lab = f"{ctx.base.policy_id} clipped to the AV-09 guardrails (no other change)"
+        out.append(Candidate(gid, "incremental", lab, policy_from_levels(ctx.base, items, bg, gid, lab), None,
+                             allocation_capital(items, bg), model_aog(items, bg), {k: v.copy() for k, v in bg.items()}))
     for f in sorted(fc.get("incremental_fractions") or []):
         lv, cap = ctx.incr_path.allocation_at(f * cap0)
         cid = f"I{int(round(f * 100)):03d}"
-        lab = f"Base + greedy additions only, budget {f:.2f} x base allocation capital"
+        lab = f"{ctx.base.policy_id} within guardrails + greedy additions, budget {f:.2f} x base allocation capital"
         out.append(Candidate(cid, "incremental", lab, policy_from_levels(ctx.base, items, lv, cid, lab), f * cap0, cap,
                              model_aog(items, lv), lv))
     # lever: reposition only (zero capital)
-    lv, moves = reposition_only(items, base)
+    lv, moves = reposition_only(items, bg, ctx.ceils if ctx.guard else None)
     if moves:      # skipped when the base policy is already positioned (the candidate would equal the base)
         lab = f"Reposition only: {len(moves)} existing rotable units moved AUH -> outstation (zero capital)"
         out.append(Candidate("LEV_REPOS", "reposition", lab,
@@ -218,10 +235,11 @@ def build_candidates(ctx: Context) -> list[Candidate]:
     # lever: TAT -d days on the top-N PNs by net annual benefit of the TAT cut
     tat = _tat_targets(ctx, int(lc["tat_top_n"]))
     d = int(round(float(lc["tat_cut_days"])))
-    lab = f"Repair TAT -{d} d on top-{len(tat)} PNs by net benefit (base allocation)"
+    lab = f"Repair TAT -{d} d on top-{len(tat)} PNs by net benefit ({ctx.base.policy_id} within guardrails)"
     out.append(Candidate(f"LEV_TAT{d}_TOP{len(tat)}", "lever", lab,
-                         policy_from_levels(ctx.base, items, base, f"LEV_TAT{d}_TOP{len(tat)}", lab, tat),
-                         None, cap0, model_aog(items, base, tat), {k: v.copy() for k, v in base.items()}, tat))
+                         policy_from_levels(ctx.base, items, bg, f"LEV_TAT{d}_TOP{len(tat)}", lab, tat),
+                         None, allocation_capital(items, bg), model_aog(items, bg, tat),
+                         {k: v.copy() for k, v in bg.items()}, tat))
     # combo: re-optimised allocation at the base budget + the same TAT cuts
     lv, cap = ctx.path.allocation_at(1.0 * cap0)
     cid = f"COMBO_B100_TAT{d}"
@@ -290,8 +308,13 @@ def selection_seeds() -> list[int]:
     return list(cfg_seeds()["selection"])
 
 
+RETIRED_HOLDOUT = set(range(1000, 1020))     # v1 holdout seeds, seen and retired (D012); never usable
+
+
 def _check_seeds(seeds, allow_holdout: bool):
     sel, hold = set(cfg_seeds()["selection"]), set(cfg_seeds()["holdout"])
+    if any(s in RETIRED_HOLDOUT for s in seeds):
+        raise PermissionError("retired v1 holdout seeds 1000-1019 must never be used (D012)")
     bad_hold = [s for s in seeds if s in hold]
     if bad_hold and not allow_holdout:
         raise PermissionError(f"holdout seeds {bad_hold} are only allowed through run_frontier_holdout() after freeze")
@@ -337,6 +360,8 @@ def evaluate(world: World, policies: list[PolicySpec], seeds, variant: str = "ce
                 raise RuntimeError("run_many order mismatch")
             row = {"policy_id": p.policy_id, "seed": s, "variant": variant}
             row.update({kk: float(v) for kk, v in r.kpis.items()})
+            row["aog_event_cost_aed"] = _event_cost(world, r, kpi)
+            row["aog_hourly_penalty_aed"] = row["aog_penalty_aed"] - row["aog_event_cost_aed"]
             row["total_annual_cost_aed"] = float(sum(r.kpis[c] for c in KPI_COST_KEYS))
             rows.append(row)
     return pd.DataFrame(rows)
@@ -352,12 +377,26 @@ def t_ci(x: np.ndarray, level: float = 0.95) -> tuple[float, float, float]:
     return m, m - h, m + h
 
 
+def _event_cost(world: World, res, kpi) -> float:
+    """Annualised fixed per-event part of aog_penalty_aed (v2: per merged event starting in the KPI window)."""
+    ev = world.cfg["economics"].get("aog_event_cost_aed")
+    e = getattr(res, "aog_events", None)
+    if not ev or e is None or not len(e):
+        return 0.0
+    from gnm.config import HOURS_PER_WEEK
+    k0, k1 = kpi[0] * HOURS_PER_WEEK, (kpi[1] + 1) * HOURS_PER_WEEK
+    arch = dict(zip(world.aircraft["tail"], world.aircraft["archetype"]))
+    e = e[(e.start_h >= k0) & (e.start_h < k1)]
+    return float(e["tail"].map(arch).map(ev).astype(float).sum()) * 52.0 / (kpi[1] - kpi[0] + 1)
+
+
 def recost(long: pd.DataFrame, penalty_factor: float = 1.0, carry: float | None = None,
            base_carry: float = 0.20) -> pd.DataFrame:
-    """Recompute annual cost under a different AOG penalty scale / carrying %, from simulated KPIs
-    (both enter the total linearly, so no re-simulation is needed)."""
+    """Recompute annual cost under a different HOURLY downtime rate (the fixed per-event cost stays x1,
+    V2-POL-5) / carrying %, from simulated KPIs (both linear, so no re-simulation is needed)."""
     d = long.copy()
-    d["aog_penalty_aed"] = d.aog_penalty_aed * penalty_factor
+    ev = d["aog_event_cost_aed"] if "aog_event_cost_aed" in d else 0.0
+    d["aog_penalty_aed"] = ev + (d.aog_penalty_aed - ev) * penalty_factor
     if carry is not None:
         d["holding_cost_aed"] = d.spare_capital_aed * carry
     d["total_annual_cost_aed"] = d[KPI_COST_KEYS].sum(axis=1)
@@ -537,14 +576,24 @@ def allocation_rows(ctx: Context, c: Candidate) -> list[dict]:
         h_new = it.aog_hours(lv, tat_mult=tm)
         alt = best.loc[pn, "best_action"] if (len(best) and pn in best.index) else "n/a (count part)"
         flag = {"flag_more_than_doubles_p0": pn in flagged, "reason": flagged.get(pn, "")}
+        caps, why = (guardrail_caps(it, ctx.guard) if (it.is_rotable and ctx.guard) else (None, None))
+        loop = int(it.loop_units) if it.is_rotable else 0
         for j, st in enumerate(it.stations):
             if lv[j] == b[j]:
                 continue
             rev = lv.copy()
             rev[j] = b[j]
+            extra = {}
+            if it.is_rotable:   # AV-09/AV-12: total spares next to every base-stock number
+                add = loop if j == 0 else 0
+                extra = {"loop_units_at_point": add, "current_total_spares_at_point": int(b[j]) + add,
+                         "proposed_total_spares_at_point": int(lv[j]) + add,
+                         "pn_total_spares_current": int(b.sum()) + loop, "pn_total_spares_proposed": int(lv.sum()) + loop,
+                         "guardrail_cap_base_stock": int(caps[j]) if caps is not None else None,
+                         "guardrail_rule": why[j] if why is not None else ""}
             rows.append({"pn": pn, "station": st, "part_class": it.part_class,
                          "level": "base_stock" if it.is_rotable else "order_up_to_S",
-                         "current": int(b[j]), "proposed": int(lv[j]), "delta_units": int(lv[j] - b[j]),
+                         "current": int(b[j]), "proposed": int(lv[j]), "delta_units": int(lv[j] - b[j]), **extra,
                          "incremental_capital_aed": round(float((lv[j] - b[j]) * it.unit_cost), 2),
                          "modelled_aog_hour_reduction": round(float(it.aog_hours(rev, tat_mult=tm) - h_new), 3),
                          "best_alternative_action": alt, **flag})
@@ -556,6 +605,30 @@ def allocation_rows(ctx: Context, c: Candidate) -> list[dict]:
                          "best_alternative_action": alt, **flag,
                          "annual_acceleration_cost_aed": round(it.lam_net * 365 * (1 - tm) * it.work_days * ctx.accel, 2)})
     return rows
+
+
+def rotable_totals(ctx: Context, c: Candidate) -> list[dict]:
+    """Per rotable PN: serviceable base stock by station, engine loop units and TOTAL spares (AV-12),
+    the pipeline mean, the AV-09 caps and whether the candidate exceeds them."""
+    out = []
+    for pn in sorted(ctx.items):
+        it = ctx.items[pn]
+        if not it.is_rotable:
+            continue
+        lv = c.levels.get(pn, ctx.base_levels[pn])
+        caps, why = guardrail_caps(it, ctx.guard) if ctx.guard else (None, None)
+        over = [it.stations[j] for j in range(len(lv)) if caps is not None and lv[j] > caps[j]]
+        mu_out = float((it.rates.sum(axis=1)[1:] * it.route_days).sum())
+        out.append({"candidate": c.cid, "pn": pn, "hub_base_stock": int(lv[0]),
+                    "outstation_base_stock": int(lv[1:].sum()),
+                    "outstations": ";".join(f"{it.stations[j]}:{int(lv[j])}" for j in range(1, len(lv)) if lv[j] > 0),
+                    "loop_units": int(it.loop_units), "total_spares": int(lv.sum()) + int(it.loop_units),
+                    "hub_pipeline_mean": round(it.hub_mu(), 3), "outstation_pipeline_mean": round(mu_out, 3),
+                    "hub_total_cap": (int(caps[0]) + int(it.loop_units)) if caps is not None else None,
+                    "exceeds_guardrail_at": ";".join(over),
+                    "guardrail_rules": " | ".join(f"{it.stations[j]} {why[j]}" for j in range(len(lv))
+                                                  if why is not None and lv[j] > caps[j])})
+    return out
 
 
 # ---------------------------------------------------------------------------------- holdout (not run here)

@@ -152,7 +152,9 @@ def test_paired_evaluation_real_engine_same_demand(ctx_and_cands):
 def test_holdout_seeds_refused():
     from gnm.sim.api import load_world
     with pytest.raises(PermissionError):
-        fr.evaluate(load_world(), [], [1000, 1001])
+        fr.evaluate(load_world(), [], [1000, 1001])        # retired v1 holdout (D012)
+    with pytest.raises(PermissionError):
+        fr.evaluate(load_world(), [], [2000])              # v2 holdout (D013)
     with pytest.raises(ValueError):
         fr.evaluate(load_world(), [], [7])
 
@@ -232,12 +234,15 @@ def test_forecast_demand_inputs_match_forecast_rates():
     from gnm.optim.inputs import forecast_demand_inputs
     ff = pd.read_parquet(Path(__file__).resolve().parents[1] / "outputs" / "forecasting" / "final_forecasts.parquet")
     d = forecast_demand_inputs()
+    ff = ff[ff.deadline_class != "NONE"]                    # fluids never drive downtime (V2-SIM-2)
     r = ff[ff.part_class == "R"]
     assert d[d.part_class == "R"].rate_per_day.sum() == pytest.approx(r.removal_rate_day.sum(), rel=1e-9)
     c = ff[ff.part_class != "R"]
     assert d[d.part_class != "R"].rate_per_day.sum() == pytest.approx(c.weekly_rate.sum() / 7, rel=1e-9)
     assert set(d.deadline_class) <= {"D0", "D3", "D10"}
-    assert d[d.part_class == "R"].pipeline_days.notna().all()
+    # v2 pipeline = the forecast table's per-station pipeline (P1/P2 definition)
+    m = d[d.part_class == "R"].merge(r[["pn", "station", "pipeline_days"]], on=["pn", "station"], suffixes=("", "_ff"))
+    assert np.allclose(m.pipeline_days, m.pipeline_days_ff)
 
 
 def test_doubling_flag_has_reason(ctx_p2):
@@ -251,6 +256,68 @@ def test_doubling_flag_has_reason(ctx_p2):
     rows = [r for r in fr.allocation_rows(ctx, big) if r["flag_more_than_doubles_p0"]]
     assert rows and all(r["reason"] for r in rows)
 
-# v2 rebuild (D012): these tests read v1 outputs / docs/data exports; skipped until v2 regeneration.
-import pytest as _pytest_v2  # noqa: E402
-pytestmark = [_pytest_v2.mark.v1_outputs, _pytest_v2.mark.skip(reason="awaiting v2 regeneration")]
+
+
+# ---------------------------------------------------------------- AV-09 guardrails (v2)
+def _toy_rot(rates, loop=0):
+    from gnm.optim.model import ItemModel
+    return ItemModel(pn="T-R9", part_class="R", stations=("AUH", "BOM", "LHR"), rates=np.array(rates),
+                     resupply_days=40.0, work_days=30.0, route_days=4.0, transport_h=np.array([0.0, 9.0, 16.0]),
+                     unit_cost=10000.0, penalty_per_h=20000.0, loop_units=loop)
+
+
+def test_guardrail_g1_stocking_point_quantile_and_loop():
+    from gnm.optim.greedy import guardrail_caps
+    from gnm.optim.model import avail_vec, poisson_fill_quantile
+    it = _toy_rot([[0.2, 0.0, 0.0], [0.05, 0.0, 0.0], [0.0, 0.0, 0.0]], loop=3)
+    caps, why = guardrail_caps(it, {"fill_quantile": 0.995, "low_rate_per_year": 6.0, "low_rate_max_units": 1})
+    mu0 = it.hub_mu()
+    S = poisson_fill_quantile(mu0, 0.995)
+    assert avail_vec(np.array([S]), mu0)[0] >= 0.995 > avail_vec(np.array([S - 1]), mu0)[0]
+    assert caps[0] == S - 3                      # hub cap on TOTAL spares: base stock = cap - loop
+    assert caps[2] == 0                          # no demand at LHR
+    assert caps[1] >= 1 and "G1" in why[1]       # BOM 18/yr > 6/yr -> only the quantile cap
+
+
+def test_guardrail_g2_low_rate_outstation_and_override():
+    from gnm.optim.greedy import guardrail_caps
+    it = _toy_rot([[0.2, 0.0, 0.0], [0.01, 0.0, 0.0], [0.5, 0.0, 0.0]])
+    g = {"fill_quantile": 0.995, "low_rate_per_year": 6.0, "low_rate_max_units": 1}
+    caps, why = guardrail_caps(it, g)
+    assert caps[1] == 1 and why[1].startswith("G2")            # 3.65/yr <= 6/yr -> at most 1
+    assert caps[2] >= 2                                         # 182/yr: the quantile cap allows more
+    with pytest.raises(ValueError):
+        guardrail_caps(it, {**g, "overrides": {"T-R9@BOM": {"max_units": 3, "reason": " "}}})
+    caps2, why2 = guardrail_caps(it, {**g, "overrides": {"T-R9@BOM": {"max_units": 3, "reason": "ETOPS dispatch"}}})
+    assert caps2[1] == 3 and "ETOPS" in why2[1]
+
+
+def test_frontier_candidates_respect_guardrails(ctx_p2):
+    """Every generated candidate (not the as-built reference policies) stays within the AV-09 caps, and the
+    outputs show total spares = base stock + loop."""
+    ctx, cands = ctx_p2
+    assert ctx.guard and ctx.guard.get("enabled")
+    for c in cands:
+        if c.kind == "policy":
+            continue
+        rt = fr.rotable_totals(ctx, c)
+        assert all(r["exceeds_guardrail_at"] == "" for r in rt), (c.cid, [r["pn"] for r in rt if r["exceeds_guardrail_at"]])
+        for r in rt:
+            assert r["total_spares"] == r["hub_base_stock"] + r["outstation_base_stock"] + r["loop_units"]
+    big = max((c for c in cands if c.kind == "budget"), key=lambda c: c.allocation_capital_aed)
+    for r in fr.allocation_rows(ctx, big):
+        if r["part_class"] == "R":
+            assert r["pn_total_spares_proposed"] >= r["proposed"]
+            assert "proposed_total_spares_at_point" in r and r["guardrail_cap_base_stock"] is not None
+            assert r["proposed"] <= r["guardrail_cap_base_stock"]
+
+
+def test_v2_model_uses_route_waits_and_event_cost(ctx_p2):
+    ctx, _ = ctx_p2
+    it = next(i for i in ctx.items.values() if i.is_rotable and i.rates[:, 0].sum() > 0)
+    assert it.event_cost > 0 and it.fitting_h > 0 and (it.route_wait_h > 0).all() and not it.heal
+    lv = ctx.base_levels[it.pn].copy()
+    lv[:] = 0
+    h, e, r, fee = it._rates(lv, 1.0, 1.0)
+    assert e > 0 and h > 0 and fee >= 0
+    assert it.cost(lv) == pytest.approx(it.penalty_per_h * h + it.event_cost * e + fee)

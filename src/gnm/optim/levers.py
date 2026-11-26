@@ -30,7 +30,7 @@ def tat_multiplier(it: ItemModel, cut_days: float, max_share: float = 0.5) -> tu
 
 def lever_table(items: dict[str, ItemModel], levels: dict[str, np.ndarray], carry: float,
                 accel_cost_per_day: float, tat_cut_days: float = 10.0, extra_spares=(1, 2),
-                max_cut_share: float = 0.5) -> pd.DataFrame:
+                max_cut_share: float = 0.5, ceils: dict | None = None) -> pd.DataFrame:
     rows = []
     for pn in sorted(items):
         it = items[pn]
@@ -59,13 +59,19 @@ def lever_table(items: dict[str, ItemModel], levels: dict[str, np.ndarray], carr
                 for j in range(len(cur)):
                     if j > 0 and it.rates[j].sum() <= 0:
                         continue
+                    if ceils is not None and pn in ceils and cur[j] >= ceils[pn][j]:
+                        continue          # AV-09 guardrail: no buy beyond the stocking-point cap
                     cur[j] += 1
                     h = it.aog_hours(cur)
                     cur[j] -= 1
                     if best is None or h < best[1] - 1e-9:
                         best = (j, h)
+                if best is None:
+                    break
                 cur[best[0]] += 1
                 where.append(it.stations[best[0]])
+            if len(where) < n:
+                continue                  # n spares cannot be placed within the guardrails
             dh = base_h - it.aog_hours(cur)
             rows.append({**common, "lever": f"buy_{n}", "detail": "+1 @ " + ", +1 @ ".join(where),
                          "incremental_capital_aed": n * it.unit_cost, "annual_cost_aed": n * it.unit_cost * carry,
