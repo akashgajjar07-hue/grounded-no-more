@@ -76,6 +76,9 @@ def n_story_steps():
 
 def tour_play(page):
     """Press the tour's own Play button (auto-advance). Falls back to the Space key, which toggles Play in the tour."""
+    st = tour_state(page)
+    if st and st.get("playing"):
+        return  # v2.1: the '60-second tour' button opens the tour already playing; pressing Play would pause it
     loc = page.locator(".story-card .story-play")
     try:
         if loc.count() and loc.first.is_visible():
