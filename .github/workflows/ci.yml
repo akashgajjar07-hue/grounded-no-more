@@ -13,4 +13,6 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt && pip install -e .
+      - name: Rebuild simulated history (gitignored Parquet, ~2 s, deterministic)
+        run: python scripts/build_history.py
       - run: pytest -m "not slow and not browser" -q --junitxml=reports/junit-ci.xml
