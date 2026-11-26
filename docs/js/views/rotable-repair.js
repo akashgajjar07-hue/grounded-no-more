@@ -13,7 +13,7 @@
  * Every number comes from the JSON or from floatcalc.js applied to user inputs.
  */
 import { h, icon, pageHead, card, provChip, pill, dataTable } from '../ui.js';
-import { chartFrame, responsive, svgIn, axisBottom, axisLeft, gridY, directLabel, annotate, withTooltip, truncate, theme, fmtAED, fmtPct, fmtDays, fmtInt, fmtNum, fmtWeek } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, axisBottom, axisLeft, gridY, directLabel, annotate, withTooltip, truncate, theme, chipLabel, refLine, fmtAED, fmtPct, fmtDays, fmtInt, fmtNum, fmtWeek } from '../charts/theme.js';
 import { floatCalc, compareLevers, pmfSeries } from '../lib/floatcalc.js';
 
 export const data = ['rotables', 'method', 'network'];
@@ -23,6 +23,7 @@ const d3 = () => window.d3;
 const dl = (g, o) => directLabel(g, o).style('fill', o.color || null);
 const HPD = 24, HPW = 168;
 const C = theme.color;
+const SR = theme.series;
 
 let cssLoaded = false;
 function loadCSS() {
@@ -116,11 +117,11 @@ export async function render(el, ctx) {
   const condemned = sumF((f) => f.from === 'IN_REPAIR' && f.to === 'CONDEMNED');
   const flowWindow = r.lifecycle?.window_label || (r.lifecycle?.window_weeks ? `weeks ${r.lifecycle.window_weeks.join('–')}` : now != null ? `weeks 0–${Math.floor(now / HPW) - 1}` : null);
   const lcHead = flows.length && shopOut
-    ? `${fmtInt(removals)} removals fed the repair loop; ${fmtPct(condemned / shopOut)} of units leaving the shop were condemned (BER), the rest went back to stock`
+    ? `${fmtInt(removals)} removals fed the repair loop; ${fmtPct(condemned / shopOut)} of shop exits were condemned (BER)`
     : `${fmtInt(loop)} serials are removed (U/S) or in repair right now`;
   const lcF = chartFrame(lcCard, {
     headline: lcHead,
-    subtitle: `Box = serials in each state at ${now != null ? fmtWeek(Math.floor(now / HPW)) : 'end of window'} · arc width = transitions${flowWindow ? ` over ${flowWindow}` : ''} · forward above, returns below · ${fmtInt(r.lifecycle?.n_serials ?? fleet)} serials`,
+    subtitle: `Box = serials in each state at ${now != null ? fmtWeek(Math.floor(now / HPW)) : 'end of window'} (${fmtInt(r.lifecycle?.n_serials ?? fleet)} serials) · line width = transitions${flowWindow ? ` over ${flowWindow}` : ''} · forward above, returns below`,
     provenance: prov(r.lifecycle, prov(r.meta)), source: 'rotables.json → lifecycle',
     table: { columns: [{ key: 'item', label: 'State / transition' }, { key: 'count', label: 'Serials', num: true, format: fmtInt }], rows: [...Object.entries(counts).map(([k, v]) => ({ item: k, count: v })), ...flows.map((f) => ({ item: `${f.from} → ${f.to}`, count: f.count }))] },
   });
@@ -156,13 +157,14 @@ export async function render(el, ctx) {
     kicker: 'Repair orders', title: `${fmtInt(tableRows.length)} open repair orders, overdue first`, prov: prov(r.meta),
     body: dataTable({
       caption: 'Open repair orders', maxHeight: 360, dense: true,
+      mobileColumns: ['serial', 'late_d', 'shop', 'ro_id', 'overdue'], stickyFirst: true,
       columns: [
         { key: 'ro_id', label: 'RO', mono: true },
         { key: 'serial', label: 'Serial', mono: true },
         { key: 'shop', label: 'Shop', format: shopLabel },
         { key: 'inH', label: 'Inducted', num: true, format: (v) => (v == null ? '—' : fmtWeek(Math.floor(v / HPW))) },
         { key: 'due', label: 'Quoted due', num: true, format: (v) => (v == null ? '—' : fmtWeek(Math.floor(v / HPW))) },
-        { key: 'late_d', label: 'vs due', num: true, format: (v) => (v == null ? '—' : v > 0 ? `+${fmtDays(v)}` : `−${fmtDays(-v)}`) },
+        { key: 'late_d', label: 'vs due', short: 'vs due', num: true, format: (v) => (v == null ? '—' : v > 0 ? `+${fmtDays(v)}` : `−${fmtDays(-v)}`) },
         { key: 'overdue', label: 'Status', render: (o) => (o.overdue ? pill('urgent', o.planted ? `Overdue · ${o.planted}` : 'Overdue') : pill('ok', 'In quote')) },
       ],
       rows: tableRows,
@@ -182,78 +184,133 @@ const STATE_META = {
   IN_TRANSIT: { label: 'IN TRANSIT', sub: 'Shop return · positioning' },
   CONDEMNED: { label: 'CONDEMNED', sub: 'BER · replace by PO' },
 };
+/**
+ * Arc lifecycle. Forward transitions (teal) arc above the boxes, returns (neutral titanium, 40%) below,
+ * condemnation (red) is the only status colour. Each arc gets its own lane (interval-graph colouring),
+ * so overlapping arcs never share an apex height; the value sits in a filled chip on its own arc and
+ * slides along it until it clears every other arc and chip.
+ */
 function drawFlow(el, states, counts, flows, w) {
   const order = ['SERVICEABLE', 'INSTALLED', 'REMOVED', 'IN_REPAIR', 'IN_TRANSIT', 'CONDEMNED'].filter((s) => states.includes(s) || counts[s] != null);
   states.forEach((s) => { if (!order.includes(s)) order.push(s); });
   const vertical = w < 640;
   const n = order.length;
+  const idx = (s) => order.indexOf(s);
   const fl = flows.filter((f) => f.from !== f.to && order.includes(f.from) && order.includes(f.to) && num(f.count));
   const maxC = d3().max(fl, (f) => f.count) || 1;
-  const sw = d3().scaleSqrt().domain([0, maxC]).range([1, vertical ? 14 : 18]);
-  const boxW = vertical ? Math.min(180, w * 0.42) : Math.min(170, (w - 24) / n - 18), boxH = vertical ? 64 : 92;
-  const gap = vertical ? 44 : (w - n * boxW) / (n - 1);
-  const pad = vertical ? 0 : 0;
-  const hgt = vertical ? n * boxH + (n - 1) * gap + 24 : 420;
-  const midY = vertical ? 0 : 200;
-  const midX = vertical ? w / 2 : 0;
-  const pos = (i) => (vertical ? { x: midX - boxW / 2, y: 12 + i * (boxH + gap) } : { x: pad + i * (boxW + gap), y: midY - boxH / 2 });
-  const center = (s) => { const i = order.indexOf(s), p = pos(i); return { x: p.x + boxW / 2, y: p.y + boxH / 2, i }; };
+  const sw = d3().scaleSqrt().domain([0, maxC]).range([1.5, vertical ? 9 : 12]);
+  const side = (f) => (idx(f.to) > idx(f.from) ? 'fwd' : 'back');
+  // lanes: shortest spans first; an arc sits one lane above every arc whose span overlaps it
+  const lane = new Map();
+  const maxLane = { fwd: 0, back: 0 };
+  ['fwd', 'back'].forEach((sd) => {
+    const placed = [];
+    fl.filter((f) => side(f) === sd)
+      .map((f) => ({ f, lo: Math.min(idx(f.from), idx(f.to)), hi: Math.max(idx(f.from), idx(f.to)) }))
+      .sort((a, b) => (a.hi - a.lo) - (b.hi - b.lo) || a.lo - b.lo)
+      .forEach((a) => {
+        const k = 1 + Math.max(0, ...placed.filter((p) => p.lo < a.hi && p.hi > a.lo).map((p) => p.k));
+        placed.push({ ...a, k }); lane.set(a.f, k); maxLane[sd] = Math.max(maxLane[sd], k);
+      });
+  });
+  const boxW = vertical ? Math.min(168, Math.round(w * 0.42)) : Math.min(170, (w - 24) / n - 18);
+  const boxH = vertical ? 60 : 92;
+  const gap = vertical ? 40 : (w - n * boxW) / (n - 1);
+  const BASE = 10, CHIP = 18;
+  let L, LB, liftF, liftB, hgt, midY = 0, midX = 0;
+  if (!vertical) {
+    L = 28; LB = 28;
+    liftF = BASE + maxLane.fwd * L; liftB = BASE + maxLane.back * LB;
+    midY = 30 + 0.75 * liftF + CHIP / 2 + boxH / 2;
+    hgt = Math.round(midY + boxH / 2 + 0.75 * liftB + CHIP / 2 + 30);
+  } else {
+    const room = (w - boxW) / 2 - 18; // horizontal room either side of the box column
+    L = Math.min(26, Math.max(10, (room / 0.75 - BASE) / Math.max(1, maxLane.fwd)));
+    LB = Math.min(26, Math.max(10, (room / 0.75 - BASE) / Math.max(1, maxLane.back)));
+    midX = w / 2;
+    hgt = 30 + n * boxH + (n - 1) * gap + 12;
+  }
+  const pos = (i) => (vertical ? { x: midX - boxW / 2, y: 30 + i * (boxH + gap) } : { x: i * (boxW + gap), y: midY - boxH / 2 });
+  const center = (s) => { const i = idx(s), p = pos(i); return { x: p.x + boxW / 2, y: p.y + boxH / 2, i }; };
   const svg = svgIn(el, w, hgt, `Rotable lifecycle flow: ${order.map((s) => `${s} ${counts[s] ?? 0}`).join(', ')}`);
   const defs = svg.append('defs');
-  defs.append('marker').attr('id', 'rr-arr').attr('viewBox', '0 0 10 10').attr('refX', 8).attr('refY', 5).attr('markerWidth', 7).attr('markerHeight', 7).attr('orient', 'auto-start-reverse').attr('markerUnits', 'userSpaceOnUse')
-    .append('path').attr('d', 'M0,1.5L10,5L0,8.5L2.5,5Z').attr('fill', C.accentHi);
-  const arcG = svg.append('g');
-  const labels = [];
+  const KIND = {
+    fwd: { color: SR.recommended, op: 0.42, id: 'rr-arr-fwd' },
+    back: { color: SR.neutral, op: 0.4, id: 'rr-arr-back' },
+    bad: { color: SR.urgent, op: 0.55, id: 'rr-arr-bad' },
+  };
+  Object.values(KIND).forEach((k) => defs.append('marker').attr('id', k.id).attr('viewBox', '0 0 10 10').attr('refX', 8).attr('refY', 5).attr('markerWidth', 7).attr('markerHeight', 7).attr('orient', 'auto-start-reverse').attr('markerUnits', 'userSpaceOnUse')
+    .append('path').attr('d', 'M0,1.5L10,5L0,8.5L2.5,5Z').attr('fill', k.color));
+  const arcG = svg.append('g').attr('class', 'rr-arcs');
   // distribute arc ports along each box side so arcs do not share an endpoint
   const ports = new Map();
-  const side = (f) => (order.indexOf(f.to) > order.indexOf(f.from) ? 'fwd' : 'back');
   order.forEach((st) => ['fwd', 'back'].forEach((sd) => {
     const ends = [];
-    fl.forEach((f) => { if (side(f) !== sd) return; if (f.from === st) ends.push({ f, end: 'from', other: order.indexOf(f.to) }); if (f.to === st) ends.push({ f, end: 'to', other: order.indexOf(f.from) }); });
-    const me = order.indexOf(st);
+    fl.forEach((f) => { if (side(f) !== sd) return; if (f.from === st) ends.push({ f, end: 'from', other: idx(f.to) }); if (f.to === st) ends.push({ f, end: 'to', other: idx(f.from) }); });
+    const me = idx(st);
     ends.sort((p, q) => (p.other - me) - (q.other - me) || (p.end === 'from' ? -1 : 1));
     const span = (vertical ? boxH : boxW) * 0.7;
     ends.forEach((e, k) => ports.set(`${e.f.from}>${e.f.to}:${e.end}`, (ends.length === 1 ? 0 : -span / 2 + (span * k) / (ends.length - 1))));
   }));
+  const drawn = [];
   fl.slice().sort((a, b) => b.count - a.count).forEach((f) => {
     const A0 = center(f.from), B0 = center(f.to);
     const pf = ports.get(`${f.from}>${f.to}:from`) || 0, pt = ports.get(`${f.from}>${f.to}:to`) || 0;
     const A = vertical ? { ...A0, y: A0.y + pf } : { ...A0, x: A0.x + pf };
     const B = vertical ? { ...B0, y: B0.y + pt } : { ...B0, x: B0.x + pt };
-    const fwd = B.i > A.i;
-    const span = Math.abs(B.i - A.i);
-    const bad = f.to === 'CONDEMNED';
-    let d, lx, ly;
+    const fwd = side(f) === 'fwd';
+    const kind = f.to === 'CONDEMNED' ? KIND.bad : fwd ? KIND.fwd : KIND.back;
+    const lift = BASE + lane.get(f) * (fwd ? L : LB);
+    let d;
     if (!vertical) {
-      const x1 = A.x, x2 = B.x;
       const y0 = fwd ? midY - boxH / 2 : midY + boxH / 2;
-      const lift = (fwd ? -1 : 1) * (36 + span * 34);
-      d = `M${x1},${y0} C${x1},${y0 + lift} ${x2},${y0 + lift} ${x2},${y0 + (fwd ? -2 : 2)}`;
-      lx = (x1 + x2) / 2; ly = y0 + lift * 0.75;
+      const s = fwd ? -1 : 1;
+      d = `M${A.x},${y0} C${A.x},${y0 + s * lift} ${B.x},${y0 + s * lift} ${B.x},${y0 + s * 2}`;
     } else {
-      const y1 = A.y, y2 = B.y;
       const x0 = fwd ? midX + boxW / 2 : midX - boxW / 2;
-      const lift = (fwd ? 1 : -1) * (24 + span * 22);
-      d = `M${x0},${y1} C${x0 + lift},${y1} ${x0 + lift},${y2} ${x0 + 2 * (fwd ? 1 : -1)},${y2}`;
-      lx = x0 + lift * 0.75; ly = (y1 + y2) / 2;
+      const s = fwd ? 1 : -1;
+      d = `M${x0},${A.y} C${x0 + s * lift},${A.y} ${x0 + s * lift},${B.y} ${x0 + s * 2},${B.y}`;
     }
-    const color = bad ? C.urgent : fwd ? C.accent : C.accent2;
-    const pth = arcG.append('path').attr('d', d).attr('fill', 'none').attr('stroke', color).attr('stroke-opacity', 0.5).attr('stroke-width', sw(f.count)).attr('stroke-linecap', 'round');
-    arcG.append('path').attr('d', d).attr('fill', 'none').attr('stroke', color).attr('stroke-width', 1).attr('marker-end', 'url(#rr-arr)').attr('stroke-opacity', 0.9);
-    withTooltip(pth, () => ({ title: `${STATE_META[f.from]?.label || f.from} → ${STATE_META[f.to]?.label || f.to}`, rows: [['Transitions', fmtInt(f.count)]] }));
-    labels.push({ x: lx, y: ly, text: fmtInt(f.count), color: bad ? C.urgent : C.text });
+    const g = arcG.append('g').attr('class', `rr-arc rr-arc--${kind === KIND.bad ? 'bad' : fwd ? 'fwd' : 'back'}`);
+    const wide = g.append('path').attr('d', d).attr('fill', 'none').attr('stroke', kind.color).attr('stroke-opacity', kind.op).attr('stroke-width', sw(f.count)).attr('stroke-linecap', 'round');
+    g.append('path').attr('d', d).attr('fill', 'none').attr('stroke', kind.color).attr('stroke-width', 1).attr('marker-end', `url(#${kind.id})`).attr('stroke-opacity', 0.9);
+    withTooltip(wide, () => ({ title: `${STATE_META[f.from]?.label || f.from} → ${STATE_META[f.to]?.label || f.to}`, rows: [['Transitions', fmtInt(f.count)]] }));
+    drawn.push({ f, node: wide.node(), half: sw(f.count) / 2, kind });
   });
-  const lg = svg.append('g');
-  labels.forEach((l) => lg.append('text').attr('x', l.x).attr('y', l.y).attr('dy', '0.32em').attr('text-anchor', 'middle').attr('class', 'rr-flow-count').attr('fill', l.color).text(l.text));
-  const nodes = svg.append('g').selectAll('g').data(order).join('g').attr('transform', (s) => { const p = pos(order.indexOf(s)); return `translate(${p.x},${p.y})`; });
+  // sample every arc once (for chip placement)
+  const samples = drawn.map((a) => { const out = []; try { const len = a.node.getTotalLength(); for (let t = 0; t <= len; t += 5) { const p = a.node.getPointAtLength(t); out.push(p); } } catch { /* ignore */ } return out; });
+  const hit = (box, pad, pts, half) => pts.some((p) => p.x > box.x - half - pad && p.x < box.x + box.width + half + pad && p.y > box.y - half - pad && p.y < box.y + box.height + half + pad);
+  const inter = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+  const chipG = svg.append('g').attr('class', 'rr-chips');
+  const chips = [];
+  const nodeBoxes = order.map((s) => { const p = pos(idx(s)); return { x: p.x - 2, y: p.y - 2, width: boxW + 4, height: boxH + 4 }; });
+  drawn.forEach((a, i) => {
+    let len = 0; try { len = a.node.getTotalLength(); } catch { /* ignore */ }
+    const text = fmtInt(a.f.count);
+    const wTxt = text.length * 6.9 + 12, hTxt = CHIP;
+    let best = null;
+    for (const t of [0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74]) {
+      const p = len ? a.node.getPointAtLength(len * t) : { x: 0, y: 0 };
+      const box = { x: p.x - wTxt / 2, y: p.y - hTxt / 2, width: wTxt, height: hTxt };
+      const bad = drawn.some((o, j) => j !== i && hit(box, 1, samples[j], o.half)) || chips.some((c) => inter(c, box)) || nodeBoxes.some((b) => inter(b, box));
+      if (!bad) { best = p; break; }
+      if (!best) best = p;
+    }
+    const chip = chipLabel(chipG, { x: best.x, y: best.y, text, color: a.kind === KIND.bad ? SR.urgent : C.text, cls: 'rr-flow-chip' });
+    chips.push(chip.datum().box);
+  });
+  const nodes = svg.append('g').selectAll('g').data(order).join('g').attr('class', 'rr-node-g').attr('transform', (s) => { const p = pos(idx(s)); return `translate(${p.x},${p.y})`; });
   nodes.append('rect').attr('width', boxW).attr('height', boxH).attr('rx', 10).attr('class', (s) => `rr-node ${s === 'CONDEMNED' ? 'is-bad' : ''} ${s === 'IN_REPAIR' ? 'is-active' : ''}`);
   nodes.append('text').attr('x', 12).attr('y', vertical ? 20 : 24).attr('class', 'rr-node-state').text((s) => STATE_META[s]?.label || s);
-  nodes.append('text').attr('x', 12).attr('y', vertical ? 50 : 62).attr('class', (s) => `rr-node-count ${s === 'CONDEMNED' ? 'is-bad' : ''}`).text((s) => fmtInt(counts[s] ?? 0));
+  nodes.append('text').attr('x', 12).attr('y', vertical ? 48 : 62).attr('class', (s) => `rr-node-count ${s === 'CONDEMNED' ? 'is-bad' : ''}`).text((s) => fmtInt(counts[s] ?? 0));
   if (!vertical) nodes.append('text').attr('x', 12).attr('y', 80).attr('class', 'rr-node-sub').text((s) => truncate(STATE_META[s]?.sub || '', boxW - 20, 6.2));
-  else nodes.append('text').attr('x', boxW - 10).attr('y', 50).attr('text-anchor', 'end').attr('class', 'rr-node-sub').text('units');
   if (!vertical) {
-    dl(svg, { x: 4, y: 14, text: 'FORWARD FLOW (fit → removal → shop) ↑', color: C.faint });
-    dl(svg, { x: 4, y: hgt - 10, text: 'RETURNS TO STOCK / AIRCRAFT ↓', color: C.faint });
+    dl(svg, { x: 0, y: 12, text: 'FORWARD · fit → removal → shop → transit', color: SR.recommended, mono: true });
+    dl(svg, { x: 0, y: hgt - 10, text: 'RETURNS · back to stock or straight onto aircraft', color: SR.neutral, mono: true });
+    dl(svg, { x: w, y: hgt - 10, text: 'CONDEMNED · beyond economic repair', anchor: 'end', color: SR.urgent, mono: true });
+  } else {
+    dl(svg, { x: midX - boxW / 2 - 6, y: 12, text: '← RETURNS', anchor: 'end', color: SR.neutral, mono: true });
+    dl(svg, { x: midX + boxW / 2 + 6, y: 12, text: 'FORWARD →', color: SR.recommended, mono: true });
   }
 }
 
@@ -265,12 +322,12 @@ function renderGantt(host, ros, now, r, ctx) {
   const ps2 = ros.find((o) => o.open && o.overdue && o.planted);
   const overdue = ros.filter((o) => o.open && o.overdue);
   const worst = ps2 || overdue.slice().sort((a, b) => (b.late_d ?? 0) - (a.late_d ?? 0))[0];
-  const head = overdue.length
-    ? `${fmtInt(overdue.length)} repair orders are past their quoted due date${worst ? `; ${worst.serial} is ${fmtDays(worst.late_d)} late at ${shopLabel(worst.shop)}` : ''}`
-    : 'Every open repair order is still inside its quoted due date';
+  // the serial lives in the chase list below; a hyphenated serial wraps badly inside a headline
+  const head = !overdue.length ? 'Every open repair order is still inside its quoted due date'
+    : `${fmtInt(overdue.length)} repair orders are past quoted due${worst ? `; the worst is ${fmtDays(worst.late_d)} late at ${shopLabel(worst.shop)}` : ''}`;
   const f = chartFrame(host, {
     headline: head,
-    subtitle: `Open + recently closed ROs · bar = induction → return (or now) · tick = quoted due · simulated weeks${now != null ? ` · now ${fmtWeek(Math.floor(now / HPW))}` : ''}`,
+    subtitle: `Bar = induction → return (or now) · tick = quoted due · red = days past due · shops ordered by worst delay${now != null ? ` · now ${fmtWeek(Math.floor(now / HPW))}` : ''}`,
     provenance: prov(r.meta), source: 'rotables.json → repair_queue',
     table: { columns: [{ key: 'ro_id', label: 'RO' }, { key: 'serial', label: 'Serial' }, { key: 'shop', label: 'Shop', format: shopLabel }, { key: 'quoted_tat_d', label: 'Quoted TAT', num: true, format: fmtDays }, { key: 'elapsed_d', label: 'Elapsed / actual', num: true, format: fmtDays }, { key: 'late_d', label: 'Days vs due', num: true, format: (v) => (v == null ? '—' : fmtNum(v, 0)) }, { key: 'open', label: 'Open', format: (v) => (v ? 'yes' : 'no') }], rows: ros },
   });
@@ -285,19 +342,27 @@ function renderGantt(host, ros, now, r, ctx) {
     h('span', {}, h('i', { style: { background: 'rgba(185,200,214,0.22)' } }), 'Returned'),
     h('span', {}, h('i', { style: { background: C.urgent } }), 'Past quoted due'),
     h('span', {}, h('i', { style: { background: C.text, width: '2px', height: '12px' } }), 'Quoted due date')));
-  const alerts = h('div', { class: 'rr-alerts', role: 'list', 'aria-label': 'Overdue repair order alerts' });
-  f.body.append(alerts);
   const topOverdue = overdue.slice().sort((a, b) => (!!b.planted - !!a.planted) || ((b.late_d ?? 0) - (a.late_d ?? 0))).slice(0, 3);
-  topOverdue.forEach((o) => alerts.append(h('div', { class: 'rr-alert', role: 'listitem' }, icon('alert'),
-    h('div', {}, h('strong', {}, `Overdue ${fmtDays(o.late_d)}`), ' · ', h('span', { class: 'mono' }, `${o.ro_id} · ${o.serial}`), ` at ${shopLabel(o.shop)} — quoted due ${o.due != null ? fmtWeek(Math.floor(o.due / HPW)) : '—'}`, o.planted ? h('span', { class: 'faint' }, ` · planted situation ${o.planted}`) : null))));
-  if (overdue.length > topOverdue.length) alerts.append(h('div', { class: 'faint t-12' }, `+ ${fmtInt(overdue.length - topOverdue.length)} more overdue ROs in the table below`));
+  if (topOverdue.length) {
+    const chase = h('div', { class: 'rr-chase', role: 'list', 'aria-label': 'Overdue repair orders to chase first' },
+      h('div', { class: 'rr-chase-head' }, icon('alert'), h('span', {}, 'Chase first'), overdue.length > topOverdue.length ? h('span', { class: 'rr-chase-more' }, `+ ${fmtInt(overdue.length - topOverdue.length)} more overdue in the table below`) : null),
+      ...topOverdue.map((o) => h('div', { class: 'rr-alert', role: 'listitem' },
+        h('span', { class: 'rr-alert-late' }, `+${fmtDays(o.late_d)}`),
+        h('span', { class: 'rr-alert-id mono' }, o.serial),
+        h('span', { class: 'rr-alert-shop' }, `${shopLabel(o.shop)} · ${o.ro_id} · due ${o.due != null ? fmtWeek(Math.floor(o.due / HPW)) : '—'}`),
+        o.planted ? h('span', { class: 'chip chip-mono rr-alert-ps' }, o.planted) : h('span'))));
+    f.body.append(chase);
+  }
 
   let stop = null;
   function rows() {
     let a = ros.filter((o) => shopSel === 'ALL' || o.shop === shopSel);
     if (statusSel === 'open') a = a.filter((o) => o.open);
     if (statusSel === 'overdue') a = a.filter((o) => o.open && o.overdue);
-    return a.sort((x, y) => String(x.shop).localeCompare(String(y.shop)) || (x.inH ?? 0) - (y.inH ?? 0));
+    // shops with the worst delay first, so the most urgent rows are visible without scrolling
+    const worstBy = new Map();
+    a.forEach((o) => worstBy.set(o.shop, Math.max(worstBy.get(o.shop) ?? -1e9, o.open && o.overdue ? (o.late_d ?? 0) : -1e6)));
+    return a.sort((x, y) => (worstBy.get(y.shop) - worstBy.get(x.shop)) || String(x.shop).localeCompare(String(y.shop)) || (x.inH ?? 0) - (y.inH ?? 0));
   }
   function redraw() {
     stop?.();
@@ -319,7 +384,8 @@ function drawGantt(el, rows, now, w) {
   const narrow = w < 560;
   const rowH = 20, shopH = 26;
   const labelW = narrow ? 76 : 150;
-  const m = { top: 8, right: narrow ? 52 : 64, bottom: 28, left: labelW };
+  const hasPlanted = rows.some((o) => o.planted && o.open && o.overdue);
+  const m = { top: 8, right: narrow ? 52 : hasPlanted ? 96 : 64, bottom: 28, left: labelW };
   const shops = [...new Set(rows.map((o) => o.shop))];
   const hgt = m.top + m.bottom + rows.length * rowH + shops.length * shopH;
   const iw = Math.max(60, w - m.left - m.right);
@@ -340,7 +406,8 @@ function drawGantt(el, rows, now, w) {
   });
   const ih = yCur;
   g.append('g').selectAll('rect').data(bands).join('rect').attr('class', 'rr-shop-band').attr('x', -labelW + 4).attr('width', iw + labelW - 4).attr('y', (b) => b.y).attr('height', (b) => b.h).attr('rx', 6);
-  g.append('g').selectAll('text').data(bands).join('text').attr('class', 'rr-shop-label').attr('x', -labelW + 12).attr('y', (b) => b.y + 17).text((b) => `${shopLabel(b.shop)} · ${b.n} RO${b.n === 1 ? '' : 's'}`);
+  g.append('g').selectAll('text').data(bands).join('text').attr('class', 'rr-shop-label').attr('x', -labelW + 12).attr('y', (b) => b.y + 17)
+    .text((b) => { const od = rows.filter((o) => o.shop === b.shop && o.open && o.overdue).length; return `${shopLabel(b.shop)} · ${b.n} RO${b.n === 1 ? '' : 's'}${od && od < b.n ? ` · ${od} overdue` : ''}`; });
   axisBottom(g.append('g'), x, { ticks: narrow ? 3 : 6, format: (v) => fmtWeek(Math.floor(v / HPW)), height: ih });
   if (now != null) {
     g.append('line').attr('class', 'rr-now').attr('x1', x(now)).attr('x2', x(now)).attr('y1', 0).attr('y2', ih);
@@ -362,19 +429,13 @@ function drawGantt(el, rows, now, w) {
   rowG.filter((o) => o.due != null).append('line').attr('class', 'rr-due').attr('x1', (o) => x(o.due)).attr('x2', (o) => x(o.due)).attr('y1', 2).attr('y2', rowH - 2);
   const late = rowG.filter((o) => o.open && o.overdue);
   late.append('use').attr('href', '#i-alert').attr('x', (o) => Math.min(iw + 4, ex(o) + 4)).attr('y', 3).attr('width', 13).attr('height', 13).attr('color', C.urgent).style('color', C.urgent);
-  late.append('text').attr('class', 'rr-late-label').attr('x', (o) => Math.min(iw + 4, ex(o) + 4) + 16).attr('y', rowH / 2).attr('dy', '0.32em').text((o) => `+${Math.round(o.late_d)}d`);
+  late.append('text').attr('class', 'rr-late-label').attr('x', (o) => Math.min(iw + 4, ex(o) + 4) + 16).attr('y', rowH / 2).attr('dy', '0.32em').text((o) => `+${Math.round(o.late_d)}d`)
+    .append('tspan').attr('class', 'rr-late-ps').text((o) => (o.planted && !narrow ? ` · ${o.planted}` : ''));
   withTooltip(rowG, (o) => ({
     title: `${o.ro_id} · ${o.serial}`,
     rows: [['Shop', shopLabel(o.shop)], ['Inducted', o.inH != null ? fmtWeek(Math.floor(o.inH / HPW)) : '—'], ['Quoted TAT', fmtDays(o.quoted_tat_d)], [o.open ? 'Elapsed' : 'Actual TAT', fmtDays(o.open ? o.elapsed_d : o.actual_tat_d)], ['vs quoted due', o.late_d == null ? '—' : o.late_d > 0 ? `+${fmtDays(o.late_d)} late` : `${fmtDays(-o.late_d)} early`]],
     note: o.planted ? `Planted situation ${o.planted}` : o.open ? (o.overdue ? 'Overdue — chase the vendor' : 'Open, inside quote') : 'Returned',
   }));
-  const hl = rows.find((o) => o.planted && o.open) || rows.filter((o) => o.open && o.overdue).sort((a, b) => b.late_d - a.late_d)[0];
-  if (hl && pos.has(hl) && !narrow) {
-    const yy = pos.get(hl) + rowH / 2;
-    const xx = ex(hl);
-    const up = yy > 60;
-    annotate(g, { x: xx, y: yy, dx: xx > iw * 0.55 ? -36 : 36, dy: up ? -28 : 28, title: hl.planted ? `${hl.planted} · ${hl.ro_id}` : hl.ro_id, sub: `${fmtDays(hl.late_d)} past quoted due` });
-  }
 }
 
 // ============================================================================= TAT distribution
@@ -383,8 +444,8 @@ function renderTatDist(host, r) {
   if (!dists.length) return null;
   const slow = dists.slice().sort((a, b) => (b.mean_d / b.quoted_mean_d) - (a.mean_d / a.quoted_mean_d))[0];
   const f = chartFrame(host, {
-    headline: `${shopLabel(slow.shop)} turns units in ${fmtDays(slow.mean_d)} on average against ${fmtDays(slow.quoted_mean_d)} quoted; one in ten takes over ${fmtDays(slow.p90_d)}`,
-    subtitle: `Share of completed ROs by shop TAT (shop in → return) · ${slow.bin_width_d}-day bins · dashed = mean quoted TAT · ${dists.map((d) => `${shopLabel(d.shop)} n=${fmtInt(d.n)}`).join(' · ')}`,
+    headline: `${shopLabel(slow.shop)} averages ${fmtDays(slow.mean_d)} against ${fmtDays(slow.quoted_mean_d)} quoted; one in ten takes over ${fmtDays(slow.p90_d)}`,
+    subtitle: `Share of completed ROs by shop TAT · ${slow.bin_width_d}-day bins · solid = actual mean, dashed = quoted · ${dists.map((d) => `${shopLabel(d.shop)} n=${fmtInt(d.n)}`).join(' · ')}`,
     provenance: prov(dists[0], prov(r.meta)), source: 'rotables.json → tat_distribution',
     table: { columns: [{ key: 'shop', label: 'Shop', format: shopLabel }, { key: 'n', label: 'ROs', num: true, format: fmtInt }, { key: 'quoted_mean_d', label: 'Quoted mean', num: true, format: fmtDays }, { key: 'mean_d', label: 'Actual mean', num: true, format: fmtDays }, { key: 'median_d', label: 'Median', num: true, format: fmtDays }, { key: 'p90_d', label: 'p90', num: true, format: fmtDays }], rows: dists },
   });
@@ -405,13 +466,14 @@ function renderTatDist(host, r) {
       const pg = g.append('g').attr('transform', `translate(0,${gy})`);
       const share = d.counts.slice(0, lastNZ + 1).map((c, k) => ({ x0: d.bins_d[k], c, p: c / d.n }));
       const y = d3().scaleLinear().domain([0, d3().max(dists, (dd) => d3().max(dd.counts) / dd.n)]).range([panelH, 18]);
-      const color = i === 0 ? C.accent : C.accent2;
-      const bars = pg.selectAll('rect').data(share).join('rect').attr('x', (b) => x(b.x0) + 0.5).attr('width', Math.max(1, x(bw) - x(0) - 1.5)).attr('y', (b) => y(b.p)).attr('height', (b) => panelH - y(b.p)).attr('fill', color).attr('fill-opacity', 0.6);
+      // the slowest shop is the finding (teal); the others are context (titanium)
+      const color = d === slow ? SR.recommended : SR.neutral;
+      const bars = pg.selectAll('rect').data(share).join('rect').attr('x', (b) => x(b.x0) + 0.5).attr('width', Math.max(1, x(bw) - x(0) - 1.5)).attr('y', (b) => y(b.p)).attr('height', (b) => panelH - y(b.p)).attr('fill', color).attr('fill-opacity', d === slow ? 0.6 : 0.35);
       withTooltip(bars, (b) => ({ title: `${shopLabel(d.shop)} · ${b.x0}–${b.x0 + bw} d`, rows: [['ROs', fmtInt(b.c)], ['Share', fmtPct(b.p)]] }));
       pg.append('line').attr('x1', 0).attr('x2', iw).attr('y1', panelH).attr('y2', panelH).attr('stroke', C.lineStrong);
-      pg.append('line').attr('x1', x(d.quoted_mean_d)).attr('x2', x(d.quoted_mean_d)).attr('y1', 14).attr('y2', panelH).attr('stroke', C.review).attr('stroke-dasharray', '3 3');
+      refLine(pg, { x1: x(d.quoted_mean_d), x2: x(d.quoted_mean_d), y1: 14, y2: panelH });
       pg.append('line').attr('x1', x(d.mean_d)).attr('x2', x(d.mean_d)).attr('y1', 14).attr('y2', panelH).attr('stroke', C.text).attr('stroke-width', 1.25);
-      dl(pg, { x: 0, y: 6, text: `${shopLabel(d.shop)} · mean ${fmtDays(d.mean_d)} vs quoted ${fmtDays(d.quoted_mean_d)}`, color, strong: true });
+      dl(pg, { x: 0, y: 6, text: `${shopLabel(d.shop)} · mean ${fmtDays(d.mean_d)} vs quoted ${fmtDays(d.quoted_mean_d)}`, color: d === slow ? SR.recommended : C.muted, strong: d === slow });
       if (d === slow && w >= 360) annotate(pg, { x: x(d.p90_d), y: panelH - 4, dx: x(d.p90_d) > iw * 0.6 ? -24 : 24, dy: -34, title: `p90 ${fmtDays(d.p90_d)}`, sub: 'long tail' });
     });
     axisBottom(g.append('g'), x, { ticks: w < 480 ? 4 : 6, format: (v) => `${v} d`, height: hgt - m.top - m.bottom });
@@ -426,16 +488,18 @@ function renderTat(host, r) {
   const worst = rows.slice().sort((a, b) => (b.actual_mean_d - b.quoted_d) - (a.actual_mean_d - a.quoted_d))[0];
   const byShop = shops.map((s) => { const rs = rows.filter((t) => t.shop === s); return { shop: s, n: rs.length, ratio: median(rs.map((t) => t.actual_mean_d / t.quoted_d)) }; });
   const headline = rows.length
-    ? `${fmtInt(late.length)} of ${fmtInt(rows.length)} PN–shop pairs turn slower than quoted${worst ? `; ${worst.pn} runs ${fmtDays(worst.actual_mean_d - worst.quoted_d)} over` : ''}`
+    ? `${fmtInt(late.length)} of ${fmtInt(rows.length)} PN–shop pairs run slower than quoted${worst ? `; ${worst.pn} is ${fmtDays(worst.actual_mean_d - worst.quoted_d)} over` : ''}`
     : 'TAT comparison not run';
   const f = chartFrame(host, {
     headline,
-    subtitle: `Days · x = vendor-quoted TAT · y = actual mean (whisker to p90) · one dot per PN × shop · ${byShop.map((b) => `${shopLabel(b.shop)} median ${fmtNum(b.ratio, 2)}×`).join(' · ')}`,
+    subtitle: `Quoted vs actual mean TAT (whisker to p90), one dot per PN × shop · ${byShop.map((b) => `${shopLabel(b.shop)} median ${fmtNum(b.ratio, 2)}×`).join(' · ')}`,
     provenance: prov(r.tat?.[0], prov(r.meta)), source: 'rotables.json → tat',
     table: { columns: [{ key: 'pn', label: 'PN' }, { key: 'shop', label: 'Shop', format: shopLabel }, { key: 'quoted_d', label: 'Quoted', num: true, format: fmtDays }, { key: 'actual_mean_d', label: 'Actual mean', num: true, format: fmtDays }, { key: 'p90_d', label: 'p90', num: true, format: fmtDays }, { key: 'n', label: 'ROs', num: true, format: fmtInt }], rows },
   });
   if (!rows.length) { f.body.append(h('div', { class: 'state' }, 'not run')); return null; }
-  const colorOf = (s) => (shops.indexOf(s) === 0 ? C.accent : shops.indexOf(s) === 1 ? C.accent2 : C.muted);
+  // the slowest shop (highest median ratio) is the finding in teal; every other shop is titanium context
+  const slowShop = byShop.slice().sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))[0]?.shop;
+  const colorOf = (s) => (s === slowShop ? SR.recommended : SR.neutral);
   return responsive(f.body, (w) => {
     const hgt = Math.max(300, Math.min(420, Math.round(w * 0.82)));
     const m = { top: 16, right: 20, bottom: 40, left: 48 };
@@ -451,8 +515,7 @@ function renderTat(host, r) {
     dl(g, { x: iw, y: ih + 30, text: 'QUOTED TAT →', anchor: 'end', color: C.faint });
     // y = x reference
     const dmax = Math.min(x.domain()[1], y.domain()[1]);
-    g.append('line').attr('x1', x(0)).attr('y1', y(0)).attr('x2', x(dmax)).attr('y2', y(dmax)).attr('stroke', C.review).attr('stroke-dasharray', '4 4').attr('stroke-opacity', 0.8);
-    dl(g, { x: x(dmax) - 4, y: y(dmax) + 12, text: 'on quote', anchor: 'end', color: C.review });
+    refLine(g, { x1: x(0), y1: y(0), x2: x(dmax), y2: y(dmax), label: 'on quote', dx: -4, dy: 14, anchor: 'end' });
     dl(g, { x: 6, y: 6, text: 'SLOWER THAN QUOTED ↑', color: C.faint });
     const r0 = d3().scaleSqrt().domain([0, d3().max(rows, (t) => t.n || 1)]).range([2.5, 7]);
     const pts = g.append('g').selectAll('g').data(rows).join('g').attr('transform', (t) => `translate(${x(t.quoted_d)},0)`);
@@ -460,8 +523,14 @@ function renderTat(host, r) {
     pts.append('circle').attr('cy', (t) => y(t.actual_mean_d)).attr('r', (t) => r0(t.n || 1)).attr('fill', C.bg).attr('stroke', (t) => colorOf(t.shop)).attr('stroke-width', 1.75);
     withTooltip(pts, (t) => ({ title: `${t.pn} · ${shopLabel(t.shop)}`, rows: [['Quoted', fmtDays(t.quoted_d)], ['Actual mean', fmtDays(t.actual_mean_d)], ['p90', fmtDays(t.p90_d)], ['ROs', fmtInt(t.n)]] }));
     // direct shop labels (legend-free): top-right stack
-    shops.slice(0, 2).forEach((s, i) => dl(g, { x: iw, y: ih - 12 - i * 16, text: `● ${shopLabel(s)}`, anchor: 'end', color: colorOf(s) }));
-    if (worst) annotate(g, { x: x(worst.quoted_d), y: y(worst.actual_mean_d), dx: x(worst.quoted_d) > iw * 0.55 ? -30 : 30, dy: y(worst.actual_mean_d) < 50 ? 30 : -26, title: worst.pn, sub: `+${fmtDays(worst.actual_mean_d - worst.quoted_d)} vs quote` });
+    const legendShops = [slowShop, ...shops.filter((s) => s !== slowShop)].slice(0, 3);
+    legendShops.forEach((s, i) => dl(g, { x: iw, y: ih - 12 - i * 16, text: `● ${shopLabel(s)}`, anchor: 'end', color: s === slowShop ? SR.recommended : C.muted }));
+    if (worst) {
+      // annotate into the empty lower-left / upper-left space, away from the point cloud
+      const wx = x(worst.quoted_d), wy = y(worst.actual_mean_d);
+      const cx = d3().mean(rows, (t) => x(t.quoted_d));
+      annotate(g, { x: wx, y: wy, dx: wx > cx ? -Math.min(wx - 8, 64) : 40, dy: wy < 60 ? 40 : -30, title: worst.pn, sub: `+${fmtDays(worst.actual_mean_d - worst.quoted_d)} vs quote` });
+    }
   });
 }
 
@@ -533,14 +602,15 @@ function renderFloatCalc(host, r, method, ctx) {
   // levers
   const lN = mkNum('extra', 'Buy N more spares', { min: 0, step: 1 });
   const lD = mkNum('cut', 'Cut TAT by d days', { min: 0, step: 1 });
-  const leverBox = h('div', { class: 'fc-levers' });
+  const leverBox = h('div', { class: 'fc-levers', role: 'region', 'aria-label': 'Lever comparison' });
   const verdict = h('p', { class: 'fc-verdict', dataset: { out: 'verdict' } });
   const assume = h('div', { class: 'fc-assume' },
     accel ? [provChip(accel.provenance), h('span', {}, `Repair acceleration fee ${fmtAED(accel.value)} per day per unit (${accel.provenance === 'ASSUMED' ? 'ASSUMED' : accel.provenance}; ${accel.source})`)]
       : [provChip('ASSUMED'), h('span', {}, 'Repair acceleration fee: not exported — TAT-cut cost not run')]);
 
-  const right = h('div', {}, outs, chartHost);
-  host.append(h('div', { class: 'fc-grid' }, inputs, right));
+  // grid areas: inputs left / outputs + chart right at desktop; outputs first on narrow screens
+  inputs.classList.add('fc-area-in'); outs.classList.add('fc-area-out'); chartHost.classList.add('fc-area-chart');
+  host.append(h('div', { class: 'fc-grid' }, inputs, outs, chartHost));
   host.append(h('div', { class: 'section-title mt-3' }, h('h2', { class: 't-16' }, 'Lever comparison: buy spares vs cut TAT'), h('span', { class: 'rule' })));
   host.append(h('div', { class: 'fc-lever-controls' }, lN.el, lD.el), leverBox, verdict, assume);
   host.append(h('p', { class: 'rr-method-note mt-2' }, 'Palm’s theorem: with Poisson removals at rate λ and any repair-time distribution of mean T, the number of units in the pipeline is Poisson(λT). Availability = P(X < S); EBO = E[max(X − S, 0)]; expected wait = EBO / λ. Single site, infinite repair capacity, no condemnation — hence “METRIC-inspired”, not a full multi-echelon METRIC.'));
@@ -599,8 +669,8 @@ function renderFloatCalc(host, r, method, ctx) {
     oE.v.textContent = fmtNum(res.ebo, 3);
     oW.v.textContent = `${fmtNum(res.expected_wait_days, 2)} d`;
     oCap.v.textContent = fmtAED(res.capital_aed);
-    frame.root.querySelector('.chart-headline').textContent = `${fmtPct(res.availability, 1)} chance a serviceable ${cur.pn || 'unit'} is on the shelf at removal, with ${fmtInt(S)} spare${S === 1 ? '' : 's'} against a mean pipeline of ${fmtNum(res.pipeline_mean, 2)} units`;
-    frame.root.querySelector('.chart-subtitle').textContent = `Probability · units in the repair pipeline X ~ Poisson(λT = ${fmtNum(rate, 2)}/30 d × ${fmtNum(tat, 1)} d) · bars ≥ S are shortages · analytic`;
+    frame.root.querySelector('.chart-headline').textContent = `${fmtInt(S)} spare${S === 1 ? '' : 's'} cover ${fmtPct(res.availability, 1)} of removals against a mean pipeline of ${fmtNum(res.pipeline_mean, 2)} units`;
+    frame.root.querySelector('.chart-subtitle').textContent = `P(k units in the repair pipeline), X ~ Poisson(λT = ${fmtNum(rate, 2)}/30 d × ${fmtNum(tat, 1)} d)${cur.pn ? ` for ${cur.pn}` : ''} · bars at k ≥ S are shortages`;
     stopChart?.();
     stopChart = drawPmf(frame, res.pipeline_mean, S, res);
     // levers
@@ -608,20 +678,22 @@ function renderFloatCalc(host, r, method, ctx) {
     const cl = compareLevers(rate, tat, S, cost, D, N, accel ? accel.value : 0);
     const gainA = cl.extra_spares.availability - cl.base.availability;
     const gainB = cl.tat_cut.availability - cl.base.availability;
-    const lever = (title, key, o, gain, costLines, better) => h('div', { class: `fc-lever ${better ? 'is-better' : ''}`, dataset: { lever: key } },
-      h('div', { class: 'fc-lever-head' }, h('div', { class: 'fc-lever-title' }, title), better ? pill('ok', 'More availability') : null),
-      h('dl', {},
-        h('dt', {}, 'Availability'), h('dd', { dataset: { out: `${key}_availability` } }, `${fmtPct(o.availability, 1)} (${gain >= 0 ? '+' : '−'}${fmtNum(Math.abs(gain) * 100, 1)} pts)`),
-        h('dt', {}, 'Expected backorders'), h('dd', { dataset: { out: `${key}_ebo` } }, fmtNum(o.ebo, 3)),
-        h('dt', {}, 'Expected wait'), h('dd', {}, `${fmtNum(o.expected_wait_days, 2)} d`),
-        ...costLines));
-    leverBox.replaceChildren(
-      lever(`Buy ${fmtInt(N)} more spare${N === 1 ? '' : 's'}`, 'extra_spares', cl.extra_spares, gainA,
-        [h('dt', {}, 'One-off capital'), h('dd', { dataset: { out: 'extra_spares_capital' } }, fmtAED(cl.extra_spares.incremental_capital_aed)), h('dt', {}, 'Carrying / yr'), h('dd', {}, carrying(cl.extra_spares.incremental_capital_aed, method))],
-        gainA > gainB + 1e-9),
-      lever(`Cut TAT by ${fmtInt(D)} day${D === 1 ? '' : 's'}`, 'tat_cut', cl.tat_cut, gainB,
-        [h('dt', {}, 'One-off capital'), h('dd', {}, fmtAED(0)), h('dt', {}, 'Acceleration / yr'), h('dd', { dataset: { out: 'tat_cut_annual' } }, accel ? fmtAED(cl.tat_cut.incremental_annual_aed) : 'not run')],
-        gainB > gainA + 1e-9));
+    const betterA = gainA > gainB + 1e-9, betterB = gainB > gainA + 1e-9;
+    const cell = (v, out, better) => h('td', { class: better ? 'is-better' : '', dataset: out ? { out } : undefined }, v);
+    const rowC = (label, a, b, outA, outB) => h('tr', {}, h('th', { scope: 'row' }, label), cell(a, outA, betterA), cell(b, outB, betterB));
+    const gainTxt = (o, gain) => [fmtPct(o.availability, 1), h('span', { class: 'fc-gain' }, ` ${gain >= 0 ? '+' : '−'}${fmtNum(Math.abs(gain) * 100, 1)} pts`)];
+    const thLever = (title, key, better) => h('th', { scope: 'col', class: better ? 'is-better' : '', dataset: { lever: key } }, h('span', { class: 'fc-lever-title' }, title), better ? h('span', { class: 'fc-win' }, icon('check'), 'More availability') : null);
+    leverBox.replaceChildren(h('table', { class: 'fc-cmp' },
+      h('caption', { class: 'sr-only' }, 'Lever comparison: buy spares versus cut TAT'),
+      h('thead', {}, h('tr', {}, h('th', { scope: 'col' }, h('span', { class: 'sr-only' }, 'Metric')),
+        thLever(`Buy ${fmtInt(N)} more spare${N === 1 ? '' : 's'}`, 'extra_spares', betterA),
+        thLever(`Cut TAT by ${fmtInt(D)} day${D === 1 ? '' : 's'}`, 'tat_cut', betterB))),
+      h('tbody', {},
+        rowC('Availability', gainTxt(cl.extra_spares, gainA), gainTxt(cl.tat_cut, gainB), 'extra_spares_availability', 'tat_cut_availability'),
+        rowC('Expected backorders', fmtNum(cl.extra_spares.ebo, 3), fmtNum(cl.tat_cut.ebo, 3), 'extra_spares_ebo', 'tat_cut_ebo'),
+        rowC('Expected wait', `${fmtNum(cl.extra_spares.expected_wait_days, 2)} d`, `${fmtNum(cl.tat_cut.expected_wait_days, 2)} d`),
+        rowC('One-off capital', fmtAED(cl.extra_spares.incremental_capital_aed), fmtAED(0), 'extra_spares_capital'),
+        rowC('Annual cost', h('span', {}, carrying(cl.extra_spares.incremental_capital_aed, method), h('span', { class: 'fc-gain' }, ' carrying')), h('span', {}, accel ? fmtAED(cl.tat_cut.incremental_annual_aed) : 'not run', h('span', { class: 'fc-gain' }, ' fees')), null, 'tat_cut_annual'))));
     const ann = carryingValue(cl.extra_spares.incremental_capital_aed, method);
     verdict.replaceChildren(
       h('strong', {}, gainA > gainB + 1e-9 ? `Buying ${fmtInt(N)} spare${N === 1 ? '' : 's'} lifts availability more` : gainB > gainA + 1e-9 ? `Cutting TAT by ${fmtInt(D)} d lifts availability more` : 'Both levers give the same availability'),
@@ -662,17 +734,16 @@ function drawPmf(frame, mu, S, res) {
     ax.selectAll('.tick line').attr('stroke', C.lineStrong);
     dl(g, { x: iw, y: ih + 30, text: 'UNITS IN PIPELINE (k) →', anchor: 'end', color: C.faint });
     const bars = g.append('g').selectAll('rect').data(series).join('rect').attr('x', (d) => x(d.k)).attr('width', x.bandwidth()).attr('y', (d) => y(d.p)).attr('height', (d) => ih - y(d.p)).attr('rx', 1.5)
-      .attr('fill', (d) => (d.k < S ? C.accent : C.accent2)).attr('fill-opacity', (d) => (d.k < S ? 0.75 : 0.85));
+      .attr('fill', (d) => (d.k < S ? SR.recommended : SR.urgent)).attr('fill-opacity', (d) => (d.k < S ? 0.75 : 0.8));
     withTooltip(bars, (d) => ({ title: `${d.k} unit${d.k === 1 ? '' : 's'} in the pipeline`, rows: [['P(X = k)', fmtPct(d.p, 2)], ['Zone', d.k < S ? 'Covered by spares' : 'Shortage']] }));
     const sx = S <= kMax ? (x(S) ?? iw) - (x.step() * x.padding()) / 2 : iw;
     g.append('line').attr('x1', sx).attr('x2', sx).attr('y1', -14).attr('y2', ih).attr('stroke', C.text).attr('stroke-width', 1.25).attr('stroke-dasharray', '3 3');
     dl(g, { x: sx + (sx > iw * 0.7 ? -6 : 6), y: -18, text: `S = ${S}`, anchor: sx > iw * 0.7 ? 'end' : 'start', color: C.text, strong: true, dy: '0.7em' });
     if (w >= 420) {
       dl(g, { x: Math.max(4, sx - 8), y: 6, text: '◀ covered', anchor: 'end', color: C.accent });
-      dl(g, { x: sx + 8, y: 6, text: 'shortage ▶', color: C.accent2 });
+      dl(g, { x: sx + 8, y: 6, text: 'shortage ▶', color: SR.urgent });
     }
-    const peak = series.reduce((a, b) => (b.p > a.p ? b : a), series[0]);
-    if (x(peak.k) != null && w >= 360) annotate(g, { x: x(peak.k) + x.bandwidth() / 2, y: y(peak.p), dx: x(peak.k) > iw * 0.5 ? -30 : 30, dy: 0, title: `mean λT ${fmtNum(mu, 2)}`, sub: `EBO ${fmtNum(res.ebo, 3)}` });
+    // mean λT and EBO are already in the output tiles: no in-chart annotation competing with the bars
   });
 }
 
@@ -700,10 +771,13 @@ function renderPalmVsSim(host, r, hubId) {
   const hub = rows.filter((d) => d.hub), out = rows.filter((d) => !d.hub);
   const gap = rows.slice().sort((a, b) => (a.sim - a.palm) - (b.sim - b.palm))[0];
   const pol = meta.policy || r.palm_vs_sim_policy;
-  const headline = `${pol ? `For ${pol}’s floats, r` : 'R'}equest-weighted Palm predicts ${fmtPct(wavg(hub, 'palm'))} at the hub; the simulation delivers ${fmtPct(wavg(hub, 'sim'))}${out.length ? ` (outstations ${fmtPct(wavg(out, 'palm'))} vs ${fmtPct(wavg(out, 'sim'))})` : ''}`;
+  const hp = wavg(hub, 'palm'), hs = wavg(hub, 'sim');
+  const headline = hub.length
+    ? `Palm predicts ${fmtPct(hp)} fill at the hub; the simulation delivers ${fmtPct(hs)}`
+    : `Palm predicts ${fmtPct(wavg(rows, 'palm'))} fill; the simulation delivers ${fmtPct(wavg(rows, 'sim'))}`;
   const f = chartFrame(host, {
     headline,
-    subtitle: `Analytic P(X<S) vs simulated immediate fill · one dot per rotable × station, size = requests · ${meta.policy || r.palm_vs_sim_policy ? `${meta.policy || r.palm_vs_sim_policy} floats · ` : ''}${meta.split || r.palm_vs_sim_split || 'selection'} seeds${meta.n_seeds ? ` (${meta.n_seeds})` : ''}`,
+    subtitle: `Request-weighted${pol ? `, ${pol} floats` : ''}${out.length && hub.length ? ` · outstations ${fmtPct(wavg(out, 'palm'))} Palm vs ${fmtPct(wavg(out, 'sim'))} sim` : ''} · one dot per rotable × station, size = requests · ${meta.split || r.palm_vs_sim_split || 'selection'} seeds${meta.n_seeds ? ` (${meta.n_seeds})` : ''}`,
     provenance: 'SIMULATED', source: 'rotables.json → palm_vs_sim',
     table: { columns: [{ key: 'pn', label: 'PN' }, { key: 'station', label: 'Station' }, { key: 'palm', label: 'Palm A', num: true, format: (v) => fmtPct(v) }, { key: 'sim', label: 'Sim fill', num: true, format: (v) => fmtPct(v) }, { key: 'n', label: 'Requests', num: true, format: fmtInt }], rows },
   });
@@ -721,8 +795,8 @@ function renderPalmVsSim(host, r, hubId) {
     axisBottom(g.append('g'), x, { ticks: w < 480 ? 3 : 5, format: (v) => fmtPct(v, 0), height: ih });
     dl(g, { x: iw, y: ih + 30, text: 'PALM AVAILABILITY →', anchor: 'end', color: C.faint });
     dl(g, { x: 6, y: 6, text: 'SIMULATED FILL ↑', color: C.faint });
-    g.append('line').attr('x1', 0).attr('y1', ih).attr('x2', iw).attr('y2', 0).attr('stroke', C.review).attr('stroke-dasharray', '4 4');
-    dl(g, { x: iw * 0.18 + 6, y: ih - ih * 0.18 + 4, text: 'sim = Palm', color: C.review });
+    refLine(g, { x1: 0, y1: ih, x2: iw, y2: 0 });
+    dl(g, { x: iw * 0.18 + 8, y: ih - ih * 0.18 + 6, text: 'sim = Palm', color: C.faint, mono: true });
     const rr = d3().scaleSqrt().domain([0, d3().max(rows, (d) => d.n)]).range([2, 8]);
     const pts = g.append('g').selectAll('circle').data(rows.slice().sort((a, b) => a.hub - b.hub)).join('circle').attr('cx', (d) => x(d.palm)).attr('cy', (d) => y(d.sim)).attr('r', (d) => rr(d.n))
       .attr('fill', (d) => (d.hub ? C.accent : C.neutral)).attr('fill-opacity', (d) => (d.hub ? 0.55 : 0.35)).attr('stroke', (d) => (d.hub ? C.accent : C.muted)).attr('stroke-width', 1);

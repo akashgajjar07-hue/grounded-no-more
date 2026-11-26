@@ -85,3 +85,50 @@ def test_float_calculator_matches_floatcalc_js(site, inp):
         assert not problems, problems
     finally:
         ctx.close()
+
+
+FRAME_JS = """async () => {
+  const { lintAccents } = await import('./js/charts/theme.js');
+  return [...document.querySelectorAll('#view .chart-frame')].map((f) => ({
+    headline: (f.querySelector('.chart-headline')?.textContent || '').trim(),
+    accents: lintAccents(f),
+  }));
+}"""
+
+CHIPS_JS = """() => {
+  const boxes = [...document.querySelectorAll('[data-story="rotable-lifecycle"] .rr-flow-chip rect')].map((r) => r.getBBox());
+  const inter = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+  let overlaps = 0;
+  boxes.forEach((a, i) => boxes.slice(i + 1).forEach((b) => { if (inter(a, b)) overlaps += 1; }));
+  const backColours = [...document.querySelectorAll('[data-story="rotable-lifecycle"] .rr-arc--back path')].map((p) => (p.getAttribute('stroke') || '').toLowerCase());
+  return { n: boxes.length, overlaps, backColours };
+}"""
+
+
+@pytest.mark.parametrize("viewport", list(VIEWPORTS))
+def test_wave2_design_fixes(site, viewport):
+    """Design wave 2: lifecycle values in chips that do not overlap, no copper return flows,
+    headlines <= 90 chars, <= 2 accents per chart, decision column visible on phones."""
+    b, base = site
+    ctx, page, problems = open_route(b, base, "#/rotables", viewport)
+    try:
+        flows = page.evaluate("""async () => { const r = await (await fetch('./data/rotables.json')).json();
+          return (r.lifecycle?.flows || []).filter((f) => f.from !== f.to && +f.count).length; }""")
+        chips = page.evaluate(CHIPS_JS)
+        assert chips["n"] == flows
+        assert chips["overlaps"] == 0
+        assert chips["backColours"] and all(c != "#c47f52" for c in chips["backColours"])
+        for f in page.evaluate(FRAME_JS):
+            assert len(f["headline"]) <= 90, f["headline"]
+            assert len(f["accents"]) <= 2, f
+        assert page.locator(".rr-chase .rr-alert").count() >= 1
+        assert page.locator('[data-lever="extra_spares"]').count() == 1
+        if viewport == "390":
+            assert page.locator(".data-table-stack .dts-metric-label", has_text="vs due").count() >= 1
+            # calculator outputs come before the inputs on a phone
+            out_y = page.locator(".fc-outs").bounding_box()["y"]
+            in_y = page.locator(".fc-inputs").bounding_box()["y"]
+            assert out_y < in_y
+        assert not problems, problems
+    finally:
+        ctx.close()

@@ -41,7 +41,10 @@ def test_station_select_updates_url_and_replay_runs(site):
     b, base = site
     ctx, page, problems = open_route(b, base, "#/network", "1440")
     try:
-        page.locator('.np-picker button[data-station="BOM"]').click()
+        # the chip row is a keyboard-only selector now (visually hidden until focused)
+        btn = page.locator('.np-picker button[data-station="BOM"]')
+        btn.focus()
+        page.keyboard.press("Enter")
         assert "station=BOM" in page.url
         assert page.locator(".np-drill-code").inner_text().strip() == "BOM"
         page.get_by_role("button", name="Replay transfer").click()
@@ -66,6 +69,63 @@ def test_map_nodes_keyboard_reachable(site):
         assert "station=JED" in page.url
         label = node.get_attribute("aria-label")
         assert "risk" in label.lower()
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+FRAME_JS = """async () => {
+  const { lintAccents } = await import('./js/charts/theme.js');
+  return [...document.querySelectorAll('#view .chart-frame')].map((f) => ({
+    headline: (f.querySelector('.chart-headline')?.textContent || '').trim(),
+    accents: lintAccents(f),
+  }));
+}"""
+
+
+@pytest.mark.parametrize("viewport", list(VIEWPORTS))
+def test_wave2_design_fixes(site, viewport):
+    """Design wave 2: headlines <= 90, <= 2 accents per chart, sub-labels without bullets, hidden chip row, stacked table."""
+    b, base = site
+    ctx, page, problems = open_route(b, base, "#/network?station=BOM", viewport)
+    try:
+        frames = page.evaluate(FRAME_JS)
+        for f in frames:
+            assert len(f["headline"]) <= 90, f["headline"]
+            assert len(f["accents"]) <= 2, f
+        subs = page.eval_on_selector_all("svg.map-main .map-label-sub", "els => els.map(e => e.textContent)")
+        assert all("●" not in t and "▲" not in t for t in subs), subs
+        # chip row is visually hidden until focus, then shown
+        picker = page.locator(".np-picker")
+        assert picker.bounding_box()["width"] <= 2
+        page.locator('.np-picker button[data-station="AUH"]').focus()
+        assert picker.bounding_box()["width"] > 40
+        # no copper on the emergency encodings (legend, replay dots)
+        legend = page.locator(".np-legend").inner_html().lower()
+        assert "196, 127, 82" not in legend and "#c47f52" not in legend
+        fills = page.eval_on_selector_all('[data-story="network-replay"] .np-ev circle', "els => els.map(e => (e.getAttribute('fill') || '').toLowerCase())")
+        assert "#c47f52" not in fills
+        if viewport == "390":
+            # the decision column (projected risk) stays visible on a phone
+            assert page.locator(".data-table-stack .dts-metric-label", has_text="Risk").count() >= 1
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+def test_ci_clamp_note(site):
+    """Negative CI lower ends are drawn at 0 and the clamp is stated (drill table + compare subtitle)."""
+    b, base = site
+    ctx, page, problems = open_route(b, base, "#/network?station=BOM", "1440")
+    try:
+        clamped = page.evaluate("""async () => {
+          const n = await (await fetch('./data/network.json')).json();
+          return (n.policy_compare || []).some((r) => Object.entries(r).some(([k, v]) =>
+            (Array.isArray(v) && /_ci$/.test(k) && v[0] < 0) || (/_(ci_)?lo$/.test(k) && v < 0) || (v && typeof v === 'object' && !Array.isArray(v) && (v.ci_lo ?? v.lo) < 0)));
+        }""")
+        sub = page.locator('[data-story="network-policy"] .chart-subtitle').get_attribute("title") or ""
+        if clamped:
+            assert "drawn at 0" in sub
         assert not problems, problems
     finally:
         ctx.close()

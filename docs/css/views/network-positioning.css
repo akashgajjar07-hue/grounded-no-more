@@ -1,12 +1,18 @@
 /* 05 · Network Positioning — view styles (loaded once by views/network-positioning.js) */
-.np-hero { display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: var(--gutter); }
+.np-hero { display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: var(--gutter); align-items: start; }
 @media (max-width: 1199px) { .np-hero { grid-template-columns: minmax(0, 1fr); } }
-.np-map-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--s-1) var(--s-2); margin-top: var(--s-2); }
+.np-map-foot { position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--s-1) var(--s-2); margin-top: var(--s-2); }
 .np-legend { display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-2); font-size: var(--fs-12); color: var(--text-muted); }
 .np-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .np-legend .np-ring { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid currentColor; display: inline-block; }
 .np-legend .np-line { width: 16px; height: 2px; background: currentColor; display: inline-block; }
 .np-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+/* keyboard-only selector: visually hidden until something inside it has focus */
+.np-picker:not(:focus-within) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.np-picker:focus-within { flex-basis: 100%; }
+.np-legend-k { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); }
+.np-legend-k:not(:first-child) { margin-left: var(--s-1); }
+.np-note { font-size: var(--fs-12); color: var(--text-faint); margin: 8px 0 0; line-height: 1.4; }
 .np-picker button { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.06em; padding: 6px 10px; min-height: 32px; border-radius: var(--r-chip); border: 1px solid var(--line-strong); background: transparent; color: var(--text-muted); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
 .np-picker button[aria-pressed='true'] { color: var(--text); border-color: var(--primary); background: var(--c-teal-a14); }
 .np-picker button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
@@ -33,7 +39,7 @@
 .np-replay-bar .select { max-width: 100%; min-width: 0; flex: 1 1 260px; font-family: var(--font-mono); font-size: var(--fs-12); }
 .np-event { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-control); background: var(--panel); font-size: var(--fs-14); margin-top: var(--s-2); }
 .np-event .mono { font-size: var(--fs-12); }
-.np-event.is-emergency { border-color: color-mix(in srgb, var(--c-copper) 55%, transparent); }
+.np-event.is-emergency { border-color: color-mix(in srgb, var(--c-red) 45%, transparent); }
 .np-strip .np-ev { cursor: pointer; }
 .np-strip .np-ev:focus { outline: none; }
 .np-strip .np-ev:focus .np-ev-ring, .np-strip .np-ev.is-sel .np-ev-ring { stroke: var(--c-teal-hi); stroke-width: 1.5; }
@@ -63,7 +69,7 @@
 .np-timeline li { display: grid; grid-template-columns: 64px 44px minmax(0, 1fr); gap: 8px; padding: 6px 0 6px 14px; position: relative; font-size: var(--fs-14); color: var(--text-muted); }
 .np-timeline li::before { content: ''; position: absolute; left: -4px; top: 12px; width: 7px; height: 7px; border-radius: 50%; background: var(--bg); border: 1.5px solid var(--primary); }
 .np-timeline li.is-aog_start::before { border-color: var(--c-red); background: var(--c-red); }
-.np-timeline li.is-shipped::before { border-color: var(--c-copper); background: var(--c-copper); }
+.np-timeline li.is-shipped::before { border-color: var(--c-titanium); background: var(--c-titanium); }
 .np-timeline li.is-fitted::before { background: var(--primary); }
 .np-tl-t, .np-tl-st { font-size: var(--fs-12); color: var(--text-faint); padding-top: 2px; }
 .np-tl-ev { color: var(--text); }
