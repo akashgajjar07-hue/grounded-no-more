@@ -59,12 +59,12 @@ Every helper returns a real DOM element. Compose them and don't restyle them per
 | Data table | `dataTable({columns, rows, sort, onRowClick, rowKey, selected, maxHeight, dense, caption, bare, mobileColumns, stack, stickyFirst})` | Sticky header, sortable buttons with `aria-sort`, `mono: true` for PNs/serials, `num: true` right-aligns tabular numbers, `render(row)` for cells holding nodes. `.update(rows)` re-renders, `.setSelected(key)`. **Mobile:** `mobileColumns: ['pn','risk_score','stock']` is a priority list: < 768 px shows only those columns; ≤ 480 px renders two-line stacked rows (key 1 on line 1, key 2 in a right-aligned metric pill, the rest as faint "Label value" pairs on line 2) with a compact sort control (`stack: false` opts out; `short` gives a column a short label). `stickyFirst: true` pins the first column with a hairline shadow. Every table whose decision column would scroll off at 390 px must set `mobileColumns`. |
 | Tabs | `tabs({tabs:[{id,label,count}], value, onChange})` | ARIA tablist with arrow-key support. |
 | Segmented | `segmented({options:[{value,label}], value, onChange, label})` | Radio group. |
-| Slider | `slider({label, min, max, step, value, format, onInput})` | Labelled range with live `<output>` and min/max scale. |
+| Slider | `slider({label, min, max, step, value, format, valueText, onInput})` | Labelled range with live `<output>` and min/max scale. **Always sets `aria-valuetext`** (from `valueText(v)`, else `format(v)`), so screen readers hear "AED 41.9M", not "41850000". Returns the field with `.input` and `.setValue(v)`. For a hand-built `<input type=range>` call `bindValueText(input, fmt)` (returns `update()` for programmatic changes). |
 | Drawer | `drawer({title, kicker, body, foot, onClose, persistOnParams}).open()` | Right panel. Esc, the scrim and the close button all close it; focus is trapped and then restored; page scroll is locked while open. Registered with the overlay registry: **the router closes it on every route change** (`onClose({reason:'route'})`). `close()` is idempotent. |
 | Modal | `modal({title, body}).open()` | Used by the shortcuts help. Registered like the drawer. |
 | Overlay registry | `closeAllOverlays({reason})`, `registerOverlay({close, el, persistOnParams})`, `openOverlayCount()` | The router calls `closeAllOverlays()` before rendering any view (links, `ctx.navigate`, `location.hash`, Back/Forward, query changes that re-render). Register any custom overlay so it is closed too. Story mode is exempt. |
 | Tooltip | `tooltip.show(evt, {title, rows:[[k,v]], note})`, `.move`, `.hide` | Card-style singleton, also used by charts. |
-| Story mode | `storyMode({steps, navigate}).start()` | Spotlight plus step card. Steps come from `story.json` (`{route, selector, title, body}`); mark targets with `data-story="…"`. The card goes right / left / below / above the target (then the corners), choosing the least overlap (`storyCardPosition(rect, {cw, ch, vw, vh})`). At ≤ 480 px it is a bottom sheet (≤ 40vh) and the target is scrolled to just under the top bar. Spotlight targets should be whole cards, not slices. |
+| Story mode | `storyMode({steps, navigate}).start()` | Spotlight plus step card. Steps come from `story.json` (`{route, selector, mobile_selector?, title, body}`); mark targets with `data-story="…"`. Targets are framed with their top at **top-bar height + 16 px** (never under the sticky bar; re-framed while charts above them finish rendering); a target taller than the free space is top-aligned under the bar and the card goes in the remaining space. The card goes right / left / below / above the visible part of the target (then the corners), choosing the least overlap (`storyCardPosition(rect, {cw, ch, vw, vh, top})`, `top` = the smallest card top). **≤ 480 px:** a bottom sheet (≤ 40vh) with a grab-handle button; it drops to a **peek** strip (~25% of the viewport, body clamped to 2 lines) automatically when it would cover the target, and the handle toggles it. `mobile_selector` names a narrower child to spotlight on phones (falls back to `selector`). |
 | Native select | `<select>` (any class) | Styled globally: no OS chrome, 8 px radius, hairline border, DS chevron. Views may change size/font; the chevron always wins. |
 | Footer | `disclaimer({meta})` | Holds the **exact** required disclaimer text (`DISCLAIMER` constant). Do not edit it. |
 | States | `stateBlock('loading'|'empty'|'error', msg)`, `stubNote(text)` | |
@@ -111,14 +111,23 @@ Every helper returns a real DOM element. Compose them and don't restyle them per
   green: spending more capital is a choice, not an alarm. `kpiTile` does this automatically for capital KPIs.
 - Calibration target bands: hatch or outline in titanium, not a copper fill.
 - `lintAccents(el)` lists the accents painted in a chart; `chartFrame` warns in dev builds when there are more than 2.
+- **The one-line rule: teal = the recommended / primary result only; neutral (titanium/slate) for every other category;
+  red = urgent / AOG; amber = review status; copper = capital or the P0 baseline.** Teal is never a category colour
+  ("EU vendor", "hub", "Willemain", a "best" marker on a non-recommended row, a "high" tornado bar).
+- `lintTeal(el)` lists the distinct **series** painted teal (marks tagged with `data-series` via `markSeries(sel, id)` /
+  `pickSeries(role, id)`, plus teal non-numeric direct labels). `chartFrame` warns in dev builds when more than one series
+  is teal. `lineChart`, `dotWhiskerChart` and `barList` tag their marks automatically; tag bespoke marks with
+  `markSeries(selection, d => d.key)` and pick colours with `pickSeries('recommended', id)` (it also warns when two
+  different series ask for teal in the same chart).
 
 ### API
 ```js
 import { chartFrame, lineChart, dotWhiskerChart, barList, plot, responsive, svgIn,
          axisBottom, axisLeft, gridY, line, band, dotWhisker, directLabel, annotate, dodge,
-         labelAround, labelBox, markerRect, elementRect, chipLabel, refLine, lintAccents,
-         withTooltip, sparkline, theme, fmtAED, fmtPct, fmtPts, fmtHours, fmtDays, fmtInt,
-         fmtNum, fmtWeek, fmtWeekRange, fmtCapitalDelta, fmtByUnit } from '../charts/theme.js';
+         labelAround, labelBox, markerRect, elementRect, chipLabel, refLine, lintAccents, lintTeal,
+         markSeries, pickSeries, withTooltip, sparkline, theme, fmtAED, fmtMoney, fmtPct, fmtPts, fmtHours,
+         fmtDays, fmtInt, fmtCount, fmtNum, fmtMult, TIMES, fmtEnum, plural, fmtSimTime, fmtStamp, SIM_EPOCH,
+         fmtWeek, fmtWeekRange, fmtCapitalDelta, fmtByUnit } from '../charts/theme.js';
 
 const f = chartFrame(card, {
   headline: 'P2 cuts AOG hours by 45% versus legacy rules',
@@ -130,7 +139,12 @@ dotWhiskerChart(f.body, { rows: [{ key: 'P2', label: 'P2 · Multi-echelon', valu
 lineChart(f.body, { series: [{ id: 'mean', label: '8-wk mean', values, primary: true }], band, x: { format: fmtWeek },
                     annotation: { x: 13, y: 15, title: 'Peak W13', sub: '15 units' } });
 ```
-Formatters: `fmtAED(4.8e6)` → `AED 4.8M`, `fmtAED(820000)` → `AED 820k`, `fmtPct(0.987)` → `98.7%`
+Formatters: `fmtAED(4.8e6)` → `AED 4.8M`, `fmtAED(820000)` → `AED 820k` (`fmtMoney` is the same compact format: use it for
+**every** money value, prose included, never `AED 137,650`), `fmtCount(47977)` → `47,977`, `fmtMult(2)` → `×2.0` (always
+the `×` sign, `TIMES`), `fmtEnum('EU_VENDOR')` → `EU vendor` (never print raw enums), `plural(3, 'option')` → `3 options`
+(never "option(s)"), `fmtSimTime('2023-01-18T01:00Z' | simHours)` → `W2 · d3 01:00` (simulated calendar, epoch
+`SIM_EPOCH` = `aog_lab.json` `sim_calendar.epoch`), `fmtStamp('2026-11-26T02:25:21Z')` → `26 Nov 02:25 UTC` (real build
+timestamps only), `fmtPct(0.987)` → `98.7%`
 (fractions in), `fmtPts(0.034)` → `3.4 pts`, `fmtHours(124)` → `124 h`, `fmtInt(12345)` → `12,345`,
 `fmtWeek(104)` → `W104` (simulated calendar; also accepts `'W104'`, rounds, `null` → `—`), `fmtWeekRange(104, 155)` →
 `W104–W155`, `fmtCapitalDelta(5.04e6)` → `+AED 5M more capital`.
@@ -209,11 +223,27 @@ export async function render(el, ctx) {
 - Mark story targets with `data-story="name"`. Use one `bp` hero card at most.
 - Test at 1440 × 900 and 390 × 844 with `scripts/screenshot.py --only <route>`.
 - Keyboard: 1–8 switch workspaces, 0 opens Data & Method, ? shows help, S starts the story, Esc closes
-  overlays. The shell ignores keys while focus is in an input.
+  overlays. 1–8 / 0 / S also work **while a drawer or modal is open** (the shell closes every overlay, then acts);
+  Esc closes the overlay first. The shell ignores keys while focus is in an input, and the tour owns → ← Esc.
 - Overlays: never leave one behind. The router closes all drawers/modals/tooltips before any view renders, and a stale
   view's `ctx.setParams` is ignored. To keep a drawer open across same-route query changes, export
   `onParams(params, ctx)` from the view (return `false` to fall back to a full re-render) and open the drawer with
   `persistOnParams: true`.
+
+### Cross-screen numbers (exported once, shown the same everywhere)
+- Per-PN AOG hours: `parts.json` `aog_h_2y`, `aog_h_52w`, `aog_h_52w_max_station` (+ `_id`), printed with the labels in
+  `parts.json` `aog_metric_labels` (e.g. "AOG h · last 52 wk · all stations"). Never show an unlabelled "AOG h".
+- ATA system pills: print `ata_systems[].status_label` with `pill(status)`; `system_level` (relative rating) and
+  `has_urgent_part` are separate fields. A system never reads a bare OK next to urgent parts ("WATCH · 2 urgent PNs").
+- Outstation risk: `network.json` `stations[].outstation_risk_level` / `risk_vs_outstations` / `outstation_rank`
+  (relative to the riskiest outstation); the hub-normalised `risk` is for the hub-vs-network comparison only.
+- Float S: the calculator's S = shelf + units in the loop (`rotables.json` `float_examples[].spares_total`).
+
+### Automated QA (tests/_sitefx.py `audit()`)
+Fails on: console errors, failed requests, visible NaN/undefined/null, horizontal page scroll, text clipped inside a card
+(`scrollWidth > clientWidth`; a deliberate **single-line ellipsis is allowed when the full text is in a `title`**
+on the element or an ancestor), **text past the right edge of its card, its `<svg>` or the viewport** (`EDGE_JS`: SVG
+`text` boxes and HTML glyph boxes; scroll containers exempt), and chart frames without headline + subtitle + chip.
 
 ## 6. Do / don't
 
@@ -223,6 +253,8 @@ export async function render(el, ctx) {
 | Use teal for the recommendation, copper for capital or baseline, neutrals for everything else | Use more than 2 accent colours, rainbow scales, pies or 3-D |
 | Draw reference lines with `refLine()` (faded titanium dashes) | Draw reference lines in amber or copper |
 | Show capital changes in neutral text ("+AED 5M more capital") | Colour a capital increase red |
+| Keep teal for the recommended / primary result only | Paint a category, a vendor, the hub or a "best" row teal |
+| Format money compactly (`fmtMoney` → "AED 138k"), multipliers with `×`, enums as words | Print "AED 137,650", "x2.0", `EU_VENDOR` or "option(s)" |
 | Keep headlines ≤ 90 characters and subtitles ≤ 2 lines | Pack three clauses and six numbers into a headline |
 | Pair status with icon and text (`pill`) | Encode status by colour alone |
 | Show CIs and bands, and say "simulated" | Show point estimates as certainties |

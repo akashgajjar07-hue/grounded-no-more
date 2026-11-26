@@ -332,15 +332,37 @@ export function segmented({ options, value, onChange, label = 'Options' }) {
   return g;
 }
 
-/** Labelled range slider with live <output>. format(v) → display string. */
-export function slider({ label, min, max, step = 1, value, format = String, onInput, id }) {
+/**
+ * Keep a range input's aria-valuetext in sync with a formatter, so screen readers announce "AED 41.9M" rather
+ * than "41850000" (F5). Sets it now and on every input/change event; returns update() for programmatic changes.
+ *   const update = bindValueText(rangeInput, (v) => fmtAED(v)); input.value = 3; update();
+ */
+export function bindValueText(input, fmt = String) {
+  const update = () => { try { input.setAttribute('aria-valuetext', String(fmt(+input.value))); } catch { input.removeAttribute('aria-valuetext'); } };
+  update();
+  input.addEventListener('input', update);
+  input.addEventListener('change', update);
+  return update;
+}
+
+/**
+ * Labelled range slider with live <output> and min/max scale.
+ * slider({label, min, max, step, value, format, valueText, onInput, id}) → field element with
+ *   .input (the <input type=range>) and .setValue(v) (moves thumb, output and aria-valuetext; does not call onInput).
+ * format(v) → the visible output / scale text. valueText(v) → aria-valuetext (defaults to format): always set (F5).
+ */
+export function slider({ label, min, max, step = 1, value, format = String, valueText, onInput, id }) {
   const sid = id || `sl-${Math.random().toString(36).slice(2, 8)}`;
-  const out = h('output', { for: sid }, format(value));
+  const out = h('output', { for: sid, 'aria-hidden': 'true' }, format(value));
   const input = h('input', { class: 'slider', type: 'range', id: sid, min, max, step, value });
-  const pct = () => input.style.setProperty('--pct', `${((input.value - min) / (max - min)) * 100}%`);
+  const pct = () => input.style.setProperty('--pct', `${max > min ? ((input.value - min) / (max - min)) * 100 : 0}%`);
   pct();
+  const vt = bindValueText(input, valueText || format);
   input.addEventListener('input', () => { pct(); out.textContent = format(+input.value); onInput?.(+input.value); });
-  return h('div', { class: 'field' }, h('label', { class: 'field-label', for: sid }, label, out), input, h('div', { class: 'slider-scale', 'aria-hidden': 'true' }, h('span', {}, format(min)), h('span', {}, format(max))));
+  const field = h('div', { class: 'field' }, h('label', { class: 'field-label', for: sid }, label, out), input, h('div', { class: 'slider-scale', 'aria-hidden': 'true' }, h('span', {}, format(min)), h('span', {}, format(max))));
+  field.input = input;
+  field.setValue = (v) => { input.value = v; pct(); out.textContent = format(+input.value); vt(); };
+  return field;
 }
 
 // --------------------------------------------------------------------------- overlays
@@ -571,7 +593,10 @@ export function fillLifecycle(svg, { counts = {}, flows = [] } = {}) {
 
 // --------------------------------------------------------------------------- story mode
 /**
- * Story-mode overlay: spotlight + step card. steps: [{route, selector, title, body}]
+ * Story-mode overlay: spotlight + step card. steps: [{route, selector, mobile_selector?, title, body}]
+ * Targets are framed just under the sticky top bar (+16 px). At ≤ 480 px the card is a bottom sheet that collapses to
+ * a peek strip (~25% of the viewport) when it would cover the target; the grab handle toggles it. `mobile_selector`
+ * (optional) names a narrower element to spotlight on phones.
  * navigate(route) must return a Promise that resolves once the view has rendered.
  */
 let activeStory = null;
@@ -579,20 +604,21 @@ let activeStory = null;
  * Where to put a floating card of size cw × ch next to target rect r inside a vw × vh viewport.
  * Tries right, left, below and above (then the four corners), each clamped to a 16 px margin, and returns the
  * candidate with the least overlap with the target (inflated by 16 px clearance); ties keep that order.
- * Exported for tests and for any other anchored popover. → {left, top, side, overlap}
+ * `top` is the smallest allowed card top (story mode passes the sticky top-bar height + 16 so the card never sits under
+ * the bar). Exported for tests and for any other anchored popover. → {left, top, side, overlap}
  */
-export function storyCardPosition(r, { cw, ch, vw, vh, gap = 24, margin = 16, clearance = 16 }) {
+export function storyCardPosition(r, { cw, ch, vw, vh, gap = 24, margin = 16, clearance = 16, top: minTop = margin }) {
   const clampX = (x) => Math.max(margin, Math.min(x, vw - cw - margin));
-  const clampY = (y) => Math.max(margin, Math.min(y, vh - ch - margin));
+  const clampY = (y) => Math.max(minTop, Math.min(y, vh - ch - margin));
   const cands = [
     { side: 'right', left: r.right + gap, top: clampY(r.top) },
     { side: 'left', left: r.left - gap - cw, top: clampY(r.top) },
     { side: 'below', left: clampX(r.left), top: r.bottom + gap },
     { side: 'above', left: clampX(r.left), top: r.top - gap - ch },
     { side: 'bottom-right', left: vw - cw - margin, top: vh - ch - margin },
-    { side: 'top-right', left: vw - cw - margin, top: margin },
+    { side: 'top-right', left: vw - cw - margin, top: minTop },
     { side: 'bottom-left', left: margin, top: vh - ch - margin },
-    { side: 'top-left', left: margin, top: margin },
+    { side: 'top-left', left: margin, top: minTop },
   ].map((c) => ({ ...c, left: clampX(c.left), top: clampY(c.top) }));
   const t = { l: r.left - clearance, t: r.top - clearance, r: r.right + clearance, b: r.bottom + clearance };
   let best = null;
@@ -616,7 +642,9 @@ export function storyMode({ steps, navigate, onExit }) {
   const prog = h('div', { class: 'story-progress', 'aria-hidden': 'true' }, steps.map(() => h('span')));
   const back = h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => go(i - 1) }, 'Back');
   const next = h('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => (i < steps.length - 1 ? go(i + 1) : exit()) }, 'Next');
-  const cardEl = h('div', { class: 'story-card' }, stepEl, titleEl, bodyEl, prog, h('div', { class: 'story-actions' }, h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => exit() }, 'Exit tour'), h('div', { class: 'row' }, back, next)));
+  let peekUser = null; // null = automatic, true/false = the reader toggled the sheet on this step
+  const grab = h('button', { class: 'story-grab', type: 'button', 'aria-expanded': 'true', 'aria-label': 'Collapse the tour card', onclick: () => { setPeek(!cardEl.classList.contains('is-peek')); peekUser = cardEl.classList.contains('is-peek'); } }, h('span', { 'aria-hidden': 'true' }));
+  const cardEl = h('div', { class: 'story-card' }, grab, stepEl, titleEl, bodyEl, prog, h('div', { class: 'story-actions' }, h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => exit() }, 'Exit tour'), h('div', { class: 'row' }, back, next)));
   root.append(spot, cardEl);
   let opener = null;
   const onKey = (e) => {
@@ -639,28 +667,73 @@ export function storyMode({ steps, navigate, onExit }) {
   }
   const SHEET_MAX = 480; // px viewport width at or below which the card becomes a bottom sheet
   const isSheet = () => innerWidth <= SHEET_MAX;
+  /** Bottom of the sticky top bar (0 if absent): story targets and the card stay below it. */
+  const barBottom = () => { const b = document.querySelector('.topbar'); return b ? Math.max(0, Math.round(b.getBoundingClientRect().bottom)) : 0; };
+  const BAR_GAP = 16;
+  function setPeek(on) {
+    cardEl.classList.toggle('is-peek', !!on);
+    grab.setAttribute('aria-expanded', String(!on));
+    grab.setAttribute('aria-label', on ? 'Expand the tour card' : 'Collapse the tour card');
+    onViewport();
+  }
   function place() {
-    cardEl.classList.toggle('is-sheet', isSheet());
+    const sheet = isSheet();
+    cardEl.classList.toggle('is-sheet', sheet);
+    if (!sheet && cardEl.classList.contains('is-peek')) cardEl.classList.remove('is-peek');
+    const bar = barBottom();
     if (!target || !target.isConnected) {
       Object.assign(spot.style, { left: '50%', top: '50%', width: '0px', height: '0px' });
-      if (!isSheet()) Object.assign(cardEl.style, { left: `${(innerWidth - Math.min(380, innerWidth - 32)) / 2}px`, top: `${innerHeight / 3}px` });
+      if (!sheet) Object.assign(cardEl.style, { left: `${(innerWidth - Math.min(380, innerWidth - 32)) / 2}px`, top: `${Math.max(bar + BAR_GAP, innerHeight / 3)}px` });
       return;
     }
     const r = target.getBoundingClientRect();
     const pad = 8;
-    const top0 = Math.max(r.top - pad, 4), bot0 = Math.min(r.bottom + pad, innerHeight - 4);
+    // the spotlight never covers the sticky top bar
+    const top0 = Math.max(r.top - pad, bar + 4), bot0 = Math.min(r.bottom + pad, innerHeight - 4);
     Object.assign(spot.style, { left: `${r.left - pad}px`, top: `${top0}px`, width: `${r.width + pad * 2}px`, height: `${Math.max(0, bot0 - top0)}px` });
-    if (isSheet()) { cardEl.style.left = ''; cardEl.style.top = ''; return; } // CSS pins it to the bottom (≤ 40vh)
-    const pos = storyCardPosition(r, { cw: Math.min(380, innerWidth - 32), ch: cardEl.offsetHeight || 240, vw: innerWidth, vh: innerHeight });
+    if (sheet) {
+      cardEl.style.left = ''; cardEl.style.top = '';
+      // automatic peek: collapse to ~25% of the viewport when the expanded sheet would cover the target
+      if (peekUser == null) {
+        const wasPeek = cardEl.classList.contains('is-peek');
+        if (wasPeek) cardEl.classList.remove('is-peek');
+        const sheetTop = innerHeight - cardEl.offsetHeight;
+        const covered = Math.min(r.bottom, innerHeight) - Math.max(r.top, sheetTop);
+        cardEl.classList.toggle('is-peek', covered > 24);
+        grab.setAttribute('aria-expanded', String(!cardEl.classList.contains('is-peek')));
+      }
+      return;
+    }
+    // clip the target rect to the visible area below the bar, so a tall target leaves room for the card
+    const vis = { left: r.left, right: r.right, top: Math.max(r.top, bar), bottom: Math.min(r.bottom, innerHeight), width: r.width };
+    vis.height = Math.max(0, vis.bottom - vis.top);
+    const pos = storyCardPosition(vis, { cw: Math.min(380, innerWidth - 32), ch: cardEl.offsetHeight || 240, vw: innerWidth, vh: innerHeight, top: bar + BAR_GAP });
     Object.assign(cardEl.style, { left: `${pos.left}px`, top: `${pos.top}px` });
   }
   let raf = 0;
   const onViewport = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(place); };
 
+  /**
+   * Scroll so the target's top sits just under the sticky top bar (bar + 16 px on desktop, bar + 8 px on phones).
+   * A target shorter than the free space is not pushed further than needed: if it already sits fully inside the free
+   * band below the bar it stays put.
+   */
+  function frame(el) {
+    const bar = barBottom();
+    const r = el.getBoundingClientRect();
+    const gapTop = isSheet() ? 8 : BAR_GAP;
+    const freeTop = bar + gapTop, freeBot = innerHeight - (isSheet() ? Math.round(innerHeight * 0.25) : BAR_GAP);
+    if (r.top >= freeTop && r.bottom <= freeBot) return false;
+    const y = Math.max(0, Math.round(scrollY + r.top - freeTop));
+    window.scrollTo({ top: y, behavior: reduce() ? 'auto' : 'smooth' });
+    return true;
+  }
+
   async function go(n) {
     const my = ++seq;
     i = Math.max(0, Math.min(steps.length - 1, n));
     const s = steps[i];
+    peekUser = null;
     stepEl.textContent = `STEP ${String(i + 1).padStart(2, '0')} / ${String(steps.length).padStart(2, '0')}`;
     titleEl.textContent = s.title;
     bodyEl.textContent = s.body;
@@ -674,18 +747,22 @@ export function storyMode({ steps, navigate, onExit }) {
       if (differs) await navigate(want);
     }
     if (my !== seq) return;
-    target = await waitFor(s.selector);
+    // phones: a step may name a narrower child (mobile_selector) so the sheet does not cover what the step describes
+    target = null;
+    if (isSheet() && s.mobile_selector) target = await waitFor(s.mobile_selector, 2500);
+    if (my !== seq) return;
+    if (!target) target = await waitFor(s.selector);
     if (my !== seq) return;
     if (target) {
-      if (isSheet()) {
-        // bottom sheet: bring the target's top just under the top bar so it sits in the upper half
-        const prev = target.style.scrollMarginTop;
-        target.style.scrollMarginTop = '72px';
-        target.scrollIntoView({ block: 'start', behavior: reduce() ? 'auto' : 'smooth' });
-        target.style.scrollMarginTop = prev;
-      } else target.scrollIntoView({ block: 'center', behavior: reduce() ? 'auto' : 'smooth' });
-      await new Promise((r) => setTimeout(r, reduce() ? 50 : 350));
-      if (my !== seq) return;
+      cardEl.classList.toggle('is-sheet', isSheet());
+      // views render charts asynchronously: content above the target can still grow after the first scroll, so
+      // re-frame until the target stops moving (max 4 passes)
+      for (let pass = 0; pass < 4; pass++) {
+        const moved = frame(target);
+        await new Promise((r) => setTimeout(r, moved && !reduce() ? 450 : 120));
+        if (my !== seq) return;
+        if (!moved && pass > 0) break;
+      }
     }
     place();
     root.removeAttribute('aria-busy');

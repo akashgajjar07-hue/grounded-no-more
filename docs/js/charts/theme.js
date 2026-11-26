@@ -100,6 +100,67 @@ export const fmtWeekRange = (a, b) => `${fmtWeek(a)}–${fmtWeek(b)}`;
  * fmtCapitalDelta(5.04e6) = "+AED 5M more capital"; fmtCapitalDelta(-3.6e6) = "AED 3.6M less capital".
  */
 export const fmtCapitalDelta = (v) => (v == null || Number.isNaN(+v) ? '—' : v === 0 ? 'no capital change' : `${v > 0 ? '+' : ''}${fmtAED(Math.abs(v))} ${v > 0 ? 'more' : 'less'} capital`);
+/** Money, ALWAYS compact ("AED 138k", "AED 1.9M"): use for every AED value, prose included. Alias of fmtAED. */
+export const fmtMoney = (v, opts) => fmtAED(v, opts);
+/** Count with thousands separators: fmtCount(47977) = "47,977"; accepts numeric strings; null → "—". */
+export const fmtCount = (v) => (v == null || v === '' || Number.isNaN(+v) ? '—' : Math.round(+v).toLocaleString('en-GB'));
+/** The multiplication sign. Never write "x2" / "2x": use fmtMult() or `${TIMES}`. */
+export const TIMES = '×';
+/** Multiplier: fmtMult(2) = "×2.0", fmtMult(0.5) = "×0.5", fmtMult(1.25, 2) = "×1.25". */
+export const fmtMult = (v, digits = 1) => (v == null || Number.isNaN(+v) ? '—' : `${TIMES}${(+v).toFixed(digits)}`);
+/**
+ * Simulated calendar epoch (config/assumptions.yaml → calendar.epoch, a Monday; also exported as
+ * aog_lab.json → sim_calendar.epoch). Simulated time, never presented as real dates.
+ */
+export const SIM_EPOCH = '2023-01-02T00:00:00Z';
+const SIM_EPOCH_MS = Date.parse(SIM_EPOCH);
+/**
+ * Simulated timestamp → "W103 · d4 06:00" (week · day-of-week 1–7, d1 = Monday · hh:mm).
+ * Accepts an ISO string on the simulated calendar ('2023-01-18T01:00Z') or simulated hours since the epoch (number).
+ * {day: false} → "W103 · 06:00"; {time: false} → "W103 · d4"; both false → "W103".
+ */
+export function fmtSimTime(x, { day = true, time = true } = {}) {
+  if (x == null || x === '') return '—';
+  const hrs = typeof x === 'number' ? x : (Date.parse(/(Z|[+-]\d\d:?\d\d)$/.test(String(x)) ? String(x) : `${x}Z`) - SIM_EPOCH_MS) / 3.6e6;
+  if (!Number.isFinite(hrs)) return '—';
+  const totalMin = Math.round(hrs * 60);
+  const w = Math.floor(totalMin / (168 * 60));
+  const inWeek = totalMin - w * 168 * 60;
+  const d = Math.floor(inWeek / (24 * 60)) + 1;
+  const m = inWeek % (24 * 60);
+  const hh = String(Math.floor(m / 60)).padStart(2, '0'), mm = String(m % 60).padStart(2, '0');
+  const tail = [day ? `d${d}` : null, time ? `${hh}:${mm}` : null].filter(Boolean).join(' ');
+  return tail ? `W${w} · ${tail}` : `W${w}`;
+}
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** REAL build/run timestamp (generated_at, frozen_at) → "26 Nov 02:25 UTC" ({year: true} → "26 Nov 2026 02:25 UTC"). */
+export function fmtStamp(iso, { year = false } = {}) {
+  const t = Date.parse(iso);
+  if (iso == null || !Number.isFinite(t)) return '—';
+  const d = new Date(t);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}${year ? ` ${d.getUTCFullYear()}` : ''} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
+}
+/** Acronyms kept upper-case by fmtEnum(). */
+const ENUM_ACRONYMS = new Set(['AOG', 'EU', 'US', 'UK', 'PO', 'RO', 'BER', 'TAT', 'MRO', 'OEM', 'PN', 'ATA', 'MEL', 'AUH', 'LHR', 'FRA', 'CAI', 'JED', 'BOM', 'SIN', 'D0', 'D3', 'D10', 'P0', 'P1', 'P2', 'U/S', 'FH', 'FC', 'LRU', 'ME', 'APAC', 'GCC']);
+/** Override labels for specific enums (add here rather than in views). */
+export const ENUM_LABELS = { CONDEMNED_AWAITING_REPLACEMENT: 'Condemned, awaiting replacement', EXCESS_DECLINING_DEMAND: 'Excess / declining demand', QUARANTINE_DOCS: 'Quarantine (docs)', IN_REPAIR: 'In repair', D0_no_stock: 'D0, no stock', deadline_expired: 'Deadline expired' };
+/** Raw enum → readable label: "OVERDUE_REPAIR" → "Overdue repair", "EU_VENDOR" → "EU vendor", "shop_return" → "Shop return". */
+export function fmtEnum(s) {
+  if (s == null || s === '') return '—';
+  const raw = String(s);
+  if (ENUM_LABELS[raw]) return ENUM_LABELS[raw];
+  if (!/[_]/.test(raw) && !/^[A-Z0-9]+$/.test(raw)) return raw; // already prose
+  const words = raw.split(/[_\s]+/).filter(Boolean).map((w, i) => {
+    const up = w.toUpperCase();
+    if (ENUM_ACRONYMS.has(up)) return up;
+    const lo = w.toLowerCase();
+    return i === 0 ? lo.charAt(0).toUpperCase() + lo.slice(1) : lo;
+  });
+  return words.join(' ');
+}
+/** "3 options" / "1 option"; plural(n, 'unit', 'units'); the count uses fmtCount. Never write "option(s)". */
+export const plural = (n, one, many = `${one}s`) => `${fmtCount(n)} ${Math.round(+n) === 1 ? one : many}`;
 /** Pick a formatter from a KPI unit string. */
 export const fmtByUnit = (unit) => (unit === 'AED' ? fmtAED : unit === '%' ? fmtPct : unit === 'h' ? fmtHours : unit === 'd' ? fmtDays : fmtInt);
 
@@ -144,7 +205,13 @@ export function chartFrame(host, { headline, subtitle, provenance, source, table
   if (isDev()) {
     const len = String(headline || '').length;
     if (len > HEADLINE_MAX) console.warn(`[chartFrame] headline is ${len} chars (max ${HEADLINE_MAX}): "${headline}"`);
-    setTimeout(() => { if (root.isConnected) { const n = lintAccents(body); if (n.length > 2) console.warn(`[chartFrame] ${n.length} accent colours (${n.join(', ')}) in "${headline}" (max 2)`); } }, 1500);
+    setTimeout(() => {
+      if (!root.isConnected) return;
+      const n = lintAccents(body);
+      if (n.length > 2) console.warn(`[chartFrame] ${n.length} accent colours (${n.join(', ')}) in "${headline}" (max 2)`);
+      const t = lintTeal(body);
+      if (t.length > 1) console.warn(`[chartFrame] teal on ${t.length} series (${t.join(', ')}) in "${headline}": teal = the recommended / primary result ONLY; use theme.series.neutral for other categories`);
+    }, 1500);
   }
   return { root, body, setTable };
 }
@@ -163,6 +230,59 @@ export function lintAccents(root) {
     for (const [name, keys] of Object.entries(ACCENTS)) if (vals.some((v) => keys.some((k) => v.includes(k.replace(/\s/g, ''))))) found.add(name);
   });
   return [...found];
+}
+
+const TEAL_KEYS = ACCENTS.teal.map((k) => k.replace(/\s/g, ''));
+const isTealPaint = (el) => {
+  const cs = getComputedStyle(el);
+  return [el.getAttribute('fill'), el.getAttribute('stroke'), cs.fill, cs.stroke].filter(Boolean)
+    .map((v) => v.toLowerCase().replace(/\s/g, '')).some((v) => TEAL_KEYS.some((k) => v.includes(k)));
+};
+/**
+ * Accent linter for rule "teal = recommended / primary result only". Returns the distinct SERIES painted teal in
+ * `root`'s SVG: (a) `data-series` ids of teal marks (set by markSeries(), lineChart, dotWhiskerChart, barList,
+ * pickSeries()), and (b) the text of teal-coloured, non-numeric direct labels. More than one → teal is being used
+ * as a category colour. chartFrame console.warns about it in dev builds; tests call it on every chart.
+ */
+export function lintTeal(root) {
+  const ids = new Set(), labels = new Set();
+  [...root.querySelectorAll('svg [data-series]')].slice(0, 2500).forEach((el) => {
+    if (el.closest('.chip')) return;
+    const marks = el.matches('g') ? [...el.querySelectorAll('path,rect,circle,line,polygon')] : [el];
+    if (marks.some(isTealPaint)) ids.add(el.getAttribute('data-series'));
+  });
+  [...root.querySelectorAll('svg text')].slice(0, 1500).forEach((el) => {
+    if (el.closest('[data-series]') || el.closest('.chip') || el.closest('.gnm-chip')) return;
+    const txt = (el.textContent || '').trim();
+    if (!txt || /^[\s\d.,%+−\-–×hdkMBAED·$()/]+$/.test(txt)) return; // values, ticks
+    if (isTealPaint(el)) labels.add(txt.length > 32 ? `${txt.slice(0, 31)}…` : txt);
+  });
+  // a labelled series that also carries a data-series id is counted once
+  return [...new Set([...ids, ...labels])];
+}
+/** Tag marks with their series id so lintTeal() can tell series apart: markSeries(sel, 'P2') (d3 selection or element). */
+export function markSeries(sel, id) {
+  if (!sel) return sel;
+  if (typeof sel.attr === 'function') sel.attr('data-series', typeof id === 'function' ? id : String(id));
+  else sel.setAttribute?.('data-series', String(id));
+  return sel;
+}
+/**
+ * Semantic colour picker with linting: pickSeries('recommended', 'I125') → teal, and records which series asked for
+ * teal. Use it with markSeries(). In dev, asking for 'recommended' for two different series in one chart warns.
+ * role: recommended | baseline | reference | neutral | neutralSoft | context | urgent | review
+ */
+const tealAsked = new Map();
+export function pickSeries(role, seriesId, chartKey = 'default') {
+  const c = theme.series[role];
+  if (!c) { if (isDev()) console.warn(`[pickSeries] unknown role "${role}"`); return theme.series.neutral; }
+  if (role === 'recommended' && seriesId != null && isDev()) {
+    const set = tealAsked.get(chartKey) || new Set();
+    set.add(String(seriesId)); tealAsked.set(chartKey, set);
+    if (set.size > 1) console.warn(`[pickSeries] teal requested for ${set.size} series in "${chartKey}" (${[...set].join(', ')}): teal = recommended / primary only`);
+    setTimeout(() => tealAsked.delete(chartKey), 0);
+  }
+  return c;
 }
 
 /** Re-run draw(width) whenever the element's width changes (debounced to animation frames). */
@@ -444,7 +564,7 @@ export function lineChart(body, { series = [], band: bandData, bandColor, x: xo 
     series.forEach((s, i) => {
       const color = colorOf(s, i);
       const primary = s.primary ?? i === 0;
-      line(g, s.values, { x, y, color, width: s.width || (primary ? 2 : 1.5), dash: s.dash, curve: s.curve });
+      markSeries(line(g, s.values, { x, y, color, width: s.width || (primary ? 2 : 1.5), dash: s.dash, curve: s.curve }), s.label || s.id || `s${i}`);
       const last = s.values.at(-1);
       if (s.label) labels.push({ x: x(last.x) + 8, y: y(last.y), text: s.label, color: primary ? color : theme.color.muted, strong: primary });
     });
@@ -486,6 +606,7 @@ export function dotWhiskerChart(body, { rows = [], format = String, height, doma
     if (refValue != null) refLine(g, { x1: x(refValue), x2: x(refValue), y1: -4, y2: ih, label: refLabel, labelAt: 'start', dx: 4, dy: 2 });
     const colored = rows.map((r) => ({ ...r, color: r.highlight ? theme.color.accent : theme.color.muted }));
     const sel = dotWhisker(g, colored, { x, y });
+    markSeries(sel, (d) => d.key);
     withTooltip(sel, (d) => ({ title: d.label, rows: [['Mean', format(d.value)], ['95% CI', `${format(d.lo)} – ${format(d.hi)}`]] }));
     g.selectAll('text.rl').data(rows).join('text').attr('class', (d) => (d.highlight ? 'gnm-label gnm-label--strong' : 'gnm-label')).attr('x', -12).attr('y', (d) => y(d.key) + y.bandwidth() / 2).attr('dy', '0.32em').attr('text-anchor', 'end').text((d) => truncate(w < 480 ? d.key : d.label, labelW - 16));
     g.selectAll('text.vl').data(rows).join('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', iw + 10).attr('y', (d) => y(d.key) + y.bandwidth() / 2).attr('dy', '0.32em').text((d) => format(d.value));
@@ -499,7 +620,7 @@ export function barList(body, { rows = [], format = String, max, barHeight = 10 
     const svg = svgIn(body, w, hgt, 'Ranked bars');
     const bw = Math.max(40, w - 72);
     const x = d3().scaleLinear().domain([0, max || d3().max(rows, (d) => d.value)]).range([0, bw]);
-    const g = svg.selectAll('g').data(rows).join('g').attr('transform', (d, i) => `translate(0,${i * rowH})`);
+    const g = svg.selectAll('g').data(rows).join('g').attr('transform', (d, i) => `translate(0,${i * rowH})`).attr('data-series', (d) => d.label);
     g.append('text').attr('class', (d) => (d.highlight ? 'gnm-label gnm-label--strong' : 'gnm-label')).attr('y', 12).text((d) => d.label);
     g.append('rect').attr('y', 19).attr('width', bw).attr('height', barHeight).attr('rx', 2).attr('fill', 'rgba(185,200,214,0.08)');
     g.append('rect').attr('y', 19).attr('width', (d) => Math.max(1, x(d.value))).attr('height', barHeight).attr('rx', 2).attr('fill', (d) => (d.highlight ? theme.color.accent : theme.color.neutral));

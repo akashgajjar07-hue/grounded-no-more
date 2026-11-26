@@ -89,3 +89,48 @@ def test_manifest_lists_existing_files():
     assert man["files"] == FILES
     for n in FILES:
         assert (SITE / f"{n}.json").exists(), n
+
+
+@needs_site
+def test_canonical_cross_screen_fields():
+    """wave-3 #2: one per-PN AOG metric set, explicit system fields, outstation-relative risk, story = screen numbers."""
+    p = json.load(open(SITE / "parts.json"))
+    labels = p["aog_metric_labels"]
+    assert set(labels) == {"aog_h_2y", "aog_h_52w", "aog_h_52w_max_station"}
+    assert all(v["label"] and v["short"] for v in labels.values())
+    acts = json.load(open(SITE / "actions.json"))["actions"]
+    for r in p["parts"]:
+        assert r["aog_h_2y"] >= r["aog_h_52w"] >= r["aog_h_52w_max_station"] >= 0
+        assert (r["aog_h_52w_max_station_id"] is None) == (r["aog_h_52w"] == 0)
+        # the action centre's per-station lookback never exceeds the worst-station figure, and matches it there
+        lb = {a["station"]: a["evidence"]["aog_hours_lookback"] for a in acts
+              if a["pn"] == r["pn"] and a["type"] == "OUTSTATION_DEPLETION"}
+        if lb:
+            assert max(lb.values()) <= r["aog_h_52w_max_station"] + 0.5
+            st = r["aog_h_52w_max_station_id"]
+            if st in lb:
+                assert abs(lb[st] - r["aog_h_52w_max_station"]) < 0.5
+    for s in p["ata_systems"]:
+        assert s["system_level"] == s["risk_level"] and s["has_urgent_part"] == (s["n_urgent"] > 0)
+        assert not (s["status"] == "ok" and s["has_urgent_part"]), s  # never a bare OK next to urgent parts
+    n = json.load(open(SITE / "network.json"))
+    outs = [s for s in n["stations"] if s["role"] != "hub"]
+    top = min(outs, key=lambda s: s["outstation_rank"])
+    assert top["risk_vs_outstations"] == 1 and top["outstation_risk_level"] == "urgent"
+    assert all(s["outstation_risk_level"] != "ok" for s in outs if s["n_urgent_actions"])
+    # story float numbers use the calculator's S (shelf + loop)
+    story = json.load(open(SITE / "story.json"))
+    rot = json.load(open(SITE / "rotables.json"))
+    step4 = next(s for s in story["steps"] if s["story_id"] == "rotable-float-calc")
+    pn = next(s for s in story["steps"] if s["story_id"] == "aircraft")["route"].split("pn=")[1]
+    fl = next(f for f in rot["float_examples"] if f["pn"] == pn)
+    assert fl["spares_total"]["P2"] == fl["p2_units"] + fl["loop_units"]
+    assert f"P2 {fl['spares_total']['P2']}" in step4["body"]
+    for s in story["steps"]:
+        ms = s.get("mobile_selector")
+        assert ms is None or ms.startswith(f'[data-story="{s["story_id"]}"]') or ms.startswith("[data-incident="), s
+        assert " M " not in s["body"] and "(step 2" not in s["body"]
+    aog = json.load(open(SITE / "aog_lab.json"))
+    assert aog["sim_calendar"]["epoch"] == "2023-01-02T00:00:00Z"
+    theme = (SITE.parent / "js" / "charts" / "theme.js").read_text()
+    assert f"SIM_EPOCH = '{aog['sim_calendar']['epoch']}'" in theme

@@ -48,6 +48,19 @@ RISK_URGENT_H = 25.0
 SYS_URGENT_SHARE = 0.15   # ASSUMED: chapter share of fleet risk-hours for 'urgent'
 SYS_REVIEW_SHARE = 0.07
 RISK_REVIEW_H = 5.0
+# outstation-relative risk bands (share of the riskiest OUTSTATION's P0 holdout AOG h); ASSUMED
+OUT_URGENT_REL = 0.8
+OUT_REVIEW_REL = 0.5
+AOG_LOOKBACK_WEEKS = 52   # same window as the planner action centre (config/aog_lab.yaml depletion_lookback_weeks)
+# the ONE set of per-PN AOG-hour metrics shown on Mission, Parts and Actions (parts.json -> aog_metric_labels)
+AOG_METRIC_LABELS = {
+    "aog_h_2y": {"label": "AOG h · 2-yr history · all stations", "short": "AOG h 2 yr",
+                 "definition": "Hours of every history AOG event (weeks 0-103, P0 world) that waited on this PN, all stations."},
+    "aog_h_52w": {"label": "AOG h · last 52 wk · all stations", "short": "AOG h 52 wk",
+                  "definition": "Same events, last 52 weeks of history only (W52-W103), summed over all stations."},
+    "aog_h_52w_max_station": {"label": "AOG h · last 52 wk · worst station", "short": "max AOG h at one station",
+                              "definition": "The largest single-station total in the last 52 weeks (station in aog_h_52w_max_station_id)."},
+}
 
 METHOD_LABELS = {
     "naive": "Naive (last value)", "ma": "Moving average", "croston": "Croston", "sba": "SBA",
@@ -165,8 +178,22 @@ def fmt_int(x) -> str:
     return f"{int(round(float(x))):,}"
 
 
-def fmt_aed_m(x) -> str:
-    return f"AED {float(x) / 1e6:,.1f} M"
+def fmt_aed(x, digits: int = 1) -> str:
+    """Same output as theme.js fmtAED (compact): AED 41.9M, AED 5M, AED 138k, AED 950."""
+    v = float(x)
+    a, sgn = abs(v), ("−" if v < 0 else "")
+    def trim(t: str) -> str:
+        return re.sub(r"\.0(?=\D|$)", "", t, count=1)
+    if a >= 1e9:
+        return f"AED {sgn}{trim(f'{a / 1e9:.{digits}f}')}B"
+    if a >= 1e6:
+        return f"AED {sgn}{trim(f'{a / 1e6:.{digits}f}')}M"
+    if a >= 1e3:
+        return f"AED {sgn}{int(a / 1e3 + 0.5)}k"
+    return f"AED {sgn}{int(a + 0.5)}"
+
+
+fmt_aed_m = fmt_aed   # legacy name: story money uses the site's ONE compact money format
 
 
 def fmt_pct(x, d=1) -> str:
@@ -317,6 +344,28 @@ def risk_table() -> pd.DataFrame:
     t["risk_score"] = np.log1p(t.risk_hours) / math.log1p(mx) if mx > 0 else 0.0
     t["risk_level"] = np.where(t.risk_hours >= RISK_URGENT_H, "urgent",
                                np.where(t.risk_hours >= RISK_REVIEW_H, "review", "ok"))
+    return t
+
+
+@lru_cache(maxsize=None)
+def aog_metrics() -> pd.DataFrame:
+    """Canonical per-PN AOG-hour metrics (whole event hours for every event that lists the PN; same window and
+    counting as the action centre's aog_hours_lookback, so per-station values reconcile with actions.json)."""
+    pm = hist("part_master")
+    ae = hist("aog_events").copy()
+    ae["pn_list"] = ae.pns.astype(str).str.split(";")
+    ex = ae.explode("pn_list").rename(columns={"pn_list": "pn"})
+    lo = AS_OF_H - AOG_LOOKBACK_WEEKS * HOURS_PER_WEEK
+    recent = ex[(ex.start_h >= lo) & (ex.start_h < AS_OF_H)]
+    by_st = recent.groupby(["pn", "station"]).hours.sum().reset_index().sort_values(["pn", "hours", "station"], ascending=[True, False, True])
+    top = by_st.groupby("pn").head(1).set_index("pn")
+    t = pd.DataFrame(index=pd.Index(pm.pn, name="pn"))
+    t["aog_h_2y"] = ex.groupby("pn").hours.sum().reindex(t.index).fillna(0.0)
+    t["aog_events_2y"] = ex.groupby("pn").size().reindex(t.index).fillna(0).astype(int)
+    t["aog_h_52w"] = recent.groupby("pn").hours.sum().reindex(t.index).fillna(0.0)
+    t["aog_events_52w"] = recent.groupby("pn").size().reindex(t.index).fillna(0).astype(int)
+    t["aog_h_52w_max_station"] = top.hours.reindex(t.index).fillna(0.0)
+    t["aog_h_52w_max_station_id"] = top.station.reindex(t.index)
     return t
 
 
@@ -484,6 +533,7 @@ def build_parts() -> dict:
     pm = hist("part_master").set_index("pn")
     attrs = part_attributes()
     risk = risk_table()
+    am = aog_metrics()
     st = stock_table()
     ff = pq("outputs/forecasting/final_forecasts.parquet")
     hub = ff[ff.station == cfg()["network"]["hub"]].set_index("pn")
@@ -505,6 +555,10 @@ def build_parts() -> dict:
             "risk_score": num(r.risk_score), "risk_level": r.risk_level, "risk_hours": num(r.risk_hours),
             "aog_hours_hist_per_yr": num(r.aog_hours_hist_per_yr), "aog_events_hist": int(r.aog_events_hist),
             "residual_aog_h_per_yr": num(r.residual_aog_h_per_yr), "residual_modelled": bool(r.residual_modelled),
+            "aog_h_2y": num(am.at[pn, "aog_h_2y"]), "aog_events_2y": int(am.at[pn, "aog_events_2y"]),
+            "aog_h_52w": num(am.at[pn, "aog_h_52w"]), "aog_events_52w": int(am.at[pn, "aog_events_52w"]),
+            "aog_h_52w_max_station": num(am.at[pn, "aog_h_52w_max_station"]),
+            "aog_h_52w_max_station_id": (None if pd.isna(am.at[pn, "aog_h_52w_max_station_id"]) else str(am.at[pn, "aog_h_52w_max_station_id"])),
             "unit_cost": num(p.unit_cost_aed),
             "planted": (None if pd.isna(p.planted) else str(p.planted)),
             "requests_hist": int(nreq.get(pn, 0)), "n_actions": int(acts.get(pn, 0)),
@@ -528,6 +582,16 @@ def build_parts() -> dict:
         x["risk_share"] = round(x["risk_hours"] / tot, 4)
         x["risk_level"] = ("urgent" if x["risk_share"] >= SYS_URGENT_SHARE else
                            "review" if x["risk_share"] >= SYS_REVIEW_SHARE else "ok")
+        # explicit, separate fields (wave-3 #2): the system rating vs "does it hold an urgent part"
+        x["system_level"] = x["risk_level"]
+        x["has_urgent_part"] = x["n_urgent"] > 0
+        nu = x["n_urgent"]
+        urg = f"{nu} urgent PN{'s' if nu != 1 else ''}"
+        if x["system_level"] == "ok" and nu:
+            x["status"], x["status_label"] = "review", f"WATCH · {urg}"   # never a bare OK next to urgent parts
+        else:
+            x["status"] = x["system_level"]
+            x["status_label"] = x["system_level"].upper() + (f" · {urg}" if nu else "")
     systems.sort(key=lambda x: x["ata"])
     return {
         "meta": meta("SIMULATED", ["data/processed/history/part_master.parquet", "data/processed/history/material_requests.parquet",
@@ -544,15 +608,17 @@ def build_parts() -> dict:
                      f"minus the modelled reductions of the {rid} rows for that PN (allocations.json, leave-one-out), floored "
                      "at 0; rotables only (residual_modelled=false for C/E, residual 0). risk_score = ln(1+risk_hours) / "
                      f"ln(1+max risk_hours) in [0,1]. risk_level: urgent if risk_hours >= {RISK_URGENT_H:g}, review if >= "
-                     f"{RISK_REVIEW_H:g}, else ok. ata_systems.risk = max risk_score in the chapter; ata_systems.risk_level is relative: urgent if the chapter holds >= 15% of fleet risk-hours, review if >= 7%, else ok (ASSUMED bands, DERIVED values). adi/cv2 are null "
+                     f"{RISK_REVIEW_H:g}, else ok. ata_systems.risk = max risk_score in the chapter; ata_systems.risk_level is relative: urgent if the chapter holds >= 15% of fleet risk-hours, review if >= 7%, else ok (ASSUMED bands, DERIVED values); system_level = that rating, has_urgent_part = n_urgent > 0, status/status_label = what to print on the system pill (an OK system with urgent parts reads 'WATCH · n urgent PNs', status review). CANONICAL AOG METRICS (the same numbers on every screen, labels in aog_metric_labels): aog_h_2y / aog_events_2y = whole hours of every history AOG event listing the PN (all stations, weeks 0-103); aog_h_52w / aog_events_52w = the last 52 weeks only (W52-W103, the action centre's lookback); aog_h_52w_max_station(_id) = the worst single station in that window (equals the largest actions.json aog_hours_lookback for the PN when that station has a depletion exception). risk_hours instead splits multi-PN events equally and is per year. adi/cv2 are null "
                      "when demand_class = insufficient_data (fewer than 3 non-zero training weeks: undefined).",
-                     provenance_by_key={"risk_bands_h": "ASSUMED", "system_risk_bands_share": "ASSUMED"}),
+                     provenance_by_key={"risk_bands_h": "ASSUMED", "system_risk_bands_share": "ASSUMED",
+                                        "aog_lookback_weeks": "ASSUMED"}),
         "stock_basis": (f"{rid} recommended allocation target units: P2 stock params with the {rid} changes from "
                         "outputs/frontier/allocations.json. Rotables = serviceable base stock (excludes units already in the "
                         "repair loop); consumables/expendables = order-up-to level S."),
         "stock_basis_id": rid, "stations": stations(),
         "risk_bands_h": {"urgent": RISK_URGENT_H, "review": RISK_REVIEW_H},
         "system_risk_bands_share": {"urgent": SYS_URGENT_SHARE, "review": SYS_REVIEW_SHARE},
+        "aog_metric_labels": AOG_METRIC_LABELS, "aog_lookback_weeks": AOG_LOOKBACK_WEEKS,
         "parts": parts, "ata_systems": systems,
     }
 
@@ -769,6 +835,9 @@ def build_rotables() -> dict:
                        "p0_units": int(tot.at[pn, "P0"]), "p1_units": int(tot.at[pn, "P1"]),
                        "p2_units": int(tot.at[pn, "P2"]), "rec_units": int(tot.at[pn, rid]),
                        "current": int(tot.at[pn, "P0"]), "recommended": int(tot.at[pn, rid]),
+                       # S as the float calculator defines it: serviceable base stock + the units already in the loop
+                       "spares_total": {k: int(tot.at[pn, c]) + int(loop.get(pn, 0))
+                                        for k, c in (("P0", "P0"), ("P1", "P1"), ("P2", "P2"), ("recommended", rid))},
                        "reason": reasons.get(pn, ""), "planted": planted.get(pn), "provenance": "DERIVED"})
     floats.sort(key=lambda x: (x["planted"] is None, x["pn"]))
     keep = ["pn", "station", "deadline_class", "base_stock", "total_spares", "rate_per_year", "pipeline_days",
@@ -826,6 +895,17 @@ def build_network() -> dict:
     bys = {(r["policy_id"], r["station"]): r for r in ps["by_station"] if r["variant"] == "central"}
     aog_hist = {r["station"]: r for r in jload("outputs/aog_lab/summary.json")["by_station"]}
     p0max = max(means.loc[("P0", s), "aog_hours"] for s in stations())
+    outs = [s for s in stations() if s != net["hub"]]
+    out_max = max(means.loc[("P0", s), "aog_hours"] for s in outs) or 1.0
+    out_rank = {s: i + 1 for i, s in enumerate(sorted(outs, key=lambda s: -means.loc[("P0", s), "aog_hours"]))}
+    acts_ = jload("outputs/actions/actions.json")["actions"]
+    n_act = Counter(a["station"] for a in acts_)
+    n_urg = Counter(a["station"] for a in acts_ if a["severity"] == "urgent")
+
+    def out_level(s):
+        rel = means.loc[("P0", s), "aog_hours"] / out_max
+        lvl = "urgent" if rel >= OUT_URGENT_REL else "review" if rel >= OUT_REVIEW_REL else "ok"
+        return "review" if lvl == "ok" and n_urg.get(s, 0) else lvl   # open urgent actions never read OK
     st_rows = []
     for s in stations():
         st_rows.append({
@@ -837,6 +917,10 @@ def build_network() -> dict:
             "requests": int(req.get(s, 0)), "requests_d0": int(req_d0.get(s, 0)),
             "aog_events_hist": int(aog_hist.get(s, {}).get("events", 0)), "aog_hours_hist": num(aog_hist.get(s, {}).get("aog_hours", 0)),
             "risk": float(means.loc[("P0", s), "aog_hours"] / p0max),
+            "risk_vs_outstations": (None if s == net["hub"] else float(means.loc[("P0", s), "aog_hours"] / out_max)),
+            "outstation_rank": (None if s == net["hub"] else out_rank[s]),
+            "outstation_risk_level": (None if s == net["hub"] else out_level(s)),
+            "n_actions": int(n_act.get(s, 0)), "n_urgent_actions": int(n_urg.get(s, 0)),
             "aog_hours_by_policy": {pid: {"mean": float(means.loc[(pid, s), "aog_hours"]),
                                           "ci": bys[(pid, s)]["aog_hours_ci"]} for pid in ["P0", "P1", "P2"]},
             "coord_provenance": "REAL", "provenance": "SIMULATED",
@@ -889,7 +973,11 @@ def build_network() -> dict:
                      f"serviceable_units / stock_value = the recommended {rid} plan's rotable serviceable target units and "
                      "all-class stock value at target (by_policy gives P0/P1/P2/" + rid + "). requests = history material "
                      "requests (2 years, P0). risk = the station's holdout P0 material AOG h/yr divided by the worst "
-                     "station's (0-1); aog_hours_by_policy and policy_compare = holdout seeds 1000-1019, central, means "
+                     "station's (0-1; the hub is the worst, so outstations look small on it). For outstations, "
+                     "risk_vs_outstations = the same AOG h divided by the riskiest OUTSTATION's, outstation_rank (1 = riskiest) and "
+                     f"outstation_risk_level (urgent >= {OUT_URGENT_REL:g}, review >= {OUT_REVIEW_REL:g}, ASSUMED bands; an outstation "
+                     "with open urgent planner actions is at least review); n_actions / n_urgent_actions = actions.json "
+                     "exceptions at the station. Hub: those fields are null. aog_hours_by_policy and policy_compare = holdout seeds 1000-1019, central, means "
                      "over seeds (from policy_station_kpis.parquet) with 95% CIs from policy_summary.json. The recommended "
                      f"{rid} plan has no per-station holdout breakdown (frontier holdout reports network totals only). "
                      "arcs = history transfers AUH->station by kind; transfer_replay = real history transfers around the "
@@ -1055,6 +1143,10 @@ def build_aog_lab() -> dict:
     payload = {k: v for k, v in inc.items() if k not in ("meta",)}
     payload["summary"] = {k: v for k, v in summ.items() if k not in ("meta",)}
     payload["summary"].setdefault("provenance", "SIMULATED")
+    cal = cfg()["calendar"]
+    # simulated calendar for timestamps (theme.js fmtSimTime: "W103 · d4 06:00"); never real dates
+    payload["sim_calendar"] = {"epoch": cal["epoch"], "hours_per_week": HOURS_PER_WEEK, "day1": "Monday",
+                               "provenance": "ASSUMED"}
     for i in payload["incidents"]:
         i.setdefault("provenance", "SIMULATED")
         rec = next((o for o in i["options"] if o.get("rank") == 1), None)
@@ -1253,7 +1345,7 @@ def build_story(data: dict) -> dict:
     else:
         lead = f"ATA {ata} rates {sys_['risk_level'].upper()}, led by {pn}, a {part['deadline']} {noun} with risk {risk}/100."
         t2 = f"{pn}: never in stock at {st}"
-    body2 = (f"{lead} With {int(st_units.P0)} units at {st} under P0, {st_d0} D0 requests over two years became "
+    body2 = (f"{lead} With {int(st_units.P0)} units at {st} under P0, {st_d0} D0 requests in two years of history (W0–W103) became "
              f"{len(ae_st)} AOG events ({fmt_int(ae_st.hours.sum())} h).")
 
     body3 = (f"Its weekly demand is {part['demand_class']} (ADI {part['adi']:.2f} weeks, CV² {part['cv2']:.2f} on training "
@@ -1262,13 +1354,14 @@ def build_story(data: dict) -> dict:
         body3 += (f" The frozen MASE champion for this cell, '{chk['method']}', ranked {chk['holdout_rank']}/{chk['n_methods']} "
                   "on the holdout, so the policies size rotables on the reliability-exposure rate.")
     body4 = (f"Network removals run at {fl['rate_per_30d']:.1f} per 30 days with a {fl['pipeline_days']:.0f}-day hub pipeline. "
-             f"Serviceable units: P0 {fl['p0_units']}, P2 {fl['p2_units']}, recommended {fl['rec_units']}. On its "
+             f"Spares S, as the calculator counts them (on the shelf + {fl['loop_units']} already in the repair loop): "
+             f"P0 {fl['spares_total']['P0']}, P2 {fl['spares_total']['P2']}, recommended {fl['spares_total']['recommended']}. On its "
              f"{float(st_ff.t_eff_out_d):.0f}-day loop, Palm's theorem gives {fmt_pct(a_st, 0)} availability for the "
              f"{p2_st} units P2 places at {st}.")
     body5 = (f"At {st}, holdout material AOG falls from {fmt_int(net[('P0', st)]['aog_hours'])} h/yr under P0 to "
              f"{fmt_int(net[('P2', st)]['aog_hours'])} under P2, which stocks outstations where the D0 penalty pays for the unit."
              + (f" Each emergency hop from AUH takes {fmt_int(arc['aog_transport_h'])} h." if arc else ""))
-    body6 = (f"The pre-stated rule walks the capital-vs-AOG hull until an extra AED 1 M saves fewer than "
+    body6 = (f"The pre-stated rule walks the capital-vs-AOG hull until an extra AED 1M saves fewer than "
              f"{rec['h_star_per_aed_1m']:.1f} AOG h/yr, and stops at {rid}: {fmt_aed_m(pts[rid]['capital_aed'])} and "
              f"{fmt_int(pts[rid]['aog_hours'])} AOG h/yr on the holdout, against {fmt_int(pts['P2']['aog_hours'])} h for P2 at "
              f"{fmt_aed_m(pts['P2']['capital_aed'])}.")
@@ -1278,7 +1371,7 @@ def build_story(data: dict) -> dict:
     if act and act["type"] == "OUTSTATION_DEPLETION":
         e = act["evidence"]
         body8 += (f" At {st}, {pn} has {e['on_hand']} of {e['target']} on hand, with {e['d0_requests_lookback']} D0 requests "
-                  f"and {fmt_int(e['aog_hours_lookback'])} AOG h in the last {e['lookback_weeks']} weeks (step 2 counted two years).")
+                  f"and {fmt_int(e['aog_hours_lookback'])} AOG h there in the last {e['lookback_weeks']} weeks (W{data['actions']['as_of_week'] + 1 - e['lookback_weeks']}–W{data['actions']['as_of_week']}).")
     elif act:
         body8 += f" Including: {act['summary']}."
 
@@ -1299,6 +1392,15 @@ def build_story(data: dict) -> dict:
         (f"#/aog?incident={inc['id']}", "aog-incident-ps1", aog_sel, "One incident, replayed", body7),
         ("#/actions", "action-inbox", '[data-story="action-inbox"]', "What the planner does on Monday", body8),
     ]
+    # phones (<= 480 px): a narrower child to spotlight so the bottom sheet does not cover the subject (wave-3 #4).
+    # Hooks are stable view markup (see docs/agent_notes/wave3-S.md); the UI falls back to `selector` if absent.
+    tl = aog_sel.replace(' [data-story="aog-timeline"]', ' [data-story="aog-timeline"] .chart-body')
+    mobile = {
+        "network-" + st.lower(): f'[data-story="network-{st.lower()}"] .np-pol',
+        "frontier-chart": '[data-story="frontier-chart"] .chart-body',
+        "aog-incident-ps1": tl,
+        "action-inbox": (f'[data-story="action-inbox"] [data-id="{act["exception_id"]}"]' if act else None),
+    }
     ids = [sid for _, sid, _, _, _ in steps]
     return {
         "meta": meta("DERIVED", ["docs/data/kpis.json", "docs/data/parts.json", "docs/data/forecast.json",
@@ -1307,9 +1409,11 @@ def build_story(data: dict) -> dict:
                                  "data/processed/history/material_requests.parquet", "data/processed/history/aog_events.parquet"],
                      "Story-mode steps; bodies are templated at export time from the exported numbers. Each selector starts "
                      "with the data-story attribute the screen renders (story_id), optionally narrowed to a child element so "
-                     "the step card does not cover its subject: " + ", ".join(ids) + "."),
+                     "the step card does not cover its subject: " + ", ".join(ids) + ". mobile_selector (or null) is the narrower "
+                     "target used at <= 480 px (bottom-sheet layout); it also starts with the story_id hook."),
         "selector_ids": ids,
-        "steps": [{"route": r, "selector": sel, "story_id": sid, "title": t, "body": b, "provenance": "DERIVED"}
+        "steps": [{"route": r, "selector": sel, "mobile_selector": mobile.get(sid), "story_id": sid, "title": t, "body": b,
+                   "provenance": "DERIVED"}
                   for r, sid, sel, t, b in steps],
     }
 

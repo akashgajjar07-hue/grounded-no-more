@@ -19,9 +19,10 @@
  * ctx.setParams of a view that is no longer current is ignored (a stale drawer onClose can't rewrite the URL of the
  * next view). ctx.navigate always works (story mode is driven by a view's ctx.navigate).
  * Keyboard: 1–8 jump between workspaces, 0 = Data & Method, ? = shortcuts, S = story mode,
- * Esc closes overlays. A skip link jumps to the main content.
+ * Esc closes overlays. 1–8 / 0 / S also work while a drawer or modal is open (overlays close first, then the
+ * shell navigates). A skip link jumps to the main content.
  */
-import { h, icon, ensureSprite, fixtureChip, disclaimer, modal, kbd, storyMode, stateBlock, closeAllOverlays } from './ui.js';
+import { h, icon, ensureSprite, fixtureChip, disclaimer, modal, kbd, storyMode, stateBlock, closeAllOverlays, openOverlayCount } from './ui.js';
 import { loadMany, load, onFixture } from './data.js';
 
 export const ROUTES = [
@@ -176,7 +177,14 @@ function onKey(e) {
   if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
   const t = e.target;
   if (t.closest?.('input, textarea, select, [contenteditable="true"]')) return;
-  if (document.querySelector('.story, .modal, .drawer.is-open') && e.key !== '?') return;
+  if (document.querySelector('.story')) return; // the tour owns the keyboard (→ ← Esc)
+  const nav = /^[0-8]$/.test(e.key) || e.key === 's' || e.key === 'S';
+  // F1: workspace shortcuts also work while a drawer / modal is open: close every overlay first, then act.
+  // Esc is handled by the overlay itself (it closes first); other keys stay with the overlay.
+  if (openOverlayCount() || document.querySelector('.modal, .drawer.is-open')) {
+    if (!nav && e.key !== '?') return;
+    if (nav) { e.preventDefault(); closeAllOverlays({ reason: 'route' }); }
+  }
   if (/^[1-8]$/.test(e.key)) { const r = ROUTES[+e.key - 1]; navigate(`#/${r.id}`); }
   else if (e.key === '0') navigate('#/method');
   else if (e.key === '?') { e.preventDefault(); openHelp(); }
