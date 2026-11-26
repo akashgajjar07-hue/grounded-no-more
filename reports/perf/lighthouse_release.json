@@ -1,0 +1,34 @@
+{
+ "url": "https://akashgajjar07-hue.github.io/grounded-no-more/index.html",
+ "label": "live-v2.1-release",
+ "results": {
+  "mission:mobile": {
+   "performance": 89,
+   "accessibility": 100,
+   "cls": 0.007580806731615575,
+   "lcp_ms": 3541.554,
+   "tbt_ms": 22
+  },
+  "mission:desktop": {
+   "performance": 100,
+   "accessibility": 100,
+   "cls": 0.001286991069083268,
+   "lcp_ms": 654.777,
+   "tbt_ms": 0
+  },
+  "capital:mobile": {
+   "performance": 91,
+   "accessibility": 96,
+   "cls": 0.02386816737766665,
+   "lcp_ms": 3537.73,
+   "tbt_ms": 38
+  },
+  "capital:desktop": {
+   "performance": 99,
+   "accessibility": 95,
+   "cls": 0.001321836419753086,
+   "lcp_ms": 860.8765000000001,
+   "tbt_ms": 0
+  }
+ }
+}

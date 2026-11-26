@@ -1,0 +1,24 @@
+{
+ "chromium": {
+  "landing_title": true,
+  "tour_playing": true,
+  "tour_advanced": "0->1",
+  "results_scope_line": true,
+  "results_capital_note": true,
+  "explore_link": true,
+  "download": "grounded_no_more_planner_workbook.xlsx",
+  "cutaway_svg": true,
+  "errors": []
+ },
+ "webkit": {
+  "landing_title": true,
+  "tour_playing": true,
+  "tour_advanced": "0->1",
+  "results_scope_line": true,
+  "results_capital_note": true,
+  "explore_link": true,
+  "download": "grounded_no_more_planner_workbook.xlsx",
+  "cutaway_svg": true,
+  "errors": []
+ }
+}
