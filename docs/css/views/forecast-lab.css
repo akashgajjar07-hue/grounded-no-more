@@ -1,0 +1,83 @@
+/* =====================================================================
+   03 · Forecast Lab (view-scoped fl-* classes; strip-* live in parts-intelligence.css)
+   ===================================================================== */
+.fl-strips { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--s-3); }
+.fl-strip-col { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
+.fl-strip-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-1); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.fl-dc { font-family: var(--font-display); font-size: var(--fs-16); font-weight: 500; text-transform: capitalize; }
+.fl-strip-head .faint, .fl-strip-meta .faint { font-size: 11px; }
+.fl-strip { display: flex; flex-direction: column; gap: 2px; }
+.fl-strip-meta { display: flex; justify-content: space-between; gap: var(--s-1); font-size: 12px; }
+.fl-strip-meta a, .fl-strip-label a { color: var(--text-muted); text-decoration: none; font-size: 12px; }
+.fl-strip-meta a:hover, .fl-strip-label a:hover { color: var(--primary); text-decoration: underline; }
+.fl-strip-sel { margin-bottom: var(--s-3); padding: var(--s-2); border: 1px solid var(--c-teal-a24); border-radius: var(--r-control); background: var(--c-teal-a08); }
+.fl-strip-label { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: var(--fs-12); }
+.fl-strip-label a { color: var(--text); font-size: 13px; }
+
+.fl-controls { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-3); margin-bottom: var(--s-2); }
+.fl-control { display: flex; flex-direction: column; gap: 6px; min-width: 0; max-width: 100%; }
+.fl-control .seg { flex-wrap: wrap; }
+.fl-control-l, .fl-chip-l { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); }
+
+/* leaderboard rows */
+.fl-ref { stroke: var(--c-amber); stroke-dasharray: 3 3; stroke-width: 1; }
+.fl-sep { stroke: var(--line-strong); stroke-dasharray: 2 3; }
+.fl-row-bg { fill: transparent; }
+.fl-row.is-champ .fl-row-bg { fill: var(--c-teal-a08); }
+.fl-ci { stroke: var(--c-titanium); stroke-opacity: 0.6; stroke-width: 1.5; }
+.fl-dot { fill: var(--bg); stroke: var(--c-titanium); stroke-width: 2; }
+.fl-row.is-champ .fl-ci { stroke: var(--primary); stroke-opacity: 0.9; }
+.fl-row.is-champ .fl-dot { fill: var(--primary); stroke: var(--c-teal-hi); }
+.fl-row.is-zero .fl-ci { stroke: var(--c-slate); stroke-dasharray: 3 2; }
+.fl-row.is-zero .fl-dot { stroke: var(--c-slate); stroke-dasharray: 2 2; }
+.fl-mlabel { fill: var(--text-muted); font-family: var(--font-ui); font-size: 12px; }
+.fl-row.is-champ .fl-mlabel { fill: var(--text); font-weight: 600; }
+.fl-row.is-zero .fl-mlabel { fill: var(--text-faint); font-style: italic; }
+.fl-vlabel { fill: var(--text-muted); font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums; }
+.fl-row.is-champ .fl-vlabel { fill: var(--primary); font-weight: 600; }
+
+.fl-champ-name { font-family: var(--font-display); font-size: var(--fs-28); font-weight: 500; color: var(--primary); line-height: 1.1; }
+.fl-honest { display: flex; gap: 12px; margin-top: var(--s-3); padding: 12px 14px; border-radius: var(--r-control); border: 1px solid var(--line-strong); background: var(--panel); }
+.fl-honest .icon { flex: none; width: 18px; height: 18px; color: var(--c-amber); margin-top: 2px; }
+.fl-honest strong { font-size: var(--fs-14); font-weight: 600; }
+.fl-honest p { margin-top: 4px; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+
+/* holdout rank strip */
+.fl-rank-track { stroke: var(--line-strong); stroke-width: 1; }
+.fl-rank-tick { fill: var(--c-slate); }
+.fl-rank-dot { fill: var(--c-titanium); fill-opacity: 0.35; stroke: var(--c-titanium); stroke-width: 1.5; }
+.fl-rank.is-first .fl-rank-dot { fill: var(--primary); fill-opacity: 0.85; stroke: var(--c-teal-hi); }
+.fl-rank.is-last .fl-rank-dot { fill: var(--c-copper); fill-opacity: 0.85; stroke: var(--c-copper); }
+.fl-rank.is-last .fl-vlabel { fill: var(--c-copper); font-weight: 600; }
+.fl-rank.is-first .fl-vlabel { fill: var(--primary); }
+
+/* LTD */
+.fl-bar { fill: var(--c-slate); fill-opacity: 0.55; }
+.fl-bar.is-covered { fill: var(--primary); fill-opacity: 0.75; }
+.fl-rop { stroke: var(--c-ice); stroke-width: 1.5; }
+
+/* stock eval */
+.fl-card-seg { display: flex; justify-content: flex-end; margin-bottom: var(--s-2); }
+.fl-pt circle { fill: var(--bg); stroke: var(--c-titanium); stroke-width: 1.75; }
+.fl-pt.is-champ circle { stroke-dasharray: none; fill: rgba(185, 200, 214, 0.3); }
+.fl-pt.is-key circle { stroke: var(--primary); fill: var(--primary); fill-opacity: 0.85; }
+
+/* monash */
+.fl-monash-chips { align-items: center; margin-bottom: var(--s-2); }
+.fl-monash-foot { display: flex; flex-direction: column; gap: 6px; margin-top: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--line); font-size: var(--fs-12); color: var(--text-muted); line-height: 1.5; }
+.fl-attrib { display: flex; gap: 8px; align-items: flex-start; }
+.fl-attrib .icon { width: 16px; height: 16px; flex: none; color: var(--prov-real); margin-top: 1px; }
+
+/* truth recovery dumbbell */
+.fl-db { stroke: var(--line-strong); stroke-width: 2; }
+.fl-db-q { fill: var(--c-copper); }
+.fl-db-e { fill: var(--primary); stroke: var(--c-teal-hi); stroke-width: 1.5; }
+.fl-db-t { fill: var(--text-muted); font-family: var(--font-mono); font-size: 11px; }
+.fl-db-t.is-e { fill: var(--primary); font-weight: 600; }
+.fl-db-t.is-q { fill: var(--c-copper); }
+
+@media (max-width: 767px) {
+  .fl-strips { grid-template-columns: 1fr; gap: var(--s-2); }
+  .fl-card-seg { justify-content: flex-start; }
+  .fl-champ-name { font-size: var(--fs-20); }
+}

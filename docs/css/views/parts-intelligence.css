@@ -1,0 +1,139 @@
+/* =====================================================================
+   02 · Parts Intelligence (and the demand strip shared with 03 Forecast Lab)
+   Loaded once by docs/js/views/parts-intelligence.js and forecast-lab.js.
+   Only view-scoped classes (pi-*, strip-*); shared components are untouched.
+   ===================================================================== */
+
+/* ---------- aircraft explorer ---------- */
+.pi-explorer .card-title { font-size: var(--fs-20); }
+.pi-aircraft { max-width: 760px; margin: 0 auto; }
+.pi-aircraft svg { display: block; }
+.pi-aircraft .ata-hotspot { --risk: var(--c-aero-teal); }
+.pi-aircraft .ata-hotspot.risk-review { --risk: var(--c-amber); }
+.pi-aircraft .ata-hotspot.risk-urgent { --risk: var(--c-red); }
+.pi-aircraft .ata-hotspot.risk-unknown { --risk: var(--c-slate); }
+.pi-aircraft svg .ata-hotspot .hs-shape { stroke: var(--risk); fill: var(--risk); }
+.pi-aircraft svg .ata-hotspot .hs-line { stroke: var(--risk); }
+.pi-aircraft svg .ata-hotspot .hs-badge circle { stroke: var(--risk); }
+.pi-aircraft svg .ata-hotspot .hs-badge text { fill: var(--risk); }
+.pi-aircraft svg .ata-hotspot.is-active .hs-shape { stroke: var(--risk); fill-opacity: 0.28; }
+.pi-aircraft svg .ata-hotspot.is-active .hs-badge circle { fill: var(--risk); stroke: var(--c-ice); stroke-width: 2; }
+.pi-aircraft svg .ata-hotspot.is-active .hs-badge text:not(.hs-risk) { fill: var(--bg); }
+.pi-aircraft svg .ata-hotspot .hs-risk {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-anchor: middle; dominant-baseline: central;
+  fill: var(--risk); paint-order: stroke; stroke: var(--bg); stroke-width: 5px; stroke-linejoin: round;
+}
+.pi-aircraft svg .ata-hotspot.is-active .hs-risk { fill: var(--c-ice); }
+.pi-aircraft .hs-pulse { fill: none; stroke: var(--risk); stroke-width: 1.5; opacity: 0; transform-box: fill-box; transform-origin: center; pointer-events: none; }
+.pi-aircraft .risk-urgent .hs-pulse { animation: pi-pulse 2.4s var(--ease) infinite; }
+@keyframes pi-pulse { 0% { opacity: 0.7; transform: scale(1); } 80%, 100% { opacity: 0; transform: scale(2.1); } }
+@media (prefers-reduced-motion: reduce) { .pi-aircraft .risk-urgent .hs-pulse { animation: none; opacity: 0.5; transform: scale(1.3); } }
+
+.pi-legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-2); margin-top: var(--s-2); padding-top: var(--s-2); border-top: 1px solid var(--line); font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.pi-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.pi-legend-item b { font-weight: 600; }
+.pi-legend-item.is-urgent b { color: var(--status-urgent); }
+.pi-legend-item.is-review b { color: var(--status-review); }
+.pi-legend-item.is-ok b { color: var(--status-ok); }
+.pi-legend .faint { text-transform: none; letter-spacing: 0.02em; margin-left: auto; }
+
+/* ---------- system list (accessible alternative) ---------- */
+.pi-syslist { display: flex; flex-direction: column; gap: 6px; }
+.pi-sys {
+  width: 100%; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: var(--r-control); border: 1px solid var(--line); background: transparent; text-align: left; color: var(--text);
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.pi-sys:hover { background: var(--c-titanium-a10); }
+.pi-sys:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.pi-sys[aria-pressed='true'] { border-color: var(--primary); background: var(--c-teal-a08); box-shadow: inset 2px 0 0 var(--primary); }
+.pi-sys-ata { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--line-strong); font-size: var(--fs-14); font-weight: 600; color: var(--text); }
+.pi-sys.is-urgent .pi-sys-ata { border-color: var(--status-urgent); color: var(--status-urgent); }
+.pi-sys.is-review .pi-sys-ata { border-color: var(--status-review); color: var(--status-review); }
+.pi-sys.is-ok .pi-sys-ata { border-color: var(--status-ok); color: var(--status-ok); }
+.pi-sys-main { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.pi-sys-name { font-size: var(--fs-14); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pi-sys-meta { font-size: var(--fs-12); color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- exploded view ---------- */
+.pi-exploded { margin-top: var(--s-2); }
+.pi-exploded .pi-slot { cursor: pointer; }
+.pi-exploded .pi-slot:focus { outline: none; }
+.pi-exploded .pi-slot:hover .bp-pn, .pi-exploded .pi-slot:focus-visible .bp-pn { fill: var(--c-teal-hi); text-decoration: underline; }
+.pi-slotkey { display: grid; grid-template-columns: 1fr; gap: 4px; margin-top: var(--s-2); }
+.pi-slotkey-btn { width: 100%; display: grid; grid-template-columns: 24px auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 8px; border-radius: var(--r-control); text-align: left; font-size: var(--fs-12); color: var(--text); }
+.pi-slotkey-btn:hover { background: var(--c-titanium-a10); }
+.pi-slotkey-btn .mono { font-size: 13px; }
+.pi-slotnum { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line-strong); font-size: 11px !important; color: var(--text-muted); }
+.pi-slotdesc { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- ADI/CV² matrix ---------- */
+.pi-quad--sparse { fill: var(--c-teal-a08); }
+.pi-cut { stroke: var(--c-amber); stroke-dasharray: 4 3; stroke-width: 1; }
+.pi-cut-t { fill: var(--c-amber); font-family: var(--font-mono); font-size: 11px; }
+.pi-quad-t { fill: var(--text-muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; font-weight: 500; }
+.pi-quad-n { fill: var(--text); font-weight: 600; }
+.pi-axis-t { fill: var(--text-faint); font-family: var(--font-mono); font-size: 11px; }
+.pi-dot { fill: var(--bg); stroke: var(--c-titanium); stroke-opacity: 0.55; stroke-width: 1.2; }
+.pi-dot.is-sel { fill: var(--primary); fill-opacity: 0.9; stroke: var(--c-teal-hi); stroke-opacity: 1; }
+.pi-dot:focus-visible { outline: none; stroke: var(--c-ice); stroke-width: 2.5; }
+.pi-matrix-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: var(--fs-12); color: var(--text-faint); margin-top: calc(-1 * var(--s-1)); }
+.pi-key-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.2px solid var(--c-titanium); display: inline-block; }
+.pi-key-dot.is-sel { background: var(--primary); border-color: var(--c-teal-hi); }
+.pi-key-sw { width: 14px; height: 10px; background: var(--c-teal-a14); border: 1px dashed var(--c-amber); display: inline-block; }
+
+/* ---------- table ---------- */
+.pi-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-1) var(--s-2); margin-bottom: var(--s-2); }
+.pi-search { flex: 1 1 260px; max-width: 360px; }
+.pi-pn { display: inline-flex; align-items: center; gap: 8px; }
+.pi-desc { display: inline-block; max-width: 280px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.pi-cls { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; font-family: var(--font-mono); font-size: 12px; font-weight: 600; border: 1px solid var(--line-strong); color: var(--text-muted); }
+.pi-cls--R { color: var(--c-teal-hi); border-color: rgba(34, 199, 184, 0.5); }
+.pi-planted { height: 18px; padding: 0 6px; font-size: 11px; color: var(--c-amber); border-color: rgba(245, 185, 66, 0.5); background: var(--c-amber-a12); }
+
+/* ---------- heatmap ---------- */
+.pi-hm-col { fill: var(--text-muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+.pi-hm-row { fill: var(--text); font-family: var(--font-display); font-size: 16px; font-weight: 600; }
+.pi-hm-n { fill: var(--text); font-family: var(--font-mono); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pi-hm-n.is-dark { fill: var(--bg); }
+.pi-hm-tot { fill: var(--text-faint); font-family: var(--font-mono); font-size: 13px; }
+.pi-hm-focus { fill: none; stroke: var(--c-ice); stroke-width: 1.5; pointer-events: none; }
+
+/* ---------- planted list ---------- */
+.pi-planted-list { display: flex; flex-direction: column; gap: 6px; }
+.pi-planted-row { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto 16px; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-control); text-align: left; color: var(--text); }
+.pi-planted-row:hover { background: var(--c-titanium-a10); }
+.pi-planted-row .icon { width: 16px; height: 16px; color: var(--text-faint); }
+.pi-planted-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pi-planted-main .mono { font-size: 13px; }
+.pi-planted-main .faint { font-size: var(--fs-12); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- drawer ---------- */
+.pi-drawer .chart-headline { font-size: var(--fs-16); }
+.pi-planted-banner { display: flex; gap: 12px; padding: 12px; border-radius: var(--r-control); border: 1px solid rgba(245, 185, 66, 0.45); background: var(--c-amber-a12); color: var(--c-amber); }
+.pi-planted-banner .icon { flex: none; }
+.pi-planted-banner strong { font-size: var(--fs-14); }
+.pi-planted-banner p { margin-top: 2px; color: var(--text-muted); }
+.pi-stock { display: flex; flex-direction: column; gap: 6px; }
+.pi-stock li { display: grid; grid-template-columns: 44px 1fr 40px; align-items: center; gap: 12px; font-size: 13px; }
+.pi-stock-bar { height: 6px; border-radius: 3px; background: var(--c-titanium-a10); overflow: hidden; }
+.pi-stock-bar > span { display: block; height: 100%; background: var(--primary); border-radius: 3px; min-width: 2px; }
+.pi-stock-bar > span.is-zero { background: transparent; }
+
+/* ---------- demand strip (shared with Forecast Lab) ---------- */
+.strip-sel { fill: rgba(34, 199, 184, 0.06); }
+.strip-split { stroke: var(--c-amber); stroke-dasharray: 3 3; stroke-width: 1; }
+.strip-zone { fill: var(--text-faint); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.1em; }
+.strip-zone--sel { fill: var(--c-teal-hi); }
+.strip-zero { stroke: var(--c-titanium); stroke-opacity: 0.25; stroke-width: 1; }
+.strip-max { fill: var(--text-faint); font-family: var(--font-mono); font-size: 10px; dominant-baseline: hanging; }
+
+@media (max-width: 767px) {
+  .pi-legend .faint { margin-left: 0; flex-basis: 100%; }
+  .pi-sys { grid-template-columns: 36px minmax(0, 1fr); }
+  .pi-sys > .pill { grid-column: 2; justify-self: start; }
+  .pi-search { max-width: none; }
+  .pi-slotkey-btn { grid-template-columns: 22px auto minmax(0, 1fr); }
+  .pi-slotkey-btn > .pill { display: none; }
+  .pi-desc { max-width: 180px; }
+}

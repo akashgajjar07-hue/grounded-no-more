@@ -45,6 +45,8 @@ ALLOC_ROWS_PER_POINT = 40
 
 # risk bands on risk_hours (AOG h / yr attributable to the PN, see parts.json meta.notes)
 RISK_URGENT_H = 25.0
+SYS_URGENT_SHARE = 0.15   # ASSUMED: chapter share of fleet risk-hours for 'urgent'
+SYS_REVIEW_SHARE = 0.07
 RISK_REVIEW_H = 5.0
 
 METHOD_LABELS = {
@@ -520,6 +522,11 @@ def build_parts() -> dict:
                         "n_urgent": sum(x["risk_level"] == "urgent" for x in ps),
                         "n_review": sum(x["risk_level"] == "review" for x in ps),
                         "top_pn": top["pn"], "provenance": "DERIVED"})
+    tot = sum(x["risk_hours"] for x in systems) or 1.0
+    for x in systems:   # system level is RELATIVE: share of fleet risk-hours (part bands applied to sums made every system urgent)
+        x["risk_share"] = round(x["risk_hours"] / tot, 4)
+        x["risk_level"] = ("urgent" if x["risk_share"] >= SYS_URGENT_SHARE else
+                           "review" if x["risk_share"] >= SYS_REVIEW_SHARE else "ok")
     systems.sort(key=lambda x: x["ata"])
     return {
         "meta": meta("SIMULATED", ["data/processed/history/part_master.parquet", "data/processed/history/material_requests.parquet",
@@ -536,14 +543,15 @@ def build_parts() -> dict:
                      f"minus the modelled reductions of the {rid} rows for that PN (allocations.json, leave-one-out), floored "
                      "at 0; rotables only (residual_modelled=false for C/E, residual 0). risk_score = ln(1+risk_hours) / "
                      f"ln(1+max risk_hours) in [0,1]. risk_level: urgent if risk_hours >= {RISK_URGENT_H:g}, review if >= "
-                     f"{RISK_REVIEW_H:g}, else ok. ata_systems.risk = max risk_score in the chapter (DERIVED). adi/cv2 are null "
+                     f"{RISK_REVIEW_H:g}, else ok. ata_systems.risk = max risk_score in the chapter; ata_systems.risk_level is relative: urgent if the chapter holds >= 15% of fleet risk-hours, review if >= 7%, else ok (ASSUMED bands, DERIVED values). adi/cv2 are null "
                      "when demand_class = insufficient_data (fewer than 3 non-zero training weeks: undefined).",
-                     provenance_by_key={"risk_bands_h": "ASSUMED"}),
+                     provenance_by_key={"risk_bands_h": "ASSUMED", "system_risk_bands_share": "ASSUMED"}),
         "stock_basis": (f"{rid} recommended allocation target units: P2 stock params with the {rid} changes from "
                         "outputs/frontier/allocations.json. Rotables = serviceable base stock (excludes units already in the "
                         "repair loop); consumables/expendables = order-up-to level S."),
         "stock_basis_id": rid, "stations": stations(),
         "risk_bands_h": {"urgent": RISK_URGENT_H, "review": RISK_REVIEW_H},
+        "system_risk_bands_share": {"urgent": SYS_URGENT_SHARE, "review": SYS_REVIEW_SHARE},
         "parts": parts, "ata_systems": systems,
     }
 
