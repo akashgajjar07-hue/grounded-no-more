@@ -1,0 +1,824 @@
+{
+ "meta": {
+  "generated_at": "2026-11-26T00:00:00Z",
+  "git_sha": "fixture",
+  "provenance": "SIMULATED",
+  "source": "docs/design/make_fixtures.mjs",
+  "notes": "FIXTURE — layout placeholder, not model output. Capital vs AOG-hours frontier (placeholder).",
+  "fixture": true
+ },
+ "points": [
+  {
+   "id": "F00",
+   "budget_aed": 38000000,
+   "capital_aed": 37889047,
+   "aog_hours": 749,
+   "aog_ci": [
+    644,
+    861
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F01",
+   "budget_aed": 38550000,
+   "capital_aed": 38480333,
+   "aog_hours": 685,
+   "aog_ci": [
+    589,
+    788
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F02",
+   "budget_aed": 39100000,
+   "capital_aed": 38900810,
+   "aog_hours": 644,
+   "aog_ci": [
+    554,
+    741
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F03",
+   "budget_aed": 39650000,
+   "capital_aed": 39466645,
+   "aog_hours": 595,
+   "aog_ci": [
+    512,
+    684
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F04",
+   "budget_aed": 40200000,
+   "capital_aed": 40008395,
+   "aog_hours": 564,
+   "aog_ci": [
+    485,
+    649
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F05",
+   "budget_aed": 40750000,
+   "capital_aed": 40619045,
+   "aog_hours": 517,
+   "aog_ci": [
+    445,
+    595
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F06",
+   "budget_aed": 41300000,
+   "capital_aed": 41289212,
+   "aog_hours": 488,
+   "aog_ci": [
+    420,
+    561
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F07",
+   "budget_aed": 41850000,
+   "capital_aed": 41665388,
+   "aog_hours": 472,
+   "aog_ci": [
+    406,
+    543
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F08",
+   "budget_aed": 42400000,
+   "capital_aed": 42265668,
+   "aog_hours": 442,
+   "aog_ci": [
+    380,
+    508
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F09",
+   "budget_aed": 42950000,
+   "capital_aed": 42779584,
+   "aog_hours": 416,
+   "aog_ci": [
+    358,
+    478
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F10",
+   "budget_aed": 43500000,
+   "capital_aed": 43380907,
+   "aog_hours": 394,
+   "aog_ci": [
+    339,
+    453
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F11",
+   "budget_aed": 44050000,
+   "capital_aed": 44022563,
+   "aog_hours": 369,
+   "aog_ci": [
+    317,
+    424
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F12",
+   "budget_aed": 44600000,
+   "capital_aed": 44499755,
+   "aog_hours": 349,
+   "aog_ci": [
+    300,
+    401
+   ],
+   "dominated": false,
+   "kind": "recommended"
+  },
+  {
+   "id": "F13",
+   "budget_aed": 45150000,
+   "capital_aed": 45093712,
+   "aog_hours": 334,
+   "aog_ci": [
+    287,
+    384
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F14",
+   "budget_aed": 45700000,
+   "capital_aed": 45680562,
+   "aog_hours": 303,
+   "aog_ci": [
+    261,
+    348
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F15",
+   "budget_aed": 46250000,
+   "capital_aed": 46149964,
+   "aog_hours": 302,
+   "aog_ci": [
+    260,
+    347
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F16",
+   "budget_aed": 46800000,
+   "capital_aed": 46722043,
+   "aog_hours": 284,
+   "aog_ci": [
+    244,
+    327
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F17",
+   "budget_aed": 47350000,
+   "capital_aed": 47185169,
+   "aog_hours": 275,
+   "aog_ci": [
+    237,
+    316
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F18",
+   "budget_aed": 47900000,
+   "capital_aed": 47819996,
+   "aog_hours": 252,
+   "aog_ci": [
+    217,
+    290
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F19",
+   "budget_aed": 48450000,
+   "capital_aed": 48422444,
+   "aog_hours": 249,
+   "aog_ci": [
+    214,
+    286
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F20",
+   "budget_aed": 49000000,
+   "capital_aed": 48976351,
+   "aog_hours": 235,
+   "aog_ci": [
+    202,
+    270
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F21",
+   "budget_aed": 49550000,
+   "capital_aed": 49540493,
+   "aog_hours": 227,
+   "aog_ci": [
+    195,
+    261
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F22",
+   "budget_aed": 50100000,
+   "capital_aed": 49968769,
+   "aog_hours": 220,
+   "aog_ci": [
+    189,
+    253
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F23",
+   "budget_aed": 50650000,
+   "capital_aed": 50486326,
+   "aog_hours": 202,
+   "aog_ci": [
+    174,
+    232
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F24",
+   "budget_aed": 51200000,
+   "capital_aed": 51152572,
+   "aog_hours": 196,
+   "aog_ci": [
+    169,
+    225
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F25",
+   "budget_aed": 51750000,
+   "capital_aed": 51701585,
+   "aog_hours": 188,
+   "aog_ci": [
+    162,
+    216
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F26",
+   "budget_aed": 52300000,
+   "capital_aed": 52280307,
+   "aog_hours": 183,
+   "aog_ci": [
+    157,
+    210
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "F27",
+   "budget_aed": 52850000,
+   "capital_aed": 52780356,
+   "aog_hours": 189,
+   "aog_ci": [
+    163,
+    217
+   ],
+   "dominated": false,
+   "kind": "frontier"
+  },
+  {
+   "id": "D00",
+   "budget_aed": 45776512.74134405,
+   "capital_aed": 45776513,
+   "aog_hours": 539,
+   "aog_ci": [
+    458,
+    625
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D01",
+   "budget_aed": 44175703.68479937,
+   "capital_aed": 44175704,
+   "aog_hours": 484,
+   "aog_ci": [
+    411,
+    561
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D02",
+   "budget_aed": 47608817.6141493,
+   "capital_aed": 47608818,
+   "aog_hours": 386,
+   "aog_ci": [
+    328,
+    448
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D03",
+   "budget_aed": 47689200.21574013,
+   "capital_aed": 47689200,
+   "aog_hours": 493,
+   "aog_ci": [
+    419,
+    572
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D04",
+   "budget_aed": 52142395.65515891,
+   "capital_aed": 52142396,
+   "aog_hours": 231,
+   "aog_ci": [
+    196,
+    268
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D05",
+   "budget_aed": 53901746.50331028,
+   "capital_aed": 53901747,
+   "aog_hours": 248,
+   "aog_ci": [
+    211,
+    288
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D06",
+   "budget_aed": 47005384.508287534,
+   "capital_aed": 47005385,
+   "aog_hours": 513,
+   "aog_ci": [
+    436,
+    595
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D07",
+   "budget_aed": 53910346.22420557,
+   "capital_aed": 53910346,
+   "aog_hours": 316,
+   "aog_ci": [
+    269,
+    367
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D08",
+   "budget_aed": 45594823.49292375,
+   "capital_aed": 45594823,
+   "aog_hours": 368,
+   "aog_ci": [
+    313,
+    427
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D09",
+   "budget_aed": 49836482.64175281,
+   "capital_aed": 49836483,
+   "aog_hours": 386,
+   "aog_ci": [
+    328,
+    448
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D10",
+   "budget_aed": 43094282.86598995,
+   "capital_aed": 43094283,
+   "aog_hours": 487,
+   "aog_ci": [
+    414,
+    565
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D11",
+   "budget_aed": 44199736.87129095,
+   "capital_aed": 44199737,
+   "aog_hours": 445,
+   "aog_ci": [
+    378,
+    516
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D12",
+   "budget_aed": 48785161.09054908,
+   "capital_aed": 48785161,
+   "aog_hours": 304,
+   "aog_ci": [
+    258,
+    353
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D13",
+   "budget_aed": 40889451.02272555,
+   "capital_aed": 40889451,
+   "aog_hours": 681,
+   "aog_ci": [
+    579,
+    790
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D14",
+   "budget_aed": 42349009.57765058,
+   "capital_aed": 42349010,
+   "aog_hours": 532,
+   "aog_ci": [
+    452,
+    617
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D15",
+   "budget_aed": 46762498.83812852,
+   "capital_aed": 46762499,
+   "aog_hours": 354,
+   "aog_ci": [
+    301,
+    411
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D16",
+   "budget_aed": 47450509.53445025,
+   "capital_aed": 47450510,
+   "aog_hours": 328,
+   "aog_ci": [
+    279,
+    380
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D17",
+   "budget_aed": 48697454.556589946,
+   "capital_aed": 48697455,
+   "aog_hours": 322,
+   "aog_ci": [
+    274,
+    374
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D18",
+   "budget_aed": 50145451.770862564,
+   "capital_aed": 50145452,
+   "aog_hours": 419,
+   "aog_ci": [
+    356,
+    486
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D19",
+   "budget_aed": 41858998.22716601,
+   "capital_aed": 41858998,
+   "aog_hours": 645,
+   "aog_ci": [
+    548,
+    748
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D20",
+   "budget_aed": 45030124.95674193,
+   "capital_aed": 45030125,
+   "aog_hours": 423,
+   "aog_ci": [
+    360,
+    491
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D21",
+   "budget_aed": 43902377.931866795,
+   "capital_aed": 43902378,
+   "aog_hours": 506,
+   "aog_ci": [
+    430,
+    587
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D22",
+   "budget_aed": 47005276.38872154,
+   "capital_aed": 47005276,
+   "aog_hours": 373,
+   "aog_ci": [
+    317,
+    433
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D23",
+   "budget_aed": 51810825.05593076,
+   "capital_aed": 51810825,
+   "aog_hours": 285,
+   "aog_ci": [
+    242,
+    331
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D24",
+   "budget_aed": 42915740.60660787,
+   "capital_aed": 42915741,
+   "aog_hours": 467,
+   "aog_ci": [
+    397,
+    542
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "D25",
+   "budget_aed": 48357566.53896533,
+   "capital_aed": 48357567,
+   "aog_hours": 385,
+   "aog_ci": [
+    327,
+    447
+   ],
+   "dominated": true,
+   "kind": "candidate"
+  },
+  {
+   "id": "BASE",
+   "budget_aed": 48200000,
+   "capital_aed": 48200000,
+   "aog_hours": 412,
+   "aog_ci": [
+    352,
+    471
+   ],
+   "dominated": true,
+   "kind": "baseline"
+  }
+ ],
+ "baseline": "BASE",
+ "recommended": "F12",
+ "allocations": {
+  "F12": [
+   {
+    "pn": "GN-28-R001",
+    "station": "BOM",
+    "current": 0,
+    "proposed": 0,
+    "delta_capital": 12473,
+    "risk_reduction": 3.1,
+    "alt_action": "Pool exchange"
+   },
+   {
+    "pn": "GN-27-R001",
+    "station": "AUH",
+    "current": 2,
+    "proposed": 0,
+    "delta_capital": 12768,
+    "risk_reduction": 21.3,
+    "alt_action": "—"
+   },
+   {
+    "pn": "GN-49-R001",
+    "station": "LHR",
+    "current": 1,
+    "proposed": 2,
+    "delta_capital": -88838,
+    "risk_reduction": 27,
+    "alt_action": "Pool exchange"
+   },
+   {
+    "pn": "GN-24-R001",
+    "station": "SIN",
+    "current": 1,
+    "proposed": 1,
+    "delta_capital": 8300,
+    "risk_reduction": 13.2,
+    "alt_action": "Lateral from AUH"
+   },
+   {
+    "pn": "GN-32-R014",
+    "station": "SIN",
+    "current": 1,
+    "proposed": 1,
+    "delta_capital": -15526,
+    "risk_reduction": 20.3,
+    "alt_action": "Lateral from AUH"
+   },
+   {
+    "pn": "GN-29-R001",
+    "station": "JED",
+    "current": 3,
+    "proposed": 1,
+    "delta_capital": 120063,
+    "risk_reduction": 18.4,
+    "alt_action": "Pool exchange"
+   },
+   {
+    "pn": "GN-32-R002",
+    "station": "BOM",
+    "current": 3,
+    "proposed": 3,
+    "delta_capital": 45675,
+    "risk_reduction": 19.4,
+    "alt_action": "Pool exchange"
+   },
+   {
+    "pn": "GN-34-R001",
+    "station": "BOM",
+    "current": 0,
+    "proposed": 3,
+    "delta_capital": -25724,
+    "risk_reduction": 32,
+    "alt_action": "—"
+   },
+   {
+    "pn": "GN-49-R002",
+    "station": "AUH",
+    "current": 2,
+    "proposed": 1,
+    "delta_capital": -22918,
+    "risk_reduction": 30.7,
+    "alt_action": "Lateral from AUH"
+   },
+   {
+    "pn": "GN-38-R001",
+    "station": "SIN",
+    "current": 2,
+    "proposed": 1,
+    "delta_capital": 54865,
+    "risk_reduction": 27.9,
+    "alt_action": "Lateral from AUH"
+   }
+  ]
+ },
+ "levers": [
+  {
+   "id": "budget",
+   "label": "Capital budget",
+   "min": 38000000,
+   "max": 54000000,
+   "step": 500000,
+   "value": 44600000,
+   "unit": "AED"
+  },
+  {
+   "id": "aog_penalty",
+   "label": "AOG penalty multiplier",
+   "min": 0.5,
+   "max": 2,
+   "step": 0.5,
+   "value": 1,
+   "unit": "×"
+  },
+  {
+   "id": "carrying",
+   "label": "Carrying cost",
+   "min": 0.15,
+   "max": 0.25,
+   "step": 0.01,
+   "value": 0.2,
+   "unit": "%/yr"
+  }
+ ],
+ "tornado": [
+  {
+   "param": "AOG penalty ×0.5 / ×2",
+   "low": -2900000,
+   "high": 5800000
+  },
+  {
+   "param": "Repair TAT ±25%",
+   "low": -1400000,
+   "high": 2100000
+  },
+  {
+   "param": "Carrying cost 15–25%",
+   "low": -1100000,
+   "high": 1100000
+  },
+  {
+   "param": "Lead time ±25%",
+   "low": -600000,
+   "high": 900000
+  },
+  {
+   "param": "Condemnation ±50%",
+   "low": -300000,
+   "high": 500000
+  }
+ ]
+}

@@ -1,0 +1,93 @@
+{
+ "meta": {
+  "generated_at": "2026-11-26T00:00:00Z",
+  "git_sha": "fixture",
+  "provenance": "DERIVED",
+  "source": "docs/design/make_fixtures.mjs",
+  "notes": "FIXTURE — layout placeholder, not model output. Method & provenance (placeholder).",
+  "fixture": true
+ },
+ "source_manifest": [
+  {
+   "id": "ourairports",
+   "name": "OurAirports airport coordinates",
+   "url": "https://ourairports.com/data/",
+   "licence": "Public domain",
+   "used_for": "Station lat/lon",
+   "provenance": "REAL"
+  },
+  {
+   "id": "naturalearth",
+   "name": "Natural Earth 1:110m land (via world-atlas)",
+   "url": "https://www.naturalearthdata.com/",
+   "licence": "Public domain",
+   "used_for": "Map basemap",
+   "provenance": "REAL"
+  },
+  {
+   "id": "generator",
+   "name": "Synthetic world generator",
+   "url": "",
+   "licence": "MIT (this repo)",
+   "used_for": "Fleet, parts, demand, repairs",
+   "provenance": "SIMULATED"
+  }
+ ],
+ "assumptions": [
+  {
+   "key": "economics.carrying_cost_pct_per_year",
+   "value": "0.20",
+   "provenance": "ASSUMED",
+   "rationale": "Planning assumption; sensitivity-tested 15–25%."
+  },
+  {
+   "key": "economics.aog_penalty_aed_per_hour.widebody",
+   "value": "30000",
+   "provenance": "ASSUMED",
+   "rationale": "Scenario value for decision-making."
+  },
+  {
+   "key": "network.stations.*",
+   "value": "7 stations",
+   "provenance": "REAL",
+   "rationale": "OurAirports coordinates."
+  }
+ ],
+ "validation": {
+  "tests_passed": 0,
+  "tests_total": 0,
+  "checks": [
+   {
+    "name": "Fixture placeholder — no validation run",
+    "status": "unknown"
+   }
+  ]
+ },
+ "licences": [
+  {
+   "name": "d3",
+   "version": "7.9.0",
+   "licence": "ISC"
+  },
+  {
+   "name": "@observablehq/plot",
+   "version": "0.6.16",
+   "licence": "ISC"
+  },
+  {
+   "name": "topojson-client",
+   "version": "3.1.0",
+   "licence": "ISC"
+  },
+  {
+   "name": "world-atlas",
+   "version": "2.0.2",
+   "licence": "ISC (data: Natural Earth, public domain)"
+  },
+  {
+   "name": "Space Grotesk / Inter / IBM Plex Mono",
+   "version": "@fontsource 5.1.0",
+   "licence": "SIL OFL 1.1"
+  }
+ ]
+}

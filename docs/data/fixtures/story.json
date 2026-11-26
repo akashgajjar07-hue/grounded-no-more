@@ -1,0 +1,42 @@
+{
+ "meta": {
+  "generated_at": "2026-11-26T00:00:00Z",
+  "git_sha": "fixture",
+  "provenance": "DERIVED",
+  "source": "docs/design/make_fixtures.mjs",
+  "notes": "FIXTURE — layout placeholder, not model output. Story-mode steps (placeholder copy).",
+  "fixture": true
+ },
+ "steps": [
+  {
+   "route": "#/mission",
+   "selector": "[data-story=\"kpis\"]",
+   "title": "Where the network stands",
+   "body": "Four instruments summarise service, groundings, capital and cost — baseline policy versus the recommendation, each with its uncertainty."
+  },
+  {
+   "route": "#/mission",
+   "selector": "[data-story=\"aircraft\"]",
+   "title": "Risk by aircraft system",
+   "body": "Each ATA zone on the schematic glows by the share of high-risk part numbers it contains. Select one to open Parts Intelligence."
+  },
+  {
+   "route": "#/parts",
+   "selector": "[data-story=\"parts-table\"]",
+   "title": "Part-level evidence",
+   "body": "Demand class, stock by station and a risk score for every fictional part number."
+  },
+  {
+   "route": "#/network",
+   "selector": "[data-story=\"map\"]",
+   "title": "Where the stock sits",
+   "body": "The hub at AUH supports six outstations. Arcs show AOG transport times and transfer volumes."
+  },
+  {
+   "route": "#/capital",
+   "selector": "[data-story=\"frontier\"]",
+   "title": "Capital versus groundings",
+   "body": "Every dot is a stocking plan. The frontier shows the lowest AOG hours reachable for each capital level."
+  }
+ ]
+}

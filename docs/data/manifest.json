@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "provenance": "DERIVED",
+    "notes": "Lists the real exports present in docs/data/. The exporter (gnm.export) rewrites this file. Any file not listed falls back to docs/data/fixtures/<name>.json (layout fixtures, shown with a FIXTURE DATA chip)."
+  },
+  "files": []
+}

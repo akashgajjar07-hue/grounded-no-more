@@ -1,0 +1,122 @@
+{
+ "meta": {
+  "generated_at": "2026-11-26T00:00:00Z",
+  "git_sha": "fixture",
+  "provenance": "SIMULATED",
+  "source": "docs/design/make_fixtures.mjs",
+  "notes": "FIXTURE — layout placeholder, not model output. 20 paired holdout seeds (placeholder).",
+  "fixture": true
+ },
+ "split": "holdout",
+ "n_seeds": 20,
+ "policies": [
+  {
+   "policy_id": "P0",
+   "label": "Legacy rules (baseline)",
+   "kpi": {
+    "immediate_fill_rate": {
+     "mean": 0.947,
+     "ci_lo": 0.941,
+     "ci_hi": 0.952
+    },
+    "aog_hours": {
+     "mean": 412,
+     "ci_lo": 354,
+     "ci_hi": 474
+    },
+    "spare_capital_aed": {
+     "mean": 48200000,
+     "ci_lo": 47477000,
+     "ci_hi": 48971200
+    },
+    "total_annual_cost_aed": {
+     "mean": 31500000,
+     "ci_lo": 29295000,
+     "ci_hi": 34020000
+    }
+   },
+   "provenance": "SIMULATED"
+  },
+  {
+   "policy_id": "P1",
+   "label": "Service-level targets",
+   "kpi": {
+    "immediate_fill_rate": {
+     "mean": 0.968,
+     "ci_lo": 0.962,
+     "ci_hi": 0.973
+    },
+    "aog_hours": {
+     "mean": 301,
+     "ci_lo": 259,
+     "ci_hi": 346
+    },
+    "spare_capital_aed": {
+     "mean": 46900000,
+     "ci_lo": 46196500,
+     "ci_hi": 47650400
+    },
+    "total_annual_cost_aed": {
+     "mean": 27800000,
+     "ci_lo": 25854000,
+     "ci_hi": 30024000.000000004
+    }
+   },
+   "provenance": "SIMULATED"
+  },
+  {
+   "policy_id": "P2",
+   "label": "Multi-echelon optimised",
+   "kpi": {
+    "immediate_fill_rate": {
+     "mean": 0.981,
+     "ci_lo": 0.975,
+     "ci_hi": 0.986
+    },
+    "aog_hours": {
+     "mean": 228,
+     "ci_lo": 196,
+     "ci_hi": 262
+    },
+    "spare_capital_aed": {
+     "mean": 44600000,
+     "ci_lo": 43931000,
+     "ci_hi": 45313600
+    },
+    "total_annual_cost_aed": {
+     "mean": 24900000,
+     "ci_lo": 23157000,
+     "ci_hi": 26892000
+    }
+   },
+   "provenance": "SIMULATED"
+  },
+  {
+   "policy_id": "P3",
+   "label": "P2 + pool exchange",
+   "kpi": {
+    "immediate_fill_rate": {
+     "mean": 0.984,
+     "ci_lo": 0.978,
+     "ci_hi": 0.989
+    },
+    "aog_hours": {
+     "mean": 205,
+     "ci_lo": 176,
+     "ci_hi": 236
+    },
+    "spare_capital_aed": {
+     "mean": 43100000,
+     "ci_lo": 42453500,
+     "ci_hi": 43789600
+    },
+    "total_annual_cost_aed": {
+     "mean": 25600000,
+     "ci_lo": 23808000,
+     "ci_hi": 27648000
+    }
+   },
+   "provenance": "SIMULATED"
+  }
+ ]
+}

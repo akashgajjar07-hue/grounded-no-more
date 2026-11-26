@@ -1,0 +1,219 @@
+[
+ {
+  "fg": "ice (text)",
+  "bg": "midnight",
+  "ratio": 17.2,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "ice (text)",
+  "bg": "card",
+  "ratio": 15.53,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "ice (text)",
+  "bg": "deep_steel",
+  "ratio": 14.2,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "titanium (muted)",
+  "bg": "midnight",
+  "ratio": 10.93,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "titanium (muted)",
+  "bg": "card",
+  "ratio": 9.87,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "titanium (muted)",
+  "bg": "deep_steel",
+  "ratio": 9.03,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "text-faint (derived)",
+  "bg": "midnight",
+  "ratio": 6.56,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "text-faint (derived)",
+  "bg": "card",
+  "ratio": 5.92,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "text-faint (derived)",
+  "bg": "deep_steel",
+  "ratio": 5.41,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "aero_teal",
+  "bg": "midnight",
+  "ratio": 8.83,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "aero_teal",
+  "bg": "card",
+  "ratio": 7.97,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "aero_teal",
+  "bg": "deep_steel",
+  "ratio": 7.29,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "amber",
+  "bg": "midnight",
+  "ratio": 10.58,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "amber",
+  "bg": "card",
+  "ratio": 9.56,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "amber",
+  "bg": "deep_steel",
+  "ratio": 8.74,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "red",
+  "bg": "midnight",
+  "ratio": 5.94,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "red",
+  "bg": "card",
+  "ratio": 5.37,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "red",
+  "bg": "deep_steel",
+  "ratio": 4.91,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "copper",
+  "bg": "midnight",
+  "ratio": 5.78,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "copper",
+  "bg": "card",
+  "ratio": 5.22,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "copper",
+  "bg": "deep_steel",
+  "ratio": 4.78,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "slate (non-text only)",
+  "bg": "midnight",
+  "ratio": 4.36,
+  "required": 3.0,
+  "pass": true
+ },
+ {
+  "fg": "slate (non-text only)",
+  "bg": "card",
+  "ratio": 3.94,
+  "required": 3.0,
+  "pass": true
+ },
+ {
+  "fg": "slate (non-text only)",
+  "bg": "deep_steel",
+  "ratio": 3.6,
+  "required": 3.0,
+  "pass": true
+ },
+ {
+  "fg": "chip REAL",
+  "bg": "aero_teal 10% tint on card",
+  "ratio": 6.64,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "chip DERIVED",
+  "bg": "titanium 10% tint on card",
+  "ratio": 7.99,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "chip ASSUMED",
+  "bg": "amber 10% tint on card",
+  "ratio": 7.85,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "chip SIMULATED",
+  "bg": "copper 10% tint on card",
+  "ratio": 4.6,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "pill urgent",
+  "bg": "red 12% tint on card",
+  "ratio": 4.66,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "pill review",
+  "bg": "amber 12% tint on card",
+  "ratio": 7.51,
+  "required": 4.5,
+  "pass": true
+ },
+ {
+  "fg": "midnight on aero_teal (primary button)",
+  "bg": "aero_teal",
+  "ratio": 8.83,
+  "required": 4.5,
+  "pass": true
+ }
+]

@@ -1,0 +1,301 @@
+{
+ "meta": {
+  "generated_at": "2026-11-26T00:00:00Z",
+  "git_sha": "fixture",
+  "provenance": "DERIVED",
+  "source": "docs/design/make_fixtures.mjs",
+  "notes": "FIXTURE — layout placeholder, not model output. Planner exceptions (placeholder).",
+  "fixture": true
+ },
+ "actions": [
+  {
+   "exception_id": "EX-1040",
+   "week": 104,
+   "type": "UNDERSTOCK_D0",
+   "severity": "urgent",
+   "pn": "GN-32-R014",
+   "station": "BOM",
+   "summary": "GN-32-R014 has no serviceable unit at BOM; D0 exposure on 2 fleets",
+   "evidence": {
+    "risk_score": 0.91,
+    "deadline": "D0",
+    "stock_total": 2
+   },
+   "recommended_action": "Raise float at outstation",
+   "owner": "Repair controller",
+   "due_week": 105
+  },
+  {
+   "exception_id": "EX-1041",
+   "week": 104,
+   "type": "OVERDUE_REPAIR",
+   "severity": "urgent",
+   "pn": "GN-27-R001",
+   "station": "CAI",
+   "summary": "overdue repair on GN-27-R001",
+   "evidence": {
+    "risk_score": 0.78,
+    "deadline": "D3",
+    "stock_total": 9
+   },
+   "recommended_action": "Chase vendor / accelerate repair",
+   "owner": "Logistics lead",
+   "due_week": 105
+  },
+  {
+   "exception_id": "EX-1042",
+   "week": 104,
+   "type": "EXCESS_STOCK",
+   "severity": "review",
+   "pn": "GN-38-C001",
+   "station": "JED",
+   "summary": "excess stock on GN-38-C001",
+   "evidence": {
+    "risk_score": 0.41,
+    "deadline": "D3",
+    "stock_total": 119
+   },
+   "recommended_action": "Reduce max; redistribute",
+   "owner": "Logistics lead",
+   "due_week": 105
+  },
+  {
+   "exception_id": "EX-1043",
+   "week": 104,
+   "type": "LEAD_TIME_SHIFT",
+   "severity": "review",
+   "pn": "GN-29-E001",
+   "station": "JED",
+   "summary": "lead time shift on GN-29-E001",
+   "evidence": {
+    "risk_score": 0.55,
+    "deadline": "D3",
+    "stock_total": 8
+   },
+   "recommended_action": "Update planning lead time",
+   "owner": "Repair controller",
+   "due_week": 106
+  },
+  {
+   "exception_id": "EX-1044",
+   "week": 105,
+   "type": "LEAD_TIME_SHIFT",
+   "severity": "review",
+   "pn": "GN-29-C006",
+   "station": "BOM",
+   "summary": "lead time shift on GN-29-C006",
+   "evidence": {
+    "risk_score": 0.719,
+    "deadline": "D10",
+    "stock_total": 71
+   },
+   "recommended_action": "Update planning lead time",
+   "owner": "Logistics lead",
+   "due_week": 106
+  },
+  {
+   "exception_id": "EX-1045",
+   "week": 105,
+   "type": "EXCESS_STOCK",
+   "severity": "review",
+   "pn": "GN-27-R004",
+   "station": "CAI",
+   "summary": "excess stock on GN-27-R004",
+   "evidence": {
+    "risk_score": 0.964,
+    "deadline": "D0",
+    "stock_total": 13
+   },
+   "recommended_action": "Reduce max; redistribute",
+   "owner": "Materials planner",
+   "due_week": 106
+  },
+  {
+   "exception_id": "EX-1046",
+   "week": 105,
+   "type": "FORECAST_DRIFT",
+   "severity": "info",
+   "pn": "GN-32-R005",
+   "station": "AUH",
+   "summary": "forecast drift on GN-32-R005",
+   "evidence": {
+    "risk_score": 0.006,
+    "deadline": "D3",
+    "stock_total": 7
+   },
+   "recommended_action": "Review forecast champion",
+   "owner": "Logistics lead",
+   "due_week": 107
+  },
+  {
+   "exception_id": "EX-1047",
+   "week": 105,
+   "type": "FORECAST_DRIFT",
+   "severity": "info",
+   "pn": "GN-49-R001",
+   "station": "BOM",
+   "summary": "forecast drift on GN-49-R001",
+   "evidence": {
+    "risk_score": 0.077,
+    "deadline": "D3",
+    "stock_total": 5
+   },
+   "recommended_action": "Review forecast champion",
+   "owner": "Logistics lead",
+   "due_week": 107
+  },
+  {
+   "exception_id": "EX-1048",
+   "week": 106,
+   "type": "UNDERSTOCK_D0",
+   "severity": "urgent",
+   "pn": "GN-34-C004",
+   "station": "LHR",
+   "summary": "understock d0 on GN-34-C004",
+   "evidence": {
+    "risk_score": 0.003,
+    "deadline": "D3",
+    "stock_total": 105
+   },
+   "recommended_action": "Raise float at outstation",
+   "owner": "Repair controller",
+   "due_week": 107
+  },
+  {
+   "exception_id": "EX-1049",
+   "week": 106,
+   "type": "EXCESS_STOCK",
+   "severity": "review",
+   "pn": "GN-29-R001",
+   "station": "BOM",
+   "summary": "excess stock on GN-29-R001",
+   "evidence": {
+    "risk_score": 0.304,
+    "deadline": "D0",
+    "stock_total": 15
+   },
+   "recommended_action": "Reduce max; redistribute",
+   "owner": "Repair controller",
+   "due_week": 108
+  },
+  {
+   "exception_id": "EX-1050",
+   "week": 106,
+   "type": "FORECAST_DRIFT",
+   "severity": "info",
+   "pn": "GN-36-R002",
+   "station": "BOM",
+   "summary": "forecast drift on GN-36-R002",
+   "evidence": {
+    "risk_score": 0.148,
+    "deadline": "D3",
+    "stock_total": 8
+   },
+   "recommended_action": "Review forecast champion",
+   "owner": "Logistics lead",
+   "due_week": 108
+  },
+  {
+   "exception_id": "EX-1051",
+   "week": 106,
+   "type": "LEAD_TIME_SHIFT",
+   "severity": "review",
+   "pn": "GN-28-C002",
+   "station": "AUH",
+   "summary": "lead time shift on GN-28-C002",
+   "evidence": {
+    "risk_score": 0.307,
+    "deadline": "D10",
+    "stock_total": 138
+   },
+   "recommended_action": "Update planning lead time",
+   "owner": "Materials planner",
+   "due_week": 108
+  },
+  {
+   "exception_id": "EX-1052",
+   "week": 107,
+   "type": "EXCESS_STOCK",
+   "severity": "review",
+   "pn": "GN-27-R004",
+   "station": "LHR",
+   "summary": "excess stock on GN-27-R004",
+   "evidence": {
+    "risk_score": 0.964,
+    "deadline": "D0",
+    "stock_total": 13
+   },
+   "recommended_action": "Reduce max; redistribute",
+   "owner": "Logistics lead",
+   "due_week": 109
+  },
+  {
+   "exception_id": "EX-1053",
+   "week": 107,
+   "type": "UNDERSTOCK_D0",
+   "severity": "urgent",
+   "pn": "GN-21-E002",
+   "station": "CAI",
+   "summary": "understock d0 on GN-21-E002",
+   "evidence": {
+    "risk_score": 0.677,
+    "deadline": "D3",
+    "stock_total": 18
+   },
+   "recommended_action": "Raise float at outstation",
+   "owner": "Repair controller",
+   "due_week": 109
+  },
+  {
+   "exception_id": "EX-1054",
+   "week": 107,
+   "type": "FORECAST_DRIFT",
+   "severity": "info",
+   "pn": "GN-27-E002",
+   "station": "SIN",
+   "summary": "forecast drift on GN-27-E002",
+   "evidence": {
+    "risk_score": 0.573,
+    "deadline": "D3",
+    "stock_total": 18
+   },
+   "recommended_action": "Review forecast champion",
+   "owner": "Repair controller",
+   "due_week": 109
+  },
+  {
+   "exception_id": "EX-1055",
+   "week": 107,
+   "type": "EXCESS_STOCK",
+   "severity": "review",
+   "pn": "GN-32-E001",
+   "station": "BOM",
+   "summary": "excess stock on GN-32-E001",
+   "evidence": {
+    "risk_score": 0.37,
+    "deadline": "D3",
+    "stock_total": 14
+   },
+   "recommended_action": "Reduce max; redistribute",
+   "owner": "Repair controller",
+   "due_week": 110
+  },
+  {
+   "exception_id": "EX-1056",
+   "week": 108,
+   "type": "EXCESS_STOCK",
+   "severity": "review",
+   "pn": "GN-24-R002",
+   "station": "LHR",
+   "summary": "excess stock on GN-24-R002",
+   "evidence": {
+    "risk_score": 0.573,
+    "deadline": "D3",
+    "stock_total": 10
+   },
+   "recommended_action": "Reduce max; redistribute",
+   "owner": "Repair controller",
+   "due_week": 110
+  }
+ ]
+}

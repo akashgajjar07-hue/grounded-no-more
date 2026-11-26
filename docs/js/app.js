@@ -1,0 +1,179 @@
+/**
+ * app.js — shell + hash router for GROUNDED NO MORE.
+ *
+ * Routes are deep-linkable: #/parts?ata=32&pn=GN-32-R014
+ * Each route lazy-loads its view module from js/views/ and the JSON files the module declares:
+ *
+ *   // js/views/parts-intelligence.js
+ *   export const data = ['parts', 'demand_history'];       // loaded before render()
+ *   export async function render(el, ctx) { ... }           // may return a cleanup function
+ *
+ * ctx = {route, params, data, navigate(hash), setParams(obj), load(name)}
+ * Keyboard: 1–8 jump between workspaces, 0 = Data & Method, ? = shortcuts, S = story mode,
+ * Esc closes overlays. A skip link jumps to the main content.
+ */
+import { h, icon, ensureSprite, fixtureChip, disclaimer, modal, kbd, storyMode, stateBlock } from './ui.js';
+import { loadMany, load, onFixture } from './data.js';
+
+export const ROUTES = [
+  { id: 'mission', num: '01', label: 'Mission Control', icon: 'aircraft', module: './views/mission-control.js' },
+  { id: 'parts', num: '02', label: 'Parts Intelligence', icon: 'part', module: './views/parts-intelligence.js' },
+  { id: 'forecast', num: '03', label: 'Forecast Lab', icon: 'flask', module: './views/forecast-lab.js' },
+  { id: 'rotables', num: '04', label: 'Rotable & Repair', icon: 'rotable', module: './views/rotable-repair.js' },
+  { id: 'network', num: '05', label: 'Network Positioning', icon: 'route', module: './views/network-positioning.js' },
+  { id: 'capital', num: '06', label: 'Capital Optimiser', icon: 'capital', module: './views/capital-optimiser.js' },
+  { id: 'aog', num: '07', label: 'AOG Response Lab', icon: 'clock', module: './views/aog-response-lab.js' },
+  { id: 'actions', num: '08', label: 'Planner Action Centre', icon: 'inbox', module: './views/planner-action-centre.js' },
+  { id: 'method', num: '—', label: 'Data & Method', icon: 'book', module: './views/data-method.js', key: '0' },
+];
+const DEFAULT = 'mission';
+const SITE = 'GROUNDED NO MORE';
+
+const $ = (s) => document.querySelector(s);
+let cleanup = null;
+let renderSeq = 0;
+let helpModal = null;
+let renderedResolve = null;
+
+/** Parse "#/parts?ata=32" → {id:'parts', params:{ata:'32'}} */
+export function parseHash(hash = location.hash) {
+  const raw = hash.replace(/^#\/?/, '');
+  const [path, query = ''] = raw.split('?');
+  const id = ROUTES.some((r) => r.id === path) ? path : DEFAULT;
+  return { id, params: Object.fromEntries(new URLSearchParams(query)) };
+}
+
+/** Build a hash from a route id and params. */
+export function buildHash(id, params = {}) {
+  const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')).toString();
+  return `#/${id}${q ? `?${q}` : ''}`;
+}
+
+/** Navigate (re-renders). Resolves after the target view has rendered. */
+export function navigate(hash) {
+  return new Promise((resolve) => {
+    if (location.hash === hash) { resolve(); return; }
+    renderedResolve = resolve;
+    location.hash = hash;
+  });
+}
+
+/** Update the URL params of the current route WITHOUT re-rendering (deep-link state). */
+function setParams(params, { merge = true } = {}) {
+  const cur = parseHash();
+  const next = buildHash(cur.id, merge ? { ...cur.params, ...params } : params);
+  history.replaceState(null, '', next);
+}
+
+// --------------------------------------------------------------------------- shell
+function buildNav() {
+  const main = ROUTES.filter((r) => r.id !== 'method');
+  const method = ROUTES.find((r) => r.id === 'method');
+  const item = (r, key) =>
+    h('a', { class: 'nav-item', href: `#/${r.id}`, dataset: { route: r.id } }, h('span', { class: 'nav-num' }, r.num), h('span', {}, r.label), h('span', { class: 'nav-key', 'aria-hidden': 'true' }, key));
+  $('#nav').replaceChildren(
+    h('div', { class: 'nav-label' }, 'Workspaces'),
+    ...main.map((r, i) => item(r, String(i + 1))),
+    h('div', { class: 'nav-label mt-3' }, 'Reference'),
+    item(method, '0')
+  );
+}
+
+function markActive(id) {
+  document.querySelectorAll('.nav-item').forEach((a) => (a.dataset.route === id ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
+  const r = ROUTES.find((x) => x.id === id);
+  $('#crumbs').replaceChildren(h('span', { class: 'mono' }, r.num === '—' ? 'REFERENCE' : `WORKSPACE ${r.num}`), h('span', { class: 'faint', 'aria-hidden': 'true' }, '/'), h('strong', {}, r.label));
+  document.title = `${r.label} · ${SITE}`;
+}
+
+function setRail(open) {
+  $('#app').classList.toggle('rail-open', open);
+  $('#menu-btn').setAttribute('aria-expanded', String(open));
+}
+
+function openHelp() {
+  if (helpModal?.isOpen) return;
+  const rows = [
+    [h('span', { class: 'row' }, kbd('1'), '–', kbd('8')), 'Jump to workspace 01–08'],
+    [kbd('0'), 'Data & Method'],
+    [kbd('S'), 'Start story mode (guided tour)'],
+    [kbd('?'), 'Show this help'],
+    [kbd('Esc'), 'Close dialogs, drawers and the tour'],
+    [kbd('Tab'), 'Move between controls (focus is always visible)'],
+  ];
+  helpModal = modal({ title: 'Keyboard shortcuts', body: h('div', { class: 'shortcut-list' }, rows.flatMap(([k, d]) => [h('div', {}, k), h('div', {}, d)])) }).open();
+}
+
+async function startStory() {
+  try {
+    const story = await load('story');
+    storyMode({ steps: story.steps || [], navigate }).start();
+  } catch (e) {
+    console.warn('story unavailable', e);
+  }
+}
+
+// --------------------------------------------------------------------------- render
+async function render() {
+  const seq = ++renderSeq;
+  const { id, params } = parseHash();
+  const route = ROUTES.find((r) => r.id === id);
+  markActive(id);
+  setRail(false);
+  const view = $('#view');
+  if (typeof cleanup === 'function') { try { cleanup(); } catch { /* ignore */ } }
+  cleanup = null;
+  view.classList.remove('view-enter');
+  view.replaceChildren(stateBlock('loading'));
+  try {
+    const mod = await import(route.module);
+    const data = await loadMany(mod.data || []);
+    if (seq !== renderSeq) return;
+    view.replaceChildren();
+    void view.offsetWidth; // restart entry animation
+    view.classList.add('view-enter');
+    const ctx = { route, params, data, navigate, setParams, load, buildHash };
+    cleanup = (await mod.render(view, ctx)) || null;
+  } catch (err) {
+    console.error(err);
+    if (seq === renderSeq) view.replaceChildren(stateBlock('error', `This workspace could not load (${err.message}).`));
+  }
+  if (seq === renderSeq) {
+    if (window.__gnmNavigated) { view.focus({ preventScroll: true }); window.scrollTo({ top: 0 }); }
+    window.__gnmNavigated = true;
+    renderedResolve?.(); renderedResolve = null;
+    document.documentElement.dataset.ready = 'true';
+  }
+}
+
+function onKey(e) {
+  if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+  const t = e.target;
+  if (t.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+  if (document.querySelector('.story, .modal, .drawer.is-open') && e.key !== '?') return;
+  if (/^[1-8]$/.test(e.key)) { const r = ROUTES[+e.key - 1]; navigate(`#/${r.id}`); }
+  else if (e.key === '0') navigate('#/method');
+  else if (e.key === '?') { e.preventDefault(); openHelp(); }
+  else if (e.key === 's' || e.key === 'S') startStory();
+  else if (e.key === 'Escape') setRail(false);
+}
+
+function boot() {
+  ensureSprite();
+  buildNav();
+  const foot = $('#footer');
+  foot.replaceWith(disclaimer({ meta: 'Falcon Hub Airways is fictional' }));
+  $('#menu-btn').addEventListener('click', () => setRail(!$('#app').classList.contains('rail-open')));
+  $('#rail-scrim').addEventListener('click', () => setRail(false));
+  $('#help-btn').addEventListener('click', openHelp);
+  $('#story-btn').addEventListener('click', startStory);
+  $('#rail-story').addEventListener('click', startStory);
+  onFixture(() => { const slot = $('#fixture-slot'); if (!slot.childElementCount) slot.append(fixtureChip()); });
+  window.addEventListener('hashchange', render);
+  document.addEventListener('keydown', onKey);
+  if (!location.hash) history.replaceState(null, '', `#/${DEFAULT}`);
+  render();
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();

@@ -1,0 +1,1192 @@
+{
+ "meta": {
+  "generated_at": "2026-11-26T00:00:00Z",
+  "git_sha": "fixture",
+  "provenance": "DERIVED",
+  "source": "docs/design/make_fixtures.mjs",
+  "notes": "FIXTURE — layout placeholder, not model output. Rolling-origin selection weeks 78–103 (placeholder).",
+  "fixture": true
+ },
+ "leaderboard": [
+  {
+   "demand_class": "smooth",
+   "part_class": "C",
+   "method": "Naive (last 4w mean)",
+   "mase": 1.347,
+   "mase_ci": [
+    1.212,
+    1.482
+   ],
+   "bias": -0.085,
+   "pis": 29.83,
+   "coverage": 0.801,
+   "n": 17
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "C",
+   "method": "Croston",
+   "mase": 1.154,
+   "mase_ci": [
+    1.039,
+    1.269
+   ],
+   "bias": 0.209,
+   "pis": 5.75,
+   "coverage": 0.876,
+   "n": 24
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "C",
+   "method": "SBA",
+   "mase": 1.096,
+   "mase_ci": [
+    0.986,
+    1.206
+   ],
+   "bias": 0.106,
+   "pis": 27.28,
+   "coverage": 0.846,
+   "n": 26
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "C",
+   "method": "TSB",
+   "mase": 1.21,
+   "mase_ci": [
+    1.089,
+    1.331
+   ],
+   "bias": -0.185,
+   "pis": 16.18,
+   "coverage": 0.856,
+   "n": 6
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "C",
+   "method": "ETS (ANN)",
+   "mase": 1.088,
+   "mase_ci": [
+    0.979,
+    1.197
+   ],
+   "bias": 0.056,
+   "pis": 28.52,
+   "coverage": 0.915,
+   "n": 15
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "C",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 1.131,
+   "mase_ci": [
+    1.018,
+    1.244
+   ],
+   "bias": 0.058,
+   "pis": 8.8,
+   "coverage": 0.869,
+   "n": 26
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "E",
+   "method": "Naive (last 4w mean)",
+   "mase": 0.895,
+   "mase_ci": [
+    0.806,
+    0.985
+   ],
+   "bias": -0.246,
+   "pis": 25.53,
+   "coverage": 0.909,
+   "n": 17
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "E",
+   "method": "Croston",
+   "mase": 0.743,
+   "mase_ci": [
+    0.669,
+    0.817
+   ],
+   "bias": -0.193,
+   "pis": 27.38,
+   "coverage": 0.829,
+   "n": 5
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "E",
+   "method": "SBA",
+   "mase": 0.729,
+   "mase_ci": [
+    0.656,
+    0.802
+   ],
+   "bias": -0.203,
+   "pis": 7.75,
+   "coverage": 0.864,
+   "n": 4
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "E",
+   "method": "TSB",
+   "mase": 0.731,
+   "mase_ci": [
+    0.658,
+    0.804
+   ],
+   "bias": 0.052,
+   "pis": 6.86,
+   "coverage": 0.908,
+   "n": 24
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "E",
+   "method": "ETS (ANN)",
+   "mase": 0.833,
+   "mase_ci": [
+    0.75,
+    0.916
+   ],
+   "bias": -0.086,
+   "pis": 8.89,
+   "coverage": 0.888,
+   "n": 15
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "E",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.646,
+   "mase_ci": [
+    0.581,
+    0.711
+   ],
+   "bias": 0.108,
+   "pis": 26.11,
+   "coverage": 0.923,
+   "n": 21
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "R",
+   "method": "Naive (last 4w mean)",
+   "mase": 1.098,
+   "mase_ci": [
+    0.988,
+    1.208
+   ],
+   "bias": -0.209,
+   "pis": 16.57,
+   "coverage": 0.93,
+   "n": 23
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "R",
+   "method": "Croston",
+   "mase": 1.029,
+   "mase_ci": [
+    0.926,
+    1.132
+   ],
+   "bias": -0.121,
+   "pis": 6.15,
+   "coverage": 0.836,
+   "n": 19
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "R",
+   "method": "SBA",
+   "mase": 0.934,
+   "mase_ci": [
+    0.841,
+    1.027
+   ],
+   "bias": -0.149,
+   "pis": 11.74,
+   "coverage": 0.908,
+   "n": 14
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "R",
+   "method": "TSB",
+   "mase": 0.901,
+   "mase_ci": [
+    0.811,
+    0.991
+   ],
+   "bias": -0.133,
+   "pis": 12.88,
+   "coverage": 0.806,
+   "n": 24
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "R",
+   "method": "ETS (ANN)",
+   "mase": 0.962,
+   "mase_ci": [
+    0.866,
+    1.058
+   ],
+   "bias": 0.015,
+   "pis": 10.72,
+   "coverage": 0.826,
+   "n": 19
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "R",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.793,
+   "mase_ci": [
+    0.714,
+    0.872
+   ],
+   "bias": -0.153,
+   "pis": 5.68,
+   "coverage": 0.812,
+   "n": 23
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "C",
+   "method": "Naive (last 4w mean)",
+   "mase": 1.235,
+   "mase_ci": [
+    1.112,
+    1.359
+   ],
+   "bias": 0.197,
+   "pis": 16.93,
+   "coverage": 0.901,
+   "n": 6
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "C",
+   "method": "Croston",
+   "mase": 1.085,
+   "mase_ci": [
+    0.977,
+    1.194
+   ],
+   "bias": -0.134,
+   "pis": 20.25,
+   "coverage": 0.832,
+   "n": 4
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "C",
+   "method": "SBA",
+   "mase": 0.973,
+   "mase_ci": [
+    0.876,
+    1.07
+   ],
+   "bias": 0.192,
+   "pis": 17.97,
+   "coverage": 0.922,
+   "n": 10
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "C",
+   "method": "TSB",
+   "mase": 1.016,
+   "mase_ci": [
+    0.914,
+    1.118
+   ],
+   "bias": 0.184,
+   "pis": 8.07,
+   "coverage": 0.855,
+   "n": 13
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "C",
+   "method": "ETS (ANN)",
+   "mase": 0.957,
+   "mase_ci": [
+    0.861,
+    1.053
+   ],
+   "bias": -0.197,
+   "pis": 3.94,
+   "coverage": 0.92,
+   "n": 24
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "C",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 1.122,
+   "mase_ci": [
+    1.01,
+    1.234
+   ],
+   "bias": 0.033,
+   "pis": 5.99,
+   "coverage": 0.869,
+   "n": 23
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "E",
+   "method": "Naive (last 4w mean)",
+   "mase": 1.308,
+   "mase_ci": [
+    1.177,
+    1.439
+   ],
+   "bias": 0.049,
+   "pis": 17.62,
+   "coverage": 0.878,
+   "n": 22
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "E",
+   "method": "Croston",
+   "mase": 1.078,
+   "mase_ci": [
+    0.97,
+    1.186
+   ],
+   "bias": -0.052,
+   "pis": 23.82,
+   "coverage": 0.817,
+   "n": 15
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "E",
+   "method": "SBA",
+   "mase": 1.035,
+   "mase_ci": [
+    0.932,
+    1.139
+   ],
+   "bias": 0.193,
+   "pis": 13.83,
+   "coverage": 0.87,
+   "n": 24
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "E",
+   "method": "TSB",
+   "mase": 1.105,
+   "mase_ci": [
+    0.995,
+    1.216
+   ],
+   "bias": 0.036,
+   "pis": 29.75,
+   "coverage": 0.809,
+   "n": 10
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "E",
+   "method": "ETS (ANN)",
+   "mase": 0.998,
+   "mase_ci": [
+    0.898,
+    1.098
+   ],
+   "bias": -0.068,
+   "pis": 28.28,
+   "coverage": 0.847,
+   "n": 7
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "E",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.945,
+   "mase_ci": [
+    0.85,
+    1.04
+   ],
+   "bias": -0.118,
+   "pis": 18.76,
+   "coverage": 0.838,
+   "n": 24
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "R",
+   "method": "Naive (last 4w mean)",
+   "mase": 1.038,
+   "mase_ci": [
+    0.934,
+    1.142
+   ],
+   "bias": 0.009,
+   "pis": 21.23,
+   "coverage": 0.817,
+   "n": 19
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "R",
+   "method": "Croston",
+   "mase": 0.832,
+   "mase_ci": [
+    0.749,
+    0.915
+   ],
+   "bias": -0.173,
+   "pis": 4.67,
+   "coverage": 0.791,
+   "n": 21
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "R",
+   "method": "SBA",
+   "mase": 0.886,
+   "mase_ci": [
+    0.797,
+    0.975
+   ],
+   "bias": 0.149,
+   "pis": 2.06,
+   "coverage": 0.897,
+   "n": 7
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "R",
+   "method": "TSB",
+   "mase": 0.91,
+   "mase_ci": [
+    0.819,
+    1.001
+   ],
+   "bias": -0.24,
+   "pis": 10.34,
+   "coverage": 0.808,
+   "n": 17
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "R",
+   "method": "ETS (ANN)",
+   "mase": 0.821,
+   "mase_ci": [
+    0.739,
+    0.903
+   ],
+   "bias": -0.218,
+   "pis": 7.58,
+   "coverage": 0.852,
+   "n": 26
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "R",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.75,
+   "mase_ci": [
+    0.675,
+    0.825
+   ],
+   "bias": 0.068,
+   "pis": 7.26,
+   "coverage": 0.907,
+   "n": 11
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "C",
+   "method": "Naive (last 4w mean)",
+   "mase": 1.141,
+   "mase_ci": [
+    1.027,
+    1.255
+   ],
+   "bias": -0.117,
+   "pis": 23.17,
+   "coverage": 0.781,
+   "n": 13
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "C",
+   "method": "Croston",
+   "mase": 1.064,
+   "mase_ci": [
+    0.958,
+    1.17
+   ],
+   "bias": -0.157,
+   "pis": 9.09,
+   "coverage": 0.815,
+   "n": 9
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "C",
+   "method": "SBA",
+   "mase": 0.994,
+   "mase_ci": [
+    0.895,
+    1.093
+   ],
+   "bias": 0.127,
+   "pis": 16.41,
+   "coverage": 0.857,
+   "n": 10
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "C",
+   "method": "TSB",
+   "mase": 0.977,
+   "mase_ci": [
+    0.879,
+    1.075
+   ],
+   "bias": 0.135,
+   "pis": 23.63,
+   "coverage": 0.936,
+   "n": 19
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "C",
+   "method": "ETS (ANN)",
+   "mase": 0.91,
+   "mase_ci": [
+    0.819,
+    1.001
+   ],
+   "bias": 0.083,
+   "pis": 12.7,
+   "coverage": 0.829,
+   "n": 12
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "C",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.962,
+   "mase_ci": [
+    0.866,
+    1.058
+   ],
+   "bias": 0.064,
+   "pis": 27.84,
+   "coverage": 0.808,
+   "n": 12
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "E",
+   "method": "Naive (last 4w mean)",
+   "mase": 1.235,
+   "mase_ci": [
+    1.112,
+    1.359
+   ],
+   "bias": -0.232,
+   "pis": 6.41,
+   "coverage": 0.87,
+   "n": 4
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "E",
+   "method": "Croston",
+   "mase": 0.989,
+   "mase_ci": [
+    0.89,
+    1.088
+   ],
+   "bias": -0.122,
+   "pis": 27.29,
+   "coverage": 0.91,
+   "n": 17
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "E",
+   "method": "SBA",
+   "mase": 1.132,
+   "mase_ci": [
+    1.019,
+    1.245
+   ],
+   "bias": 0.088,
+   "pis": 5.81,
+   "coverage": 0.825,
+   "n": 23
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "E",
+   "method": "TSB",
+   "mase": 1.101,
+   "mase_ci": [
+    0.991,
+    1.211
+   ],
+   "bias": 0.101,
+   "pis": 7.2,
+   "coverage": 0.928,
+   "n": 20
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "E",
+   "method": "ETS (ANN)",
+   "mase": 1.058,
+   "mase_ci": [
+    0.952,
+    1.164
+   ],
+   "bias": -0.007,
+   "pis": 22.92,
+   "coverage": 0.925,
+   "n": 8
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "E",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.892,
+   "mase_ci": [
+    0.803,
+    0.981
+   ],
+   "bias": 0.216,
+   "pis": 22.86,
+   "coverage": 0.905,
+   "n": 14
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "R",
+   "method": "Naive (last 4w mean)",
+   "mase": 1.114,
+   "mase_ci": [
+    1.003,
+    1.225
+   ],
+   "bias": 0.169,
+   "pis": 23.22,
+   "coverage": 0.813,
+   "n": 24
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "R",
+   "method": "Croston",
+   "mase": 1.044,
+   "mase_ci": [
+    0.94,
+    1.148
+   ],
+   "bias": 0.175,
+   "pis": 15.82,
+   "coverage": 0.868,
+   "n": 16
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "R",
+   "method": "SBA",
+   "mase": 0.982,
+   "mase_ci": [
+    0.884,
+    1.08
+   ],
+   "bias": -0.015,
+   "pis": 8.6,
+   "coverage": 0.883,
+   "n": 18
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "R",
+   "method": "TSB",
+   "mase": 1.034,
+   "mase_ci": [
+    0.931,
+    1.137
+   ],
+   "bias": -0.18,
+   "pis": 23.71,
+   "coverage": 0.873,
+   "n": 14
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "R",
+   "method": "ETS (ANN)",
+   "mase": 1.009,
+   "mase_ci": [
+    0.908,
+    1.11
+   ],
+   "bias": 0.17,
+   "pis": 7.51,
+   "coverage": 0.848,
+   "n": 21
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "R",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.805,
+   "mase_ci": [
+    0.725,
+    0.886
+   ],
+   "bias": -0.083,
+   "pis": 14.87,
+   "coverage": 0.924,
+   "n": 13
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "C",
+   "method": "Naive (last 4w mean)",
+   "mase": 1.129,
+   "mase_ci": [
+    1.016,
+    1.242
+   ],
+   "bias": -0.069,
+   "pis": 15.06,
+   "coverage": 0.849,
+   "n": 5
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "C",
+   "method": "Croston",
+   "mase": 0.872,
+   "mase_ci": [
+    0.785,
+    0.959
+   ],
+   "bias": 0.111,
+   "pis": 21.35,
+   "coverage": 0.873,
+   "n": 14
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "C",
+   "method": "SBA",
+   "mase": 1.036,
+   "mase_ci": [
+    0.932,
+    1.14
+   ],
+   "bias": -0.126,
+   "pis": 11.73,
+   "coverage": 0.795,
+   "n": 22
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "C",
+   "method": "TSB",
+   "mase": 0.957,
+   "mase_ci": [
+    0.861,
+    1.053
+   ],
+   "bias": -0.231,
+   "pis": 6.36,
+   "coverage": 0.879,
+   "n": 13
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "C",
+   "method": "ETS (ANN)",
+   "mase": 0.929,
+   "mase_ci": [
+    0.836,
+    1.022
+   ],
+   "bias": -0.074,
+   "pis": 21.67,
+   "coverage": 0.934,
+   "n": 25
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "C",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 1.057,
+   "mase_ci": [
+    0.951,
+    1.163
+   ],
+   "bias": 0.043,
+   "pis": 2.74,
+   "coverage": 0.887,
+   "n": 9
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "E",
+   "method": "Naive (last 4w mean)",
+   "mase": 0.848,
+   "mase_ci": [
+    0.763,
+    0.933
+   ],
+   "bias": -0.012,
+   "pis": 7.58,
+   "coverage": 0.797,
+   "n": 12
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "E",
+   "method": "Croston",
+   "mase": 0.659,
+   "mase_ci": [
+    0.593,
+    0.725
+   ],
+   "bias": -0.185,
+   "pis": 22.47,
+   "coverage": 0.894,
+   "n": 7
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "E",
+   "method": "SBA",
+   "mase": 0.744,
+   "mase_ci": [
+    0.67,
+    0.818
+   ],
+   "bias": -0.2,
+   "pis": 24.46,
+   "coverage": 0.93,
+   "n": 14
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "E",
+   "method": "TSB",
+   "mase": 0.646,
+   "mase_ci": [
+    0.581,
+    0.711
+   ],
+   "bias": 0.21,
+   "pis": 18.94,
+   "coverage": 0.819,
+   "n": 15
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "E",
+   "method": "ETS (ANN)",
+   "mase": 0.743,
+   "mase_ci": [
+    0.669,
+    0.817
+   ],
+   "bias": -0.232,
+   "pis": 22.16,
+   "coverage": 0.905,
+   "n": 24
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "E",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.612,
+   "mase_ci": [
+    0.551,
+    0.673
+   ],
+   "bias": 0.123,
+   "pis": 9.8,
+   "coverage": 0.934,
+   "n": 21
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "R",
+   "method": "Naive (last 4w mean)",
+   "mase": 1.379,
+   "mase_ci": [
+    1.241,
+    1.517
+   ],
+   "bias": 0.051,
+   "pis": 23.85,
+   "coverage": 0.88,
+   "n": 26
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "R",
+   "method": "Croston",
+   "mase": 1.174,
+   "mase_ci": [
+    1.057,
+    1.291
+   ],
+   "bias": -0.174,
+   "pis": 16.31,
+   "coverage": 0.806,
+   "n": 6
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "R",
+   "method": "SBA",
+   "mase": 1.233,
+   "mase_ci": [
+    1.11,
+    1.356
+   ],
+   "bias": 0.088,
+   "pis": 8.59,
+   "coverage": 0.877,
+   "n": 16
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "R",
+   "method": "TSB",
+   "mase": 1.218,
+   "mase_ci": [
+    1.096,
+    1.34
+   ],
+   "bias": 0.061,
+   "pis": 29.79,
+   "coverage": 0.917,
+   "n": 15
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "R",
+   "method": "ETS (ANN)",
+   "mase": 1.099,
+   "mase_ci": [
+    0.989,
+    1.209
+   ],
+   "bias": 0.151,
+   "pis": 19.12,
+   "coverage": 0.924,
+   "n": 11
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "R",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.996,
+   "mase_ci": [
+    0.896,
+    1.096
+   ],
+   "bias": 0.081,
+   "pis": 7.87,
+   "coverage": 0.875,
+   "n": 19
+  }
+ ],
+ "champions": [
+  {
+   "demand_class": "smooth",
+   "part_class": "C",
+   "method": "ETS (ANN)",
+   "mase": 1.088
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "E",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.646
+  },
+  {
+   "demand_class": "smooth",
+   "part_class": "R",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.793
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "C",
+   "method": "ETS (ANN)",
+   "mase": 0.957
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "E",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.945
+  },
+  {
+   "demand_class": "erratic",
+   "part_class": "R",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.75
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "C",
+   "method": "ETS (ANN)",
+   "mase": 0.91
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "E",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.892
+  },
+  {
+   "demand_class": "intermittent",
+   "part_class": "R",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.805
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "C",
+   "method": "Croston",
+   "mase": 0.872
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "E",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.612
+  },
+  {
+   "demand_class": "lumpy",
+   "part_class": "R",
+   "method": "Reliability-exposure (FH/FC)",
+   "mase": 0.996
+  }
+ ],
+ "stock_eval": [
+  {
+   "method": "Naive (last 4w mean)",
+   "fill_rate": 0.932,
+   "capital_aed": 47026386
+  },
+  {
+   "method": "Croston",
+   "fill_rate": 0.941,
+   "capital_aed": 46896170
+  },
+  {
+   "method": "SBA",
+   "fill_rate": 0.947,
+   "capital_aed": 46767455
+  },
+  {
+   "method": "TSB",
+   "fill_rate": 0.956,
+   "capital_aed": 46012801
+  },
+  {
+   "method": "ETS (ANN)",
+   "fill_rate": 0.966,
+   "capital_aed": 45219985
+  },
+  {
+   "method": "Reliability-exposure (FH/FC)",
+   "fill_rate": 0.974,
+   "capital_aed": 44926029
+  }
+ ],
+ "truth_recovery": [
+  {
+   "param": "MTBUR (rotables)",
+   "metric": "median abs % error",
+   "vendor_quoted": 0.31,
+   "estimated": 0.12
+  },
+  {
+   "param": "Line usage rate (consumables)",
+   "metric": "median abs % error",
+   "vendor_quoted": null,
+   "estimated": 0.09
+  },
+  {
+   "param": "Repair TAT mean",
+   "metric": "median abs % error",
+   "vendor_quoted": 0.22,
+   "estimated": 0.08
+  }
+ ],
+ "monash": {
+  "status": "not run",
+  "reason": "Fixture placeholder: external benchmark not evaluated."
+ },
+ "ltd_example": {
+  "pn": "GN-32-R014",
+  "lead_time_days": 60,
+  "dist": [
+   {
+    "q": 0,
+    "p": 0.122
+   },
+   {
+    "q": 1,
+    "p": 0.257
+   },
+   {
+    "q": 2,
+    "p": 0.27
+   },
+   {
+    "q": 3,
+    "p": 0.189
+   },
+   {
+    "q": 4,
+    "p": 0.099
+   },
+   {
+    "q": 5,
+    "p": 0.042
+   },
+   {
+    "q": 6,
+    "p": 0.015
+   },
+   {
+    "q": 7,
+    "p": 0.004
+   },
+   {
+    "q": 8,
+    "p": 0.001
+   }
+  ]
+ }
+}

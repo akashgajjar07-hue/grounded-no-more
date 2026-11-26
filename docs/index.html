@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>GROUNDED NO MORE · Aviation spare-parts intelligence</title>
+  <meta name="description" content="An interactive aviation spare-parts intelligence workspace for a fictional airline: which parts can ground an aircraft, where to hold them, and what to do — forecasting, rotable repair, network positioning, capital optimisation and AOG response. Independent educational simulation.">
+  <meta name="theme-color" content="#09131F">
+  <meta name="color-scheme" content="dark">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="GROUNDED NO MORE — aviation spare-parts intelligence">
+  <meta property="og:description" content="A single missing part can ground an aircraft. Know which ones, where, and what to do. Educational simulation for the fictional Falcon Hub Airways.">
+  <meta property="og:image" content="assets/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="vendor/fonts/space-grotesk/space-grotesk-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="vendor/fonts/inter/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="vendor/fonts/ibm-plex-mono/ibm-plex-mono-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <!-- Self-hosted libraries (ISC). No external runtime requests. -->
+  <script defer src="vendor/d3/d3.min.js"></script>
+  <script defer src="vendor/plot/plot.umd.min.js"></script>
+  <script defer src="vendor/topojson-client/topojson-client.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body class="blueprint-bg">
+  <a class="skip-link" href="#view">Skip to main content</a>
+  <div class="app" id="app">
+    <nav class="rail" aria-label="Workspaces">
+      <a class="brand" href="#/mission" aria-label="GROUNDED NO MORE — Mission Control">
+        <img class="brand-mark" src="assets/favicon.svg" alt="" width="32" height="32">
+        <span class="brand-name">GROUNDED<br>NO MORE<span class="brand-sub">Falcon Hub Airways (fictional)</span></span>
+      </a>
+      <div class="nav" id="nav"></div>
+      <div class="rail-foot">
+        <button class="btn btn--ghost" id="rail-story" type="button" style="justify-content:flex-start"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-play"/></svg>Story mode</button>
+        <p class="rail-hint">Press <kbd class="kbd">?</kbd> for keyboard shortcuts</p>
+      </div>
+    </nav>
+    <div class="rail-scrim" id="rail-scrim"></div>
+    <div class="main">
+      <header class="topbar">
+        <button class="btn btn--ghost btn--icon menu-btn" id="menu-btn" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="nav"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-menu"/></svg></button>
+        <div class="crumbs" id="crumbs" aria-live="polite"></div>
+        <div class="topbar-actions">
+          <span id="fixture-slot"></span>
+          <span class="chip hide-sm" title="Simulated calendar, not real dates">SIM · W104–155</span>
+          <button class="btn btn--sm hide-sm" id="story-btn" type="button"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-play"/></svg>Story</button>
+          <button class="btn btn--ghost btn--icon" id="help-btn" type="button" aria-label="Keyboard shortcuts"><svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-keyboard"/></svg></button>
+        </div>
+      </header>
+      <main class="view" id="view" tabindex="-1">
+        <noscript>
+          <div class="card" style="max-width:640px">
+            <h1 class="t-28">GROUNDED NO MORE needs JavaScript</h1>
+            <p class="lede mt-2">This interactive workspace renders its charts, maps and blueprint diagrams with JavaScript. Please enable it, or read the project documentation in the repository. Everything is self-hosted; no third-party scripts are loaded.</p>
+          </div>
+        </noscript>
+      </main>
+      <footer id="footer" class="disclaimer">Independent educational simulation. Not an airline system or an approved maintenance, airworthiness or dispatch tool. Models run offline; the site loads exported results.</footer>
+    </div>
+  </div>
+</body>
+</html>

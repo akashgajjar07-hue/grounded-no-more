@@ -1,0 +1,138 @@
+{
+ "meta": {
+  "generated_at": "2026-11-26T00:00:00Z",
+  "git_sha": "fixture",
+  "provenance": "SIMULATED",
+  "source": "docs/design/make_fixtures.mjs",
+  "notes": "FIXTURE — layout placeholder, not model output. AOG response options for placeholder incidents.",
+  "fixture": true
+ },
+ "incidents": [
+  {
+   "id": "AOG-0193",
+   "tail": "A6-FW07",
+   "pn": "GN-32-R014",
+   "desc": "Carbon brake assembly",
+   "station": "BOM",
+   "deadline": "D0",
+   "archetype": "widebody",
+   "need_h": 17531,
+   "timeline": [
+    {
+     "t_h": 0,
+     "event": "Defect raised on walkaround"
+    },
+    {
+     "t_h": 1,
+     "event": "No serviceable unit at BOM"
+    },
+    {
+     "t_h": 2,
+     "event": "Options evaluated"
+    },
+    {
+     "t_h": 11,
+     "event": "Unit arrives (AUH emergency)"
+    },
+    {
+     "t_h": 14,
+     "event": "Fitted, released"
+    }
+   ],
+   "options": [
+    {
+     "option": "Emergency transfer from AUH",
+     "feasible": true,
+     "reason_codes": [
+      "STOCK_AT_HUB"
+     ],
+     "wait_h": 11,
+     "direct_cost": 9200,
+     "exposure_aed": 330000,
+     "deadline_met": false
+    },
+    {
+     "option": "Lateral from SIN",
+     "feasible": true,
+     "reason_codes": [
+      "LATERAL_OK"
+     ],
+     "wait_h": 16,
+     "direct_cost": 12400,
+     "exposure_aed": 480000,
+     "deadline_met": false
+    },
+    {
+     "option": "Pool exchange",
+     "feasible": false,
+     "reason_codes": [
+      "NOT_CONTRACTED_P0"
+     ],
+     "wait_h": 24,
+     "direct_cost": 0,
+     "exposure_aed": 0,
+     "deadline_met": false
+    },
+    {
+     "option": "Expedite purchase",
+     "feasible": true,
+     "reason_codes": [
+      "LEAD_TIME_LONG"
+     ],
+     "wait_h": 960,
+     "direct_cost": 51000,
+     "exposure_aed": 28800000,
+     "deadline_met": false
+    }
+   ]
+  },
+  {
+   "id": "AOG-0207",
+   "tail": "A6-FH12",
+   "pn": "GN-36-E004",
+   "desc": "Bleed check valve",
+   "station": "JED",
+   "deadline": "D3",
+   "archetype": "narrowbody",
+   "need_h": 17602,
+   "timeline": [
+    {
+     "t_h": 0,
+     "event": "Fault isolated"
+    },
+    {
+     "t_h": 3,
+     "event": "Routine replenishment due in 40 h"
+    },
+    {
+     "t_h": 43,
+     "event": "Fitted within window"
+    }
+   ],
+   "options": [
+    {
+     "option": "Wait for routine replenishment",
+     "feasible": true,
+     "reason_codes": [
+      "WITHIN_WINDOW"
+     ],
+     "wait_h": 43,
+     "direct_cost": 150,
+     "exposure_aed": 0,
+     "deadline_met": true
+    },
+    {
+     "option": "Emergency transfer from AUH",
+     "feasible": true,
+     "reason_codes": [
+      "STOCK_AT_HUB"
+     ],
+     "wait_h": 9,
+     "direct_cost": 4100,
+     "exposure_aed": 0,
+     "deadline_met": true
+    }
+   ]
+  }
+ ]
+}

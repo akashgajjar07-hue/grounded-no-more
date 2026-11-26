@@ -1,0 +1,121 @@
+/* =====================================================================
+   GROUNDED NO MORE — design tokens ("Aerospace Titanium × Blueprint")
+   Source of truth: docs/design/tokens.json. Keep the two in sync.
+   Fonts are self-hosted (docs/vendor/fonts, SIL OFL 1.1).
+   ===================================================================== */
+
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 400; font-display: swap; src: url('../vendor/fonts/space-grotesk/space-grotesk-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 500; font-display: swap; src: url('../vendor/fonts/space-grotesk/space-grotesk-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 600; font-display: swap; src: url('../vendor/fonts/space-grotesk/space-grotesk-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-style: normal; font-weight: 700; font-display: swap; src: url('../vendor/fonts/space-grotesk/space-grotesk-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url('../vendor/fonts/inter/inter-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: swap; src: url('../vendor/fonts/inter/inter-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; font-display: swap; src: url('../vendor/fonts/inter/inter-latin-600-normal.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('../vendor/fonts/ibm-plex-mono/ibm-plex-mono-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('../vendor/fonts/ibm-plex-mono/ibm-plex-mono-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 600; font-display: swap; src: url('../vendor/fonts/ibm-plex-mono/ibm-plex-mono-latin-600-normal.woff2') format('woff2'); }
+
+:root {
+  color-scheme: dark;
+
+  /* ---- raw palette (tokens.json → color) ---- */
+  --c-midnight: #09131F;
+  --c-deep-steel: #132638;
+  --c-card: #0F1E2E;
+  --c-hairline: rgba(185, 200, 214, 0.14);
+  --c-grid: rgba(34, 199, 184, 0.07);
+  --c-aero-teal: #22C7B8;
+  --c-titanium: #B9C8D6;
+  --c-copper: #C47F52;
+  --c-ice: #F2F6FA;
+  --c-amber: #F5B942;
+  --c-red: #E76B64;
+  --c-slate: #6B7C8F;
+
+  /* ---- derived (not in tokens.json; computed from it, see DESIGN_SYSTEM.md) ---- */
+  --c-teal-hi: #7FF3E6;                     /* glow / active highlight only */
+  --c-text-faint: #8A9BAD;                  /* tertiary text: slate lifted to pass AA (6.6:1 on midnight) */
+  --c-hairline-strong: rgba(185, 200, 214, 0.26);
+  --c-grid-major: rgba(34, 199, 184, 0.11);
+  --c-teal-a08: rgba(34, 199, 184, 0.08);
+  --c-teal-a14: rgba(34, 199, 184, 0.14);
+  --c-teal-a24: rgba(34, 199, 184, 0.24);
+  --c-amber-a12: rgba(245, 185, 66, 0.12);
+  --c-red-a12: rgba(231, 107, 100, 0.12);
+  --c-copper-a12: rgba(196, 127, 82, 0.14);
+  --c-titanium-a10: rgba(185, 200, 214, 0.10);
+  --c-scrim: rgba(4, 9, 15, 0.72);
+
+  /* ---- semantic (tokens.json → semantic) ---- */
+  --bg: var(--c-midnight);
+  --panel: var(--c-deep-steel);
+  --surface: var(--c-card);
+  --text: var(--c-ice);
+  --text-muted: var(--c-titanium);
+  --text-faint: var(--c-text-faint);
+  --primary: var(--c-aero-teal);
+  --accent-capital: var(--c-copper);
+  --status-ok: var(--c-aero-teal);
+  --status-review: var(--c-amber);
+  --status-urgent: var(--c-red);
+  --status-unknown: var(--c-slate);
+  --line: var(--c-hairline);
+  --line-strong: var(--c-hairline-strong);
+
+  /* provenance chips (tokens.json → provenance_chip) */
+  --prov-real: var(--c-aero-teal);
+  --prov-derived: var(--c-titanium);
+  --prov-assumed: var(--c-amber);
+  --prov-simulated: var(--c-copper);
+
+  /* ---- type ---- */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --fs-12: 0.75rem;
+  --fs-14: 0.875rem;
+  --fs-16: 1rem;
+  --fs-20: 1.25rem;
+  --fs-28: 1.75rem;
+  --fs-40: 2.5rem;
+  --fs-64: 4rem;
+
+  /* ---- space (8-px base) ---- */
+  --s-0: 0;
+  --s-1: 8px;
+  --s-2: 16px;
+  --s-3: 24px;
+  --s-4: 32px;
+  --s-5: 40px;
+  --s-6: 48px;
+  --s-8: 64px;
+  --s-10: 80px;
+  --s-half: 4px;
+
+  /* ---- layout ---- */
+  --max-w: 1440px;
+  --gutter: 24px;
+  --mobile-gutter: 16px;
+  --rail-w: 264px;
+  --topbar-h: 56px;
+
+  /* ---- shape ---- */
+  --r-card: 12px;
+  --r-chip: 999px;
+  --r-control: 8px;
+  --line-w: 1px;
+  --icon-stroke: 1.5px;
+  --shadow-pop: 0 16px 48px rgba(2, 6, 12, 0.55), 0 0 0 1px var(--c-hairline);
+
+  /* ---- motion ---- */
+  --dur-fast: 200ms;
+  --dur-base: 300ms;
+  --dur-slow: 400ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--c-aero-teal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; }
+}

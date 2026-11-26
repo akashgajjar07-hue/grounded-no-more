@@ -1,0 +1,411 @@
+{
+ "meta": {
+  "generated_at": "2026-11-26T00:00:00Z",
+  "git_sha": "fixture",
+  "provenance": "SIMULATED",
+  "source": "docs/design/make_fixtures.mjs",
+  "notes": "FIXTURE — layout placeholder, not model output. Serial lifecycle counts and repair queue (placeholder).",
+  "fixture": true
+ },
+ "lifecycle": {
+  "states": [
+   "SERVICEABLE",
+   "INSTALLED",
+   "REMOVED",
+   "IN_REPAIR",
+   "CONDEMNED"
+  ],
+  "counts": {
+   "SERVICEABLE": 96,
+   "INSTALLED": 412,
+   "REMOVED": 14,
+   "IN_REPAIR": 31,
+   "CONDEMNED": 6
+  },
+  "flows": [
+   {
+    "from": "SERVICEABLE",
+    "to": "INSTALLED",
+    "count": 188
+   },
+   {
+    "from": "INSTALLED",
+    "to": "REMOVED",
+    "count": 191
+   },
+   {
+    "from": "REMOVED",
+    "to": "IN_REPAIR",
+    "count": 186
+   },
+   {
+    "from": "IN_REPAIR",
+    "to": "SERVICEABLE",
+    "count": 178
+   },
+   {
+    "from": "IN_REPAIR",
+    "to": "CONDEMNED",
+    "count": 6
+   }
+  ]
+ },
+ "repair_queue": [
+  {
+   "ro_id": "RO-4100",
+   "serial": "GN-28-R001-S1000",
+   "pn": "GN-28-R001",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17052,
+   "start_h": 17177,
+   "due_h": 18484,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4101",
+   "serial": "GN-27-R001-S1007",
+   "pn": "GN-27-R001",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17234,
+   "start_h": 17306,
+   "due_h": 18733,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4102",
+   "serial": "GN-27-R001-S0042",
+   "pn": "GN-27-R001",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17110,
+   "start_h": 17224,
+   "due_h": 17755,
+   "return_h": null,
+   "overdue": true
+  },
+  {
+   "ro_id": "RO-4103",
+   "serial": "GN-24-R001-S1021",
+   "pn": "GN-24-R001",
+   "shop": "AUH_INHOUSE",
+   "shop_in_h": 17211,
+   "start_h": 17283,
+   "due_h": 18184,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4104",
+   "serial": "GN-32-R014-S1028",
+   "pn": "GN-32-R014",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17278,
+   "start_h": 17417,
+   "due_h": 18138,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4105",
+   "serial": "GN-29-R001-S1035",
+   "pn": "GN-29-R001",
+   "shop": "AUH_INHOUSE",
+   "shop_in_h": 17125,
+   "start_h": 17134,
+   "due_h": 19042,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4106",
+   "serial": "GN-32-R002-S1042",
+   "pn": "GN-32-R002",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17037,
+   "start_h": 17132,
+   "due_h": 18316,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4107",
+   "serial": "GN-34-R001-S1049",
+   "pn": "GN-34-R001",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17095,
+   "start_h": 17210,
+   "due_h": 18258,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4108",
+   "serial": "GN-49-R002-S1056",
+   "pn": "GN-49-R002",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17119,
+   "start_h": 17132,
+   "due_h": 18663,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4109",
+   "serial": "GN-38-R001-S1063",
+   "pn": "GN-38-R001",
+   "shop": "AUH_INHOUSE",
+   "shop_in_h": 17202,
+   "start_h": 17330,
+   "due_h": 19164,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4110",
+   "serial": "GN-21-R001-S1070",
+   "pn": "GN-21-R001",
+   "shop": "AUH_INHOUSE",
+   "shop_in_h": 17138,
+   "start_h": 17273,
+   "due_h": 18619,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4111",
+   "serial": "GN-32-R003-S1077",
+   "pn": "GN-32-R003",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17107,
+   "start_h": 17125,
+   "due_h": 18343,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4112",
+   "serial": "GN-32-R004-S1084",
+   "pn": "GN-32-R004",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17183,
+   "start_h": 17347,
+   "due_h": 19493,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4113",
+   "serial": "GN-27-R002-S1091",
+   "pn": "GN-27-R002",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17133,
+   "start_h": 17323,
+   "due_h": 18653,
+   "return_h": null,
+   "overdue": true
+  },
+  {
+   "ro_id": "RO-4114",
+   "serial": "GN-32-R005-S1098",
+   "pn": "GN-32-R005",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17295,
+   "start_h": 17358,
+   "due_h": 18912,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4115",
+   "serial": "GN-36-R001-S1105",
+   "pn": "GN-36-R001",
+   "shop": "AUH_INHOUSE",
+   "shop_in_h": 17091,
+   "start_h": 17118,
+   "due_h": 18252,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4116",
+   "serial": "GN-32-R006-S1112",
+   "pn": "GN-32-R006",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17376,
+   "start_h": 17478,
+   "due_h": 19217,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4117",
+   "serial": "GN-21-R002-S1119",
+   "pn": "GN-21-R002",
+   "shop": "AUH_INHOUSE",
+   "shop_in_h": 17041,
+   "start_h": 17041,
+   "due_h": 18911,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4118",
+   "serial": "GN-49-R003-S1126",
+   "pn": "GN-49-R003",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17324,
+   "start_h": 17376,
+   "due_h": 18293,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4119",
+   "serial": "GN-21-R003-S1133",
+   "pn": "GN-21-R003",
+   "shop": "AUH_INHOUSE",
+   "shop_in_h": 17367,
+   "start_h": 17449,
+   "due_h": 18857,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4120",
+   "serial": "GN-24-R002-S1140",
+   "pn": "GN-24-R002",
+   "shop": "AUH_INHOUSE",
+   "shop_in_h": 17231,
+   "start_h": 17422,
+   "due_h": 18273,
+   "return_h": null,
+   "overdue": false
+  },
+  {
+   "ro_id": "RO-4121",
+   "serial": "GN-32-R007-S1147",
+   "pn": "GN-32-R007",
+   "shop": "EU_VENDOR",
+   "shop_in_h": 17263,
+   "start_h": 17424,
+   "due_h": 18452,
+   "return_h": null,
+   "overdue": false
+  }
+ ],
+ "tat": [
+  {
+   "pn": "GN-28-R001",
+   "shop": "AUH_INHOUSE",
+   "quoted_d": 52,
+   "actual_mean_d": 58.1,
+   "p90_d": 103.5,
+   "n": 26
+  },
+  {
+   "pn": "GN-27-R001",
+   "shop": "AUH_INHOUSE",
+   "quoted_d": 21,
+   "actual_mean_d": 30.8,
+   "p90_d": 38.9,
+   "n": 24
+  },
+  {
+   "pn": "GN-49-R001",
+   "shop": "AUH_INHOUSE",
+   "quoted_d": 39,
+   "actual_mean_d": 45,
+   "p90_d": 61.4,
+   "n": 8
+  },
+  {
+   "pn": "GN-24-R001",
+   "shop": "EU_VENDOR",
+   "quoted_d": 60,
+   "actual_mean_d": 72.1,
+   "p90_d": 86.5,
+   "n": 26
+  },
+  {
+   "pn": "GN-32-R014",
+   "shop": "EU_VENDOR",
+   "quoted_d": 42,
+   "actual_mean_d": 45.3,
+   "p90_d": 82,
+   "n": 21
+  },
+  {
+   "pn": "GN-29-R001",
+   "shop": "EU_VENDOR",
+   "quoted_d": 18,
+   "actual_mean_d": 26.1,
+   "p90_d": 27.6,
+   "n": 11
+  },
+  {
+   "pn": "GN-32-R002",
+   "shop": "AUH_INHOUSE",
+   "quoted_d": 53,
+   "actual_mean_d": 55.3,
+   "p90_d": 83.6,
+   "n": 27
+  },
+  {
+   "pn": "GN-34-R001",
+   "shop": "EU_VENDOR",
+   "quoted_d": 16,
+   "actual_mean_d": 15.7,
+   "p90_d": 25.1,
+   "n": 23
+  },
+  {
+   "pn": "GN-49-R002",
+   "shop": "EU_VENDOR",
+   "quoted_d": 49,
+   "actual_mean_d": 55.8,
+   "p90_d": 101.2,
+   "n": 15
+  },
+  {
+   "pn": "GN-38-R001",
+   "shop": "AUH_INHOUSE",
+   "quoted_d": 23,
+   "actual_mean_d": 25.6,
+   "p90_d": 46.1,
+   "n": 13
+  },
+  {
+   "pn": "GN-21-R001",
+   "shop": "AUH_INHOUSE",
+   "quoted_d": 49,
+   "actual_mean_d": 51.8,
+   "p90_d": 90.3,
+   "n": 16
+  },
+  {
+   "pn": "GN-32-R003",
+   "shop": "EU_VENDOR",
+   "quoted_d": 24,
+   "actual_mean_d": 30.2,
+   "p90_d": 46,
+   "n": 9
+  }
+ ],
+ "float_examples": [
+  {
+   "pn": "GN-32-R014",
+   "station": "BOM",
+   "current": 0,
+   "recommended": 1,
+   "reason": "D0 exposure at outstation; 9 h AOG transfer from AUH"
+  },
+  {
+   "pn": "GN-27-R001",
+   "station": "AUH",
+   "current": 2,
+   "recommended": 3,
+   "reason": "Vendor TAT p90 well above quoted"
+  }
+ ]
+}
