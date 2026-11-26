@@ -12,13 +12,15 @@
  *  6. Palm vs simulation
  * Every number comes from the JSON or from floatcalc.js applied to user inputs.
  */
-import { h, icon, pageHead, card, provChip, pill, dataTable, bindValueText, fillPct, intro3 } from '../ui.js';
-import { chartFrame, responsive, svgIn, axisBottom, axisLeft, gridY, directLabel, annotate, withTooltip, truncate, theme, chipLabel, refLine, fmtAED, fmtPct, fmtDays, fmtInt, fmtNum, fmtWeek, fmtEnum, fmtCount, plural } from '../charts/theme.js';
+import { h, icon, pageHead, card, provChip, pill, dataTable, bindValueText, fillPct, intro3, slidingThumb } from '../ui.js';
+import { chartFrame, responsive, svgIn, axisBottom, axisLeft, gridY, styleAxis, directLabel, annotate, withTooltip, truncate, theme, chipLabel, refLine, fmtAED, fmtPct, fmtDays, fmtInt, fmtNum, fmtWeek, fmtEnum, fmtCount, plural } from '../charts/theme.js';
 import { floatCalc, compareLevers, pmfSeries } from '../lib/floatcalc.js';
 import { isSimple, byMode } from '../lib/mode.js';
 import { term, termText } from '../lib/glossary.js';
 import { displayName } from '../lib/names.js';
 import { escalationBlock, allocationFlagNote } from './parts-intelligence/flags.js';
+import { drawIn, focusTip } from './parts-intelligence/motion-helpers.js';
+import { chartTransition, throttleRAF, countUpOnce } from '../lib/motion.js';
 
 export const data = ['rotables', 'method', 'network', 'parts'];
 
@@ -39,6 +41,9 @@ function loadCSS() {
   document.head.append(l);
   cssLoaded = true;
 }
+
+/** responsive() + a one-time chart draw-in (slow token) of the svg the draw callback renders. */
+const respIn = (host, draw) => responsive(host, (w) => { draw(w); drawIn(host, host.querySelector('svg')); });
 
 // ----------------------------------------------------------------------------- data helpers
 const num = (v) => (v == null || v === '' || Number.isNaN(+v) ? null : +v);
@@ -113,15 +118,17 @@ export async function render(el, ctx) {
   const tatRows = (r.tat || []).filter((t) => num(t.quoted_d) && num(t.actual_mean_d) != null);
   const tatRatio = median(tatRows.map((t) => t.actual_mean_d / t.quoted_d));
   const lateShare = tatRows.length ? tatRows.filter((t) => t.actual_mean_d > t.quoted_d).length / tatRows.length : null;
+  // addendum: KPI values count up ONCE per session (countUpOnce, 600 ms); re-renders print the final value
+  const countEl = (v, fmt, key) => { const e = h('span', { class: 'rr-count' }); if (v == null || !Number.isFinite(+v)) e.textContent = fmt(v); else countUpOnce(e, +v, fmt, { key: `rotables-${key}` }); return e; };
   const stat = ({ label, value, unit, sub, chip, alert, story }) => h('div', { class: `rr-stat ${alert ? 'is-alert' : ''}`, dataset: story ? { story } : undefined },
     h('div', { class: 'rr-stat-top' }, h('div', { class: 'rr-stat-label' }, label), provChip(chip)),
     h('div', { class: 'rr-stat-value' }, value, unit ? h('small', {}, unit) : null),
     h('div', { class: 'rr-stat-sub' }, sub));
   el.append(h('div', { class: 'rr-stats mt-3', dataset: { story: 'rotable-stats' } },
-    stat({ label: byMode('Parts away for repair', 'Units in repair loop'), value: fmtInt(loop), unit: byMode('parts', 'serials'), sub: fleet ? (S ? `${fmtPct(loop / fleet)} of ${fmtInt(fleet)} parts are broken or in a shop` : `${fmtPct(loop / fleet)} of ${fmtInt(fleet)} active serials are removed (U/S) or in a shop`) : 'Lifecycle counts not exported', chip: prov(r.lifecycle, prov(r.meta)) }),
-    stat({ label: byMode('Open repair jobs', 'Open repair orders'), value: fmtInt(r.repair_summary?.open ?? openROs.length), unit: byMode('jobs', 'ROs'), sub: `${fmtInt(new Set(openROs.map((o) => o.shop)).size)} shops · ${fmtInt(r.repair_summary?.returned_last_8w ?? ros.length - openROs.length)} returned in the last 8 weeks`, chip: prov(r.meta) }),
-    stat({ label: byMode('Repair jobs past due', 'Overdue vs quoted due'), value: fmtInt(r.repair_summary?.overdue ?? overdueROs.length), unit: byMode('jobs', 'ROs'), sub: overdueROs.length ? h('span', { class: 'rr-stat-crit' }, overdueROs.some(isCritical) ? icon('alert') : null, `${plural(overdueROs.filter(isCritical).length, byMode('job', 'RO'))} more than ${Math.round(CRITICAL_LATE_D / 7)} weeks late`) : 'None overdue', chip: prov(r.meta) }),
-    stat({ label: byMode('Actual vs promised repair time', 'Actual / quoted TAT'), value: tatRatio != null ? `${fmtNum(tatRatio, 2)}×` : 'not run', sub: lateShare != null ? (S ? `Middle value over ${fmtInt(tatRows.length)} part and shop pairs · ${fmtPct(lateShare, 0)} run late` : `Median over ${fmtInt(tatRows.length)} PN–shop pairs · ${fmtPct(lateShare, 0)} run late`) : 'TAT table not exported', chip: prov(r.tat?.[0], prov(r.meta)) }),
+    stat({ label: byMode('Parts away for repair', 'Units in repair loop'), value: countEl(loop, fmtInt, 'loop'), unit: byMode('parts', 'serials'), sub: fleet ? (S ? `${fmtPct(loop / fleet)} of ${fmtInt(fleet)} parts are broken or in a shop` : `${fmtPct(loop / fleet)} of ${fmtInt(fleet)} active serials are removed (U/S) or in a shop`) : 'Lifecycle counts not exported', chip: prov(r.lifecycle, prov(r.meta)) }),
+    stat({ label: byMode('Open repair jobs', 'Open repair orders'), value: countEl(r.repair_summary?.open ?? openROs.length, fmtInt, 'open'), unit: byMode('jobs', 'ROs'), sub: `${fmtInt(new Set(openROs.map((o) => o.shop)).size)} shops · ${fmtInt(r.repair_summary?.returned_last_8w ?? ros.length - openROs.length)} returned in the last 8 weeks`, chip: prov(r.meta) }),
+    stat({ label: byMode('Repair jobs past due', 'Overdue vs quoted due'), value: countEl(r.repair_summary?.overdue ?? overdueROs.length, fmtInt, 'overdue'), unit: byMode('jobs', 'ROs'), sub: overdueROs.length ? h('span', { class: 'rr-stat-crit' }, overdueROs.some(isCritical) ? icon('alert') : null, `${plural(overdueROs.filter(isCritical).length, byMode('job', 'RO'))} more than ${Math.round(CRITICAL_LATE_D / 7)} weeks late`) : 'None overdue', chip: prov(r.meta) }),
+    stat({ label: byMode('Actual vs promised repair time', 'Actual / quoted TAT'), value: tatRatio != null ? countEl(tatRatio, (v) => `${fmtNum(v, 2)}×`, 'tat-ratio') : 'not run', sub: lateShare != null ? (S ? `Middle value over ${fmtInt(tatRows.length)} part and shop pairs · ${fmtPct(lateShare, 0)} run late` : `Median over ${fmtInt(tatRows.length)} PN–shop pairs · ${fmtPct(lateShare, 0)} run late`) : 'TAT table not exported', chip: prov(r.tat?.[0], prov(r.meta)) }),
   ));
 
   // ---------------------------------------------------------------- 2. lifecycle
@@ -146,7 +153,7 @@ export async function render(el, ctx) {
   });
   const lcHost = h('div', { class: 'rr-flow' });
   lcF.body.append(lcHost, h('p', { class: 'rr-lc-note' }, byMode('Each part is in one state at a time. Broken parts at other airports fly to AUH before repair. Hub removals go straight to the shop. Parts not worth fixing are scrapped and bought new.', 'Each serial is in exactly one state. Outstation removals travel to AUH as unserviceable cores before induction; hub removals go straight to the shop. BER units are condemned and replaced by purchase order.')));
-  cleanups.push(responsive(lcHost, (w) => drawFlow(lcHost, r.lifecycle?.states || Object.keys(counts), counts, flows, w)));
+  cleanups.push(respIn(lcHost, (w) => drawFlow(lcHost, r.lifecycle?.states || Object.keys(counts), counts, flows, w)));
   // ---------------------------------------------------------------- 3. repair queue gantt + 4. TAT
   const grid = h('div', { class: 'grid-12 mt-3' });
   el.append(grid);
@@ -283,7 +290,7 @@ function drawFlow(el, states, counts, flows, w) {
     const lo = Math.min(x1, x2), hi = Math.max(x1, x2);
     const right = hi + 12 + tw <= w, left = lo - 12 - tw >= 0;
     if (right || left) g.append('text').attr('class', 'gnm-label rr-lane-name').attr('x', right ? hi + 12 : lo - 12).attr('y', r.y).attr('dy', '0.32em').attr('text-anchor', right ? 'start' : 'end').text(name);
-    withTooltip(g, () => tip(f));
+    withTooltip(g, () => tip(f)); focusTip(g, () => tip(f));
   });
   const nodes = svg.append('g').selectAll('g').data(order).join('g').attr('class', 'rr-node-g').attr('transform', (s) => `translate(${idx(s) * (boxW + gap)},${top})`);
   nodes.append('rect').attr('width', boxW).attr('height', boxH).attr('rx', 10).attr('class', (s) => `rr-node ${s === 'CONDEMNED' ? 'is-bad' : ''} ${s === 'IN_REPAIR' ? 'is-active' : ''}`);
@@ -325,7 +332,7 @@ function drawFlowList(el, order, counts, fl, w, { kindOf, KIND, maxC, tip }) {
     g.append('rect').attr('x', barX).attr('y', 20).attr('height', 6).attr('rx', 2).attr('width', Math.max(2, (barW * f.count) / maxC))
       .attr('fill', o.color).attr('fill-opacity', k === 'fwd' ? 0.75 : 0.6).attr('stroke', k === 'bad' ? o.color : null).attr('stroke-dasharray', o.dash || null);
     chipLabel(g, { x: w, y: 18, text: fmtInt(f.count), anchor: 'end', color: C.text, cls: 'rr-flow-chip' });
-    withTooltip(g, () => tip(f));
+    withTooltip(g, () => tip(f)); focusTip(g, () => tip(f));
   });
 }
 
@@ -384,9 +391,11 @@ function renderGantt(host, ros, now, r, ctx) {
     a.forEach((o) => worstBy.set(o.shop, Math.max(worstBy.get(o.shop) ?? -1e9, o.open && o.overdue ? (o.late_d ?? 0) : -1e6)));
     return a.sort((x, y) => (worstBy.get(y.shop) - worstBy.get(x.shop)) || String(x.shop).localeCompare(String(y.shop)) || (x.inH ?? 0) - (y.inH ?? 0));
   }
+  let lastW = 0;
   function redraw() {
-    stop?.();
-    stop = responsive(chart, (w) => drawGantt(chart, rows(), now, w));
+    // filter change: re-join in place (animated); the observer only redraws on a width change
+    if (stop && lastW) { drawGantt(chart, rows(), now, lastW, true); return; }
+    stop = responsive(chart, (w) => { lastW = w; drawGantt(chart, rows(), now, w); });
   }
   redraw();
   return () => stop?.();
@@ -394,13 +403,18 @@ function renderGantt(host, ros, now, r, ctx) {
 
 function segmentedLite(options, value, onChange, label) {
   const g = h('div', { class: 'seg', role: 'radiogroup', 'aria-label': label });
-  const set = (v) => { [...g.children].forEach((b) => b.setAttribute('aria-checked', String(b.dataset.value === String(v)))); onChange(v); };
+  const set = (v) => { g.querySelectorAll(':scope > button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.value === String(v)))); onChange(v); };
   options.forEach((o) => g.append(h('button', { type: 'button', role: 'radio', dataset: { value: o.value }, 'aria-checked': String(o.value === value), onclick: () => set(o.value) }, o.label)));
+  slidingThumb(g);
   return g;
 }
 
-function drawGantt(el, rows, now, w) {
-  if (!rows.length) { el.replaceChildren(h('div', { class: 'state' }, 'No repair orders match this filter.')); return; }
+/**
+ * Repair-order Gantt. Filter changes (shop / status) re-join the rows keyed on the RO id: rows slide to their new
+ * place (transform), bars re-scale (base token), new rows fade in and removed rows fade out. A width change redraws.
+ */
+function drawGantt(el, rows, now, w, animate = false) {
+  if (!rows.length) { el.replaceChildren(h('div', { class: 'state' }, 'No repair orders match this filter.')); el.__gantt = null; return; }
   const narrow = w < 560;
   const rowH = 20, shopH = 26;
   const labelW = narrow ? 76 : 150;
@@ -409,10 +423,17 @@ function drawGantt(el, rows, now, w) {
   const shops = [...new Set(rows.map((o) => o.shop))];
   const hgt = m.top + m.bottom + rows.length * rowH + shops.length * shopH;
   const iw = Math.max(60, w - m.left - m.right);
-  const svg = svgIn(el, w, hgt, 'Repair order Gantt chart');
-  svg.append('defs').append('pattern').attr('id', 'rr-hatch').attr('width', 5).attr('height', 5).attr('patternUnits', 'userSpaceOnUse').attr('patternTransform', 'rotate(45)')
-    .call((pt) => { pt.append('rect').attr('width', 5).attr('height', 5).attr('fill', 'rgba(185,200,214,0.18)'); pt.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 5).attr('stroke', 'rgba(185,200,214,0.75)').attr('stroke-width', 2); });
-  const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+  let G = el.__gantt;
+  if (!G || G.w !== w || G.right !== m.right || !G.svg.node().isConnected) {
+    const svg = svgIn(el, w, hgt, 'Repair order Gantt chart');
+    svg.append('defs').append('pattern').attr('id', 'rr-hatch').attr('width', 5).attr('height', 5).attr('patternUnits', 'userSpaceOnUse').attr('patternTransform', 'rotate(45)')
+      .call((pt) => { pt.append('rect').attr('width', 5).attr('height', 5).attr('fill', 'rgba(185,200,214,0.18)'); pt.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 5).attr('stroke', 'rgba(185,200,214,0.75)').attr('stroke-width', 2); });
+    const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+    G = el.__gantt = { w, right: m.right, svg, g, bands: g.append('g'), labels: g.append('g'), axis: g.append('g'), nowG: g.append('g'), rowsG: g.append('g') };
+    animate = false;
+  }
+  const T = (sel, o = {}) => (animate ? sel.transition(chartTransition(o)) : sel);
+  G.svg.attr('height', hgt).attr('viewBox', `0 0 ${w} ${hgt}`);
   const lo = d3().min(rows, (o) => o.inH ?? o.start);
   const hi = d3().max(rows, (o) => Math.max(o.end ?? 0, o.due ?? 0, now ?? 0));
   const x = d3().scaleLinear().domain([lo, hi + (hi - lo) * 0.02]).range([0, iw]);
@@ -420,44 +441,70 @@ function drawGantt(el, rows, now, w) {
   let yCur = 0;
   const pos = new Map();
   const bands = [];
-  shops.forEach((s) => {
-    const rs = rows.filter((o) => o.shop === s);
-    bands.push({ shop: s, y: yCur, h: shopH + rs.length * rowH, n: rs.length });
+  shops.forEach((sh) => {
+    const rs = rows.filter((o) => o.shop === sh);
+    bands.push({ shop: sh, y: yCur, h: shopH + rs.length * rowH, n: rs.length });
     yCur += shopH;
-    rs.forEach((o) => { pos.set(o, yCur); yCur += rowH; });
+    rs.forEach((o) => { pos.set(o.ro_id, yCur); yCur += rowH; });
   });
   const ih = yCur;
-  g.append('g').selectAll('rect').data(bands).join('rect').attr('class', 'rr-shop-band').attr('x', -labelW + 4).attr('width', iw + labelW - 4).attr('y', (b) => b.y).attr('height', (b) => b.h).attr('rx', 6);
-  g.append('g').selectAll('text').data(bands).join('text').attr('class', 'rr-shop-label').attr('x', -labelW + 12).attr('y', (b) => b.y + 17)
-    .text((b) => { const od = rows.filter((o) => o.shop === b.shop && o.open && o.overdue).length; return `${shopLabel(b.shop)} · ${b.n} ${isSimple() ? 'job' : 'RO'}${b.n === 1 ? '' : 's'}${od && od < b.n ? ` · ${od} ${isSimple() ? 'late' : 'overdue'}` : ''}`; });
-  axisBottom(g.append('g'), x, { ticks: narrow ? 3 : 6, format: (v) => fmtWeek(Math.floor(v / HPW)), height: ih });
+  const bandSel = G.bands.selectAll('rect').data(bands, (b) => b.shop).join((en) => en.append('rect').attr('class', 'rr-shop-band').attr('rx', 6).attr('y', (b) => b.y).attr('height', (b) => b.h).style('opacity', 0));
+  bandSel.attr('x', -labelW + 4).attr('width', iw + labelW - 4);
+  T(bandSel).attr('y', (b) => b.y).attr('height', (b) => b.h).style('opacity', 1);
+  const shopTxt = (b) => { const od = rows.filter((o) => o.shop === b.shop && o.open && o.overdue).length; return `${shopLabel(b.shop)} · ${b.n} ${isSimple() ? 'job' : 'RO'}${b.n === 1 ? '' : 's'}${od && od < b.n ? ` · ${od} ${isSimple() ? 'late' : 'overdue'}` : ''}`; };
+  const lblSel = G.labels.selectAll('text').data(bands, (b) => b.shop).join((en) => en.append('text').attr('class', 'rr-shop-label').attr('transform', (b) => `translate(0,${b.y + 17})`));
+  lblSel.attr('x', -labelW + 12).text(shopTxt);
+  T(lblSel).attr('transform', (b) => `translate(0,${b.y + 17})`);
+  G.axis.attr('transform', `translate(0,${ih})`);
+  T(G.axis).call(d3().axisBottom(x).ticks(narrow ? 3 : 6).tickSizeOuter(0).tickSize(4).tickPadding(6).tickFormat((v) => fmtWeek(Math.floor(v / HPW))));
+  styleAxis(G.axis);
+  G.nowG.selectAll('*').remove();
   if (now != null) {
-    g.append('line').attr('class', 'rr-now').attr('x1', x(now)).attr('x2', x(now)).attr('y1', 0).attr('y2', ih);
-    dl(g, { x: x(now) - 4, y: 10, text: 'NOW', anchor: 'end', color: C.text });
+    G.nowG.append('line').attr('class', 'rr-now').attr('x1', x(now)).attr('x2', x(now)).attr('y1', 0).attr('y2', ih);
+    dl(G.nowG, { x: x(now) - 4, y: 10, text: 'NOW', anchor: 'end', color: C.text });
   }
-  const rowG = g.append('g').selectAll('g').data(rows).join('g').attr('class', 'rr-row').attr('transform', (o) => `translate(0,${pos.get(o)})`)
-    .attr('tabindex', 0).attr('role', 'listitem')
-    .attr('aria-label', (o) => `${o.ro_id}, serial ${o.serial}, ${shopLabel(o.shop)}, ${o.open ? 'open' : 'returned'}, ${o.overdue ? `overdue ${fmtDays(o.late_d)}` : 'within quote'}`);
-  rowG.filter((o) => !!o.planted).append('rect').attr('class', 'rr-row-hl').attr('x', -labelW + 6).attr('y', 1).attr('width', iw + labelW - 8).attr('height', rowH - 2).attr('rx', 4);
-  rowG.append('rect').attr('class', 'rr-focus').attr('x', -labelW + 6).attr('y', 1).attr('width', iw + labelW - 8).attr('height', rowH - 2).attr('rx', 4).attr('fill', 'none');
-  rowG.append('text').attr('class', (o) => (o.planted ? 'gnm-label gnm-label--strong' : 'gnm-label')).attr('font-family', theme.font.mono).attr('x', -8).attr('y', rowH / 2).attr('dy', '0.32em').attr('text-anchor', 'end').style('font-size', '11px')
-    .text((o) => truncate(narrow ? o.ro_id : `${o.serial}`, labelW - 20, 6.6));
   const bx = (o) => x(o.inH ?? o.start);
   const ex = (o) => x(o.end ?? o.inH);
-  rowG.append('rect').attr('class', (o) => `rr-bar ${o.open ? 'is-open' : ''}`).attr('x', bx).attr('y', 5).attr('height', rowH - 10).attr('rx', 2)
-    .attr('width', (o) => Math.max(2, (o.overdue && o.due != null ? x(Math.max(o.due, o.inH ?? o.due)) : ex(o)) - bx(o)));
-  rowG.filter((o) => o.due != null && o.end != null && o.end > o.due).append('rect').attr('class', (o) => `rr-bar-late ${isCritical(o) ? 'is-crit' : ''}`).attr('x', (o) => x(Math.max(o.due, o.inH ?? o.due))).attr('y', 5).attr('height', rowH - 10).attr('rx', 2)
-    .attr('width', (o) => Math.max(1.5, ex(o) - x(Math.max(o.due, o.inH ?? o.due))));
-  rowG.filter((o) => o.due != null).append('line').attr('class', 'rr-due').attr('x1', (o) => x(o.due)).attr('x2', (o) => x(o.due)).attr('y1', 2).attr('y2', rowH - 2);
-  const late = rowG.filter((o) => o.open && o.overdue);
-  late.filter(isCritical).append('use').attr('href', '#i-alert').attr('x', (o) => Math.min(iw + 4, ex(o) + 4)).attr('y', 3).attr('width', 13).attr('height', 13).attr('color', C.urgent).style('color', C.urgent);
-  late.append('text').attr('class', (o) => `rr-late-label ${isCritical(o) ? 'is-crit' : ''}`).attr('x', (o) => Math.min(iw + 4, ex(o) + 4) + (isCritical(o) ? 16 : 2)).attr('y', rowH / 2).attr('dy', '0.32em').text((o) => `+${Math.round(o.late_d)}d`)
-    .append('tspan').attr('class', 'rr-late-ps').text((o) => (o.planted && !narrow ? ` · ${o.planted}` : ''));
-  withTooltip(rowG, (o) => ({
+  const lateX = (o) => x(Math.max(o.due, o.inH ?? o.due));
+  const rowG = G.rowsG.selectAll('g.rr-row').data(rows, (o) => o.ro_id).join(
+    (en) => {
+      const rg = en.append('g').attr('class', 'rr-row').attr('transform', (o) => `translate(0,${pos.get(o.ro_id)})`).style('opacity', 0)
+        .attr('tabindex', 0).attr('role', 'listitem')
+        .attr('aria-label', (o) => `${o.ro_id}, serial ${o.serial}, ${shopLabel(o.shop)}, ${o.open ? 'open' : 'returned'}, ${o.overdue ? `overdue ${fmtDays(o.late_d)}` : 'within quote'}`);
+      rg.filter((o) => !!o.planted).append('rect').attr('class', 'rr-row-hl').attr('y', 1).attr('height', rowH - 2).attr('rx', 4);
+      rg.append('rect').attr('class', 'rr-focus').attr('y', 1).attr('height', rowH - 2).attr('rx', 4).attr('fill', 'none');
+      rg.append('text').attr('class', (o) => (o.planted ? 'gnm-label gnm-label--strong rr-row-t' : 'gnm-label rr-row-t')).attr('font-family', theme.font.mono).attr('x', -8).attr('y', rowH / 2).attr('dy', '0.32em').attr('text-anchor', 'end').style('font-size', '11px')
+        .text((o) => truncate(narrow ? o.ro_id : `${o.serial}`, labelW - 20, 6.6));
+      rg.append('rect').attr('class', (o) => `rr-bar ${o.open ? 'is-open' : ''}`).attr('y', 5).attr('height', rowH - 10).attr('rx', 2);
+      rg.filter((o) => o.due != null && o.end != null && o.end > o.due).append('rect').attr('class', (o) => `rr-bar-late ${isCritical(o) ? 'is-crit' : ''}`).attr('y', 5).attr('height', rowH - 10).attr('rx', 2);
+      rg.filter((o) => o.due != null).append('line').attr('class', 'rr-due').attr('y1', 2).attr('y2', rowH - 2);
+      const late = rg.filter((o) => o.open && o.overdue);
+      late.filter(isCritical).append('use').attr('class', 'rr-late-icon').attr('href', '#i-alert').attr('y', 3).attr('width', 13).attr('height', 13).attr('color', C.urgent).style('color', C.urgent);
+      late.append('text').attr('class', (o) => `rr-late-label ${isCritical(o) ? 'is-crit' : ''}`).attr('y', rowH / 2).attr('dy', '0.32em').text((o) => `+${Math.round(o.late_d)}d`)
+        .append('tspan').attr('class', 'rr-late-ps').text((o) => (o.planted && !narrow ? ` · ${o.planted}` : ''));
+      // new rows are placed at their final geometry, then fade in
+      placeRow(rg, (sel) => sel);
+      return rg;
+    },
+    (up) => up,
+    (exit) => (animate ? exit.transition(chartTransition({ ease: 'exit' })).style('opacity', 0).remove() : exit.remove()));
+  function placeRow(sel, Tr) {
+    sel.selectAll('.rr-row-hl, .rr-focus').attr('x', -labelW + 6).attr('width', iw + labelW - 8);
+    Tr(sel.select('.rr-bar')).attr('x', bx).attr('width', (o) => Math.max(2, (o.overdue && o.due != null ? lateX(o) : ex(o)) - bx(o)));
+    Tr(sel.select('.rr-bar-late')).attr('x', lateX).attr('width', (o) => Math.max(1.5, ex(o) - lateX(o)));
+    Tr(sel.select('.rr-due')).attr('x1', (o) => x(o.due)).attr('x2', (o) => x(o.due));
+    Tr(sel.select('.rr-late-icon')).attr('x', (o) => Math.min(iw + 4, ex(o) + 4));
+    Tr(sel.select('.rr-late-label')).attr('x', (o) => Math.min(iw + 4, ex(o) + 4) + (isCritical(o) ? 16 : 2));
+  }
+  placeRow(rowG, (sel) => T(sel));
+  T(rowG).attr('transform', (o) => `translate(0,${pos.get(o.ro_id)})`).style('opacity', 1);
+  const rowTip = (o) => ({
     title: `${o.ro_id} · ${o.serial}`,
     rows: [['Shop', shopLabel(o.shop)], ['Inducted', o.inH != null ? fmtWeek(Math.floor(o.inH / HPW)) : '—'], ['Quoted TAT', fmtDays(o.quoted_tat_d)], [o.open ? 'Elapsed' : 'Actual TAT', fmtDays(o.open ? o.elapsed_d : o.actual_tat_d)], ['vs quoted due', o.late_d == null ? '—' : o.late_d > 0 ? `+${fmtDays(o.late_d)} late` : `${fmtDays(-o.late_d)} early`]],
     note: `${o.planted ? `Planted situation ${o.planted} · ` : ''}${o.open ? (isCritical(o) ? `Critical: more than ${fmtInt(CRITICAL_LATE_D)} d past due, chase the vendor` : o.overdue ? 'Overdue, chase the vendor' : 'Open, inside quote') : 'Returned'}`,
-  }));
+  });
+  withTooltip(rowG, rowTip); focusTip(rowG, rowTip);
+  drawIn(el, G.svg);
 }
 
 // ============================================================================= TAT distribution
@@ -474,7 +521,7 @@ function renderTatDist(host, r) {
     table: { columns: [{ key: 'shop', label: 'Shop', format: shopLabel }, { key: 'n', label: 'ROs', num: true, format: fmtInt }, { key: 'quoted_mean_d', label: 'Quoted mean', num: true, format: fmtDays }, { key: 'mean_d', label: 'Actual mean', num: true, format: fmtDays }, { key: 'median_d', label: 'Median', num: true, format: fmtDays }, { key: 'p90_d', label: 'p90', num: true, format: fmtDays }], rows: dists },
   });
   f.root.classList.add('mb-3');
-  return responsive(f.body, (w) => {
+  return respIn(f.body, (w) => {
     const panelH = 96, gapH = 18, m = { top: 8, right: 12, bottom: 28, left: 12 };
     const hgt = m.top + m.bottom + dists.length * panelH + (dists.length - 1) * gapH;
     const iw = w - m.left - m.right;
@@ -526,7 +573,7 @@ function renderTat(host, r) {
   // shops are categories (no accent): the slowest shop (highest median ratio) is solid titanium, others hollow slate
   const slowShop = byShop.slice().sort((a, b) => (b.ratio ?? 0) - (a.ratio ?? 0))[0]?.shop;
   const colorOf = (s) => (s === slowShop ? SR.neutral : SR.context);
-  return responsive(f.body, (w) => {
+  return respIn(f.body, (w) => {
     const hgt = Math.max(300, Math.min(420, Math.round(w * 0.82)));
     const m = { top: 16, right: 20, bottom: 40, left: 48 };
     const iw = w - m.left - m.right, ih = hgt - m.top - m.bottom;
@@ -742,10 +789,17 @@ function renderFloatCalc(host, r, method, ctx) {
       station = views.find((sv) => sv.station === hi)?.station || views.slice().sort((a, b) => b.rate_per_30d - a.rate_per_30d)[0]?.station || null;
     }
     const optLabel = { hub: byMode('Hub pool', modes.hub?.label || 'Hub pooled view'), outstation: byMode('One outstation', modes.outstation?.label || 'Outstation view') };
-    modeSeg.replaceChildren(...['hub', 'outstation'].map((m) => h('button', {
-      type: 'button', role: 'radio', 'aria-checked': String(calcMode === m), dataset: { mode: m }, disabled: m === 'outstation' && !!issue,
-      title: m === 'outstation' && issue ? issue : '', onclick: () => setMode(m),
-    }, optLabel[m])));
+    // buttons are built once and updated in place, so the sliding thumb glides between them
+    if (!modeSeg.querySelector('button')) {
+      modeSeg.append(...['hub', 'outstation'].map((m) => h('button', { type: 'button', role: 'radio', dataset: { mode: m }, onclick: () => setMode(m) }, optLabel[m])));
+      slidingThumb(modeSeg);
+    }
+    modeSeg.querySelectorAll('button').forEach((b) => {
+      const m = b.dataset.mode;
+      b.setAttribute('aria-checked', String(calcMode === m));
+      b.disabled = m === 'outstation' && !!issue;
+      b.title = m === 'outstation' && issue ? issue : '';
+    });
     stationSel.replaceChildren(...views.map((sv) => h('option', { value: sv.station }, `${sv.station}${sv.invalid_recommendation ? ' · flagged' : ''}`)));
     if (station) stationSel.value = station;
     stationField.hidden = calcMode !== 'outstation';
@@ -811,7 +865,8 @@ function renderFloatCalc(host, r, method, ctx) {
       const v = num(String(src.value).replace(/[,\s]/g, ''));
       state[f.key] = v;
       if (src === f.input) { f.range.value = v ?? 0; f.vt?.(); } else f.input.value = f.input.dataset.grouped ? (v == null ? '' : fmtCount(v)) : v ?? '';
-      compute();
+      fillPct(f.range);
+      computeRAF(); // addendum: slider / typing updates coalesce to one recompute per animation frame
     };
     f.input.addEventListener('input', onIn(f.input));
     f.range.addEventListener('input', onIn(f.range));
@@ -847,7 +902,8 @@ function renderFloatCalc(host, r, method, ctx) {
           : h('div', { class: 'pi-alloc-flags is-compact', role: 'note', dataset: { role: 'invalid-allocations' } }, icon('alert'), h('p', {}, h('strong', {}, 'Flagged: '), P.invalid_allocation_text || 'invalid recommendation', '.')))
         : null].filter(Boolean));
   }
-  let stopChart = null;
+  const pmf = makePmf(frame);
+  const computeRAF = throttleRAF(() => compute());
   function compute() {
     [fRate, fTat, fSp, fCost, lN, lD].forEach((f) => fillPct(f.range));
     const { rate, tat, spares, cost, extra, cut } = state;
@@ -857,7 +913,7 @@ function renderFloatCalc(host, r, method, ctx) {
       [oMu, oA, oE, oW, oCap].forEach((o) => (o.v.textContent = 'not run'));
       frame.root.querySelector('.chart-headline').textContent = byMode('Enter the removals, time, spares and price to size the pool', 'Enter removal rate, TAT, spares and unit cost to size the float');
       frame.root.querySelector('.chart-subtitle').textContent = byMode('Parts away at once', 'Units in the repair pipeline · Poisson(λT)');
-      stopChart?.(); frame.body.replaceChildren(h('div', { class: 'state' }, 'not run'));
+      frame.body.replaceChildren(h('div', { class: 'state' }, 'not run'));
       leverBox.replaceChildren(); verdict.textContent = '';
       return;
     }
@@ -881,8 +937,7 @@ function renderFloatCalc(host, r, method, ctx) {
       ? `How likely it is that a given number of parts are ${sv ? 'on the way from AUH' : 'away for repair'} at once. Red bars mean more are away than there are spares.`
       : sv ? `P(k units in the resupply pipeline), X ~ Poisson(λT = ${fmtNum(rate, 3)}/30 d × ${fmtNum(tat, 2)} d) for ${cur.pn} at ${sv.station} · bars at k ≥ S are shortages`
         : `P(k units in the repair pipeline), X ~ Poisson(λT = ${fmtNum(rate, 1)}/30 d × ${fmtInt(tat)} d)${cur.pn ? ` for ${cur.pn}` : ''} · bars at k ≥ S are shortages`;
-    stopChart?.();
-    stopChart = drawPmf(frame, res.pipeline_mean, Sn, res);
+    pmf.update(res.pipeline_mean, Sn);
     // levers act on the current view's inputs
     const viewName = sv ? byMode(`${sv.station} shelf`, `Outstation view · ${sv.station}`) : byMode('Hub pool', 'Network (pooled) view');
     basisSeg.replaceChildren(h('button', { type: 'button', role: 'radio', 'aria-checked': 'true', dataset: { basis: 'inputs' }, onclick: () => compute() }, `${viewName} · ${S ? `${fmtInt(Sn)} ${sp}` : `S = ${fmtInt(Sn)}`}`));
@@ -940,7 +995,7 @@ function renderFloatCalc(host, r, method, ctx) {
   setRanges();
   if (cur.pn) load(cur); else { renderMode(); compute(); }
   if (!examples.length) reason.textContent = 'No float examples exported — enter values to explore.';
-  return () => stopChart?.();
+  return () => { computeRAF.cancel(); pmf.stop(); };
 }
 const fmtPts = (v) => `${v >= 0 ? '+' : '−'}${fmtNum(Math.abs(v) * 100, 1)} pts`;
 function carryingValue(capital, method) {
@@ -950,38 +1005,65 @@ function carryingValue(capital, method) {
 }
 function carrying(capital, method) { const v = carryingValue(capital, method); return v == null ? 'not run' : fmtAED(v); }
 
-function drawPmf(frame, mu, S, res) {
-  const sd = Math.sqrt(Math.max(mu, 0.01));
-  const kMax = Math.max(S + 3, Math.ceil(mu + 4 * sd), 6);
-  const series = pmfSeries(mu, kMax);
-  frame.setTable([{ key: 'k', label: 'Units in pipeline (k)', num: true }, { key: 'p', label: 'P(X = k)', num: true, format: (v) => fmtPct(v, 2) }, { key: 'zone', label: 'Zone' }], series.map((d) => ({ ...d, zone: d.k < S ? 'covered by spares' : 'shortage (backorder)' })));
-  return responsive(frame.body, (w) => {
+/**
+ * Pipeline distribution, built once and updated in place: bars are keyed on k and drawn as unit rects scaled by
+ * transform, so slider changes interpolate heights and positions (base token); the axes and the S marker transition.
+ */
+function makePmf(frame) {
+  let W = 0, L = null, cur = null;
+  function render(w, animate) {
+    if (!cur) return;
+    const { mu, S } = cur;
+    const sd = Math.sqrt(Math.max(mu, 0.01));
+    const kMax = Math.max(S + 3, Math.ceil(mu + 4 * sd), 6);
+    const series = pmfSeries(mu, kMax);
+    frame.setTable([{ key: 'k', label: 'Units in pipeline (k)', num: true }, { key: 'p', label: 'P(X = k)', num: true, format: (v) => fmtPct(v, 2) }, { key: 'zone', label: 'Zone' }], series.map((d) => ({ ...d, zone: d.k < S ? 'covered by spares' : 'shortage (backorder)' })));
     const hgt = 240;
     const m = { top: 28, right: 16, bottom: 36, left: 44 };
     const iw = w - m.left - m.right, ih = hgt - m.top - m.bottom;
-    const svg = svgIn(frame.body, w, hgt, `Poisson pipeline distribution, mean ${fmtNum(mu, 2)}, spares ${S}`);
-    const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+    if (w !== W || !L || !L.svg.node().isConnected) {
+      const svg = svgIn(frame.body, w, hgt, 'Poisson pipeline distribution');
+      const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+      L = { svg, g, grid: g.append('g'), ya: g.append('g'), xa: g.append('g').attr('transform', `translate(0,${ih})`) };
+      dl(g, { x: iw, y: ih + 30, text: byMode('PARTS AWAY AT ONCE (k) →', 'UNITS IN PIPELINE (k) →'), anchor: 'end', color: C.faint });
+      L.bars = g.append('g');
+      L.mark = g.append('g').attr('class', 'rr-pmf-s');
+      L.mark.append('line').attr('x1', 0).attr('x2', 0).attr('y1', -14).attr('y2', ih).attr('stroke', C.text).attr('stroke-width', 1.25).attr('stroke-dasharray', '3 3');
+      L.sLab = dl(L.mark, { x: 6, y: -18, text: '', color: C.text, strong: true, dy: '0.7em' });
+      if (w >= 420) {
+        L.cov = dl(L.mark, { x: -8, y: 6, text: '◀ covered', anchor: 'end', color: C.accent });
+        L.sho = dl(L.mark, { x: 8, y: 6, text: 'shortage ▶', color: SR.urgent });
+      }
+      W = w; animate = false;
+    }
+    const T = (sel) => (animate ? sel.transition(chartTransition()) : sel);
+    L.svg.attr('aria-label', `Poisson pipeline distribution, mean ${fmtNum(mu, 2)}, spares ${S}`);
     const x = d3().scaleBand().domain(series.map((d) => d.k)).range([0, iw]).padding(0.18);
     const y = d3().scaleLinear().domain([0, d3().max(series, (d) => d.p) * 1.15]).nice().range([ih, 0]);
-    gridY(g.append('g'), y, iw, 4);
-    axisLeft(g.append('g'), y, { ticks: 4, format: (v) => fmtPct(v, 0) });
+    gridY(L.grid, y, iw, 4);
+    T(L.ya).call(d3().axisLeft(y).ticks(4).tickSizeOuter(0).tickSize(0).tickPadding(8).tickFormat((v) => fmtPct(v, 0)));
+    styleAxis(L.ya, { domain: false });
     const every = Math.ceil(series.length / (w < 480 ? 8 : 16));
-    const ax = g.append('g').attr('transform', `translate(0,${ih})`).call(d3().axisBottom(x).tickSize(4).tickValues(series.map((d) => d.k).filter((k) => k % every === 0)));
-    ax.attr('class', 'gnm-axis').selectAll('text').attr('font-family', theme.font.mono);
-    ax.selectAll('.tick line').attr('stroke', C.lineStrong);
-    dl(g, { x: iw, y: ih + 30, text: 'UNITS IN PIPELINE (k) →', anchor: 'end', color: C.faint });
-    const bars = g.append('g').selectAll('rect').data(series).join('rect').attr('x', (d) => x(d.k)).attr('width', x.bandwidth()).attr('y', (d) => y(d.p)).attr('height', (d) => ih - y(d.p)).attr('rx', 1.5)
-      .attr('fill', (d) => (d.k < S ? SR.recommended : SR.urgent)).attr('fill-opacity', (d) => (d.k < S ? 0.75 : 0.8));
+    T(L.xa).call(d3().axisBottom(x).tickSize(4).tickValues(series.map((d) => d.k).filter((k) => k % every === 0)));
+    L.xa.attr('class', 'gnm-axis').selectAll('text').attr('font-family', theme.font.mono);
+    L.xa.selectAll('.tick line').attr('stroke', C.lineStrong);
+    const tf = (d) => `translate(${x(d.k)},${ih}) scale(1,${-Math.max(0, ih - y(d.p))})`;
+    const bars = L.bars.selectAll('rect').data(series, (d) => d.k).join(
+      (en) => en.append('rect').attr('y', 0).attr('height', 1).attr('width', x.bandwidth()).attr('transform', (d) => `translate(${x(d.k)},${ih}) scale(1,0)`),
+      (up) => up,
+      (ex) => (animate ? ex.transition(chartTransition({ ease: 'exit' })).style('opacity', 0).remove() : ex.remove()));
+    bars.attr('fill', (d) => (d.k < S ? SR.recommended : SR.urgent)).attr('fill-opacity', (d) => (d.k < S ? 0.75 : 0.8));
+    T(bars).attr('width', x.bandwidth()).attr('transform', tf).style('opacity', 1);
     withTooltip(bars, (d) => ({ title: `${d.k} unit${d.k === 1 ? '' : 's'} in the pipeline`, rows: [['P(X = k)', fmtPct(d.p, 2)], ['Zone', d.k < S ? 'Covered by spares' : 'Shortage']] }));
-    const sx = S <= kMax ? (x(S) ?? iw) - (x.step() * x.padding()) / 2 : iw;
-    g.append('line').attr('x1', sx).attr('x2', sx).attr('y1', -14).attr('y2', ih).attr('stroke', C.text).attr('stroke-width', 1.25).attr('stroke-dasharray', '3 3');
-    dl(g, { x: sx + (sx > iw * 0.7 ? -6 : 6), y: -18, text: `S = ${S}`, anchor: sx > iw * 0.7 ? 'end' : 'start', color: C.text, strong: true, dy: '0.7em' });
-    if (w >= 420) {
-      dl(g, { x: Math.max(4, sx - 8), y: 6, text: '◀ covered', anchor: 'end', color: C.accent });
-      dl(g, { x: sx + 8, y: 6, text: 'shortage ▶', color: SR.urgent });
-    }
-    // mean λT and EBO are already in the output tiles: no in-chart annotation competing with the bars
-  });
+    const sx = (x(S) ?? iw) - (x.step() * x.padding()) / 2;
+    const right = sx > iw * 0.7;
+    L.sLab.text(`S = ${S}`).attr('x', right ? -6 : 6).attr('text-anchor', right ? 'end' : 'start');
+    if (L.cov) L.cov.attr('x', -Math.min(8, sx - 4));
+    T(L.mark).attr('transform', `translate(${sx},0)`);
+    drawIn(frame.body, L.svg);
+  }
+  const stop = responsive(frame.body, (w) => render(w, false));
+  return { stop, update(mu, S) { cur = { mu, S }; if (W) render(W, true); } };
 }
 
 // ============================================================================= Palm vs sim
@@ -1022,7 +1104,7 @@ function renderPalmVsSim(host, r, hubId) {
     provenance: 'SIMULATED', source: 'rotables.json → palm_vs_sim',
     table: { columns: [{ key: 'pn', label: 'PN' }, { key: 'station', label: 'Station' }, { key: 'palm', label: 'Palm A', num: true, format: (v) => fmtPct(v) }, { key: 'sim', label: 'Sim fill', num: true, format: (v) => fmtPct(v) }, { key: 'n', label: 'Requests', num: true, format: fmtInt }], rows },
   });
-  return responsive(f.body, (w) => {
+  return respIn(f.body, (w) => {
     const hgt = Math.max(300, Math.min(400, Math.round(w * 0.6)));
     const m = { top: 16, right: 20, bottom: 40, left: 52 };
     const iw = w - m.left - m.right, ih = hgt - m.top - m.bottom;

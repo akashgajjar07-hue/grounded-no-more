@@ -105,7 +105,7 @@ def test_matrix_excludes_unclassified_and_states_training_window(site, browser):
 def test_hotspots_keyboard_reachable(site, browser):  # noqa: F811
     ctx, page, problems = open_page(browser, site + "#/parts?ata=32", "1440")
     try:
-        spot = page.locator('.pi-aircraft .ata-hotspot[data-ata="34"]')
+        spot = page.locator('.pi-aircraft .ata-hotspot[data-ata="34"] .pi-hs-btn')
         spot.focus()
         page.keyboard.press("Enter")
         page.wait_for_timeout(400)
@@ -406,5 +406,59 @@ def test_v21_readability_simple(site, browser):  # noqa: F811
                                    "words": r["words"], "sentences": r["sentences"], "longSentences": r["longSentences"]}, indent=2, ensure_ascii=False) + "\n")
         assert r["grade"] <= 9, r
         assert r["maxSentenceWords"] <= 25, r["longest"]
+    finally:
+        ctx.close()
+
+
+# ----------------------------------------------------------------------------- v2.1 addendum: motion + keyboard
+def test_addendum_keyed_joins_keep_marks_across_filters(site, browser):  # noqa: F811
+    """ATA / fleet changes update the matrix and heatmap in place (keyed joins): the same DOM nodes survive."""
+    ctx, page, problems = open_mode(browser, site + "#/parts?ata=32", "1440", "simple")
+    try:
+        page.evaluate("""() => { document.querySelectorAll('[data-story="parts-adi-matrix"] circle.pi-dot').forEach((c) => { c.__mark = 1; });
+          document.querySelectorAll('.pi-hm-cell').forEach((c) => { c.__mark = 1; }); window.__svg = document.querySelector('[data-story="parts-adi-matrix"] svg'); }""")
+        page.locator('.pi-syslist button[data-ata="27"]').click()
+        page.wait_for_timeout(600)
+        page.locator('[data-role="fleet-filter"]').get_by_role("radio", name="Narrowbody").click()
+        page.wait_for_timeout(900)
+        res = page.evaluate("""() => { const dots = [...document.querySelectorAll('[data-story="parts-adi-matrix"] circle.pi-dot')];
+          return { same: document.querySelector('[data-story="parts-adi-matrix"] svg') === window.__svg, kept: dots.filter((c) => c.__mark).length, n: dots.length,
+                   cells: [...document.querySelectorAll('.pi-hm-cell')].filter((c) => c.__mark).length, opac: dots.map((c) => getComputedStyle(c).opacity).filter((o) => o !== '1').length }; }""")
+        nb = [p for p in _parts()["parts"] if (not p.get("applicability") or p["applicability"] in ("both", "NB")) and p.get("adi") is not None and p.get("cv2") is not None and p["demand_class"] != "insufficient_data"]
+        assert res["same"], "matrix svg was redrawn from zero"
+        assert res["n"] == len(nb) and res["kept"] == len(nb), res
+        assert res["cells"] > 0 and res["opac"] == 0, res
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_addendum_keyboard_tab_order_and_escape(site, browser, vp):  # noqa: F811
+    ctx, page, problems = open_mode(browser, site + "#/parts?ata=32", vp, "simple")
+    try:
+        page.locator("#view").evaluate("(v) => { v.setAttribute('tabindex', '-1'); v.focus(); }")
+        seq = []
+        for _ in range(40):
+            page.keyboard.press("Tab")
+            seq.append(page.evaluate("""() => { const a = document.activeElement; if (!a || a === document.body) return null;
+              const all = [...document.querySelectorAll('#view *')]; return { i: all.indexOf(a), inView: !!a.closest('#view'), tag: a.tagName }; }"""))
+        assert all(s is not None for s in seq), "focus was lost to <body>"
+        idx = [s["i"] for s in seq if s["inView"]]
+        assert len(idx) >= 20
+        backs = sum(1 for a, b in zip(idx, idx[1:]) if b < a)
+        assert backs <= 1, f"tab order jumps backwards {backs} times: {idx}"
+        # Enter on a focused system button selects it; Esc closes the drawer and focus returns into the page
+        page.locator('.pi-syslist button[data-ata="21"]').focus()
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(400)
+        assert "ata=21" in page.url
+        page.goto(site + "#/parts?pn=GN-32-R014")
+        page.locator(".drawer.is-open").wait_for()
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(400)
+        assert page.locator(".drawer.is-open").count() == 0
+        assert page.evaluate("document.activeElement && document.activeElement !== document.body")
+        assert not problems, problems
     finally:
         ctx.close()

@@ -271,3 +271,9 @@
 .pi-stock-flag { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--status-review); white-space: nowrap; }
 .pi-stock-flag .icon { width: 11px; height: 11px; }
 .pi-panel-scope { margin: 0 0 var(--s-2); }
+/* addendum: the pulse ring sits in its own layer; the shaded zone is clickable across its whole area */
+.pi-aircraft .pi-pulse-wrap { pointer-events: none; }
+.pi-aircraft .pi-pulse-wrap.risk-urgent { --risk: var(--c-red); }
+.pi-aircraft svg .ata-hotspot .hs-shapes * { pointer-events: all; }
+.pi-aircraft svg .pi-hs-btn { cursor: pointer; outline: none; }
+.pi-aircraft svg .pi-hs-btn:focus-visible > circle:first-of-type { stroke: #22C7B8; stroke-width: 3; }

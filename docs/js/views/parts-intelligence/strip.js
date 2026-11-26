@@ -6,17 +6,19 @@
  *
  * Zero weeks are drawn as faint baseline ticks so "no demand" reads as data, not as missing.
  */
+import { drawIn } from './motion-helpers.js';
 import { responsive, svgIn, axisLeft, theme, annotate, fmtWeek, fmtInt, withTooltip } from '../../charts/theme.js';
 
 const d3 = () => window.d3;
 
-export function demandStrip(host, values, { height = 160, compact = false, splitAt = 78, trainLabel, selLabel, annot = true, label = 'Weekly demand' } = {}) {
+export function demandStrip(host, values, { height = 160, compact = false, splitAt = 78, trainLabel, selLabel, annot = true, label = 'Weekly demand', animate = false } = {}) {
   const data = values.map((y, x) => ({ x, y: +y || 0 }));
   const maxY = Math.max(1, d3().max(data, (d) => d.y));
   return responsive(host, (w) => {
     const m = compact ? { top: 6, right: 4, bottom: 8, left: 4 } : { top: 26, right: 12, bottom: 26, left: 36 };
     const iw = Math.max(40, w - m.left - m.right), ih = height - m.top - m.bottom;
     const svg = svgIn(host, w, height, label);
+    if (animate) drawIn(host, svg); // addendum: draw-in once (slow token)
     const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
     const x = d3().scaleLinear().domain([-0.5, data.length - 0.5]).range([0, iw]);
     const y = d3().scaleLinear().domain([0, maxY]).nice(compact ? 2 : 4).range([ih, 0]);

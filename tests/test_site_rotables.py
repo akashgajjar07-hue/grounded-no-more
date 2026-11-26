@@ -346,3 +346,49 @@ def test_v21_readability_simple(site):
         assert r["maxSentenceWords"] <= 25, r["longest"]
     finally:
         ctx.close()
+
+
+# ----------------------------------------------------------------------------- v2.1 addendum: motion + keyboard
+def test_addendum_pmf_and_gantt_update_in_place(site):
+    b, base = site
+    ctx, page, problems = open_mode(b, base, "#/rotables?pn=GN-32-R014", "1440", "simple")
+    try:
+        page.evaluate("""() => { document.querySelectorAll('[data-story="float-pipeline"] svg rect').forEach((r) => { r.__mark = 1; });
+          window.__pmf = document.querySelector('[data-story="float-pipeline"] svg'); document.querySelectorAll('.rr-row').forEach((r) => { r.__mark = 1; }); }""")
+        # slider drag: many input events in one burst -> one recompute per frame, bars keyed on k
+        page.evaluate("""() => { const r = document.querySelector('[data-range="spares"]'); for (let v = 10; v <= 20; v++) { r.value = v; r.dispatchEvent(new Event('input', { bubbles: true })); } }""")
+        page.wait_for_timeout(600)
+        res = page.evaluate("""() => ({ same: document.querySelector('[data-story="float-pipeline"] svg') === window.__pmf,
+          kept: [...document.querySelectorAll('[data-story="float-pipeline"] svg rect')].filter((r) => r.__mark).length,
+          s: document.querySelector('[data-input="spares"]').value, label: document.querySelector('.rr-pmf-s text')?.textContent })""")
+        assert res["same"] and res["kept"] > 0, res
+        assert res["s"] == "20" and res["label"] == "S = 20", res
+        page.get_by_role("radio", name="Open", exact=True).click()
+        page.wait_for_timeout(600)
+        kept = page.evaluate("[...document.querySelectorAll('.rr-row')].filter((r) => r.__mark).length")
+        assert kept > 0, "Gantt rows were redrawn from zero"
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+def test_addendum_focusable_marks_show_tooltip_and_keyboard_mode_switch(site):
+    b, base = site
+    ctx, page, problems = open_mode(b, base, "#/rotables?pn=GN-32-R014", "1440", "simple")
+    try:
+        page.locator('[data-story="rotable-lifecycle"] .rr-arc').nth(2).focus()
+        page.wait_for_timeout(250)
+        assert page.locator(".tooltip.is-on").count() == 1
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(250)
+        assert page.locator(".tooltip.is-on").count() == 0
+        btn = page.locator('[data-role="calc-mode"] [data-mode="outstation"]')
+        btn.focus()
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(300)
+        assert page.locator('[data-role="calc-mode-label"]').get_attribute("data-mode") == "outstation"
+        page.keyboard.press("Space")
+        assert page.evaluate("document.activeElement && document.activeElement !== document.body")
+        assert not problems, problems
+    finally:
+        ctx.close()
