@@ -1,0 +1,10 @@
+demand_class,part_class,n_parts,champion,champion_mase,best_in_hindsight,best_mase,champion_rank,n_methods
+erratic,C,3,reliability,0.5952365834410934,adida,0.5818324405806159,6,9
+insufficient_data,R,1,reliability,1.0945524437086938,sba,1.0731303197953859,3,9
+intermittent,C,13,reliability,0.7829979638370574,sba,0.7758488272675648,3,9
+intermittent,E,32,tsb,0.9544970535826526,tsb,0.9544970535826526,1,9
+intermittent,R,37,sba,0.9173086384319573,tsb,0.8859148154267746,6,9
+lumpy,C,2,reliability,0.78776724385027,imapa,0.7716407064781329,6,9
+smooth,C,27,sba,0.6897407441238547,sba,0.6897407441238547,1,9
+smooth,E,3,reliability,0.7261714930060347,sba,0.7222296329504285,2,9
+smooth,R,2,reliability,0.6114116627619599,reliability,0.6114116627619599,1,9
