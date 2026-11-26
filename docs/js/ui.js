@@ -651,13 +651,13 @@ export async function blueprintAircraft(host, { active, onSelect, compactBelow =
   });
   if (active) setActive(active);
   let bpRaf = 0;
+  const applyBp = (small) => { svg.classList.toggle('bp-compact', small); svg.setAttribute('viewBox', small && compact ? compact : full); };
+  applyBp((host.clientWidth || innerWidth) < compactBelow);   // first layout synchronously: no visible resize on load (CLS)
   const ro = new ResizeObserver(([entry]) => {
     const small = entry.contentRect.width < compactBelow;
+    if (small === svg.classList.contains('bp-compact')) return;
     cancelAnimationFrame(bpRaf);   // deferred to the next frame: a synchronous viewBox swap loops the observer in WebKit
-    bpRaf = requestAnimationFrame(() => {
-      svg.classList.toggle('bp-compact', small);
-      svg.setAttribute('viewBox', small && compact ? compact : full);
-    });
+    bpRaf = requestAnimationFrame(() => applyBp(small));
   });
   ro.observe(host);
   return { svg, setActive, destroy: () => ro.disconnect() };

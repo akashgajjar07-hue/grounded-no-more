@@ -348,6 +348,8 @@ export function toCSV(rows) {
 // ----------------------------------------------------------------------------- view
 export async function render(el, ctx) {
   ensureCSS();
+  // wait for the view stylesheet before building the DOM: an unstyled first paint shifts the layout (CLS)
+  await new Promise((res) => { const l = document.querySelector('link[data-view-css="planner-action-centre"]'); if (!l || l.sheet) return res(); l.addEventListener('load', res, { once: true }); l.addEventListener('error', res, { once: true }); setTimeout(res, 3000); });
   const { actions: A, parts: PT } = ctx.data;
   // one AOG-hour metric per PN across screens: the exporter's worst-station 52-week total, with its label (as on Mission)
   const partBy = Object.fromEntries((PT?.parts || []).map((p) => [p.pn, p]));

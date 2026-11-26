@@ -1,93 +1,93 @@
 {
  "mission@1440": {
-  "cls": 0.1001,
-  "shifts": 2,
-  "largest": 0.0989
+  "cls": 0.0012,
+  "shifts": 1,
+  "largest": 0.0012
  },
  "mission@390": {
-  "cls": 0.1873,
-  "shifts": 2,
-  "largest": 0.1825
+  "cls": 0.0049,
+  "shifts": 1,
+  "largest": 0.0049
  },
  "parts@1440": {
-  "cls": 0.1001,
+  "cls": 0.1623,
   "shifts": 2,
-  "largest": 0.0989
+  "largest": 0.1611
  },
  "parts@390": {
-  "cls": 0.1873,
-  "shifts": 2,
-  "largest": 0.1825
+  "cls": 0.0048,
+  "shifts": 1,
+  "largest": 0.0048
  },
  "forecast@1440": {
-  "cls": 0.1001,
-  "shifts": 2,
-  "largest": 0.0989
+  "cls": 0.0012,
+  "shifts": 1,
+  "largest": 0.0012
  },
  "forecast@390": {
-  "cls": 0.1873,
-  "shifts": 2,
-  "largest": 0.1825
+  "cls": 0.0048,
+  "shifts": 1,
+  "largest": 0.0048
  },
  "rotables@1440": {
-  "cls": 0.1003,
-  "shifts": 5,
-  "largest": 0.0989
+  "cls": 0.1571,
+  "shifts": 7,
+  "largest": 0.1556
  },
  "rotables@390": {
-  "cls": 0.1874,
-  "shifts": 3,
-  "largest": 0.1825
+  "cls": 0.0049,
+  "shifts": 2,
+  "largest": 0.0048
  },
  "network@1440": {
-  "cls": 0.1001,
-  "shifts": 2,
-  "largest": 0.0989
+  "cls": 0.0012,
+  "shifts": 1,
+  "largest": 0.0012
  },
  "network@390": {
-  "cls": 0.1873,
-  "shifts": 2,
-  "largest": 0.1825
+  "cls": 0.0048,
+  "shifts": 1,
+  "largest": 0.0048
  },
  "capital@1440": {
-  "cls": 0.1003,
+  "cls": 0.0109,
   "shifts": 11,
-  "largest": 0.0989
+  "largest": 0.0095
  },
  "capital@390": {
-  "cls": 0.1873,
+  "cls": 0.0075,
   "shifts": 2,
-  "largest": 0.1825
+  "largest": 0.0048
  },
  "aog@1440": {
-  "cls": 0.1001,
-  "shifts": 2,
-  "largest": 0.0989
+  "cls": 0.0012,
+  "shifts": 1,
+  "largest": 0.0012
  },
  "aog@390": {
-  "cls": 0.1873,
-  "shifts": 2,
-  "largest": 0.1825
+  "cls": 0.0049,
+  "shifts": 1,
+  "largest": 0.0049
  },
  "actions@1440": {
-  "cls": 0.1001,
-  "shifts": 2,
-  "largest": 0.0989
+  "cls": 0.0012,
+  "shifts": 1,
+  "largest": 0.0012
  },
  "actions@390": {
-  "cls": 0.1873,
-  "shifts": 2,
-  "largest": 0.1825
+  "cls": 0.0048,
+  "shifts": 1,
+  "largest": 0.0048
  },
  "method@1440": {
-  "cls": 0.1001,
-  "shifts": 2,
-  "largest": 0.0989
+  "cls": 0.0012,
+  "shifts": 1,
+  "largest": 0.0012
  },
  "method@390": {
-  "cls": 0.1873,
-  "shifts": 2,
-  "largest": 0.1825
+  "cls": 0.0048,
+  "shifts": 1,
+  "largest": 0.0048
  },
  "about@1440": {
   "cls": 0.0012,
@@ -95,29 +95,29 @@
   "largest": 0.0012
  },
  "about@390": {
+  "cls": 0.0047,
+  "shifts": 1,
+  "largest": 0.0047
+ },
+ "glossary@1440": {
+  "cls": 0.0012,
+  "shifts": 1,
+  "largest": 0.0012
+ },
+ "glossary@390": {
   "cls": 0.0048,
   "shifts": 1,
   "largest": 0.0048
  },
- "glossary@1440": {
-  "cls": 0.1001,
-  "shifts": 2,
-  "largest": 0.0989
- },
- "glossary@390": {
-  "cls": 0.1872,
-  "shifts": 2,
-  "largest": 0.1825
- },
  "planner@1440": {
-  "cls": 0.1001,
-  "shifts": 2,
-  "largest": 0.0989
+  "cls": 0.0012,
+  "shifts": 1,
+  "largest": 0.0012
  },
  "planner@390": {
-  "cls": 0.1873,
-  "shifts": 2,
-  "largest": 0.1825
+  "cls": 0.0048,
+  "shifts": 1,
+  "largest": 0.0048
  },
  "lab/cutaway.html@1440": {
   "cls": 0.0416,

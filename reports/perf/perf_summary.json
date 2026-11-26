@@ -1,6 +1,6 @@
 {
- "label": "baseline",
- "generated": "2026-11-26T20:11:11",
+ "label": "live-v2.1",
+ "generated": "2026-11-26T22:20:28",
  "targets": {
   "performance": 85,
   "accessibility": 90,
@@ -10,228 +10,228 @@
  },
  "environment": {
   "headless": true,
-  "machine_note": "local macOS; headless Chromium (Playwright build); timings are indicative"
+  "machine_note": "live site https://akashgajjar07-hue.github.io/grounded-no-more/index.html measured from local macOS; headless Chromium (Playwright build)"
  },
  "weights": {
   "mission": {
-   "view_js_bytes": 35782,
-   "json_bytes": 282528,
-   "total_bytes": 1273229
+   "view_js_bytes": 0,
+   "json_bytes": 0,
+   "total_bytes": 0
   },
   "parts": {
-   "view_js_bytes": 91813,
-   "json_bytes": 171033,
-   "total_bytes": 1255019
+   "view_js_bytes": 0,
+   "json_bytes": 0,
+   "total_bytes": 0
   },
   "forecast": {
-   "view_js_bytes": 86458,
-   "json_bytes": 423783,
-   "total_bytes": 1437139
+   "view_js_bytes": 0,
+   "json_bytes": 0,
+   "total_bytes": 0
   },
   "rotables": {
-   "view_js_bytes": 105088,
-   "json_bytes": 512912,
-   "total_bytes": 1533398
+   "view_js_bytes": 0,
+   "json_bytes": 0,
+   "total_bytes": 0
   },
   "network": {
-   "view_js_bytes": 67017,
-   "json_bytes": 533127,
-   "total_bytes": 1505786
+   "view_js_bytes": 0,
+   "json_bytes": 0,
+   "total_bytes": 0
   },
   "capital": {
-   "view_js_bytes": 88501,
-   "json_bytes": 483973,
-   "total_bytes": 1490052
+   "view_js_bytes": 0,
+   "json_bytes": 0,
+   "total_bytes": 0
   },
   "aog": {
-   "view_js_bytes": 69970,
-   "json_bytes": 199824,
-   "total_bytes": 1175585
+   "view_js_bytes": 0,
+   "json_bytes": 0,
+   "total_bytes": 0
   },
   "actions": {
-   "view_js_bytes": 55892,
-   "json_bytes": 215516,
-   "total_bytes": 1175163
+   "view_js_bytes": 0,
+   "json_bytes": 0,
+   "total_bytes": 0
   },
   "method": {
-   "view_js_bytes": 51971,
-   "json_bytes": 162704,
-   "total_bytes": 1119990
+   "view_js_bytes": 0,
+   "json_bytes": 0,
+   "total_bytes": 0
   },
   "about": {
-   "view_js_bytes": 16875,
+   "view_js_bytes": 0,
    "json_bytes": 0,
-   "total_bytes": 863048
+   "total_bytes": 0
   },
   "glossary": {
-   "view_js_bytes": 8123,
+   "view_js_bytes": 0,
    "json_bytes": 0,
-   "total_bytes": 843203
+   "total_bytes": 0
   },
   "planner": {
-   "view_js_bytes": 22544,
+   "view_js_bytes": 0,
    "json_bytes": 0,
-   "total_bytes": 878855
+   "total_bytes": 0
   }
  },
  "lighthouse_targets": [
   "mission",
-  "rotables",
-  "network"
+  "parts",
+  "forecast"
  ],
  "lighthouse": {
   "mission:mobile": {
    "ok": true,
-   "performance": 73,
+   "performance": 92,
    "accessibility": 100,
-   "cls": 0.1918784326544527,
-   "lcp_ms": 4662.693,
+   "cls": 0.004852120979927912,
+   "lcp_ms": 3311.023,
    "tbt_ms": 0,
-   "fcp_ms": 1806.3465,
+   "fcp_ms": 1136.0230000000001,
    "error": null
   },
   "mission:desktop": {
    "ok": true,
-   "performance": 93,
+   "performance": 100,
    "accessibility": 100,
-   "cls": 0.09457541371158393,
-   "lcp_ms": 1540.8649999999998,
+   "cls": 0.001321836419753086,
+   "lcp_ms": 641.768,
    "tbt_ms": 0,
-   "fcp_ms": 495.64875,
+   "fcp_ms": 281.76800000000003,
    "error": null
   },
-  "rotables:mobile": {
-   "ok": true,
-   "performance": 60,
-   "accessibility": 94,
-   "cls": 0.18730164711789402,
-   "lcp_ms": 10056.7882,
-   "tbt_ms": 0,
-   "fcp_ms": 3018.4396749999996,
-   "error": null
-  },
-  "rotables:desktop": {
+  "parts:mobile": {
    "ok": true,
    "performance": 90,
-   "accessibility": 94,
-   "cls": 0.09474835172051482,
-   "lcp_ms": 1809.088,
-   "tbt_ms": 0,
-   "fcp_ms": 628.952,
+   "accessibility": 92,
+   "cls": 0,
+   "lcp_ms": 3522.0789999999997,
+   "tbt_ms": 26,
+   "fcp_ms": 1272.079,
    "error": null
   },
-  "network:mobile": {
+  "parts:desktop": {
    "ok": true,
-   "performance": 64,
-   "accessibility": 91,
-   "cls": 0.19188544280699546,
-   "lcp_ms": 8859.52875,
+   "performance": 92,
+   "accessibility": 96,
+   "cls": 0.1734532099495082,
+   "lcp_ms": 685.215,
    "tbt_ms": 0,
-   "fcp_ms": 2102.7225,
+   "fcp_ms": 345.21500000000003,
    "error": null
   },
-  "network:desktop": {
+  "forecast:mobile": {
    "ok": true,
-   "performance": 91,
-   "accessibility": 95,
-   "cls": 0.09457918965064355,
-   "lcp_ms": 1731.3785000000003,
+   "performance": 92,
+   "accessibility": 100,
+   "cls": 0.004845019449038885,
+   "lcp_ms": 3380.9155,
+   "tbt_ms": 10,
+   "fcp_ms": 905.9155,
+   "error": null
+  },
+  "forecast:desktop": {
+   "ok": true,
+   "performance": 100,
+   "accessibility": 100,
+   "cls": 0.001321836419753086,
+   "lcp_ms": 658.005,
    "tbt_ms": 0,
-   "fcp_ms": 484.87649999999996,
+   "fcp_ms": 298.005,
    "error": null
   }
  },
  "lighthouse_available": true,
  "cls_on_load": {
   "mission@1440": {
-   "cls": 0.1001,
-   "shifts": 2,
-   "largest": 0.0989
+   "cls": 0.0012,
+   "shifts": 1,
+   "largest": 0.0012
   },
   "mission@390": {
-   "cls": 0.1873,
-   "shifts": 2,
-   "largest": 0.1825
+   "cls": 0.0049,
+   "shifts": 1,
+   "largest": 0.0049
   },
   "parts@1440": {
-   "cls": 0.1001,
+   "cls": 0.1623,
    "shifts": 2,
-   "largest": 0.0989
+   "largest": 0.1611
   },
   "parts@390": {
-   "cls": 0.1873,
-   "shifts": 2,
-   "largest": 0.1825
+   "cls": 0.0048,
+   "shifts": 1,
+   "largest": 0.0048
   },
   "forecast@1440": {
-   "cls": 0.1001,
-   "shifts": 2,
-   "largest": 0.0989
+   "cls": 0.0012,
+   "shifts": 1,
+   "largest": 0.0012
   },
   "forecast@390": {
-   "cls": 0.1873,
-   "shifts": 2,
-   "largest": 0.1825
+   "cls": 0.0048,
+   "shifts": 1,
+   "largest": 0.0048
   },
   "rotables@1440": {
-   "cls": 0.1003,
-   "shifts": 5,
-   "largest": 0.0989
+   "cls": 0.1571,
+   "shifts": 7,
+   "largest": 0.1556
   },
   "rotables@390": {
-   "cls": 0.1874,
-   "shifts": 3,
-   "largest": 0.1825
+   "cls": 0.0049,
+   "shifts": 2,
+   "largest": 0.0048
   },
   "network@1440": {
-   "cls": 0.1001,
-   "shifts": 2,
-   "largest": 0.0989
+   "cls": 0.0012,
+   "shifts": 1,
+   "largest": 0.0012
   },
   "network@390": {
-   "cls": 0.1873,
-   "shifts": 2,
-   "largest": 0.1825
+   "cls": 0.0048,
+   "shifts": 1,
+   "largest": 0.0048
   },
   "capital@1440": {
-   "cls": 0.1003,
+   "cls": 0.0109,
    "shifts": 11,
-   "largest": 0.0989
+   "largest": 0.0095
   },
   "capital@390": {
-   "cls": 0.1873,
+   "cls": 0.0075,
    "shifts": 2,
-   "largest": 0.1825
+   "largest": 0.0048
   },
   "aog@1440": {
-   "cls": 0.1001,
-   "shifts": 2,
-   "largest": 0.0989
+   "cls": 0.0012,
+   "shifts": 1,
+   "largest": 0.0012
   },
   "aog@390": {
-   "cls": 0.1873,
-   "shifts": 2,
-   "largest": 0.1825
+   "cls": 0.0049,
+   "shifts": 1,
+   "largest": 0.0049
   },
   "actions@1440": {
-   "cls": 0.1001,
-   "shifts": 2,
-   "largest": 0.0989
+   "cls": 0.0012,
+   "shifts": 1,
+   "largest": 0.0012
   },
   "actions@390": {
-   "cls": 0.1873,
-   "shifts": 2,
-   "largest": 0.1825
+   "cls": 0.0048,
+   "shifts": 1,
+   "largest": 0.0048
   },
   "method@1440": {
-   "cls": 0.1001,
-   "shifts": 2,
-   "largest": 0.0989
+   "cls": 0.0012,
+   "shifts": 1,
+   "largest": 0.0012
   },
   "method@390": {
-   "cls": 0.1873,
-   "shifts": 2,
-   "largest": 0.1825
+   "cls": 0.0048,
+   "shifts": 1,
+   "largest": 0.0048
   },
   "about@1440": {
    "cls": 0.0012,
@@ -239,29 +239,29 @@
    "largest": 0.0012
   },
   "about@390": {
+   "cls": 0.0047,
+   "shifts": 1,
+   "largest": 0.0047
+  },
+  "glossary@1440": {
+   "cls": 0.0012,
+   "shifts": 1,
+   "largest": 0.0012
+  },
+  "glossary@390": {
    "cls": 0.0048,
    "shifts": 1,
    "largest": 0.0048
   },
-  "glossary@1440": {
-   "cls": 0.1001,
-   "shifts": 2,
-   "largest": 0.0989
-  },
-  "glossary@390": {
-   "cls": 0.1872,
-   "shifts": 2,
-   "largest": 0.1825
-  },
   "planner@1440": {
-   "cls": 0.1001,
-   "shifts": 2,
-   "largest": 0.0989
+   "cls": 0.0012,
+   "shifts": 1,
+   "largest": 0.0012
   },
   "planner@390": {
-   "cls": 0.1873,
-   "shifts": 2,
-   "largest": 0.1825
+   "cls": 0.0048,
+   "shifts": 1,
+   "largest": 0.0048
   },
   "lab/cutaway.html@1440": {
    "cls": 0.0416,
@@ -274,39 +274,39 @@
    "largest": 0.1762
   }
  },
- "cls_max": 0.1874,
+ "cls_max": 0.1762,
  "animations": {
   "tour@x1": {
-   "duration_ms": 20024,
-   "frames": 1194,
-   "fps": 59.6,
+   "duration_ms": 20025,
+   "frames": 1199,
+   "fps": 59.9,
    "frame_p50_ms": 16.7,
-   "frame_p95_ms": 16.8,
+   "frame_p95_ms": 16.7,
    "frame_max_ms": 33.4,
-   "frames_over_33ms": 0,
+   "frames_over_33ms": 1,
    "longtasks_over_50ms": 0,
    "longtasks_over_200ms": 0,
    "longest_task_ms": 0,
    "tour_state_end": {
     "index": 4,
     "playing": true,
-    "elapsed": 1500,
+    "elapsed": 0,
     "stepMs": 3000,
-    "ready": true,
+    "ready": false,
     "loops": 1,
-    "timers": 0
+    "timers": 1
    },
    "cdp": {
-    "TaskDuration": 0.946,
-    "ScriptDuration": 0.107,
-    "LayoutDuration": 0.075,
-    "RecalcStyleDuration": 0.095,
-    "LayoutCount": 926,
-    "RecalcStyleCount": 1532
+    "TaskDuration": 0.903,
+    "ScriptDuration": 0.11,
+    "LayoutDuration": 0.078,
+    "RecalcStyleDuration": 0.113,
+    "LayoutCount": 957,
+    "RecalcStyleCount": 1631
    }
   },
   "slider@x1": {
-   "duration_ms": 4638,
+   "duration_ms": 4636,
    "frames": 277,
    "fps": 59.7,
    "frame_p50_ms": 16.7,
@@ -317,20 +317,20 @@
    "longtasks_over_200ms": 0,
    "longest_task_ms": 0,
    "cdp": {
-    "TaskDuration": 0.636,
-    "ScriptDuration": 0.095,
-    "LayoutDuration": 0.087,
-    "RecalcStyleDuration": 0.222,
+    "TaskDuration": 0.544,
+    "ScriptDuration": 0.08,
+    "LayoutDuration": 0.076,
+    "RecalcStyleDuration": 0.18,
     "LayoutCount": 287,
     "RecalcStyleCount": 287
    }
   },
   "cutaway@x1": {
-   "duration_ms": 4008,
-   "frames": 240,
-   "fps": 59.9,
+   "duration_ms": 4034,
+   "frames": 242,
+   "fps": 60.0,
    "frame_p50_ms": 16.7,
-   "frame_p95_ms": 16.7,
+   "frame_p95_ms": 16.8,
    "frame_max_ms": 16.8,
    "frames_over_33ms": 0,
    "longtasks_over_50ms": 0,
@@ -338,80 +338,80 @@
    "longest_task_ms": 0,
    "ready": true,
    "cdp": {
-    "TaskDuration": 0.074,
+    "TaskDuration": 0.085,
     "ScriptDuration": 0.005,
-    "LayoutDuration": 0.007,
-    "RecalcStyleDuration": 0.012,
-    "LayoutCount": 5,
-    "RecalcStyleCount": 121
+    "LayoutDuration": 0.008,
+    "RecalcStyleDuration": 0.014,
+    "LayoutCount": 6,
+    "RecalcStyleCount": 122
    }
   },
   "tour@x4": {
-   "duration_ms": 20119,
-   "frames": 1180,
-   "fps": 58.7,
+   "duration_ms": 20056,
+   "frames": 1174,
+   "fps": 58.5,
    "frame_p50_ms": 16.7,
    "frame_p95_ms": 16.8,
-   "frame_max_ms": 133.3,
-   "frames_over_33ms": 7,
+   "frame_max_ms": 150.1,
+   "frames_over_33ms": 9,
    "longtasks_over_50ms": 3,
    "longtasks_over_200ms": 0,
-   "longest_task_ms": 109,
+   "longest_task_ms": 121,
    "tour_state_end": {
     "index": 4,
     "playing": true,
-    "elapsed": 2566.5999999999985,
+    "elapsed": 2366.600000000002,
     "stepMs": 3000,
     "ready": true,
     "loops": 1,
     "timers": 0
    },
    "cdp": {
-    "TaskDuration": 2.215,
-    "ScriptDuration": 0.234,
-    "LayoutDuration": 0.25,
-    "RecalcStyleDuration": 0.258,
-    "LayoutCount": 903,
-    "RecalcStyleCount": 1570
+    "TaskDuration": 2.858,
+    "ScriptDuration": 0.289,
+    "LayoutDuration": 0.301,
+    "RecalcStyleDuration": 0.361,
+    "LayoutCount": 901,
+    "RecalcStyleCount": 1577
    }
   },
   "slider@x4": {
-   "duration_ms": 4637,
-   "frames": 270,
-   "fps": 58.2,
+   "duration_ms": 4640,
+   "frames": 257,
+   "fps": 55.4,
    "frame_p50_ms": 16.7,
-   "frame_p95_ms": 16.8,
-   "frame_max_ms": 33.4,
-   "frames_over_33ms": 2,
-   "longtasks_over_50ms": 0,
+   "frame_p95_ms": 33.3,
+   "frame_max_ms": 50,
+   "frames_over_33ms": 7,
+   "longtasks_over_50ms": 1,
    "longtasks_over_200ms": 0,
-   "longest_task_ms": 0,
+   "longest_task_ms": 51,
    "cdp": {
-    "TaskDuration": 1.623,
-    "ScriptDuration": 0.231,
-    "LayoutDuration": 0.231,
-    "RecalcStyleDuration": 0.573,
-    "LayoutCount": 280,
-    "RecalcStyleCount": 280
+    "TaskDuration": 1.966,
+    "ScriptDuration": 0.251,
+    "LayoutDuration": 0.278,
+    "RecalcStyleDuration": 0.762,
+    "LayoutCount": 267,
+    "RecalcStyleCount": 267
    }
   },
   "cutaway@x4": {
-   "duration_ms": 4007,
-   "frames": 239,
-   "fps": 59.6,
+   "duration_ms": 4101,
+   "frames": 245,
+   "fps": 59.7,
    "frame_p50_ms": 16.7,
-   "frame_p95_ms": 16.7,
-   "frame_max_ms": 16.8,
+   "frame_p95_ms": 16.8,
+   "frame_max_ms": 33.4,
    "frames_over_33ms": 0,
    "longtasks_over_50ms": 0,
    "longtasks_over_200ms": 0,
    "longest_task_ms": 0,
    "ready": true,
    "cdp": {
-    "TaskDuration": 0.219,
-    "ScriptDuration": 0.015,
-    "LayoutDuration": 0.024,
-    "RecalcStyleDuration": 0.042,
+    "TaskDuration": 0.259,
+    "ScriptDuration": 0.017,
+    "LayoutDuration": 0.026,
+    "RecalcStyleDuration": 0.045,
     "LayoutCount": 5,
     "RecalcStyleCount": 121
    }
@@ -419,34 +419,34 @@
  },
  "verdicts": {
   "lighthouse mission:mobile": {
-   "performance>=85": false,
+   "performance>=85": true,
    "accessibility>=90": true,
-   "cls<0.05": false
+   "cls<0.05": true
   },
   "lighthouse mission:desktop": {
    "performance>=85": true,
    "accessibility>=90": true,
-   "cls<0.05": false
+   "cls<0.05": true
   },
-  "lighthouse rotables:mobile": {
-   "performance>=85": false,
+  "lighthouse parts:mobile": {
+   "performance>=85": true,
    "accessibility>=90": true,
-   "cls<0.05": false
+   "cls<0.05": true
   },
-  "lighthouse rotables:desktop": {
+  "lighthouse parts:desktop": {
    "performance>=85": true,
    "accessibility>=90": true,
    "cls<0.05": false
   },
-  "lighthouse network:mobile": {
-   "performance>=85": false,
-   "accessibility>=90": true,
-   "cls<0.05": false
-  },
-  "lighthouse network:desktop": {
+  "lighthouse forecast:mobile": {
    "performance>=85": true,
    "accessibility>=90": true,
-   "cls<0.05": false
+   "cls<0.05": true
+  },
+  "lighthouse forecast:desktop": {
+   "performance>=85": true,
+   "accessibility>=90": true,
+   "cls<0.05": true
   },
   "cls_on_load<0.05 (all routes)": false,
   "anim tour@x1": {

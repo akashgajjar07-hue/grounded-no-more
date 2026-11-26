@@ -86,6 +86,8 @@ function normRO(o, now) {
 // ----------------------------------------------------------------------------- view
 export async function render(el, ctx) {
   loadCSS();
+  // wait for the view stylesheet before building the DOM: an unstyled first paint shifts the layout (CLS)
+  await new Promise((res) => { const l = document.querySelector('link[data-view-css="rotable-repair"]'); if (!l || l.sheet) return res(); l.addEventListener('load', res, { once: true }); l.addEventListener('error', res, { once: true }); setTimeout(res, 3000); });
   const { rotables: r, method } = ctx.data;
   const cleanups = [];
   const now = asOfHour(r);

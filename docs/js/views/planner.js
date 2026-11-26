@@ -29,6 +29,8 @@ function ensureCSS() {
 
 export async function render(el) {
   ensureCSS();
+  // wait for the view stylesheet before building the DOM: an unstyled first paint shifts the layout (CLS)
+  await new Promise((res) => { const l = document.querySelector('link[data-view-css="planner"]'); if (!l || l.sheet) return res(); l.addEventListener('load', res, { once: true }); l.addEventListener('error', res, { once: true }); setTimeout(res, 3000); });
   let src = null;
   try { src = await fetchMarkdown(assetURL('content/planner.md')); } catch (e) { console.warn('planner.md unavailable', e); }
 

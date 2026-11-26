@@ -201,6 +201,8 @@ export function missedNote(inc, rec, slack) {
 
 export async function render(el, ctx) {
   ensureCSS();
+  // wait for the view stylesheet before building the DOM: an unstyled first paint shifts the layout (CLS)
+  await new Promise((res) => { const l = document.querySelector('link[data-view-css="aog-response-lab"]'); if (!l || l.sheet) return res(); l.addEventListener('load', res, { once: true }); l.addEventListener('error', res, { once: true }); setTimeout(res, 3000); });
   const { aog_lab: A } = ctx.data;
   const codes = A.reason_codes || {};
   const labels = A.option_labels || {};

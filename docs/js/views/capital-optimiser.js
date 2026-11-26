@@ -113,6 +113,8 @@ function frontierOf(pts, get) {
 // ----------------------------------------------------------------------------- view
 export async function render(el, ctx) {
   ensureCSS();
+  // wait for the view stylesheet before building the DOM: an unstyled first paint shifts the layout (CLS)
+  await new Promise((res) => { const l = document.querySelector('link[data-view-css="capital-optimiser"]'); if (!l || l.sheet) return res(); l.addEventListener('load', res, { once: true }); l.addEventListener('error', res, { once: true }); setTimeout(res, 3000); });
   const d3 = window.d3;
   const { frontier: F, policies: POL } = ctx.data;
   const prov = F.meta?.provenance || F.provenance || 'SIMULATED';

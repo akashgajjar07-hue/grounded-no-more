@@ -120,3 +120,7 @@
   .cw-lede-phone { display: inline; }
   .cw-three { flex-direction: column; }
 }
+
+/* v2.1 CLS: while the drawing loads, the empty host reserves its space so the note and footer never jump */
+#cutaway[aria-busy="true"] { min-height: calc(min(100vw, 1600px) * 0.55); }
+@media (max-width: 600px) { #cutaway[aria-busy="true"] { min-height: 100svh; } }

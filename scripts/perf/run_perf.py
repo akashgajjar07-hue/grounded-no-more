@@ -249,12 +249,16 @@ def main():
     ap.add_argument("--label", default="run")
     ap.add_argument("--no-lighthouse", action="store_true")
     ap.add_argument("--throttle", type=float, default=4.0)
+    ap.add_argument("--base", default=None, help="measure a deployed site instead of a local server, e.g. https://…/index.html")
     a = ap.parse_args()
     from playwright.sync_api import sync_playwright
     OUT.mkdir(parents=True, exist_ok=True)
     summary = {"label": a.label, "generated": time.strftime("%Y-%m-%dT%H:%M:%S"), "targets": TARGETS,
                "environment": {"headless": True, "machine_note": "local macOS; headless Chromium (Playwright build); timings are indicative"}}
-    with AL.serve_docs() as base, sync_playwright() as pw:
+    import contextlib
+    if a.base:
+        summary["environment"]["machine_note"] = f"live site {a.base} measured from local macOS; headless Chromium (Playwright build)"
+    with (contextlib.nullcontext(a.base) if a.base else AL.serve_docs()) as base, sync_playwright() as pw:
         chrome = pw.chromium.executable_path
         print("weights ...", flush=True)
         w = route_weights(pw, base)

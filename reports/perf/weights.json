@@ -1,144 +1,98 @@
 {
  "mission": {
-  "js_bytes": 700542,
-  "view_js_bytes": 35782,
-  "json_bytes": 282528,
-  "total_bytes": 1273229,
-  "requests": 36,
-  "data_files": [
-   "actions.json",
-   "kpis.json",
-   "manifest.json",
-   "parts.json",
-   "policies.json",
-   "story.json"
-  ]
+  "js_bytes": 0,
+  "view_js_bytes": 0,
+  "json_bytes": 0,
+  "total_bytes": 0,
+  "requests": 0,
+  "data_files": []
  },
  "parts": {
-  "js_bytes": 756573,
-  "view_js_bytes": 91813,
-  "json_bytes": 171033,
-  "total_bytes": 1255019,
-  "requests": 36,
-  "data_files": [
-   "demand_history.json",
-   "manifest.json",
-   "parts.json"
-  ]
+  "js_bytes": 0,
+  "view_js_bytes": 0,
+  "json_bytes": 0,
+  "total_bytes": 0,
+  "requests": 0,
+  "data_files": []
  },
  "forecast": {
-  "js_bytes": 751218,
-  "view_js_bytes": 86458,
-  "json_bytes": 423783,
-  "total_bytes": 1437139,
-  "requests": 37,
-  "data_files": [
-   "demand_history.json",
-   "forecast.json",
-   "manifest.json",
-   "method.json",
-   "parts.json"
-  ]
+  "js_bytes": 0,
+  "view_js_bytes": 0,
+  "json_bytes": 0,
+  "total_bytes": 0,
+  "requests": 0,
+  "data_files": []
  },
  "rotables": {
-  "js_bytes": 771973,
-  "view_js_bytes": 105088,
-  "json_bytes": 512912,
-  "total_bytes": 1533398,
-  "requests": 36,
-  "data_files": [
-   "manifest.json",
-   "method.json",
-   "network.json",
-   "parts.json",
-   "rotables.json"
-  ]
+  "js_bytes": 0,
+  "view_js_bytes": 0,
+  "json_bytes": 0,
+  "total_bytes": 0,
+  "requests": 0,
+  "data_files": []
  },
  "network": {
-  "js_bytes": 748909,
-  "view_js_bytes": 67017,
-  "json_bytes": 533127,
-  "total_bytes": 1505786,
-  "requests": 35,
-  "data_files": [
-   "countries-110m.json",
-   "frontier.json",
-   "land-110m.json",
-   "manifest.json",
-   "network.json",
-   "policies.json"
-  ]
+  "js_bytes": 0,
+  "view_js_bytes": 0,
+  "json_bytes": 0,
+  "total_bytes": 0,
+  "requests": 0,
+  "data_files": []
  },
  "capital": {
-  "js_bytes": 753261,
-  "view_js_bytes": 88501,
-  "json_bytes": 483973,
-  "total_bytes": 1490052,
-  "requests": 33,
-  "data_files": [
-   "frontier.json",
-   "manifest.json",
-   "parts.json",
-   "policies.json"
-  ]
+  "js_bytes": 0,
+  "view_js_bytes": 0,
+  "json_bytes": 0,
+  "total_bytes": 0,
+  "requests": 0,
+  "data_files": []
  },
  "aog": {
-  "js_bytes": 734730,
-  "view_js_bytes": 69970,
-  "json_bytes": 199824,
-  "total_bytes": 1175585,
-  "requests": 30,
-  "data_files": [
-   "aog_lab.json",
-   "manifest.json"
-  ]
+  "js_bytes": 0,
+  "view_js_bytes": 0,
+  "json_bytes": 0,
+  "total_bytes": 0,
+  "requests": 0,
+  "data_files": []
  },
  "actions": {
-  "js_bytes": 720652,
-  "view_js_bytes": 55892,
-  "json_bytes": 215516,
-  "total_bytes": 1175163,
-  "requests": 31,
-  "data_files": [
-   "actions.json",
-   "manifest.json",
-   "parts.json"
-  ]
+  "js_bytes": 0,
+  "view_js_bytes": 0,
+  "json_bytes": 0,
+  "total_bytes": 0,
+  "requests": 0,
+  "data_files": []
  },
  "method": {
-  "js_bytes": 716731,
-  "view_js_bytes": 51971,
-  "json_bytes": 162704,
-  "total_bytes": 1119990,
-  "requests": 32,
-  "data_files": [
-   "kpis.json",
-   "manifest.json",
-   "method.json"
-  ]
+  "js_bytes": 0,
+  "view_js_bytes": 0,
+  "json_bytes": 0,
+  "total_bytes": 0,
+  "requests": 0,
+  "data_files": []
  },
  "about": {
-  "js_bytes": 640161,
-  "view_js_bytes": 16875,
+  "js_bytes": 0,
+  "view_js_bytes": 0,
   "json_bytes": 0,
-  "total_bytes": 863048,
-  "requests": 30,
+  "total_bytes": 0,
+  "requests": 0,
   "data_files": []
  },
  "glossary": {
-  "js_bytes": 625947,
-  "view_js_bytes": 8123,
+  "js_bytes": 0,
+  "view_js_bytes": 0,
   "json_bytes": 0,
-  "total_bytes": 843203,
-  "requests": 25,
+  "total_bytes": 0,
+  "requests": 0,
   "data_files": []
  },
  "planner": {
-  "js_bytes": 645830,
-  "view_js_bytes": 22544,
+  "js_bytes": 0,
+  "view_js_bytes": 0,
   "json_bytes": 0,
-  "total_bytes": 878855,
-  "requests": 30,
+  "total_bytes": 0,
+  "requests": 0,
   "data_files": []
  }
 }

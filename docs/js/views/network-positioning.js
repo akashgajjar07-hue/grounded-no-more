@@ -169,6 +169,8 @@ function splitLabel(n, p) {
 // ----------------------------------------------------------------------------- view
 export async function render(el, ctx) {
   loadCSS();
+  // wait for the view stylesheet before building the DOM: an unstyled first paint shifts the layout (CLS)
+  await new Promise((res) => { const l = document.querySelector('link[data-view-css="network-positioning"]'); if (!l || l.sheet) return res(); l.addEventListener('load', res, { once: true }); l.addEventListener('error', res, { once: true }); setTimeout(res, 3000); });
   MS = morphStore();
   const { network: n, policies: p, frontier: F } = ctx.data;
   const stations = n.stations || [];
