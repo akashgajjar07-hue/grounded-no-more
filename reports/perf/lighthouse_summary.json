@@ -1,5 +1,328 @@
 {
- "available": false,
- "results": {},
- "note": "Lighthouse unavailable (could not be fetched or run headless); fallback = Playwright + CDP metrics below."
+ "available": true,
+ "results": {
+  "mission:mobile": {
+   "ok": true,
+   "url": "http://127.0.0.1:58376/index.html#/mission",
+   "preset": "mobile",
+   "seconds": 16,
+   "performance": 73,
+   "accessibility": 100,
+   "cls": 0.1918784326544527,
+   "lcp_ms": 4662.693,
+   "fcp_ms": 1806.3465,
+   "tbt_ms": 0,
+   "si_ms": 2217.5487623262948,
+   "lighthouse_version": "12.8.2",
+   "a11y_failures": [
+    {
+     "id": "aria-allowed-role",
+     "title": "Uses ARIA roles on incompatible elements",
+     "items": 5
+    },
+    {
+     "id": "label-content-name-mismatch",
+     "title": "Elements with visible text labels do not have matching accessible names.",
+     "items": 8
+    }
+   ],
+   "perf_opportunities": [
+    {
+     "id": "unused-javascript",
+     "title": "Reduce unused JavaScript",
+     "savings_ms": 2100
+    },
+    {
+     "id": "uses-text-compression",
+     "title": "Enable text compression",
+     "savings_ms": 1950
+    },
+    {
+     "id": "render-blocking-resources",
+     "title": "Eliminate render-blocking resources",
+     "savings_ms": 900
+    },
+    {
+     "id": "unused-css-rules",
+     "title": "Reduce unused CSS",
+     "savings_ms": 150
+    }
+   ]
+  },
+  "mission:desktop": {
+   "ok": true,
+   "url": "http://127.0.0.1:58376/index.html#/mission",
+   "preset": "desktop",
+   "seconds": 12,
+   "performance": 93,
+   "accessibility": 100,
+   "cls": 0.09457541371158393,
+   "lcp_ms": 1540.8649999999998,
+   "fcp_ms": 495.64875,
+   "tbt_ms": 0,
+   "si_ms": 618.1261066513887,
+   "lighthouse_version": "12.8.2",
+   "a11y_failures": [
+    {
+     "id": "aria-allowed-role",
+     "title": "Uses ARIA roles on incompatible elements",
+     "items": 5
+    },
+    {
+     "id": "label-content-name-mismatch",
+     "title": "Elements with visible text labels do not have matching accessible names.",
+     "items": 9
+    }
+   ],
+   "perf_opportunities": [
+    {
+     "id": "uses-text-compression",
+     "title": "Enable text compression",
+     "savings_ms": 690
+    },
+    {
+     "id": "unused-javascript",
+     "title": "Reduce unused JavaScript",
+     "savings_ms": 380
+    },
+    {
+     "id": "render-blocking-resources",
+     "title": "Eliminate render-blocking resources",
+     "savings_ms": 200
+    }
+   ]
+  },
+  "rotables:mobile": {
+   "ok": true,
+   "url": "http://127.0.0.1:58376/index.html#/rotables",
+   "preset": "mobile",
+   "seconds": 12,
+   "performance": 60,
+   "accessibility": 94,
+   "cls": 0.18730164711789402,
+   "lcp_ms": 10056.7882,
+   "fcp_ms": 3018.4396749999996,
+   "tbt_ms": 0,
+   "si_ms": 3319.935151514549,
+   "lighthouse_version": "12.8.2",
+   "a11y_failures": [
+    {
+     "id": "aria-required-parent",
+     "title": "`[role]`s are not contained by their required parent element",
+     "items": 15
+    },
+    {
+     "id": "heading-order",
+     "title": "Heading elements are not in a sequentially-descending order",
+     "items": 1
+    }
+   ],
+   "perf_opportunities": [
+    {
+     "id": "uses-text-compression",
+     "title": "Enable text compression",
+     "savings_ms": 5990
+    },
+    {
+     "id": "unused-javascript",
+     "title": "Reduce unused JavaScript",
+     "savings_ms": 2700
+    },
+    {
+     "id": "render-blocking-resources",
+     "title": "Eliminate render-blocking resources",
+     "savings_ms": 1050
+    },
+    {
+     "id": "unminified-javascript",
+     "title": "Minify JavaScript",
+     "savings_ms": 450
+    },
+    {
+     "id": "unminified-css",
+     "title": "Minify CSS",
+     "savings_ms": 150
+    },
+    {
+     "id": "unused-css-rules",
+     "title": "Reduce unused CSS",
+     "savings_ms": 150
+    }
+   ]
+  },
+  "rotables:desktop": {
+   "ok": true,
+   "url": "http://127.0.0.1:58376/index.html#/rotables",
+   "preset": "desktop",
+   "seconds": 12,
+   "performance": 90,
+   "accessibility": 94,
+   "cls": 0.09474835172051482,
+   "lcp_ms": 1809.088,
+   "fcp_ms": 628.952,
+   "tbt_ms": 0,
+   "si_ms": 776.9036397638113,
+   "lighthouse_version": "12.8.2",
+   "a11y_failures": [
+    {
+     "id": "aria-required-parent",
+     "title": "`[role]`s are not contained by their required parent element",
+     "items": 15
+    },
+    {
+     "id": "heading-order",
+     "title": "Heading elements are not in a sequentially-descending order",
+     "items": 1
+    },
+    {
+     "id": "label-content-name-mismatch",
+     "title": "Elements with visible text labels do not have matching accessible names.",
+     "items": 1
+    }
+   ],
+   "perf_opportunities": [
+    {
+     "id": "uses-text-compression",
+     "title": "Enable text compression",
+     "savings_ms": 960
+    },
+    {
+     "id": "unused-javascript",
+     "title": "Reduce unused JavaScript",
+     "savings_ms": 440
+    },
+    {
+     "id": "render-blocking-resources",
+     "title": "Eliminate render-blocking resources",
+     "savings_ms": 200
+    },
+    {
+     "id": "unminified-javascript",
+     "title": "Minify JavaScript",
+     "savings_ms": 80
+    }
+   ]
+  },
+  "network:mobile": {
+   "ok": true,
+   "url": "http://127.0.0.1:58376/index.html#/network",
+   "preset": "mobile",
+   "seconds": 11,
+   "performance": 64,
+   "accessibility": 91,
+   "cls": 0.19188544280699546,
+   "lcp_ms": 8859.52875,
+   "fcp_ms": 2102.7225,
+   "tbt_ms": 0,
+   "si_ms": 2773.405343532316,
+   "lighthouse_version": "12.8.2",
+   "a11y_failures": [
+    {
+     "id": "aria-allowed-role",
+     "title": "Uses ARIA roles on incompatible elements",
+     "items": 7
+    },
+    {
+     "id": "color-contrast",
+     "title": "Background and foreground colors do not have a sufficient contrast ratio.",
+     "items": 1
+    },
+    {
+     "id": "heading-order",
+     "title": "Heading elements are not in a sequentially-descending order",
+     "items": 1
+    },
+    {
+     "id": "list",
+     "title": "Lists do not contain only `<li>` elements and script supporting elements (`<script>` and `<template>`).",
+     "items": 1
+    }
+   ],
+   "perf_opportunities": [
+    {
+     "id": "uses-text-compression",
+     "title": "Enable text compression",
+     "savings_ms": 4780
+    },
+    {
+     "id": "unused-javascript",
+     "title": "Reduce unused JavaScript",
+     "savings_ms": 2100
+    },
+    {
+     "id": "render-blocking-resources",
+     "title": "Eliminate render-blocking resources",
+     "savings_ms": 1200
+    },
+    {
+     "id": "unminified-javascript",
+     "title": "Minify JavaScript",
+     "savings_ms": 300
+    },
+    {
+     "id": "unused-css-rules",
+     "title": "Reduce unused CSS",
+     "savings_ms": 150
+    }
+   ]
+  },
+  "network:desktop": {
+   "ok": true,
+   "url": "http://127.0.0.1:58376/index.html#/network",
+   "preset": "desktop",
+   "seconds": 11,
+   "performance": 91,
+   "accessibility": 95,
+   "cls": 0.09457918965064355,
+   "lcp_ms": 1731.3785000000003,
+   "fcp_ms": 484.87649999999996,
+   "tbt_ms": 0,
+   "si_ms": 713.6456628832112,
+   "lighthouse_version": "12.8.2",
+   "a11y_failures": [
+    {
+     "id": "color-contrast",
+     "title": "Background and foreground colors do not have a sufficient contrast ratio.",
+     "items": 1
+    },
+    {
+     "id": "heading-order",
+     "title": "Heading elements are not in a sequentially-descending order",
+     "items": 1
+    },
+    {
+     "id": "label-content-name-mismatch",
+     "title": "Elements with visible text labels do not have matching accessible names.",
+     "items": 8
+    }
+   ],
+   "perf_opportunities": [
+    {
+     "id": "uses-text-compression",
+     "title": "Enable text compression",
+     "savings_ms": 830
+    },
+    {
+     "id": "unused-javascript",
+     "title": "Reduce unused JavaScript",
+     "savings_ms": 360
+    },
+    {
+     "id": "render-blocking-resources",
+     "title": "Eliminate render-blocking resources",
+     "savings_ms": 200
+    },
+    {
+     "id": "unminified-javascript",
+     "title": "Minify JavaScript",
+     "savings_ms": 80
+    },
+    {
+     "id": "unused-css-rules",
+     "title": "Reduce unused CSS",
+     "savings_ms": 80
+    }
+   ]
+  }
+ }
 }

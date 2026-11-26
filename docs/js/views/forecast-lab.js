@@ -284,7 +284,7 @@ export async function render(el, ctx) {
     // wave 5: a one-line key, so the starred champion and the teal policy rate never compete for "the answer"
     // v2.1: the cell-specific facts (window, cell size) live in this key line, so the subtitle (and its More button)
     // stays the same when the controls change
-    f.body.before(h('p', { class: 'fl-key t-12 faint', dataset: { role: 'board-key' } }, h('span', { class: 'fl-key-w' }, `${n != null ? `${fmtInt(n)} ${S ? 'parts' : 'PNs'}` : ''} · ${winLabel}`), ' · ', h('span', { class: 'fl-key-i' }, '★'), byMode(' chosen in advance (best on the tuning weeks)', ' frozen champion (best MASE on selection weeks)'), pc === 'R' ? [h('span', { class: 'fl-key-sw' }), byMode(' teal = the rate the repairable-part plans use', ' teal = the rate the rotable policies use')] : null));
+    f.body.before(h('p', { class: 'fl-key t-12 faint', dataset: { role: 'board-key' } }, h('span', { class: 'fl-key-w' }, `${n != null ? `${fmtInt(n)} ${S ? 'parts' : 'PNs'}` : ''} · ${winLabel}`), ' · ', h('span', { class: 'fl-key-g' }, h('span', { class: 'fl-key-i' }, '★'), byMode(' chosen in advance (best on the tuning weeks)', ' frozen champion (best MASE on selection weeks)')), pc === 'R' ? h('span', { class: 'fl-key-g' }, h('span', { class: 'fl-key-sw' }), byMode(' teal = the rate the repairable-part plans use', ' teal = the rate the rotable policies use')) : null));
     const ordered = eligible.concat(zero ? [zero] : []);
     // teal = the method the stocking policies actually use for this part class (rotables: the reliability-exposure
     // rate, per forecast.json meta); the frozen champion is marked with ★ + neutral strong, not the recommendation colour

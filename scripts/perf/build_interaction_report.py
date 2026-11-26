@@ -52,6 +52,9 @@ def main():
          f"Generated {time.strftime('%Y-%m-%d %H:%M')} from `reports/audit/_summary.json` (matrix generated {S.get('generated', '—')}), "
          f"`reports/audit/keyboard/`, `reports/audit/links_downloads.json`, `reports/audit/numbers_reconcile.json` and `reports/perf/perf_summary.json`.",
          "", f"**Label: {label}.** Page agents were editing their views while this ran, so failures are a snapshot, not a verdict.", ""]
+    notes = ROOT / "scripts" / "perf" / f"analyst_notes_{label}.md"
+    if notes.exists():
+        o += ["## 0. Analyst notes (root causes, harness caveats)", "", notes.read_text().strip(), ""]
     # ------------------------------------------------------------ matrix
     t = S.get("totals", {})
     o += ["## 1. Interaction matrix", "",

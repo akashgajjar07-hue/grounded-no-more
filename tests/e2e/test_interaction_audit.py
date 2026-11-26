@@ -385,7 +385,7 @@ def aggregate(label: str | None = None) -> dict:
                        **{k: c["summary"][k] for k in ("total", "ok", "failed", "skipped", "load_errors")}} for c in cells]}
     OUT.mkdir(parents=True, exist_ok=True)
     tmp = OUT / f"._summary.{os.getpid()}.tmp"
-    tmp.write_text(json.dumps(data, indent=1, ensure_ascii=False))
+    tmp.write_text(json.dumps(data, separators=(",", ":"), ensure_ascii=False))
     os.replace(tmp, OUT / "_summary.json")
     return data
 

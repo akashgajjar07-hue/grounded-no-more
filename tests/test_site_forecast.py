@@ -312,7 +312,10 @@ def test_v21_keyboard(site, browser, vp):  # noqa: F811
         assert sel.get_attribute("aria-checked") == "true"
         # a term opens its tooltip on focus; Esc closes it and focus stays on the term
         t = page.locator('#view .term').first
-        t.focus()
+        t.scroll_into_view_if_needed()
+        page.wait_for_timeout(300)   # the tooltip closes on scroll, so focus only once the page is still
+        t.evaluate("(e) => e.focus({ preventScroll: true })")
+        page.wait_for_timeout(100)
         assert page.locator(".term-pop.is-on").count() == 1
         page.keyboard.press("Escape")
         assert page.locator(".term-pop.is-on").count() == 0

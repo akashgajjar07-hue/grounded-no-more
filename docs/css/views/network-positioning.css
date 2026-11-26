@@ -104,3 +104,7 @@
 
 /* the replay annotation and map labels never swallow clicks meant for the marks under them */
 [data-story="network-replay"] .gnm-annot { pointer-events: none; }
+/* the metric control keeps one row so its sliding thumb moves horizontally; narrow screens scroll it */
+.np-metric-bar .seg.has-thumb { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+.np-metric-bar .seg.has-thumb::-webkit-scrollbar { display: none; }
+.np-metric-bar .seg.has-thumb > button { flex: 0 0 auto; white-space: nowrap; }

@@ -5,14 +5,14 @@
   "largest": 0.0989
  },
  "mission@390": {
-  "cls": 0.1872,
+  "cls": 0.1873,
   "shifts": 2,
   "largest": 0.1825
  },
  "parts@1440": {
-  "cls": 0.2619,
-  "shifts": 3,
-  "largest": 0.1618
+  "cls": 0.1001,
+  "shifts": 2,
+  "largest": 0.0989
  },
  "parts@390": {
   "cls": 0.1873,
@@ -40,9 +40,9 @@
   "largest": 0.1825
  },
  "network@1440": {
-  "cls": 0.028,
+  "cls": 0.1001,
   "shifts": 2,
-  "largest": 0.0267
+  "largest": 0.0989
  },
  "network@390": {
   "cls": 0.1873,
@@ -50,13 +50,13 @@
   "largest": 0.1825
  },
  "capital@1440": {
-  "cls": 0.1002,
-  "shifts": 8,
+  "cls": 0.1003,
+  "shifts": 11,
   "largest": 0.0989
  },
  "capital@390": {
-  "cls": 0.1899,
-  "shifts": 3,
+  "cls": 0.1873,
+  "shifts": 2,
   "largest": 0.1825
  },
  "aog@1440": {
@@ -90,14 +90,14 @@
   "largest": 0.1825
  },
  "about@1440": {
-  "cls": 0.0397,
-  "shifts": 2,
-  "largest": 0.0384
+  "cls": 0.0012,
+  "shifts": 1,
+  "largest": 0.0012
  },
  "about@390": {
-  "cls": 0.1872,
-  "shifts": 2,
-  "largest": 0.1825
+  "cls": 0.0048,
+  "shifts": 1,
+  "largest": 0.0048
  },
  "glossary@1440": {
   "cls": 0.1001,
@@ -115,7 +115,7 @@
   "largest": 0.0989
  },
  "planner@390": {
-  "cls": 0.1872,
+  "cls": 0.1873,
   "shifts": 2,
   "largest": 0.1825
  },

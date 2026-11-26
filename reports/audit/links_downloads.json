@@ -186,7 +186,7 @@
   ],
   "problems": []
  },
- "generated": "2026-11-26T20:07:33",
+ "generated": "2026-11-26T20:08:49",
  "routes_webkit": {
   "rows": [
    {
@@ -657,6 +657,12 @@
    },
    {
     "href": "downloads/grounded_no_more_planner_workbook.xlsx",
+    "kind": "file",
+    "status": 200,
+    "ok": true
+   },
+   {
+    "href": "lab/cutaway.html",
     "kind": "file",
     "status": 200,
     "ok": true

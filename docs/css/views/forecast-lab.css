@@ -105,3 +105,11 @@
 .fl-find-n { margin: 0; font-size: var(--fs-12, 12px); color: var(--text-muted); line-height: 1.45; }
 .fl-findings .scope-line { margin-top: var(--s-2); }
 @media (max-width: 520px) { .fl-find { padding: var(--s-1) var(--s-2); } .fl-find-v { font-size: 24px; } }
+
+/* v2.1 addendum: key items wrap as units (a swatch never ends a line without its text) */
+.fl-key-g { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
+/* segmented controls with a sliding thumb stay on one row (the thumb slides horizontally); narrow screens scroll */
+.fl-control .seg.has-thumb { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+.fl-control .seg.has-thumb::-webkit-scrollbar { display: none; }
+.fl-control .seg.has-thumb > button { flex: 0 0 auto; white-space: nowrap; }
+.fl-key-g .fl-key-sw { margin-left: 0; }

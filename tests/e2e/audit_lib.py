@@ -232,7 +232,7 @@ def _goto(page, base_url: str, route: str):
     page.evaluate(OBSERVE_JS)
 
 
-def _restore(page, base_url: str, route: str):
+def _restore(page, base_url: str, route: str, mode: str | None = None):
     """Close overlays / tour and return to the route if the action navigated away."""
     for _ in range(2):
         st = page.evaluate(STATE_JS)
@@ -249,6 +249,10 @@ def _restore(page, base_url: str, route: str):
             page.wait_for_timeout(200)
     if page.evaluate("location.hash").split("?")[0] != _hash_of(route).split("?")[0]:
         _goto(page, base_url, route)
+    # after the Simple/Expert toggle was operated, return to the audited mode (found by the PAGE-3 audit)
+    if mode and not page.evaluate(f"document.body.classList.contains('mode-{mode}')"):
+        page.evaluate(f"document.querySelector('[data-mode=\"{mode}\"], button[data-set-mode=\"{mode}\"]')?.click()")
+        page.wait_for_timeout(200)
 
 
 def _wait_effect(page, before: dict, timeout_ms: int, download_box: list) -> tuple[list[str], float]:
@@ -391,7 +395,7 @@ def audit_route(pw, base_url: str, cfg: AuditConfig) -> RouteReport:
             errors.clear()
             rep.elements.append(r)
             try:
-                _restore(page, base_url, cfg.route)
+                _restore(page, base_url, cfg.route, cfg.mode)
             except Exception as exc:  # noqa: BLE001
                 r.note += f" | restore failed: {exc}"
                 _goto(page, base_url, cfg.route)
