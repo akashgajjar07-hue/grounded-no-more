@@ -1,7 +1,40 @@
 {
-  "meta": {
-    "provenance": "DERIVED",
-    "notes": "Lists the real exports present in docs/data/. The exporter (gnm.export) rewrites this file. Any file not listed falls back to docs/data/fixtures/<name>.json (layout fixtures, shown with a FIXTURE DATA chip)."
-  },
-  "files": []
+ "meta": {
+  "generated_at": "2026-11-26T02:45:07Z",
+  "git_sha": "7cc773a",
+  "provenance": "DERIVED",
+  "source": [
+   "gnm.export.build_site_data"
+  ],
+  "notes": "Lists the real exports present in docs/data/ (written by scripts/export_site.py). Any file not listed falls back to docs/data/fixtures/<name>.json."
+ },
+ "files": [
+  "kpis",
+  "parts",
+  "demand_history",
+  "forecast",
+  "rotables",
+  "network",
+  "frontier",
+  "policies",
+  "aog_lab",
+  "actions",
+  "method",
+  "story"
+ ],
+ "sizes_bytes": {
+  "kpis": 5632,
+  "parts": 84845,
+  "demand_history": 30693,
+  "forecast": 101596,
+  "rotables": 177043,
+  "network": 22786,
+  "frontier": 276221,
+  "policies": 33722,
+  "aog_lab": 189295,
+  "actions": 53078,
+  "method": 87465,
+  "story": 3975
+ },
+ "total_bytes": 1066351
 }
