@@ -8,11 +8,11 @@
    "seconds": 13,
    "performance": 92,
    "accessibility": 100,
-   "cls": 0.004852120979927912,
-   "lcp_ms": 3311.023,
-   "fcp_ms": 1136.0230000000001,
+   "cls": 0.01414112024935982,
+   "lcp_ms": 3302.591,
+   "fcp_ms": 1052.591,
    "tbt_ms": 0,
-   "si_ms": 2269.0459900916185,
+   "si_ms": 2171.7491715643655,
    "lighthouse_version": "12.8.2",
    "a11y_failures": [
     {
@@ -30,22 +30,12 @@
     {
      "id": "unused-javascript",
      "title": "Reduce unused JavaScript",
-     "savings_ms": 750
+     "savings_ms": 600
     },
     {
      "id": "render-blocking-resources",
      "title": "Eliminate render-blocking resources",
-     "savings_ms": 150
-    },
-    {
-     "id": "unminified-javascript",
-     "title": "Minify JavaScript",
-     "savings_ms": 150
-    },
-    {
-     "id": "server-response-time",
-     "title": "Initial server response time was short",
-     "savings_ms": 110
+     "savings_ms": 103
     }
    ]
   },
@@ -56,11 +46,11 @@
    "seconds": 11,
    "performance": 100,
    "accessibility": 100,
-   "cls": 0.001321836419753086,
-   "lcp_ms": 641.768,
-   "fcp_ms": 281.76800000000003,
+   "cls": 0.001297865773574993,
+   "lcp_ms": 642.231,
+   "fcp_ms": 282.231,
    "tbt_ms": 0,
-   "si_ms": 469.19888392359564,
+   "si_ms": 481.457879613655,
    "lighthouse_version": "12.8.2",
    "a11y_failures": [
     {
@@ -86,14 +76,14 @@
    "ok": true,
    "url": "https://akashgajjar07-hue.github.io/grounded-no-more/index.html#/parts",
    "preset": "mobile",
-   "seconds": 13,
-   "performance": 90,
+   "seconds": 12,
+   "performance": 91,
    "accessibility": 92,
-   "cls": 0,
-   "lcp_ms": 3522.0789999999997,
-   "fcp_ms": 1272.079,
-   "tbt_ms": 26,
-   "si_ms": 3361.666441749653,
+   "cls": 0.004859222510816939,
+   "lcp_ms": 3459.933,
+   "fcp_ms": 1059.933,
+   "tbt_ms": 81,
+   "si_ms": 2359.059332808733,
    "lighthouse_version": "12.8.2",
    "a11y_failures": [
     {
@@ -127,21 +117,6 @@
      "id": "unused-javascript",
      "title": "Reduce unused JavaScript",
      "savings_ms": 600
-    },
-    {
-     "id": "server-response-time",
-     "title": "Initial server response time was short",
-     "savings_ms": 248
-    },
-    {
-     "id": "render-blocking-resources",
-     "title": "Eliminate render-blocking resources",
-     "savings_ms": 150
-    },
-    {
-     "id": "unminified-javascript",
-     "title": "Minify JavaScript",
-     "savings_ms": 150
     }
    ]
   },
@@ -149,14 +124,14 @@
    "ok": true,
    "url": "https://akashgajjar07-hue.github.io/grounded-no-more/index.html#/parts",
    "preset": "desktop",
-   "seconds": 12,
-   "performance": 92,
+   "seconds": 11,
+   "performance": 100,
    "accessibility": 96,
-   "cls": 0.1734532099495082,
-   "lcp_ms": 685.215,
-   "fcp_ms": 345.21500000000003,
+   "cls": 0.001321836419753086,
+   "lcp_ms": 647.373,
+   "fcp_ms": 287.373,
    "tbt_ms": 0,
-   "si_ms": 749.055804345991,
+   "si_ms": 531.2564062078061,
    "lighthouse_version": "12.8.2",
    "a11y_failures": [
     {
@@ -180,6 +155,11 @@
      "id": "unused-javascript",
      "title": "Reduce unused JavaScript",
      "savings_ms": 120
+    },
+    {
+     "id": "server-response-time",
+     "title": "Initial server response time was short",
+     "savings_ms": 61
     }
    ]
   },
@@ -187,14 +167,14 @@
    "ok": true,
    "url": "https://akashgajjar07-hue.github.io/grounded-no-more/index.html#/forecast",
    "preset": "mobile",
-   "seconds": 13,
+   "seconds": 12,
    "performance": 92,
    "accessibility": 100,
    "cls": 0.004845019449038885,
-   "lcp_ms": 3380.9155,
-   "fcp_ms": 905.9155,
-   "tbt_ms": 10,
-   "si_ms": 2349.0171341225596,
+   "lcp_ms": 3388.8285,
+   "fcp_ms": 1138.8285,
+   "tbt_ms": 36,
+   "si_ms": 2233.521434616848,
    "lighthouse_version": "12.8.2",
    "a11y_failures": [],
    "perf_opportunities": [
@@ -202,6 +182,11 @@
      "id": "unused-javascript",
      "title": "Reduce unused JavaScript",
      "savings_ms": 600
+    },
+    {
+     "id": "render-blocking-resources",
+     "title": "Eliminate render-blocking resources",
+     "savings_ms": 150
     },
     {
      "id": "unminified-javascript",
@@ -214,14 +199,14 @@
    "ok": true,
    "url": "https://akashgajjar07-hue.github.io/grounded-no-more/index.html#/forecast",
    "preset": "desktop",
-   "seconds": 13,
+   "seconds": 11,
    "performance": 100,
    "accessibility": 100,
-   "cls": 0.001321836419753086,
-   "lcp_ms": 658.005,
-   "fcp_ms": 298.005,
+   "cls": 0.001286991069083268,
+   "lcp_ms": 645.5255,
+   "fcp_ms": 245.5255,
    "tbt_ms": 0,
-   "si_ms": 906.1607709213572,
+   "si_ms": 488.8627396589218,
    "lighthouse_version": "12.8.2",
    "a11y_failures": [
     {

@@ -5,19 +5,19 @@
   "largest": 0.0012
  },
  "mission@390": {
-  "cls": 0.0049,
-  "shifts": 1,
-  "largest": 0.0049
- },
- "parts@1440": {
-  "cls": 0.1623,
-  "shifts": 2,
-  "largest": 0.1611
- },
- "parts@390": {
   "cls": 0.0048,
   "shifts": 1,
   "largest": 0.0048
+ },
+ "parts@1440": {
+  "cls": 0.0012,
+  "shifts": 1,
+  "largest": 0.0012
+ },
+ "parts@390": {
+  "cls": 0.0049,
+  "shifts": 1,
+  "largest": 0.0049
  },
  "forecast@1440": {
   "cls": 0.0012,
@@ -30,13 +30,13 @@
   "largest": 0.0048
  },
  "rotables@1440": {
-  "cls": 0.1571,
-  "shifts": 7,
-  "largest": 0.1556
+  "cls": 0.0015,
+  "shifts": 5,
+  "largest": 0.0012
  },
  "rotables@390": {
-  "cls": 0.0049,
-  "shifts": 2,
+  "cls": 0.0059,
+  "shifts": 3,
   "largest": 0.0048
  },
  "network@1440": {
@@ -45,19 +45,19 @@
   "largest": 0.0012
  },
  "network@390": {
-  "cls": 0.0048,
+  "cls": 0.0049,
   "shifts": 1,
-  "largest": 0.0048
+  "largest": 0.0049
  },
  "capital@1440": {
-  "cls": 0.0109,
-  "shifts": 11,
-  "largest": 0.0095
+  "cls": 0.0013,
+  "shifts": 8,
+  "largest": 0.0012
  },
  "capital@390": {
-  "cls": 0.0075,
+  "cls": 0.0282,
   "shifts": 2,
-  "largest": 0.0048
+  "largest": 0.0233
  },
  "aog@1440": {
   "cls": 0.0012,
@@ -65,9 +65,9 @@
   "largest": 0.0012
  },
  "aog@390": {
-  "cls": 0.0049,
+  "cls": 0.0048,
   "shifts": 1,
-  "largest": 0.0049
+  "largest": 0.0048
  },
  "actions@1440": {
   "cls": 0.0012,
@@ -95,9 +95,9 @@
   "largest": 0.0012
  },
  "about@390": {
-  "cls": 0.0047,
+  "cls": 0.0049,
   "shifts": 1,
-  "largest": 0.0047
+  "largest": 0.0049
  },
  "glossary@1440": {
   "cls": 0.0012,
@@ -120,13 +120,13 @@
   "largest": 0.0048
  },
  "lab/cutaway.html@1440": {
-  "cls": 0.0416,
-  "shifts": 2,
-  "largest": 0.0416
+  "cls": 0.0004,
+  "shifts": 1,
+  "largest": 0.0004
  },
  "lab/cutaway.html@390": {
-  "cls": 0.1762,
-  "shifts": 1,
-  "largest": 0.1762
+  "cls": 0,
+  "shifts": 0,
+  "largest": 0
  }
 }

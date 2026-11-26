@@ -1,6 +1,6 @@
 {
- "label": "live-v2.1",
- "generated": "2026-11-26T22:20:28",
+ "label": "live-v2.1-final",
+ "generated": "2026-11-26T23:03:02",
  "targets": {
   "performance": 85,
   "accessibility": 90,
@@ -84,40 +84,40 @@
    "ok": true,
    "performance": 92,
    "accessibility": 100,
-   "cls": 0.004852120979927912,
-   "lcp_ms": 3311.023,
+   "cls": 0.01414112024935982,
+   "lcp_ms": 3302.591,
    "tbt_ms": 0,
-   "fcp_ms": 1136.0230000000001,
+   "fcp_ms": 1052.591,
    "error": null
   },
   "mission:desktop": {
    "ok": true,
    "performance": 100,
    "accessibility": 100,
-   "cls": 0.001321836419753086,
-   "lcp_ms": 641.768,
+   "cls": 0.001297865773574993,
+   "lcp_ms": 642.231,
    "tbt_ms": 0,
-   "fcp_ms": 281.76800000000003,
+   "fcp_ms": 282.231,
    "error": null
   },
   "parts:mobile": {
    "ok": true,
-   "performance": 90,
+   "performance": 91,
    "accessibility": 92,
-   "cls": 0,
-   "lcp_ms": 3522.0789999999997,
-   "tbt_ms": 26,
-   "fcp_ms": 1272.079,
+   "cls": 0.004859222510816939,
+   "lcp_ms": 3459.933,
+   "tbt_ms": 81,
+   "fcp_ms": 1059.933,
    "error": null
   },
   "parts:desktop": {
    "ok": true,
-   "performance": 92,
+   "performance": 100,
    "accessibility": 96,
-   "cls": 0.1734532099495082,
-   "lcp_ms": 685.215,
+   "cls": 0.001321836419753086,
+   "lcp_ms": 647.373,
    "tbt_ms": 0,
-   "fcp_ms": 345.21500000000003,
+   "fcp_ms": 287.373,
    "error": null
   },
   "forecast:mobile": {
@@ -125,19 +125,19 @@
    "performance": 92,
    "accessibility": 100,
    "cls": 0.004845019449038885,
-   "lcp_ms": 3380.9155,
-   "tbt_ms": 10,
-   "fcp_ms": 905.9155,
+   "lcp_ms": 3388.8285,
+   "tbt_ms": 36,
+   "fcp_ms": 1138.8285,
    "error": null
   },
   "forecast:desktop": {
    "ok": true,
    "performance": 100,
    "accessibility": 100,
-   "cls": 0.001321836419753086,
-   "lcp_ms": 658.005,
+   "cls": 0.001286991069083268,
+   "lcp_ms": 645.5255,
    "tbt_ms": 0,
-   "fcp_ms": 298.005,
+   "fcp_ms": 245.5255,
    "error": null
   }
  },
@@ -149,19 +149,19 @@
    "largest": 0.0012
   },
   "mission@390": {
-   "cls": 0.0049,
-   "shifts": 1,
-   "largest": 0.0049
-  },
-  "parts@1440": {
-   "cls": 0.1623,
-   "shifts": 2,
-   "largest": 0.1611
-  },
-  "parts@390": {
    "cls": 0.0048,
    "shifts": 1,
    "largest": 0.0048
+  },
+  "parts@1440": {
+   "cls": 0.0012,
+   "shifts": 1,
+   "largest": 0.0012
+  },
+  "parts@390": {
+   "cls": 0.0049,
+   "shifts": 1,
+   "largest": 0.0049
   },
   "forecast@1440": {
    "cls": 0.0012,
@@ -174,13 +174,13 @@
    "largest": 0.0048
   },
   "rotables@1440": {
-   "cls": 0.1571,
-   "shifts": 7,
-   "largest": 0.1556
+   "cls": 0.0015,
+   "shifts": 5,
+   "largest": 0.0012
   },
   "rotables@390": {
-   "cls": 0.0049,
-   "shifts": 2,
+   "cls": 0.0059,
+   "shifts": 3,
    "largest": 0.0048
   },
   "network@1440": {
@@ -189,19 +189,19 @@
    "largest": 0.0012
   },
   "network@390": {
-   "cls": 0.0048,
+   "cls": 0.0049,
    "shifts": 1,
-   "largest": 0.0048
+   "largest": 0.0049
   },
   "capital@1440": {
-   "cls": 0.0109,
-   "shifts": 11,
-   "largest": 0.0095
+   "cls": 0.0013,
+   "shifts": 8,
+   "largest": 0.0012
   },
   "capital@390": {
-   "cls": 0.0075,
+   "cls": 0.0282,
    "shifts": 2,
-   "largest": 0.0048
+   "largest": 0.0233
   },
   "aog@1440": {
    "cls": 0.0012,
@@ -209,9 +209,9 @@
    "largest": 0.0012
   },
   "aog@390": {
-   "cls": 0.0049,
+   "cls": 0.0048,
    "shifts": 1,
-   "largest": 0.0049
+   "largest": 0.0048
   },
   "actions@1440": {
    "cls": 0.0012,
@@ -239,9 +239,9 @@
    "largest": 0.0012
   },
   "about@390": {
-   "cls": 0.0047,
+   "cls": 0.0049,
    "shifts": 1,
-   "largest": 0.0047
+   "largest": 0.0049
   },
   "glossary@1440": {
    "cls": 0.0012,
@@ -264,143 +264,143 @@
    "largest": 0.0048
   },
   "lab/cutaway.html@1440": {
-   "cls": 0.0416,
-   "shifts": 2,
-   "largest": 0.0416
+   "cls": 0.0004,
+   "shifts": 1,
+   "largest": 0.0004
   },
   "lab/cutaway.html@390": {
-   "cls": 0.1762,
-   "shifts": 1,
-   "largest": 0.1762
+   "cls": 0,
+   "shifts": 0,
+   "largest": 0
   }
  },
- "cls_max": 0.1762,
+ "cls_max": 0.0282,
  "animations": {
   "tour@x1": {
-   "duration_ms": 20025,
+   "duration_ms": 20040,
    "frames": 1199,
-   "fps": 59.9,
+   "fps": 59.8,
    "frame_p50_ms": 16.7,
-   "frame_p95_ms": 16.7,
+   "frame_p95_ms": 16.8,
    "frame_max_ms": 33.4,
-   "frames_over_33ms": 1,
+   "frames_over_33ms": 0,
    "longtasks_over_50ms": 0,
    "longtasks_over_200ms": 0,
    "longest_task_ms": 0,
    "tour_state_end": {
     "index": 4,
     "playing": true,
-    "elapsed": 0,
-    "stepMs": 3000,
-    "ready": false,
-    "loops": 1,
-    "timers": 1
-   },
-   "cdp": {
-    "TaskDuration": 0.903,
-    "ScriptDuration": 0.11,
-    "LayoutDuration": 0.078,
-    "RecalcStyleDuration": 0.113,
-    "LayoutCount": 957,
-    "RecalcStyleCount": 1631
-   }
-  },
-  "slider@x1": {
-   "duration_ms": 4636,
-   "frames": 277,
-   "fps": 59.7,
-   "frame_p50_ms": 16.7,
-   "frame_p95_ms": 16.8,
-   "frame_max_ms": 16.8,
-   "frames_over_33ms": 0,
-   "longtasks_over_50ms": 0,
-   "longtasks_over_200ms": 0,
-   "longest_task_ms": 0,
-   "cdp": {
-    "TaskDuration": 0.544,
-    "ScriptDuration": 0.08,
-    "LayoutDuration": 0.076,
-    "RecalcStyleDuration": 0.18,
-    "LayoutCount": 287,
-    "RecalcStyleCount": 287
-   }
-  },
-  "cutaway@x1": {
-   "duration_ms": 4034,
-   "frames": 242,
-   "fps": 60.0,
-   "frame_p50_ms": 16.7,
-   "frame_p95_ms": 16.8,
-   "frame_max_ms": 16.8,
-   "frames_over_33ms": 0,
-   "longtasks_over_50ms": 0,
-   "longtasks_over_200ms": 0,
-   "longest_task_ms": 0,
-   "ready": true,
-   "cdp": {
-    "TaskDuration": 0.085,
-    "ScriptDuration": 0.005,
-    "LayoutDuration": 0.008,
-    "RecalcStyleDuration": 0.014,
-    "LayoutCount": 6,
-    "RecalcStyleCount": 122
-   }
-  },
-  "tour@x4": {
-   "duration_ms": 20056,
-   "frames": 1174,
-   "fps": 58.5,
-   "frame_p50_ms": 16.7,
-   "frame_p95_ms": 16.8,
-   "frame_max_ms": 150.1,
-   "frames_over_33ms": 9,
-   "longtasks_over_50ms": 3,
-   "longtasks_over_200ms": 0,
-   "longest_task_ms": 121,
-   "tour_state_end": {
-    "index": 4,
-    "playing": true,
-    "elapsed": 2366.600000000002,
+    "elapsed": 2099.899999999998,
     "stepMs": 3000,
     "ready": true,
     "loops": 1,
     "timers": 0
    },
    "cdp": {
-    "TaskDuration": 2.858,
-    "ScriptDuration": 0.289,
-    "LayoutDuration": 0.301,
-    "RecalcStyleDuration": 0.361,
-    "LayoutCount": 901,
-    "RecalcStyleCount": 1577
+    "TaskDuration": 1.645,
+    "ScriptDuration": 0.172,
+    "LayoutDuration": 0.091,
+    "RecalcStyleDuration": 0.16,
+    "LayoutCount": 975,
+    "RecalcStyleCount": 1634
+   }
+  },
+  "slider@x1": {
+   "duration_ms": 4635,
+   "frames": 276,
+   "fps": 59.5,
+   "frame_p50_ms": 16.7,
+   "frame_p95_ms": 16.8,
+   "frame_max_ms": 33.3,
+   "frames_over_33ms": 0,
+   "longtasks_over_50ms": 0,
+   "longtasks_over_200ms": 0,
+   "longest_task_ms": 0,
+   "cdp": {
+    "TaskDuration": 0.881,
+    "ScriptDuration": 0.142,
+    "LayoutDuration": 0.117,
+    "RecalcStyleDuration": 0.301,
+    "LayoutCount": 286,
+    "RecalcStyleCount": 286
+   }
+  },
+  "cutaway@x1": {
+   "duration_ms": 4016,
+   "frames": 240,
+   "fps": 59.8,
+   "frame_p50_ms": 16.7,
+   "frame_p95_ms": 16.7,
+   "frame_max_ms": 16.8,
+   "frames_over_33ms": 0,
+   "longtasks_over_50ms": 0,
+   "longtasks_over_200ms": 0,
+   "longest_task_ms": 0,
+   "ready": true,
+   "cdp": {
+    "TaskDuration": 0.116,
+    "ScriptDuration": 0.007,
+    "LayoutDuration": 0.015,
+    "RecalcStyleDuration": 0.018,
+    "LayoutCount": 5,
+    "RecalcStyleCount": 121
+   }
+  },
+  "tour@x4": {
+   "duration_ms": 20045,
+   "frames": 1182,
+   "fps": 59.0,
+   "frame_p50_ms": 16.7,
+   "frame_p95_ms": 16.8,
+   "frame_max_ms": 133.3,
+   "frames_over_33ms": 7,
+   "longtasks_over_50ms": 3,
+   "longtasks_over_200ms": 0,
+   "longest_task_ms": 109,
+   "tour_state_end": {
+    "index": 4,
+    "playing": true,
+    "elapsed": 1900,
+    "stepMs": 3000,
+    "ready": true,
+    "loops": 1,
+    "timers": 0
+   },
+   "cdp": {
+    "TaskDuration": 1.953,
+    "ScriptDuration": 0.218,
+    "LayoutDuration": 0.23,
+    "RecalcStyleDuration": 0.24,
+    "LayoutCount": 968,
+    "RecalcStyleCount": 1618
    }
   },
   "slider@x4": {
-   "duration_ms": 4640,
-   "frames": 257,
-   "fps": 55.4,
+   "duration_ms": 4639,
+   "frames": 271,
+   "fps": 58.4,
    "frame_p50_ms": 16.7,
-   "frame_p95_ms": 33.3,
-   "frame_max_ms": 50,
-   "frames_over_33ms": 7,
-   "longtasks_over_50ms": 1,
+   "frame_p95_ms": 16.8,
+   "frame_max_ms": 33.4,
+   "frames_over_33ms": 1,
+   "longtasks_over_50ms": 0,
    "longtasks_over_200ms": 0,
-   "longest_task_ms": 51,
+   "longest_task_ms": 0,
    "cdp": {
-    "TaskDuration": 1.966,
-    "ScriptDuration": 0.251,
-    "LayoutDuration": 0.278,
-    "RecalcStyleDuration": 0.762,
-    "LayoutCount": 267,
-    "RecalcStyleCount": 267
+    "TaskDuration": 1.425,
+    "ScriptDuration": 0.204,
+    "LayoutDuration": 0.205,
+    "RecalcStyleDuration": 0.506,
+    "LayoutCount": 281,
+    "RecalcStyleCount": 281
    }
   },
   "cutaway@x4": {
-   "duration_ms": 4101,
-   "frames": 245,
+   "duration_ms": 4040,
+   "frames": 241,
    "fps": 59.7,
    "frame_p50_ms": 16.7,
-   "frame_p95_ms": 16.8,
+   "frame_p95_ms": 16.7,
    "frame_max_ms": 33.4,
    "frames_over_33ms": 0,
    "longtasks_over_50ms": 0,
@@ -408,12 +408,12 @@
    "longest_task_ms": 0,
    "ready": true,
    "cdp": {
-    "TaskDuration": 0.259,
-    "ScriptDuration": 0.017,
-    "LayoutDuration": 0.026,
-    "RecalcStyleDuration": 0.045,
-    "LayoutCount": 5,
-    "RecalcStyleCount": 121
+    "TaskDuration": 0.21,
+    "ScriptDuration": 0.014,
+    "LayoutDuration": 0.028,
+    "RecalcStyleDuration": 0.035,
+    "LayoutCount": 6,
+    "RecalcStyleCount": 122
    }
   }
  },
@@ -436,7 +436,7 @@
   "lighthouse parts:desktop": {
    "performance>=85": true,
    "accessibility>=90": true,
-   "cls<0.05": false
+   "cls<0.05": true
   },
   "lighthouse forecast:mobile": {
    "performance>=85": true,
@@ -448,7 +448,7 @@
    "accessibility>=90": true,
    "cls<0.05": true
   },
-  "cls_on_load<0.05 (all routes)": false,
+  "cls_on_load<0.05 (all routes)": true,
   "anim tour@x1": {
    "no longtask>200ms": true,
    "fps>=55": true
