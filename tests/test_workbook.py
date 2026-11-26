@@ -1,13 +1,16 @@
-"""Planner workbook (excel/grounded_no_more_planner_workbook.xlsx, built by scripts/build_workbook.py).
+"""Planner workbook v2 (excel/grounded_no_more_planner_workbook.xlsx, built by scripts/build_workbook.py).
 
 Three layers of verification:
-1. Structure: sheets, the disclaimer, live formula strings (POISSON.DIST, SUMPRODUCT, COUNTIF, GAMMALN, VLOOKUP),
-   data validation, filters and conditional formatting are present.
-2. Python cross-check of the documented defaults: the "Python reference" rows in the sheets equal
-   gnm.policy.analytic / gnm.policy.policies results, and the ROP formula logic reproduces the frozen P1/P2
-   hub reorder point for all 80 AUH consumable/expendable rows.
+1. Structure: sheets, the disclaimer, wording rules, live formula strings (POISSON.DIST, SUMPRODUCT, COUNTIF,
+   GAMMALN, VLOOKUP), data validation, filters and conditional formatting.
+2. Python cross-check of the defaults: the "Python reference" rows equal gnm.policy.analytic /
+   gnm.policy.policies results, and the ROP formula logic reproduces the frozen v2 P1/P2 hub reorder point for every
+   AUH consumable/expendable row.
 3. Formula evaluation: the workbook is recalculated with the `formulas` package for 3 input sets per calculator
-   and compared with values computed independently in Python (skipped if `formulas` is not installed).
+   and compared with values computed independently in Python; the default recalculation reproduces the AOG-lab
+   exposures and the actions.json counts (skipped if `formulas` is not installed).
+No incident id, PN or count is typed here: everything is derived from the pipeline outputs the same way the
+builder derives it.
 """
 from __future__ import annotations
 
@@ -24,9 +27,13 @@ openpyxl = pytest.importorskip("openpyxl")
 
 ROOT = Path(__file__).resolve().parents[1]
 XLSX = ROOT / "excel" / "grounded_no_more_planner_workbook.xlsx"
+DOWNLOAD = ROOT / "docs" / "downloads" / XLSX.name
 NAME = XLSX.name
 DISCLAIMER = ("Independent educational simulation. Not an airline system or an approved maintenance, "
               "airworthiness or dispatch tool.")
+FLOAT, ROP, EXC, AOG, ROUTES = ("Poisson float calculator", "ROP calculator", "Exception list",
+                                "AOG exposure calculator", "AOG recovery routes")
+BANNED = ("aircraft risk score", "aircraft ready", "approved to fly", "live data", "quarantine", "1000–1019")
 
 needs_inputs = pytest.mark.skipif(
     not (ROOT / "docs" / "data" / "parts.json").exists()
@@ -42,12 +49,17 @@ def _bw():
 
 
 @pytest.fixture(scope="module")
-def built(tmp_path_factory):
+def bw():
+    return _bw()
+
+
+@pytest.fixture(scope="module")
+def built(tmp_path_factory, bw):
     """Build a fresh copy so the test checks the current script and outputs, not a stale file."""
     if not (ROOT / "docs" / "data" / "parts.json").exists():
         pytest.skip("pipeline outputs missing")
     out = tmp_path_factory.mktemp("wb") / NAME
-    _bw().build(out)
+    bw.build(out)
     return out
 
 
@@ -57,61 +69,96 @@ def wb(built):
 
 
 @pytest.fixture(scope="module")
-def inputs():
-    return _bw().load_inputs()
+def inputs(bw):
+    return bw.load_inputs()
+
+
+def _all_text(wb):
+    return " ".join(str(c.value) for ws in wb.worksheets for row in ws.iter_rows() for c in row
+                    if isinstance(c.value, str) and not c.value.startswith("="))
 
 
 # ------------------------------------------------------------------ 1. structure
-def test_committed_workbook_exists():
+def test_committed_workbook_exists_and_download_copy():
     assert XLSX.exists(), "run python scripts/build_workbook.py"
+    assert DOWNLOAD.exists() and DOWNLOAD.read_bytes() == XLSX.read_bytes(), "docs/downloads copy is stale"
 
 
-def test_sheets_and_disclaimer(wb):
-    assert wb.sheetnames == ["README", "Part list", "Float calculator", "Rotable examples", "ROP calculator",
-                             "ROP examples", "Exception list", "AOG exposure"]
+def test_sheets_and_disclaimer(wb, bw):
+    assert wb.sheetnames == bw.SHEETS
     assert wb["README"]["C5"].value == DISCLAIMER
     for ws in wb.worksheets:
         texts = " ".join(str(c.value) for row in ws.iter_rows(max_row=6) for c in row if c.value)
         assert "Independent educational simulation" in texts, ws.title
-    legend = {wb["README"].cell(r, 2).value for r in range(1, 60)}
+    legend = {wb["README"].cell(r, 2).value for r in range(1, 80)}
     assert {"REAL", "DERIVED", "ASSUMED", "SIMULATED"} <= legend
 
 
+def test_wording_rules_and_v2_framing(wb, inputs):
+    txt = _all_text(wb)
+    low = txt.lower()
+    for b in BANNED:
+        assert b not in low, b
+    used = {i["id"] for i in _bw().showcase_incidents(inputs["incidents"], inputs["cfg"])}
+    for inc_id in {i["id"] for i in inputs["incidents"]["incidents"]} - used:
+        assert f"Worked incident {inc_id}" not in txt
+    assert "simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions" in txt
+    assert "a legacy OEM-quote policy holding only 8 outstation rotables" in txt
+    assert "if you invest an additional aed" in low
+    assert txt.count("A v1 world was archived after a domain review; see archive/v1") == 1
+    assert "material shortage exposure" in low and "simulated planning snapshot" in low
+    seeds = inputs["kpis"]["seeds"]
+    assert f"seeds {seeds[0]}–{seeds[-1]}" in txt
+
+
 def test_design_tokens_applied(wb):
-    ws = wb["Float calculator"]
+    ws = wb[FLOAT]
     assert ws["B8"].fill.fgColor.rgb.endswith("132638")        # deep steel header
     assert ws["B8"].font.color.rgb.endswith("22C7B8")          # teal header text
     assert ws["A1"].fill.fgColor.rgb.endswith("09131F")        # midnight canvas
-    assert ws["E20"].number_format == '"AED "#,##0'
-    assert ws["E17"].number_format == "0.0%"
+    assert ws["E21"].number_format == '"AED "#,##0'
+    assert ws["E18"].number_format == "0.0%"
     assert ws["B5"].font.name == "Inter"
 
 
 def test_part_list(wb, inputs):
     ws = wb["Part list"]
-    pns = [ws.cell(r, 2).value for r in range(6, 126)]
-    assert pns == [p["pn"] for p in inputs["parts"]["parts"]] and len(set(pns)) == 120
-    assert ws["T6"].value == "=S6-Q6" and ws["U6"].value == "=S6*L6"
+    parts = inputs["parts"]["parts"]
+    n = len(parts)
+    pns = [ws.cell(r, 2).value for r in range(6, 6 + n)]
+    assert pns == [p["pn"] for p in parts] and len(set(pns)) == n
+    hdr = {ws.cell(5, c).value: c for c in range(2, 27)}
+    for h in ("Applicability", "Removal mode", "Family", "QPA NB", "QPA WB", "Rectification window (hypothetical)"):
+        assert h in hdr, h
+    col = lambda h: [ws.cell(r, hdr[h]).value for r in range(6, 6 + n)]
+    assert col("Applicability") == [p["applicability"] for p in parts]
+    assert set(col("Rectification window (hypothetical)")) <= {"D0", "D3", "D10", "NONE"}
+    assert "NONE" in col("Rectification window (hypothetical)")
+    assert ws["V6"].value == "=T6-S6" and ws["W6"].value == "=T6*O6"
     assert ws["Z5"].value == "Row provenance" and ws["Z6"].value == "SIMULATED"
     assert {ws.cell(4, c).value for c in range(2, 27)} <= {"REAL", "DERIVED", "ASSUMED", "SIMULATED"}
-    assert ws.auto_filter.ref == "B5:Z125"
-    assert ws["S127"].value == "=SUM(S6:S125)" and "SUBTOTAL(9" in ws["S128"].value
+    end = 5 + n
+    assert ws.auto_filter.ref == f"B5:Z{end}"
+    assert ws[f"S{end + 2}"].value == f"=SUM(S6:S{end})" and "SUBTOTAL(9" in ws[f"S{end + 3}"].value
 
 
-def test_float_formulas(wb):
-    ws = wb["Float calculator"]
-    assert "POISSON.DIST(E11-1,E16,TRUE)" in ws["E17"].value
-    assert ws["E18"].value.startswith("=E16-E11+SUMPRODUCT(") and "$B$31:$B$91" in ws["E18"].value
-    assert ws["E16"].value == "=E9*E10/30"
+def test_float_formulas(wb, inputs):
+    ws = wb[FLOAT]
+    n_ex = len(inputs["rot"]["float_examples"])
+    assert "POISSON.DIST(E14-1,E17,TRUE)" in ws["E18"].value          # immediate fill P(X <= S-1)
+    assert ws["E14"].value == "=E11+E12"                               # total spares = base stock + loop
+    assert ws["E19"].value.startswith("=E17-E14+SUMPRODUCT(") and "$B$35:$B$95" in ws["E19"].value
+    assert ws["E17"].value == "=E9*E10/30"
     assert "VLOOKUP($C$5" in ws["C9"].value and "INDEX(" in ws["C11"].value
-    assert [ws.cell(r, 2).value for r in (31, 91)] == [0, 60]
+    assert [ws.cell(r, 2).value for r in (35, 95)] == [0, 60]
     dv = {str(v.sqref): v.formula1 for v in ws.data_validations.dataValidation}
-    assert "'Rotable examples'!$A$5:$A$44" in dv["C5"] and dv["C6"] == '"P0,P1,P2,I125"'
-    assert ws._charts, "availability chart missing"
+    assert f"'Rotable examples'!$A$5:$A${4 + n_ex}" in dv["C5"] and dv["C6"] == '"P0,P1,P2,I125"'
+    assert ws._charts, "fill chart missing"
+    assert ws["C5"].value == _bw().default_float_pn(inputs["rot"])
 
 
 def test_rop_formulas(wb):
-    ws = wb["ROP calculator"]
+    ws = wb[ROP]
     assert ws["E21"].value == "=E9*E11/7"
     assert ws["E22"].value == "=E10*E21+E9^2*(E12/7)^2"
     assert 'COUNTIF($C$46:$C$846,"<"&E15)' in ws["E27"].value
@@ -119,36 +166,66 @@ def test_rop_formulas(wb):
     assert "POISSON.DIST(B46,$E$21,TRUE)" in ws["C46"].value
     assert "GAMMALN" in ws["D46"].value and ws["E47"].value == "=E46+D47"
     assert ws["B846"].value == 800
+    assert [ws[f"J{r}"].value for r in range(9, 13)] == ["D0", "D3", "D10", "NONE"]
 
 
-def test_exception_sheet(wb, inputs):
-    ws = wb["Exception list"]
-    acts = inputs["actions"]["actions"]
-    assert ws.auto_filter.ref == f"B18:L{18 + len(acts)}"
-    ids = [ws.cell(r, 2).value for r in range(19, 19 + len(acts))]
-    assert ids == [a["exception_id"] for a in acts]
-    assert any("COUNTIFS(" in str(c.value) for row in ws.iter_rows(min_row=7, max_row=16) for c in row)
+def test_exception_sheet(wb, inputs, bw):
+    ws = wb[EXC]
+    A = inputs["actions"]
+    acts = A["actions"]
+    L = bw.exception_layout(A)
+    H = L["header"]
+    last = openpyxl.utils.get_column_letter(1 + len(bw.EXC_COLS))
+    assert ws.auto_filter.ref == f"B{H}:{last}{H + len(acts)}"
+    assert [ws.cell(r, 2).value for r in range(H + 1, H + 1 + len(acts))] == [a["exception_id"] for a in acts]
+    hdr = [ws.cell(H, c).value for c in range(2, 2 + len(bw.EXC_COLS))]
+    for h in ("Trigger", "Quantity", "Source", "Destination", "Required-by week", "Expected availability",
+              "Constraints", "Owner", "Expected benefit"):
+        assert h in hdr
+    owners = {ws.cell(r, hdr.index("Owner") + 2).value for r in range(H + 1, H + 1 + len(acts))}
+    assert owners <= set(A["owners"])
+    assert {ws.cell(r, hdr.index("Provenance") + 2).value for r in range(H + 1, H + 1 + len(acts))} == {"DERIVED"}
+    assert any("COUNTIFS(" in str(c.value) for row in ws.iter_rows(min_row=7, max_row=H - 1) for c in row)
     rules = [r for cf in ws.conditional_formatting for r in cf.rules]
     assert len(rules) >= 4
 
 
 def test_aog_formulas(wb):
-    ws = wb["AOG exposure"]
-    assert ws["C14"].value == "=MAX(0,C8-C13)"
-    assert ws["C17"].value == "=C16+C9"
-    assert "VLOOKUP(C6,$I$6:$J$7,2,FALSE)" in ws["C15"].value
+    ws = wb[AOG]
+    assert ws["C19"].value == "=IF(C8>C16,C8+C17-C16,0)"
+    assert ws["C23"].value == "=C21+C22+C11"
+    assert ws["C20"].value == "=VLOOKUP(C6,$I$6:$K$7,2,FALSE)*C12"
+    assert ws["C22"].value.startswith("=IF(C8>C16,VLOOKUP(C6,$I$6:$K$7,3,FALSE)")
+
+
+def test_routes_sheet(wb, inputs):
+    ws = wb[ROUTES]
+    a = inputs["cfg"]["aog_sourcing"]
+    txt = " ".join(str(c.value) for row in ws.iter_rows() for c in row if c.value is not None)
+    assert "engineering/quality approval required" in txt and "human decision" in txt
+    assert "not market data" in txt
+    vals = [c.value for row in ws.iter_rows() for c in row]
+    assert float(a["robbery"]["availability"]) in vals
+    assert float(a["exchange_loan"]["availability"]["widebody"]) in vals
+    for stn, p in a["local_borrow"]["availability"]["narrowbody"].items():
+        assert stn in vals and float(p) in vals
+    tags = [ws.cell(r, 7).value for r in range(6, 20) if ws.cell(r, 2).value]
+    assert tags and set(tags) == {"ASSUMED"}
 
 
 # ------------------------------------------------------------------ 2. Python cross-check of the defaults
 @needs_inputs
-def test_float_reference_row_matches_analytic(wb, inputs):
+def test_float_reference_row_matches_analytic(wb, inputs, bw):
     from gnm.policy.analytic import float_calc
-    ex = next(e for e in inputs["rot"]["float_examples"] if e["pn"] == "GN-28-R031")
+    pn = bw.default_float_pn(inputs["rot"])
+    ex = next(e for e in inputs["rot"]["float_examples"] if e["pn"] == pn)
     ref = float_calc(ex["rate_per_30d"], ex["pipeline_days"], ex["rec_units"] + ex["loop_units"], ex["unit_cost_aed"])
-    ws = wb["Float calculator"]
-    got = [ws.cell(26, c).value for c in range(3, 8)]
+    ws = wb[FLOAT]
+    got = [ws.cell(29, c).value for c in range(3, 8)]
     exp = [ref[k] for k in ("pipeline_mean", "availability", "ebo", "expected_wait_days", "capital_aed")]
     assert got == pytest.approx(exp)
+    assert ref["availability"] == pytest.approx(stats.poisson.cdf(ex["spares_total"]["recommended"] - 1,
+                                                                  ref["pipeline_mean"]))
 
 
 def _rop_like_sheet(rate, vmr, lt, lt_sd, sl, method="Auto", k_max=800):
@@ -169,30 +246,50 @@ def _rop_like_sheet(rate, vmr, lt, lt_sd, sl, method="Auto", k_max=800):
 
 
 @needs_inputs
-def test_rop_logic_reproduces_frozen_hub_reorder_points(inputs):
-    bw = _bw()
+def test_rop_logic_reproduces_frozen_hub_reorder_points(inputs, bw):
+    import pandas as pd
     from gnm.policy.policies import reorder_point_from_row
     rop = bw.rop_examples(inputs["ff"], inputs["p1"], inputs["parts"])
-    st = {k: float(v) for k, v in inputs["cfg"]["service_targets"].items() if k in ("D0", "D3", "D10")}
-    assert len(rop) == 80
+    p2 = pd.read_csv(ROOT / "outputs" / "policies" / "P2_stock_params.csv").query("station == 'AUH'").set_index("pn")
+    st = bw.service_targets(inputs)
+    n_ce = sum(p["cls"] != "R" for p in inputs["parts"]["parts"])
+    assert len(rop) == n_ce
     for _, r in rop.iterrows():
         sl = st[r.deadline_class]
         s_sheet = _rop_like_sheet(r.net_weekly_rate, r.vmr_net_week, r.lead_time_d, r.lead_time_sd_d, sl)
-        assert s_sheet == r.p1_s == reorder_point_from_row(r, sl), r.pn
+        assert s_sheet == r.p1_s == reorder_point_from_row(r, sl) == p2.loc[r.pn, "s"], r.pn
 
 
-def test_rop_reference_row(wb):
-    assert wb["ROP calculator"]["E40"].value == 109  # GN-30-E025 (PS4) frozen hub s
+def test_rop_reference_row(wb, inputs, bw):
+    from gnm.policy.policies import reorder_point_from_row
+    rop = bw.rop_examples(inputs["ff"], inputs["p1"], inputs["parts"]).set_index("pn")
+    pn = bw.default_rop_pn(rop.reset_index())
+    assert wb[ROP]["C5"].value == pn
+    r = rop.loc[pn]
+    assert wb[ROP]["E40"].value == reorder_point_from_row(r, bw.service_targets(inputs)[r.deadline_class]) == r.p1_s
 
 
 @needs_inputs
-def test_aog_pipeline_exposures_present(wb, inputs):
-    ws = wb["AOG exposure"]
-    incs = {i["id"]: i for i in inputs["incidents"]["incidents"]}
-    o = next(o for o in incs["AOG-0001"]["options"] if o["key"] == "b")
-    assert o["exposure_aed"] == 137650.0  # 9 h x AED 15,000 + AED 2,650
-    vals = [ws.cell(r, 9).value for r in range(20, 60) if ws.cell(r, 9).value is not None]
-    assert 137650.0 in vals
+def test_aog_incidents_chosen_by_rule(wb, inputs, bw):
+    incs = bw.showcase_incidents(inputs["incidents"], inputs["cfg"])
+    assert incs[0]["id"] == inputs["incidents"]["ps1_incident_id"]
+    assert incs[1]["id"] in inputs["incidents"]["showcase_ids"] and incs[1]["id"] != incs[0]["id"]
+    txt = _all_text(wb)
+    for inc in incs:
+        assert f"Worked incident {inc['id']}" in txt
+    # the pipeline exposures are reproduced by the Python rule
+    win, eco = bw.window_hours(inputs["cfg"]), inputs["cfg"]["economics"]
+    n = 0
+    for inc in incs:
+        for o in inc["options"]:
+            if o["wait_h"] is None:
+                continue
+            _, ex = bw.exposure_rule(o["wait_h"], win[inc["deadline"]], o["fitting_h"],
+                                     eco["aog_penalty_aed_per_hour"][inc["archetype"]],
+                                     eco["aog_event_cost_aed"][inc["archetype"]], o["direct_cost"])
+            assert ex == pytest.approx(o["exposure_aed"], abs=0.5)
+            n += 1
+    assert n >= 4
 
 
 # ------------------------------------------------------------------ 3. formula evaluation (formulas package)
@@ -203,63 +300,73 @@ def _key(sheet, cell):
 @pytest.fixture(scope="module")
 def model(built):
     formulas = pytest.importorskip("formulas")
-    xl = formulas.ExcelModel().loads(str(built)).finish()
-    return xl
+    return formulas.ExcelModel().loads(str(built)).finish()
+
+
+def _val(v):
+    return v.value[0, 0] if hasattr(v, "value") else v
 
 
 def _calc(model, sheet, inputs, outputs):
     sol = model.calculate(inputs={_key(sheet, c): v for c, v in inputs.items() if v is not None},
                           outputs=[_key(sheet, c) for c in outputs])
-    res = {}
-    for c in outputs:
-        v = sol[_key(sheet, c)]
-        v = v.value[0, 0] if hasattr(v, "value") else v
-        res[c] = v
-    return res
+    return {c: _val(sol[_key(sheet, c)]) for c in outputs}
 
 
-FLOAT_CASES = [  # inputs -> expected via gnm.policy.analytic.float_calc
-    ({"C5": "GN-28-R031", "C6": "I125"}, None),
-    ({"C5": "GN-32-R014", "C6": "P0"}, None),
-    ({"C5": "GN-21-R002", "C6": "P2", "D9": 3.0, "D10": 40.0, "D11": 4, "D12": 100000.0}, (3.0, 40.0, 4, 100000.0)),
-]
+def _float_cases(inputs, bw):
+    ex = inputs["rot"]["float_examples"]
+    ps1 = bw.default_float_pn(inputs["rot"])
+    others = [e["pn"] for e in ex if e["pn"] != ps1]
+    return [({"C5": ps1, "C6": "I125"}, None),
+            ({"C5": others[0], "C6": "P0"}, None),
+            ({"C5": others[-1], "C6": "P2", "D9": 3.0, "D10": 40.0, "D11": 4, "D12": 1, "D13": 100000.0},
+             (3.0, 40.0, 5, 100000.0))]
 
 
 @needs_inputs
 @pytest.mark.parametrize("case", range(3))
-def test_float_calculator_evaluates(model, inputs, case):
+def test_float_calculator_evaluates(model, inputs, bw, case):
     from gnm.policy.analytic import float_calc
-    ins, manual = FLOAT_CASES[case]
+    ins, manual = _float_cases(inputs, bw)[case]
+    ins = dict(ins)
     if manual is None:
         ex = next(e for e in inputs["rot"]["float_examples"] if e["pn"] == ins["C5"])
         units = {"P0": ex["p0_units"], "P1": ex["p1_units"], "P2": ex["p2_units"], "I125": ex["rec_units"]}[ins["C6"]]
         manual = (ex["rate_per_30d"], ex["pipeline_days"], units + ex["loop_units"], ex["unit_cost_aed"])
-        for c in ("D9", "D10", "D11", "D12"):
+        assert manual[2] == ex["spares_total"]["recommended" if ins["C6"] == "I125" else ins["C6"]]
+        for c in ("D9", "D10", "D11", "D12", "D13"):
             ins[c] = None
     exp = float_calc(*manual)
-    got = _calc(model, "Float calculator", ins, ["E11", "E16", "E17", "E18", "E19", "E20"])
-    assert got["E11"] == manual[2]
-    assert got["E16"] == pytest.approx(exp["pipeline_mean"], rel=1e-9)
-    assert got["E17"] == pytest.approx(exp["availability"], rel=1e-9, abs=1e-12)
-    assert got["E18"] == pytest.approx(exp["ebo"], rel=1e-7, abs=1e-9)
-    assert got["E19"] == pytest.approx(exp["expected_wait_days"], rel=1e-7, abs=1e-9)
-    assert got["E20"] == pytest.approx(exp["capital_aed"])
+    got = _calc(model, FLOAT, ins, ["E14", "E17", "E18", "E19", "E20", "E21", "E24"])
+    assert got["E14"] == manual[2]
+    assert got["E17"] == pytest.approx(exp["pipeline_mean"], rel=1e-9)
+    assert got["E18"] == pytest.approx(exp["availability"], rel=1e-9, abs=1e-12)
+    assert got["E19"] == pytest.approx(exp["ebo"], rel=1e-7, abs=1e-9)
+    assert got["E20"] == pytest.approx(exp["expected_wait_days"], rel=1e-7, abs=1e-9)
+    assert got["E21"] == pytest.approx(exp["capital_aed"])
+    if case < 2:
+        assert got["E24"] == "MATCH"
+
+
+def _rop_cases(inputs, bw):
+    rop = bw.rop_examples(inputs["ff"], inputs["p1"], inputs["parts"])
+    pn0 = bw.default_rop_pn(rop)
+    pois = rop[(rop.dist_kind == "poisson") & (rop.pn != pn0)]
+    other = (pois if len(pois) else rop[rop.pn != pn0]).pn.iloc[0]
+    third = rop[~rop.pn.isin([pn0, other])].pn.iloc[0]
+    return [(pn0, "Auto", {}), (other, "Auto", {}),
+            (third, "Poisson", {"D9": 2.0, "D10": 1.0, "D11": 30.0, "D12": 0.0, "D15": 0.95})]
 
 
 @needs_inputs
-@pytest.mark.parametrize("pn,method,overrides", [
-    ("GN-30-E025", "Auto", {}),                          # PS4: NB, re-estimated 156.5 d lead time -> s 109
-    ("GN-21-C010", "Auto", {}),                          # PS3 declining consumable
-    ("GN-24-C020", "Poisson", {"D9": 2.0, "D10": 1.0, "D11": 30.0, "D12": 0.0, "D15": 0.95}),
-])
-def test_rop_calculator_evaluates(model, inputs, pn, method, overrides):
+@pytest.mark.parametrize("case", range(3))
+def test_rop_calculator_evaluates(model, inputs, bw, case):
     from gnm.policy.analytic import reorder_point
-    bw = _bw()
+    pn, method, overrides = _rop_cases(inputs, bw)[case]
     rop = bw.rop_examples(inputs["ff"], inputs["p1"], inputs["parts"]).set_index("pn")
-    st = {k: float(v) for k, v in inputs["cfg"]["service_targets"].items() if k in ("D0", "D3", "D10")}
     ins = {"C5": pn, "C6": method, "D9": None, "D10": None, "D11": None, "D12": None, "D15": None}
     ins.update(overrides)
-    got = _calc(model, "ROP calculator", ins, ["E21", "E22", "E24", "E29", "E37", "E39"])
+    got = _calc(model, ROP, ins, ["E21", "E22", "E24", "E29", "E37", "E39"])
     r = rop.loc[pn]
     if not overrides:
         assert got["E21"] == pytest.approx(r.ltd_mean, rel=1e-9)
@@ -273,49 +380,64 @@ def test_rop_calculator_evaluates(model, inputs, pn, method, overrides):
         assert got["E29"] == reorder_point(mean, 0.95)
 
 
-AOG_CASES = [  # archetype, deadline, wait h, direct AED, multiplier
-    ("narrowbody", "D0", 9.0, 2650.0, 1.0),
-    ("widebody", "D10", 300.0, 1000.0, 1.0),
-    ("narrowbody", "D3", 50.0, 500.0, 2.0),
+AOG_CASES = [  # archetype, window class, wait h, part class, fitting override, direct AED, hourly multiplier
+    ("narrowbody", "D0", 9.0, "R", None, 2650.0, 1.0),
+    ("widebody", "D3", 156.0, "R", 6.0, 1000.0, 0.5),
+    ("narrowbody", "D10", 50.0, "E", None, 500.0, 2.0),   # on time: exposure = direct cost only
 ]
 
 
 @needs_inputs
 @pytest.mark.parametrize("case", AOG_CASES)
-def test_aog_calculator_evaluates(model, inputs, case):
-    arch, dl, wait, direct, mult = case
+def test_aog_calculator_evaluates(model, inputs, bw, case):
+    arch, dl, wait, pc, fit_o, direct, mult = case
     cfg = inputs["cfg"]
-    slack = float(cfg["deadline_classes"][dl]["hours"])
-    pen = float(cfg["economics"]["aog_penalty_aed_per_hour"][arch]) * mult
-    exp = max(0.0, wait - slack) * pen + direct
-    got = _calc(model, "AOG exposure", {"C6": arch, "C7": dl, "C8": wait, "C9": direct, "C10": mult},
-                ["C13", "C14", "C17", "C18"])
-    assert got["C13"] == slack
-    assert got["C17"] == pytest.approx(exp)
-    assert got["C18"] == ("Yes" if wait <= slack else "No")
+    win = bw.window_hours(cfg)[dl]
+    fit = fit_o if fit_o is not None else bw.fitting_hours(cfg)[pc]
+    eco = cfg["economics"]
+    h, exp = bw.exposure_rule(wait, win, fit, eco["aog_penalty_aed_per_hour"][arch], eco["aog_event_cost_aed"][arch],
+                              direct, mult)
+    got = _calc(model, AOG, {"C6": arch, "C7": dl, "C8": wait, "C9": pc, "C10": fit_o, "C11": direct, "C12": mult},
+                ["C16", "C17", "C19", "C22", "C23", "C24"])
+    assert got["C16"] == win and got["C17"] == fit
+    assert got["C19"] == pytest.approx(h)
+    assert got["C23"] == pytest.approx(exp)
+    assert got["C22"] == (float(eco["aog_event_cost_aed"][arch]) if wait > win else 0)
+    assert got["C24"] == ("Yes" if wait <= win else "No")
 
 
 @needs_inputs
-def test_default_evaluation_checks(model, inputs, wb):
-    """Default recalculation: AOG worked incidents reproduce the pipeline, exception counts match actions.json."""
+def test_default_evaluation_checks(model, inputs, wb, bw):
+    """Default recalculation: worked incidents reproduce the AOG lab, exception counts match actions.json."""
     sol = model.calculate()
 
     def val(sheet, cell):
-        v = sol[_key(sheet, cell)]
-        return v.value[0, 0] if hasattr(v, "value") else v
+        return _val(sol[_key(sheet, cell)])
 
-    checks = [val("AOG exposure", f"J{r}") for r in range(20, 60)
-              if _key("AOG exposure", f"J{r}") in sol and val("AOG exposure", f"J{r}") in ("OK", "CHECK")]
-    assert checks and all(c == "OK" for c in checks)
-    ws_rows = [r for r in range(7, 17) if wb["Exception list"][f"B{r}"].value == "Total"]
-    assert ws_rows
-    rt = ws_rows[0]
-    counts = inputs["actions"]["counts"]
-    assert val("Exception list", f"F{rt}") == len(inputs["actions"]["actions"]) == 75
-    sev = counts.get("by_severity", counts)
-    assert [val("Exception list", f"{c}{rt}") for c in "CDE"] == [sev["urgent"], sev["review"], sev["info"]]
-    assert val("ROP calculator", "E39") == "MATCH"
-    assert val("Part list", "S127") == sum(p["stock_total"] for p in inputs["parts"]["parts"])
+    ws = wb[AOG]
+    n_opts = 0
+    for r in range(25, ws.max_row + 1):
+        if ws[f"K{r}"].value and str(ws[f"K{r}"].value).startswith("=IF(ABS("):
+            n_opts += 1
+            assert val(AOG, f"K{r}") == "OK", r
+            assert val(AOG, f"G{r}") == pytest.approx(ws[f"I{r}"].value, abs=0.5)
+            if ws[f"J{r}"].value != "—":
+                assert val(AOG, f"H{r}") == ws[f"J{r}"].value, r
+    incs = bw.showcase_incidents(inputs["incidents"], inputs["cfg"])
+    assert n_opts == sum(o["wait_h"] is not None for i in incs for o in i["options"])
 
-import pytest as _pytest_v2  # noqa: E402
-pytestmark = [_pytest_v2.mark.v1_outputs, _pytest_v2.mark.skip(reason="awaiting v2 regeneration (workbook hard-codes v1 AOG incident ids and exception counts)")]
+    A = inputs["actions"]
+    L = bw.exception_layout(A)
+    rt = L["total_row"]
+    assert wb[EXC][f"B{rt}"].value == "Total"
+    assert val(EXC, f"F{rt}") == len(A["actions"]) == sum(A["counts"]["by_type"].values())
+    sev = A["counts"]["by_severity"]
+    assert [val(EXC, f"{c}{rt}") for c in "CDE"] == [sev.get("urgent", 0), sev.get("review", 0), sev.get("info", 0)]
+    for i, t in enumerate(L["types"]):
+        assert val(EXC, f"F{7 + i}") == A["counts"]["by_type"][t]
+    for i, o in enumerate(L["owners"]):
+        assert val(EXC, f"I{7 + i}") == sum(a["owner"] == o for a in A["actions"])
+    assert val(ROP, "E39") == "MATCH"
+    assert val(FLOAT, "E24") == "MATCH"
+    n = len(inputs["parts"]["parts"])
+    assert val("Part list", f"T{n + 7}") == sum(p["stock_total_p2"] for p in inputs["parts"]["parts"])
