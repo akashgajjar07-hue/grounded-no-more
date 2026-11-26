@@ -87,3 +87,37 @@ def test_csv_export_header_and_rows(site, browser):  # noqa: F811
         assert not problems, problems
     finally:
         ctx.close()
+
+
+# ---- design wave 2 (critic item #5: column grid grouped by PN, rationale in the drawer)
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_actions_wave2_grid(site, browser, vp):  # noqa: F811
+    from collections import Counter
+    ctx, page, problems = open_page(browser, site + "#/actions", vp)
+    try:
+        assert "Week " not in page.locator(".page-head, #view h1").first.inner_text()
+        # every exception row is a grid with the scannable columns
+        r0 = page.locator(".pac-row").first
+        for cls in ("pac-c-sev", "pac-c-part", "pac-c-stock", "pac-c-aog", "pac-c-d0", "pac-c-action", "pac-c-due"):
+            assert r0.locator(f".{cls}").count() == 1, cls
+        # the long sentence is not in the row; it is in the drawer
+        assert A[0]["summary"] not in page.locator(".pac-list").inner_text()
+        # same-PN exceptions are grouped under one header
+        page.locator('[data-action="show-all"]').click()
+        multi = [pn for pn, n in Counter(a["pn"] for a in A if a["pn"]).items() if n > 1]
+        for pn in multi:
+            g = page.locator(f'.pac-group[data-pn="{pn}"]')
+            assert g.count() == 1, pn
+            assert g.locator(".pac-row").count() == sum(a["pn"] == pn for a in A)
+        if vp == "1440":
+            assert page.locator(".pac-grid-head").is_visible()
+        page.locator(".pac-row").first.click()
+        dr = page.locator(".drawer.is-open")
+        dr.wait_for()
+        first_id = page.locator(".pac-row").first.get_attribute("data-id")
+        a = next(x for x in A if x["exception_id"] == first_id)
+        assert a["summary"] in dr.locator(".pac-why").inner_text()
+        assert len(dr.locator(".drawer-head h2").first.inner_text()) < len(a["summary"]) or len(a["summary"]) < 60
+        assert not problems, problems
+    finally:
+        ctx.close()

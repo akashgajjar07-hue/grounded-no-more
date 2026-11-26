@@ -9,7 +9,7 @@
  * sensitivity tornado, the lever panel, the stress-variant table and the method limitations.
  */
 import { h, pageHead, card, provChip, slider, dataTable, segmented, kpiTile, icon } from '../ui.js';
-import { chartFrame, responsive, svgIn, axisBottom, withTooltip, theme, fmtAED, fmtHours, fmtInt, fmtNum, reducedMotion, truncate } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, axisBottom, withTooltip, theme, fmtAED, fmtHours, fmtInt, fmtNum, reducedMotion, truncate, HEADLINE_MAX, markerRect, labelAround } from '../charts/theme.js';
 
 export const data = ['frontier', 'policies'];
 
@@ -28,6 +28,11 @@ const num = (v) => (v === null || v === undefined || v === '' || Number.isNaN(+v
 const ciTxt = (lo, hi, f) => (lo == null || hi == null ? '' : ` [${f(lo)}, ${f(hi)}]`);
 const signH = (v) => (v == null ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmtHours(Math.abs(v))}`);
 const signAED = (v) => fmtAED(v, { sign: true });
+/** First candidate headline that fits the 90-character rule (data-driven copy can vary in length). */
+export const fitHeadline = (...cands) => { const c = cands.filter(Boolean); return c.find((t) => t.length <= (HEADLINE_MAX || 90)) || c.at(-1); };
+const SER = theme.series;
+/** "AED 4.8M more capital" (no sign: reads well after "for"). Capital deltas are neutral copy, never red. */
+const capWords = (v) => (v == null ? '—' : v === 0 ? 'no extra capital' : `${fmtAED(Math.abs(v))} ${v > 0 ? 'more' : 'less'} capital`);
 
 function ensureCSS() {
   if (document.querySelector('link[data-view-css="capital-optimiser"]')) return;
@@ -114,14 +119,23 @@ export async function render(el, ctx) {
 
   // ---- KPI strip (constructed from frontier points; baseline = base policy P2)
   if (rec && P2) {
-    const tiles = [
-      kpiTile({ label: `${rec.id} capital · vs ${baseId}`, value: rec.cap, baseline: P2.cap, delta: rec.cap - P2.cap, better: 'lower', provenance: prov, ci: rec.capCI[0] != null ? rec.capCI : null }, { format: fmtAED, deltaFormat: (v) => fmtAED(v) }),
-      kpiTile({ label: `${rec.id} AOG / yr · vs ${baseId}`, value: rec.aog, baseline: P2.aog, delta: rec.aog - P2.aog, better: 'lower', provenance: prov, ci: rec.ci }, { format: fmtHours }),
-      P0 ? kpiTile({ label: `${rec.id} AOG / yr · vs P0`, value: rec.aog, baseline: P0.aog, delta: rec.aog - P0.aog, better: 'lower', provenance: prov, ci: rec.ci }, { format: fmtHours }) : null,
-      rec.total != null && P2.total != null ? kpiTile({ label: `${rec.id} annual cost · vs ${baseId}`, value: rec.total, baseline: P2.total, delta: rec.total - P2.total, better: 'lower', provenance: prov, ci: rec.totalCI }, { format: fmtAED }) : null,
-    ].filter(Boolean);
-    tiles.forEach((t) => t.classList.add('span-3'));
-    el.append(h('div', { class: 'grid-12 co-kpis', dataset: { story: 'capital-kpis' } }, tiles));
+    const capTile = kpiTile({ label: `${rec.id} capital`, value: rec.cap, baseline: P2.cap, delta: rec.cap - P2.cap, better: 'lower', provenance: prov, ci: rec.capCI[0] != null ? rec.capCI : null }, { format: fmtAED, deltaFormat: (v) => fmtAED(v) });
+    // One AOG tile with both comparisons (vs the base policy and vs P0), instead of the same value twice.
+    const aogTile = kpiTile({ label: `${rec.id} AOG / yr`, value: rec.aog, baseline: P2.aog, delta: rec.aog - P2.aog, better: 'lower', provenance: prov, ci: rec.ci }, { format: fmtHours });
+
+    if (P0) {
+      const d0 = rec.aog - P0.aog;
+      const second = h('span', { class: `kpi-delta co-delta2 is-${d0 < 0 ? 'good' : d0 > 0 ? 'bad' : 'flat'}` }, icon(d0 < 0 ? 'arrow-down' : d0 > 0 ? 'arrow-up' : 'minus'), `${d0 > 0 ? '+' : d0 < 0 ? '−' : ''}${fmtHours(Math.abs(d0))}`, h('span', { class: 'kpi-delta-ref' }, ' vs P0'));
+      aogTile.querySelector('.kpi-delta')?.after(second);
+      const foot = aogTile.querySelector('.kpi-foot span:last-child');
+      if (foot) foot.textContent = `${baseId} ${fmtHours(P2.aog)} · P0 ${fmtHours(P0.aog)}`;
+      aogTile.setAttribute('aria-label', `${rec.id} AOG per year: ${fmtHours(rec.aog)}; ${fmtHours(Math.abs(rec.aog - P2.aog))} ${rec.aog < P2.aog ? 'below' : 'above'} ${baseId}, ${fmtHours(Math.abs(d0))} ${d0 < 0 ? 'below' : 'above'} P0`);
+    }
+    const costTile = rec.total != null && P2.total != null ? kpiTile({ label: `${rec.id} annual cost`, value: rec.total, baseline: P2.total, delta: rec.total - P2.total, better: 'lower', provenance: prov, ci: rec.totalCI }, { format: fmtAED }) : null;
+    const tiles = [capTile, aogTile, costTile].filter(Boolean);
+    tiles.forEach((t) => { const r = t.querySelector('.kpi-delta-ref'); if (r) r.textContent = ` vs ${baseId}`; t.querySelector('.kpi-spark')?.remove(); });
+    tiles.forEach((t) => t.classList.add(tiles.length === 3 ? 'span-4' : 'span-6'));
+    el.append(h('div', { class: `grid-12 co-kpis co-kpis--${tiles.length}`, dataset: { story: 'capital-kpis' } }, tiles));
   }
 
   // ---- hero: frontier chart + control panel
@@ -130,7 +144,8 @@ export async function render(el, ctx) {
   el.append(h('div', { class: 'grid-12 mt-3' }, chartCard, side));
   const recVsP2 = rec?.dBaseAog;
   const headline = rec && P2 && P0
-    ? `${rec.id} holds material AOG to ${fmtHours(rec.aog)} a year, ${fmtHours(P2.aog - rec.aog)} below P2 for ${fmtAED(rec.cap - P2.cap)} more capital`
+    ? fitHeadline(`${rec.id} holds material AOG to ${fmtHours(rec.aog)} a year, ${fmtHours(Math.abs(P2.aog - rec.aog))} ${rec.aog <= P2.aog ? 'below' : 'above'} ${baseId} for ${capWords(rec.cap - P2.cap)}`,
+      `${rec.id}: ${fmtHours(rec.aog)} AOG a year, ${fmtHours(Math.abs(P2.aog - rec.aog))} ${rec.aog <= P2.aog ? 'below' : 'above'} ${baseId}, ${capWords(rec.cap - P2.cap)}`)
     : 'Frontier: capital versus material AOG hours';
   const tableRows = pts.slice().sort((a, b) => a.cap - b.cap).map((p) => ({ id: p.id, kind: KIND_LABEL[p.kind] || p.kind, cap: p.cap, aog: p.aog, lo: p.ci[0], hi: p.ci[1], sel: p.sel?.aog ?? null, front: front.includes(p) ? 'yes' : 'no' }));
   const frame = chartFrame(chartCard, {
@@ -142,7 +157,8 @@ export async function render(el, ctx) {
   const legend = h('div', { class: 'co-legend t-12' },
     h('span', {}, h('i', { class: 'co-key co-key--front' }), 'Non-dominated plans (connected)'),
     h('span', {}, h('i', { class: 'co-key co-key--dom' }), 'Dominated'),
-    h('span', {}, h('i', { class: 'co-key co-key--pol' }), 'Reference policies P0 / P1 / P2'),
+    P0 ? h('span', {}, h('i', { class: 'co-key co-key--p0' }), 'P0 baseline') : null,
+    h('span', {}, h('i', { class: 'co-key co-key--pol' }), 'Reference policies P1 / P2'),
     h('span', {}, h('i', { class: 'co-key co-key--lev' }), 'Levers (annual spend)'),
     h('span', { class: 'co-legend-sel', hidden: mode !== 'overlay' }, h('i', { class: 'co-key co-key--sel' }), 'Selection-seed position'));
   frame.body.before(legend);
@@ -192,7 +208,7 @@ export async function render(el, ctx) {
       const wh = gWhisk.selectAll('line').data(pts, (p) => p.id).join('line').attr('stroke-linecap', 'round');
       T(wh).attr('x1', (p) => x(posOf(p, md).cap)).attr('x2', (p) => x(posOf(p, md).cap))
         .attr('y1', (p) => y(Math.max(yMin, posOf(p, md).ci?.[0] ?? posOf(p, md).aog))).attr('y2', (p) => y(posOf(p, md).ci?.[1] ?? posOf(p, md).aog))
-        .attr('stroke', (p) => (isPolicy(p) ? theme.color.accent2 : fr.includes(p) ? theme.color.accent : theme.color.neutral)).attr('stroke-opacity', (p) => (fr.includes(p) || isPolicy(p) ? 0.55 : 0.3)).attr('stroke-width', 1.25);
+        .attr('stroke', (p) => (p === P0 ? SER.baseline : isPolicy(p) ? SER.neutral : fr.includes(p) ? theme.color.accent : theme.color.neutral)).attr('stroke-opacity', (p) => (fr.includes(p) || isPolicy(p) ? 0.55 : 0.3)).attr('stroke-width', 1.25);
       // points
       const shape = (p) => (isPolicy(p) ? d3.symbolSquare : p.kind === 'lever' || p.kind === 'combo' ? d3.symbolDiamond : d3.symbolCircle);
       const size = (p) => (p === rec ? 150 : isPolicy(p) ? 90 : fr.includes(p) ? 52 : 30);
@@ -200,7 +216,7 @@ export async function render(el, ctx) {
       pp.attr('d', (p) => d3.symbol(shape(p), size(p))())
         .attr('fill', (p) => (p === rec ? theme.color.accent : isPolicy(p) ? theme.color.bg : fr.includes(p) ? theme.color.bg : theme.color.neutral))
         .attr('fill-opacity', (p) => (fr.includes(p) || isPolicy(p) || p === rec ? 1 : 0.55))
-        .attr('stroke', (p) => (isPolicy(p) ? theme.color.accent2 : fr.includes(p) || p === rec ? theme.color.accent : p.kind === 'lever' || p.kind === 'combo' ? theme.color.muted : 'none'))
+        .attr('stroke', (p) => (p === P0 ? SER.baseline : isPolicy(p) ? SER.neutral : fr.includes(p) || p === rec ? theme.color.accent : p.kind === 'lever' || p.kind === 'combo' ? theme.color.muted : 'none'))
         .attr('stroke-width', (p) => (isPolicy(p) ? 2 : 1.5)).style('cursor', 'pointer')
         .attr('tabindex', (p) => (front.includes(p) ? 0 : null)).attr('role', (p) => (front.includes(p) ? 'button' : null))
         .attr('aria-label', (p) => `${p.id}: ${fmtAED(p.cap)}, ${fmtHours(p.aog)} per year`);
@@ -221,7 +237,7 @@ export async function render(el, ctx) {
       legend.querySelector('.co-legend-sel').hidden = mode !== 'overlay';
       // policy labels
       const pols = [P0, P1, P2].filter(Boolean);
-      const labs = gLab.selectAll('text').data(pols, (p) => p.id).join('text').attr('class', 'gnm-label gnm-label--strong').attr('fill', theme.color.accent2).attr('font-family', theme.font.mono);
+      const labs = gLab.selectAll('text').data(pols, (p) => p.id).join('text').attr('class', 'gnm-label gnm-label--strong').style('fill', (p) => (p === P0 ? SER.baseline : SER.neutral)).attr('font-family', theme.font.mono);
       T(labs).attr('x', (p) => x(posOf(p, md).cap) + (p === P2 ? -10 : 10)).attr('y', (p) => y(posOf(p, md).aog) + (p === P2 ? 20 : 0)).attr('dy', '0.32em').attr('text-anchor', (p) => (p === P2 ? 'end' : 'start'))
         .text((p) => (p.id === baseId && !narrow ? `${p.id} · base policy` : p.id));
       // annotation on recommended
@@ -236,7 +252,11 @@ export async function render(el, ctx) {
         if (md !== 'selection' && P2 && rec.dBaseAog) lines.push([`vs ${baseId}: ${signH(rec.dBaseAog[0])}${ciTxt(rec.dBaseAog[1], rec.dBaseAog[2], (v) => fmtInt(v))} h · ${signAED(rec.cap - P2.cap)}`, 'gnm-annot-sub']);
         if (md !== 'selection' && P0) lines.push([`vs P0: ${signH(rec.aog - P0.aog)}${rec.dP0Aog ? ciTxt(rec.dP0Aog[1], rec.dP0Aog[2], (v) => fmtInt(v)) : ''} · ${signAED(rec.cap - P0.cap)}`, 'gnm-annot-sub']);
         if (narrow) {
-          gAnn.append('text').attr('class', 'gnm-annot-text').attr('x', ax + 14).attr('y', ayy + 24).text(`${rec.id} · recommended`);
+          const txt = `${rec.id} · recommended`;
+          const obstacles = pts.map((p) => markerRect(x(posOf(p, md).cap), y(posOf(p, md).aog), p === rec ? 8 : 4));
+          const centroid = { x: d3.mean(fr, (p) => x(posOf(p, md).cap)), y: d3.mean(fr, (p) => y(posOf(p, md).aog)) };
+          const lp = labelAround({ x: ax, y: ayy }, { r: 12, text: txt, centroid, obstacles, bounds: { x: 0, y: 0, width: iw, height: ih } });
+          gAnn.append('text').attr('class', 'gnm-annot-text').attr('x', lp.x).attr('y', lp.y).attr('dy', '0.32em').attr('text-anchor', lp.anchor).text(txt);
           annoteHTML.replaceChildren(...lines.map(([t], i) => h(i ? 'span' : 'b', {}, t)));
           annoteHTML.hidden = false;
         } else {
@@ -301,7 +321,7 @@ export async function render(el, ctx) {
   showSel();
 
   // ---- allocation table
-  const allocCard = h('section', { class: 'card mt-3', dataset: { story: 'allocation-table' } });
+  const allocCard = h('section', { class: 'card mt-3 co-alloc', dataset: { story: 'allocation-table' } });
   el.append(allocCard);
   const allocHead = h('div', { class: 'card-head' });
   const allocBody = h('div');
@@ -312,20 +332,23 @@ export async function render(el, ctx) {
   });
   const altTxt = (a) => LEVER_LABEL[a] || (a === 'hold' ? 'Hold (no better lever)' : a ? String(a).replace(/_/g, ' ') : '—');
   const allocTable = dataTable({
-    caption: 'Allocation changes', maxHeight: 440, dense: true, sort: { key: 'risk', dir: 'desc' }, rowKey: 'pn',
+    caption: 'Allocation changes', dense: true, sort: { key: 'risk', dir: 'desc' }, rowKey: 'pn', stickyFirst: true,
+    // ≤ 767 px keeps the decision columns; ≤ 480 px stacks rows: PN · AOG-avoided pill · change, Δ capital, station
+    mobileColumns: ['pn', 'risk', 'change', 'dcap', 'station'],
     columns: [
-      { key: 'pn', label: 'PN', mono: true }, { key: 'station', label: 'Station', mono: true }, { key: 'cls', label: 'Class', mono: true },
+      { key: 'pn', label: 'PN', mono: true }, { key: 'station', label: 'Station', short: 'Stn', mono: true }, { key: 'cls', label: 'Class', mono: true },
       { key: 'current', label: `Float (${baseId})`, num: true, format: (v) => (v == null ? '—' : fmtInt(v)) },
-      { key: 'change', label: 'Change', num: true, render: (r) => h('span', { class: `co-chg ${r.change > 0 ? 'is-up' : r.change < 0 ? 'is-down' : ''}` }, r.change == null ? '—' : `${r.change > 0 ? '+' : r.change < 0 ? '−' : ''}${fmtInt(Math.abs(r.change))}`) },
+      { key: 'change', label: 'Change', short: 'Units', num: true, render: (r) => h('span', { class: `co-chg ${r.change > 0 ? 'is-up' : r.change < 0 ? 'is-down' : ''}` }, r.change == null ? '—' : `${r.change > 0 ? '+' : r.change < 0 ? '−' : ''}${fmtInt(Math.abs(r.change))}`) },
       { key: 'proposed', label: 'Proposed', num: true, format: (v) => (v == null ? '—' : fmtInt(v)) },
-      { key: 'dcap', label: 'Δ capital', num: true, format: (v) => (v == null ? '—' : signAED(v)) },
-      { key: 'risk', label: 'AOG h/yr avoided*', num: true, format: (v) => (v == null ? '—' : fmtNum(v, 1)) },
+      { key: 'dcap', label: 'Δ capital', short: 'Δ cap', num: true, format: (v) => (v == null ? '—' : signAED(v)) },
+      { key: 'risk', label: 'AOG h/yr avoided*', short: 'AOG h avoided', num: true, format: (v) => (v == null ? '—' : fmtNum(v, 1)) },
       { key: 'alt', label: 'Alternative', format: altTxt },
     ],
     rows: [],
   });
-  const allocNote = h('p', { class: 't-12 muted mt-2 m-0' });
-  allocBody.append(allocTable, allocNote, h('p', { class: 't-12 faint mt-2 m-0' }, `Rows are the changes against the base policy ${baseId} only. * AOG h/yr avoided is a leave-one-out estimate on the analytic model (a ranking heuristic), not a simulated result. Alternative action is the cheapest modelled lever for that PN.`));
+  const allocNote = h('p', { class: 't-12 muted m-0' });
+  const allocMore = h('button', { type: 'button', class: 'btn btn--sm co-alloc-more', dataset: { action: 'alloc-more' }, onclick: () => { const on = allocCard.classList.toggle('is-expanded'); allocMore.textContent = on ? 'Show fewer rows' : allocMore.dataset.label; } });
+  allocBody.append(allocTable, allocMore, h('div', { class: 'co-alloc-notes stack-1' }, allocNote, h('p', { class: 't-12 faint m-0' }, `Rows are the changes against the base policy ${baseId} only. * AOG h/yr avoided is a leave-one-out estimate on the analytic model (a ranking heuristic), not a simulated result. Alternative action is the cheapest modelled lever for that PN.`)));
   function showAlloc() {
     const rows = allocRows(sel.id);
     const tot = F.allocation_totals?.[sel.id];
@@ -333,9 +356,12 @@ export async function render(el, ctx) {
     const units = num(tot?.delta_units) ?? rows.reduce((s, r) => s + (r.change || 0), 0);
     const nAll = num(tot?.n_rows) ?? rows.length;
     allocHead.replaceChildren(
-      h('div', {}, h('div', { class: 'card-kicker' }, `Allocation · ${sel.id}`), h('h3', { class: 'card-title co-alloc-title', 'aria-live': 'polite' }, rows.length ? `${sel.id} changes ${fmtInt(nAll)} PN-station levels vs ${baseId}: ${units >= 0 ? '+' : '−'}${fmtInt(Math.abs(units))} units, ${signAED(sumCap)} allocation capital` : sel === P2 ? `${baseId} is the base policy: no changes` : `No allocation rows exported for ${sel.id}`)),
+      h('div', {}, h('div', { class: 'card-kicker' }, `Allocation · ${sel.id}`), h('h3', { class: 'card-title co-alloc-title', 'aria-live': 'polite' }, rows.length ? `${sel.id} changes ${fmtInt(nAll)} PN-station levels vs ${baseId}: ${units >= 0 ? '+' : '−'}${fmtInt(Math.abs(units))} units, ${capWords(sumCap)}` : sel === P2 ? `${baseId} is the base policy: no changes` : `No allocation rows exported for ${sel.id}`)),
       h('div', { class: 'row' }, provChip(prov)));
     allocTable.update(rows);
+    allocMore.dataset.label = `Show all ${fmtInt(rows.length)} changes`;
+    allocMore.textContent = allocCard.classList.contains('is-expanded') ? 'Show fewer rows' : allocMore.dataset.label;
+    allocCard.classList.toggle('has-more', rows.length > 8);
     allocNote.textContent = tot && num(tot.n_rows_shown) < num(tot.n_rows) ? `Showing the ${fmtInt(tot.n_rows_shown)} changes with the largest modelled effect of ${fmtInt(tot.n_rows)}; totals cover all rows.` : '';
     allocCard.dataset.point = sel.id;
   }
@@ -379,18 +405,24 @@ export async function render(el, ctx) {
     const val = (r, k) => (k === 'other' ? r.other : r.c[k] || 0);
     const r0 = rows[0], rl = rows.at(-1);
     const fr = chartFrame(host, {
-      headline: r0.c.aog_penalty != null && rl.c.aog_penalty != null ? `The AOG penalty is ${fmtNum((r0.c.aog_penalty / r0.total) * 100, 0)}% of ${r0.p.id}'s annual cost; ${rl.p.id} cuts it from ${fmtAED(r0.c.aog_penalty)} to ${fmtAED(rl.c.aog_penalty)} a year` : `Annual cost: ${r0.p.id} ${fmtAED(r0.total)} vs ${rl.p.id} ${fmtAED(rl.total)}`,
+      headline: r0.c.aog_penalty != null && rl.c.aog_penalty != null
+        ? fitHeadline(`The AOG penalty is ${fmtNum((r0.c.aog_penalty / r0.total) * 100, 0)}% of ${r0.p.id}'s annual cost; ${rl.p.id} cuts it from ${fmtAED(r0.c.aog_penalty)} to ${fmtAED(rl.c.aog_penalty)}`,
+          `${rl.p.id} cuts the annual AOG penalty from ${fmtAED(r0.c.aog_penalty)} (${r0.p.id}) to ${fmtAED(rl.c.aog_penalty)}`)
+        : `Annual cost: ${r0.p.id} ${fmtAED(r0.total)} vs ${rl.p.id} ${fmtAED(rl.total)}`,
       subtitle: `Annual cost components (AED/yr) · ${seedsTxt} · means · capital is a stock: shown on the right, never added`,
       provenance: prov, source: 'policies.json · frontier.json',
       table: { columns: [{ key: 'id', label: 'Plan', mono: true }, ...segs.map((c) => ({ key: c.key, label: c.label, num: true, format: (v) => fmtAED(v) })), { key: 'total', label: 'Annual total', num: true, format: (v) => fmtAED(v) }, { key: 'cap', label: 'Capital (separate)', num: true, format: (v) => fmtAED(v) }], rows: rows.map((r) => ({ id: r.p.id, ...Object.fromEntries(segs.map((c) => [c.key, val(r, c.key)])), total: r.total, cap: r.p.cap })) },
     });
-    const shade = { aog_penalty: theme.color.accent2, holding_cost: 'rgba(185,200,214,0.62)', repair_cost: 'rgba(185,200,214,0.40)', expedite_cost: 'rgba(185,200,214,0.25)', logistics_cost: 'rgba(185,200,214,0.15)', other: 'rgba(185,200,214,0.10)' };
+    // Neutral ramp: the AOG penalty is the strongest titanium, never copper (copper = capital / P0 only).
+    const shade = { aog_penalty: SER.neutral, holding_cost: 'rgba(185,200,214,0.55)', repair_cost: 'rgba(185,200,214,0.36)', expedite_cost: 'rgba(185,200,214,0.22)', logistics_cost: 'rgba(185,200,214,0.14)', other: 'rgba(185,200,214,0.09)' };
     stops.push(responsive(fr.body, (w) => {
       const narrow = w < 520;
-      const lw = 52, capW = narrow ? 84 : 124, rowH = narrow ? 56 : 58;
+      const lw = 40, capW = narrow ? 84 : 124, rowH = narrow ? 52 : 58;
       const Hh = rows.length * rowH + 24;
       const svg = svgIn(fr.body, w, Hh, 'Annual cost breakdown');
-      const bw = Math.max(60, w - lw - capW - (narrow ? 12 : 84));
+      // Reserve room for the longest total label so it always sits clear of its bar end.
+      const labW = d3.max(rows, (r) => fmtAED(r.total).length) * 7 + 14;
+      const bw = Math.max(60, w - lw - capW - labW - 8);
       const x = d3.scaleLinear().domain([0, d3.max(rows, (r) => r.total)]).range([0, bw]);
       svg.append('text').attr('class', 'gnm-label').attr('x', lw).attr('y', 10).style('fill', theme.color.faint).text('Annual cost / yr');
       svg.append('text').attr('class', 'gnm-label').attr('x', w - capW + 12).attr('y', 10).style('fill', theme.color.faint).text('Capital (stock)');
@@ -405,10 +437,9 @@ export async function render(el, ctx) {
           withTooltip(seg, () => ({ title: `${r.p.id} · ${c.label}`, rows: [['AED / yr', fmtAED(v)], ['Share', `${fmtNum((v / r.total) * 100, 0)}%`]] }));
           x0 += x(v);
         });
-        if (!narrow && r.c.aog_penalty != null && x(r.c.aog_penalty) > 90) svg.append('text').attr('class', 'gnm-label').attr('x', lw + 4).attr('y', y0 + 33).style('fill', theme.color.accent2).text(`AOG penalty ${fmtAED(r.c.aog_penalty)}`);
-        const tx = x0 + 6, fits = tx + 72 < w - capW;
-        svg.append('text').attr('class', 'gnm-label gnm-label--strong').attr('font-family', theme.font.mono).attr('x', fits ? tx : Math.min(x0, w - capW - 8)).attr('text-anchor', fits ? 'start' : 'end').attr('y', fits ? y0 + 13 : y0 - 4).text(fmtAED(r.total));
-        svg.append('rect').attr('x', w - capW + 12).attr('y', y0 + 4).attr('width', 10).attr('height', 10).attr('fill', 'none').attr('stroke', theme.color.muted);
+        if (r.c.aog_penalty != null) svg.append('text').attr('class', 'gnm-label').attr('x', lw).attr('y', y0 + 32).style('fill', theme.color.faint).text(`AOG penalty ${fmtAED(r.c.aog_penalty)}`);
+        svg.append('text').attr('class', 'gnm-label gnm-label--strong').attr('font-family', theme.font.mono).attr('x', x0 + 8).attr('text-anchor', 'start').attr('y', y0 + 13).text(fmtAED(r.total));
+        svg.append('rect').attr('x', w - capW + 12).attr('y', y0 + 4).attr('width', 10).attr('height', 10).attr('rx', 2).attr('fill', SER.baseline).attr('fill-opacity', 0.25).attr('stroke', SER.baseline);
         svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', w - capW + 28).attr('y', y0 + 13).text(fmtAED(r.p.cap));
       });
     }));
@@ -432,7 +463,9 @@ export async function render(el, ctx) {
     const all = rows.flatMap((r) => r.settings);
     const minLo = d3.min(all, (s) => num(s.ci?.[0]) ?? s.v), vMin = d3.min(all, (s) => s.v), vMax = d3.max(all, (s) => s.v);
     const fr = chartFrame(host, {
-      headline: minLo > 0 ? `${rec.id} beats ${baseId} at every tested setting: net benefit stays between ${fmtAED(vMin)} and ${fmtAED(vMax)} a year` : `${rec.id}'s advantage over ${baseId} is not robust everywhere: the lowest bound reaches ${fmtAED(minLo)} a year`,
+      headline: minLo > 0
+        ? fitHeadline(`${rec.id} beats ${baseId} at every tested setting: net benefit stays between ${fmtAED(vMin)} and ${fmtAED(vMax)} a year`, `${rec.id} beats ${baseId} at every tested setting: ${fmtAED(vMin)} to ${fmtAED(vMax)} a year net`)
+        : fitHeadline(`${rec.id}'s advantage over ${baseId} is not robust everywhere: the lowest bound reaches ${fmtAED(minLo)} a year`, `${rec.id}'s edge over ${baseId} is not robust: the lowest bound reaches ${fmtAED(minLo)} a year`),
       subtitle: `Net annual benefit of ${rec.id} vs ${baseId} (AED/yr) · paired · selection seeds 100–119 · base case ${fmtAED(base)} · 95% CI whiskers`,
       provenance: prov, source: 'frontier.json',
       table: { columns: [{ key: 'label', label: 'Factor' }, { key: 'setting', label: 'Setting' }, { key: 'v', label: 'Net benefit', num: true, format: (v) => fmtAED(v) }, { key: 'lo', label: 'CI lo', num: true, format: (v) => fmtAED(v) }, { key: 'hi', label: 'CI hi', num: true, format: (v) => fmtAED(v) }, { key: 'saved', label: 'AOG h saved', num: true, format: fmtHours }],
@@ -440,17 +473,18 @@ export async function render(el, ctx) {
     });
     stops.push(responsive(fr.body, (w) => {
       const narrow = w < 520;
-      const lw = narrow ? 84 : 128, rowH = 48, Hh = rows.length * rowH + 44;
+      // Narrow: factor names sit on their own line above the bars, so setting labels never meet them.
+      const lw = narrow ? 0 : 128, rowH = narrow ? 60 : 48, Hh = rows.length * rowH + 44;
       const svg = svgIn(fr.body, w, Hh, 'Sensitivity tornado');
       const vals = all.flatMap((s) => [s.v, num(s.ci?.[0]), num(s.ci?.[1])]).filter((v) => v != null).concat([0, base]);
-      const x = d3.scaleLinear().domain(d3.extent(vals)).nice().range([lw, w - (narrow ? 36 : 44)]);
+      const x = d3.scaleLinear().domain(d3.extent(vals)).nice().range([lw + (narrow ? 34 : 0), w - (narrow ? 36 : 44)]);
       axisBottom(svg.append('g'), x, { height: Hh - 22, ticks: narrow ? 3 : 5, format: (v) => fmtAED(v, { digits: 0 }) });
       svg.append('line').attr('x1', x(0)).attr('x2', x(0)).attr('y1', 14).attr('y2', Hh - 22).attr('stroke', theme.color.lineStrong);
       svg.append('line').attr('x1', x(base)).attr('x2', x(base)).attr('y1', 14).attr('y2', Hh - 22).attr('stroke', theme.color.text).attr('stroke-dasharray', '3 3');
       svg.append('text').attr('class', 'gnm-label').attr('x', x(base)).attr('y', 9).attr('text-anchor', 'middle').text(`base ${fmtAED(base)}`);
       rows.forEach((r, i) => {
-        const yc = 34 + i * rowH;
-        svg.append('text').attr('class', 'gnm-label gnm-label--strong').attr('x', 0).attr('y', yc + 4).text(r.label);
+        const yc = (narrow ? 46 : 34) + i * rowH;
+        svg.append('text').attr('class', 'gnm-label gnm-label--strong').attr('x', 0).attr('y', narrow ? yc - 16 : yc + 4).text(r.label);
         r.settings.forEach((s, j) => {
           const yy = yc - 10 + j * 13;
           const bar = svg.append('rect').attr('x', Math.min(x(base), x(s.v))).attr('width', Math.max(1.5, Math.abs(x(s.v) - x(base)))).attr('y', yy).attr('height', 10).attr('rx', 2).attr('fill', s.v >= base ? theme.color.accent : theme.color.neutral);
@@ -488,7 +522,9 @@ export async function render(el, ctx) {
     const top = cmp.sort((a, b) => b.red - a.red).slice(0, 8);
     const levPt = pts.find((p) => p.kind === 'lever');
     const fr = chartFrame(host, {
-      headline: `Buying a spare is the cheaper way to avoid an AOG hour on ${fmtInt(buyWins)} of ${fmtInt(both)} rotable PNs; cutting repair TAT wins on ${fmtInt(tatWins)}`,
+      headline: buyWins >= tatWins
+        ? fitHeadline(`Buying a spare is the cheaper way to avoid an AOG hour on ${fmtInt(buyWins)} of ${fmtInt(both)} rotable PNs; cutting repair TAT wins on ${fmtInt(tatWins)}`, `A spare is the cheaper lever on ${fmtInt(buyWins)} of ${fmtInt(both)} rotable PNs; cutting repair TAT wins on ${fmtInt(tatWins)}`)
+        : fitHeadline(`Cutting repair TAT is the cheaper way to avoid an AOG hour on ${fmtInt(tatWins)} of ${fmtInt(both)} rotable PNs; a spare wins on ${fmtInt(buyWins)}`, `Cutting TAT is the cheaper lever on ${fmtInt(tatWins)} of ${fmtInt(both)} rotable PNs; a spare wins on ${fmtInt(buyWins)}`),
       subtitle: 'AED per AOG hour avoided per year (log scale) · modelled at the base allocation · top PNs by AOG hours avoided · lower is better',
       provenance: prov, source: 'frontier.json (levers)',
       table: { columns: [{ key: 'pn', label: 'PN', mono: true }, { key: 'unit', label: 'Unit cost', num: true, format: (v) => fmtAED(v) }, { key: 'b', label: 'Buy 1: AED/h', num: true, format: (v) => fmtAED(v) }, { key: 'bh', label: 'Buy 1: h avoided', num: true, format: (v) => fmtNum(v, 1) }, { key: 't', label: 'TAT −10 d: AED/h', num: true, format: (v) => fmtAED(v) }, { key: 'th', label: 'TAT −10 d: h avoided', num: true, format: (v) => fmtNum(v, 1) }],
@@ -502,13 +538,13 @@ export async function render(el, ctx) {
       const x = d3.scaleLog().domain([d3.min(vals) * 0.7, d3.max(vals) * 1.4]).range([lw, w - 12]);
       axisBottom(svg.append('g'), x, { height: Hh - 22, ticks: narrow ? 3 : 4, format: (v) => (String(v).match(narrow ? /^1/ : /^[125]/) ? fmtAED(v, { digits: 0 }) : '') });
       svg.append('text').attr('class', 'gnm-label').attr('x', lw).attr('y', 10).style('fill', theme.color.accent).text('● Buy 1 spare');
-      svg.append('text').attr('class', 'gnm-label').attr('x', lw + 110).attr('y', 10).style('fill', theme.color.accent2).text('◆ Cut TAT 10 d');
+      svg.append('text').attr('class', 'gnm-label').attr('x', lw + 110).attr('y', 10).style('fill', SER.neutral).text('◆ Cut TAT 10 d');
       top.forEach((c, i) => {
         const yc = 32 + i * rowH;
         svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', 0).attr('y', yc + 4).text(c.pn);
         svg.append('line').attr('x1', x(c.b.cph)).attr('x2', x(c.t.cph)).attr('y1', yc).attr('y2', yc).attr('stroke', theme.color.lineStrong);
         const cb = svg.append('circle').attr('cx', x(c.b.cph)).attr('cy', yc).attr('r', 5).attr('fill', theme.color.accent);
-        const ct = svg.append('path').attr('d', d3.symbol(d3.symbolDiamond, 60)()).attr('transform', `translate(${x(c.t.cph)},${yc})`).attr('fill', theme.color.accent2);
+        const ct = svg.append('path').attr('d', d3.symbol(d3.symbolDiamond, 60)()).attr('transform', `translate(${x(c.t.cph)},${yc})`).attr('fill', SER.neutral);
         withTooltip(cb, () => ({ title: `${c.pn} · buy 1 spare`, rows: [['AED / AOG h', fmtAED(c.b.cph)], ['AOG h/yr avoided', fmtNum(c.b.red, 1)], ['Annual holding', fmtAED(c.b.cost)], ['Unit cost', fmtAED(c.unit)]] }));
         withTooltip(ct, () => ({ title: `${c.pn} · cut TAT 10 d`, rows: [['AED / AOG h', fmtAED(c.t.cph)], ['AOG h/yr avoided', fmtNum(c.t.red, 1)], ['Annual fee', fmtAED(c.t.cost)]] }));
       });
@@ -534,11 +570,12 @@ export async function render(el, ctx) {
     const low = rows.find((r) => r.k === 'low_stress');
     const tbl = dataTable({
       caption: 'Stress-variant robustness', dense: true, bare: true,
+      mobileColumns: ['label', 'nb', 'pick', 'dA', 'rec', 'p2'],
       columns: [
         { key: 'label', label: 'Stress' }, { key: 'p2', label: baseId, num: true, format: fmtHours }, { key: 'rec', label: rec.id, num: true, format: fmtHours },
         { key: 'dA', label: 'Saved', num: true, render: (r) => h('span', { class: 'co-two' }, fmtHours(r.dA), h('small', {}, ciTxt(r.dAlo, r.dAhi, (v) => fmtNum(v, Math.abs(v) < 20 ? 1 : 0)).trim())) },
-        { key: 'nb', label: 'Net / yr', num: true, render: (r) => h('span', { class: `co-two ${r.nbhi < 0 ? 'co-neg' : ''}` }, h('span', {}, r.nbhi < 0 ? icon('alert') : null, fmtAED(r.nb)), h('small', {}, ciTxt(r.nblo, r.nbhi, (v) => fmtAED(v).replace('AED ', '')).trim())) },
-        { key: 'pick', label: 'Rule', mono: true },
+        { key: 'nb', label: 'Net / yr', short: 'Net', num: true, render: (r) => h('span', { class: `co-two ${r.nbhi < 0 ? 'co-neg' : ''}` }, h('span', {}, r.nbhi < 0 ? icon('alert') : null, fmtAED(r.nb)), h('small', {}, ciTxt(r.nblo, r.nbhi, (v) => fmtAED(v).replace('AED ', '')).trim())) },
+        { key: 'pick', label: 'Rule', short: 'Rule picks', mono: true },
       ],
       rows,
     });

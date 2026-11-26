@@ -9,12 +9,11 @@
  * includes direct cost, so the two are never added.
  */
 import { h, pageHead, card, provChip, pill, icon } from '../ui.js';
-import { chartFrame, responsive, svgIn, theme, fmtAED, fmtHours, fmtInt, fmtPct, withTooltip, truncate } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, theme, fmtAED, fmtHours, fmtInt, fmtPct, fmtWeek, withTooltip, truncate, refLine, chipLabel, HEADLINE_MAX } from '../charts/theme.js';
 
 export const data = ['aog_lab'];
 
 const STEP_LABEL = { removal: 'Removal', request: 'Request', local_check: 'Local stock check', network_check: 'Network stock check', aog_start: 'AOG starts', sourcing: 'Sourcing decided', ordered: 'Ordered', shipped: 'Shipped', arrived: 'Arrived', received: 'Received', fitted: 'Fitted · released', unfilled: 'Unfilled', context: 'Context' };
-const SHORT = { removal: 'REM', request: 'REQ', local_check: 'CHK', network_check: 'NET', aog_start: 'AOG', sourcing: 'SRC', shipped: 'SHP', arrived: 'ARR', fitted: 'FIT' };
 const BASIS = {
   transport_matrix: 'Transfers keep their estimate: transport times in this world are fixed.',
   actual_order_arrival: 'Scored on the order’s actual arrival.',
@@ -22,6 +21,27 @@ const BASIS = {
   estimate_not_realisable: 'Not taken in history, so it keeps the ex-ante estimate (cannot be realised from the record).',
 };
 const stepLabel = (s) => STEP_LABEL[s] || String(s || 'step').replace(/_/g, ' ');
+/** Short step names for the swimlane (the full sentence lives in the event log). */
+const STEP_SHORT = { removal: 'Removal', requirement: 'Requirement', request: 'Request', local_check: 'Local check', network_check: 'Network check', aog_start: 'AOG starts', sourcing: 'Sourcing', ordered: 'Ordered', shipped: 'Shipped', arrived: 'Arrived', received: 'Received', fitted: 'Fitted', unfilled: 'Unfilled', context: 'Context' };
+const stepShort = (s) => STEP_SHORT[s] || stepLabel(s);
+/** Swimlanes: desk decisions vs physical movement of the part. Unknown steps go to the desk lane. */
+const MOVE_STEPS = new Set(['shipped', 'arrived', 'received', 'fitted', 'unfilled', 'issued']);
+const laneOf = (s) => (MOVE_STEPS.has(s.step) ? 1 : 0);
+/** Plain-language reason labels; the raw code stays in a title attribute. Unknown codes are sentence-cased. */
+const REASON = {
+  LOCAL_STOCK: 'Stock on the shelf here', NO_STOCK: 'No serviceable stock', COMMITTED_TO_KIT: 'Committed to a check kit', ROBS_KIT_RESERVATION: 'Breaks a kit reservation',
+  NOT_APPLICABLE_AT_HUB: 'Request is at the hub', STOCK_AT_HUB: 'Stock at the hub', NEXT_FLIGHT_OUT: 'Next flight out', ROUTINE_SHIPMENT: 'Routine shipment covers it',
+  BELOW_PROTECTION_LEVEL: 'Donors at protection level', LATERAL_OK: 'Donor keeps its cover', NOT_CONTRACTED: 'No pool contract', NOT_POOLED_PART_CLASS: 'Part class not pooled', POOL_OK: 'Pool contracted',
+  NOT_REPAIRABLE: 'Not a repairable part', NO_OPEN_RO: 'No unit at a repair shop', RO_OVERDUE: 'Repair already overdue', NO_TIME_SAVED: 'Acceleration saves no time',
+  DOES_NOT_BEAT_ALTERNATIVES: 'Slower than another option', ACCELERATION_OK: 'Acceleration is fastest', EXPEDITE_MARKET_BUY: 'AOG-desk market purchase', OPEN_PO_EXISTS: 'Order already open',
+  NO_OPEN_SUPPLY: 'No open order or repair', OPEN_PO_INBOUND: 'Open purchase order inbound', INBOUND_TRANSFER: 'Transfer already in transit', RO_RETURN_INBOUND: 'Repair return inbound',
+  QUEUED_BEHIND_BACKORDERS: 'Queued behind earlier requests', SUPPLY_OVERDUE: 'Inbound order overdue', EXCEEDS_DEADLINE: 'Wait exceeds deadline slack',
+  HUMAN_DECISION_REQUIRED: 'Engineering approval needed', NO_DONOR_AIRCRAFT: 'No donor aircraft',
+};
+export const reasonLabel = (c) => REASON[c] || String(c || '').toLowerCase().replace(/_/g, ' ').replace(/^./, (x) => x.toUpperCase());
+const fitHeadline = (...cands) => { const c = cands.filter(Boolean); return c.find((t) => t.length <= (HEADLINE_MAX || 90)) || c.at(-1); };
+const simWeek = (absH) => (absH == null ? null : fmtWeek(Math.floor(absH / 168)));
+const tLabel = (t) => `T${t >= 0 ? '+' : '−'}${fmtHours(Math.abs(t))}`;
 const fmtAEDfull = (v) => (v == null ? '—' : `AED ${Math.round(v).toLocaleString('en-GB')}`);
 
 function ensureCSS() {
@@ -37,11 +57,21 @@ export function recommendedOption(inc) {
 }
 
 function optState(o, rec) {
-  if (o.human_decision) return { cls: 'human', pill: pill('review', 'Human decision'), order: 5 };
-  if (rec && o === rec) return { cls: 'rec', pill: pill('ok', 'Recommended'), order: 0 };
-  if (o.indicative || (o.reason_codes || []).includes('NOT_CONTRACTED')) return { cls: 'greyed', pill: pill('unknown', 'Not contracted'), order: 3 };
-  if (o.feasible) return { cls: 'feasible', pill: pill('info', o.rank ? `Feasible · rank ${o.rank}` : 'Feasible'), order: 1 };
-  return { cls: 'infeasible', pill: pill('unknown', 'Infeasible'), order: 4 };
+  if (o.human_decision) return { cls: 'human', pill: pill('review', 'Human decision'), order: 5, group: 'na' };
+  if (rec && o === rec) return { cls: 'rec', pill: pill('ok', 'Recommended · rank 1'), order: 0, group: 'ok' };
+  if (o.indicative || (o.reason_codes || []).includes('NOT_CONTRACTED')) return { cls: 'greyed', pill: pill('unknown', 'Not contracted'), order: 3, group: 'na' };
+  if (o.feasible) return { cls: 'feasible', pill: pill('info', o.rank ? `Feasible · rank ${o.rank}` : 'Feasible'), order: 1, group: 'ok' };
+  return { cls: 'infeasible', pill: pill('unknown', 'Infeasible'), order: 4, group: 'na' };
+}
+
+/** Why the recommended option misses its deadline, in one plain sentence (null when it meets it). */
+export function missedNote(inc, rec, slack) {
+  if (!rec || rec.deadline_met || rec.wait_h == null) return null;
+  const feas = (inc.options || []).filter((o) => o.feasible && !o.human_decision);
+  const anyMeets = feas.some((o) => o.deadline_met);
+  if (anyMeets) return `Misses the deadline, but has the lowest exposure of the ${fmtInt(feas.length)} feasible options.`;
+  if (!slack) return `No option meets a ${inc.deadline || 'D0'} deadline: the aircraft is AOG from removal; ranked by exposure.`;
+  return `No feasible option arrives within the ${fmtHours(slack)} slack: some AOG is unavoidable; ranked by exposure.`;
 }
 
 export async function render(el, ctx) {
@@ -110,7 +140,7 @@ export async function render(el, ctx) {
       ['AOG (history)', inc.aog_hours != null ? fmtHours(inc.aog_hours) : 'not run'], ['AOG penalty', inc.penalty_aed_per_h != null ? `${fmtAEDfull(inc.penalty_aed_per_h)} / h · ${inc.archetype || ''}` : 'not run'],
     ];
     const head = card({
-      cls: 'aog-head', kicker: `${inc.id}${inc.need_datetime ? ` · ${inc.need_datetime.replace('T', ' ').replace('Z', ' UTC (simulated)')}` : ''}`,
+      cls: 'aog-head', kicker: `${inc.id}${inc.need_h != null ? ` · ${simWeek(inc.need_h)} · simulated hour ${fmtInt(inc.need_h)}` : ''}`,
       title: `${inc.pn} · ${inc.desc || ''}`, prov,
       body: h('dl', { class: 'aog-facts' }, facts.map(([k, v]) => h('div', {}, h('dt', {}, k), h('dd', { class: k === 'Part' || k === 'Station' ? 'mono' : '' }, v)))),
     });
@@ -120,28 +150,38 @@ export async function render(el, ctx) {
     const incWrap = h('div', { class: 'span-12 aog-incident', dataset: { story: inc.id === 'AOG-0001' ? 'aog-incident-ps1' : 'aog-incident', incident: inc.id } });
     const fitted = (inc.timeline || []).find((s) => s.step === 'fitted');
     const tf = chartFrame(tlCard, {
-      headline: fitted ? `Released ${fmtHours(fitted.t_h)} after the request: ${cf.actual_route_label || 'route not recorded'}` : `Not released within the history window: ${cf.actual_route_label || 'route not recorded'}`,
-      subtitle: 'Hours from the material request (T+) · simulated UTC · steps marked context happened before the request',
+      headline: fitted
+        ? fitHeadline(`Released ${fmtHours(fitted.t_h)} after the request: ${cf.actual_route_label || 'route not recorded'}`, `Released ${fmtHours(fitted.t_h)} after the request`)
+        : fitHeadline(`Not released within the history window: ${cf.actual_route_label || 'route not recorded'}`, 'Not released within the history window'),
+      subtitle: 'Each step in order, split into desk decisions and physical movement · same-hour steps share a bracket · gaps show elapsed hours (not to scale)',
       provenance: prov, source: 'aog_lab.json',
-      table: { columns: [{ key: 'datetime', label: 'Simulated UTC', mono: true }, { key: 't_h', label: 'T+ h', num: true }, { key: 'station', label: 'Station', mono: true }, { key: 'step', label: 'Step', format: stepLabel }, { key: 'event', label: 'Event' }], rows: inc.timeline || [] },
+      table: { columns: [{ key: 'wk', label: 'Sim week', mono: true }, { key: 't_h', label: 'T+ h', num: true }, { key: 'station', label: 'Station', mono: true }, { key: 'step', label: 'Step', format: stepLabel }, { key: 'event', label: 'Event' }], rows: (inc.timeline || []).map((s) => ({ ...s, wk: simWeek(s.abs_h) ?? '—' })) },
     });
     stops.push(responsive(tf.body, (w) => drawTimeline(tf.body, w, inc, slack)));
+    // The full event sentences: collapsed by default so the chart, not a repeat of it, carries the story.
     const tlList = h('ol', { class: 'aog-tl list-reset' }, (inc.timeline || []).map((s, i) => h('li', { class: `aog-tl-row ${s.evidence?.context ? 'is-context' : ''} ${s.step === 'fitted' ? 'is-fitted' : ''}` },
       h('span', { class: 'aog-tl-n mono' }, String(i + 1).padStart(2, '0')),
-      h('span', { class: 'aog-tl-time mono' }, h('span', {}, (s.datetime || '').replace('T', ' ').replace('Z', '')), h('span', { class: 'faint' }, `T${s.t_h >= 0 ? '+' : '−'}${Math.abs(s.t_h)} h`)),
+      h('span', { class: 'aog-tl-time mono' }, h('span', {}, tLabel(s.t_h)), s.abs_h != null ? h('span', { class: 'faint' }, simWeek(s.abs_h)) : null),
       h('span', { class: 'aog-tl-stn mono' }, s.station || ''),
       h('span', { class: 'aog-tl-ev' }, h('b', {}, stepLabel(s.step)), ' ', s.event))));
-    tf.body.after(tlList);
+    tf.body.after(h('details', { class: 'aog-tl-details' }, h('summary', {}, icon('chevron-right'), `Event log · ${fmtInt((inc.timeline || []).length)} steps with the record behind each`), tlList));
 
     // options
     const opts = (inc.options || []).slice().sort((a, b) => optState(a, rec).order - optState(b, rec).order || (a.rank ?? 99) - (b.rank ?? 99) || String(a.key).localeCompare(String(b.key)));
-    const optCards = opts.map((o) => optionCard(o, rec, inc, codes, optLabel, slack));
+    const mNote = missedNote(inc, rec, slack);
+    const optCards = opts.map((o) => optionCard(o, rec, inc, codes, optLabel, slack, o === rec ? mNote : null));
+    const okCards = optCards.filter((c, i) => optState(opts[i], rec).group === 'ok');
+    const naCards = optCards.filter((c, i) => optState(opts[i], rec).group === 'na');
     const feas = opts.filter((o) => o.feasible && o.exposure_aed != null && !o.human_decision);
     const runner = feas.filter((o) => o !== rec).sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))[0];
     const exCard = h('section', { class: 'card span-12' });
     const ef = chartFrame(exCard, {
-      headline: rec ? `${optLabel(rec)} has the lowest exposure: ${fmtAED(rec.exposure_aed)}${runner ? ` against ${fmtAED(runner.exposure_aed)} for ${optLabel(runner).toLowerCase()}` : ''}` : 'No feasible option at the time of the request',
-      subtitle: `Exposure = hours beyond the ${slack != null ? `${fmtHours(slack)} ` : ''}deadline slack × AOG penalty + direct cost (AED) · ex-ante estimate at request time · greyed = not contracted`,
+      headline: rec
+        ? fitHeadline(`${optLabel(rec)} has the lowest exposure: ${fmtAED(rec.exposure_aed)}${runner ? ` against ${fmtAED(runner.exposure_aed)} for ${optLabel(runner).toLowerCase()}` : ''}`,
+          runner ? `${optLabel(rec)} has the lowest exposure: ${fmtAED(rec.exposure_aed)} vs ${fmtAED(runner.exposure_aed)} next best` : null,
+          `${optLabel(rec)} has the lowest exposure: ${fmtAED(rec.exposure_aed)}`)
+        : 'No feasible option at the time of the request',
+      subtitle: `Exposure = hours beyond the ${slack != null ? `${fmtHours(slack)} ` : ''}deadline slack × AOG penalty + direct cost (AED) · ex-ante estimate at request time · dashed = not available`,
       provenance: prov, source: 'aog_lab.json',
       table: { columns: [{ key: 'key', label: 'Key', mono: true }, { key: 'option', label: 'Option' }, { key: 'feasible', label: 'Feasible', format: (v) => (v ? 'yes' : 'no') }, { key: 'wait_h', label: 'Wait', num: true, format: fmtHours }, { key: 'direct_cost', label: 'Direct cost', num: true, format: (v) => fmtAEDfull(v) }, { key: 'exposure_aed', label: 'Exposure', num: true, format: (v) => fmtAEDfull(v) }, { key: 'rank', label: 'Rank', num: true, format: (v) => (v == null ? '—' : v) }], rows: opts },
     });
@@ -163,7 +203,16 @@ export async function render(el, ctx) {
           h('ul', { class: 'aog-checks list-reset' }, (d.robbery_checks || []).map((c) => h('li', {}, icon('shield'), h('span', {}, c))))),
         h('p', { class: 't-12 faint m-0' }, 'The lab supports the AOG desk. It is not an approved maintenance, airworthiness or dispatch tool.')),
     });
-    const optsWrap = card({ cls: 'span-12', kicker: `Options a–h · ${fmtInt(opts.filter((o) => o.feasible && !o.human_decision).length)} feasible`, title: 'Every sourcing route the desk could have taken', prov, body: h('div', { class: 'aog-opts' }, optCards) });
+    const optsWrap = card({
+      cls: 'span-12', kicker: `Options a–h · ${fmtInt(okCards.length)} feasible`, title: 'Every sourcing route the desk could have taken', prov, story: 'aog-options',
+      body: h('div', { class: 'stack-3' },
+        h('div', { class: 'aog-optgroup', dataset: { group: 'feasible' } },
+          h('div', { class: 'aog-optgroup-head' }, h('h4', {}, `Feasible (${fmtInt(okCards.length)})`), h('span', { class: 't-12 faint' }, okCards.length ? 'Ranked by exposure: hours beyond the deadline slack × AOG penalty + direct cost.' : 'No route could supply a unit at the time of the request.')),
+          okCards.length ? h('div', { class: 'aog-opts' }, okCards) : null),
+        naCards.length ? h('div', { class: 'aog-optgroup', dataset: { group: 'unavailable' } },
+          h('div', { class: 'aog-optgroup-head' }, h('h4', {}, `Not available (${fmtInt(naCards.length)})`), h('span', { class: 't-12 faint' }, 'Not contracted, infeasible at the time, or a human decision the lab never ranks.')),
+          h('div', { class: 'aog-opts' }, naCards)) : null),
+    });
 
     // counterfactual for this incident
     const cfCard = counterfactualCard(inc, cf, prov, optLabel);
@@ -193,7 +242,11 @@ export async function render(el, ctx) {
     ].filter((r) => r.value != null);
     const saved = C.actual_request_aog_h - C.best_option_request_aog_h;
     const fr = chartFrame(sc, {
-      headline: `Taking the best feasible option at request time would have cut request-level AOG from ${fmtHours(C.actual_request_aog_h)} to ${fmtHours(C.best_option_request_aog_h)}${C.net_exposure_saving_aed != null ? `, ${fmtAED(C.net_exposure_saving_aed)} less exposure` : ''}`,
+      headline: saved > 0
+        ? fitHeadline(`Taking the best feasible option at request time would have cut request-level AOG from ${fmtHours(C.actual_request_aog_h)} to ${fmtHours(C.best_option_request_aog_h)}${C.net_exposure_saving_aed != null ? `, ${fmtAED(C.net_exposure_saving_aed)} less exposure` : ''}`,
+          `The best feasible option would have cut request-level AOG from ${fmtHours(C.actual_request_aog_h)} to ${fmtHours(C.best_option_request_aog_h)}`,
+          `Best option: request-level AOG ${fmtHours(C.actual_request_aog_h)} → ${fmtHours(C.best_option_request_aog_h)}`)
+        : fitHeadline(`History matched or beat the best feasible option: ${fmtHours(C.actual_request_aog_h)} of request-level AOG`, 'History matched the best feasible option'),
       subtitle: `${fmtInt(C.requests_compared)} requests · history weeks 0–103 under P0 · AOG hours before merging per incident · exposure in AED`,
       provenance: prov, source: 'aog_lab.json',
       table: { columns: [{ key: 'label', label: 'Basis' }, { key: 'value', label: 'AOG h', num: true, format: fmtHours }, { key: 'ex', label: 'Exposure', num: true, format: (v) => fmtAED(v) }], rows },
@@ -206,10 +259,10 @@ export async function render(el, ctx) {
       rows.forEach((r, i) => {
         const y = i * rowH + (narrow ? 16 : 8);
         svg.append('text').attr('class', r.hi ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 0).attr('y', narrow ? y - 4 : y + 11).text(r.label);
-        svg.append('rect').attr('x', lw).attr('y', y + (narrow ? 2 : 2)).attr('height', 14).attr('rx', 2).attr('width', Math.max(1, x(r.value))).attr('fill', r.key === 'actual' ? theme.color.accent2 : r.hi ? theme.color.accent : theme.color.neutral).attr('fill-opacity', r.key === 'ante' ? 0.6 : 0.95);
+        svg.append('rect').attr('x', lw).attr('y', y + (narrow ? 2 : 2)).attr('height', 14).attr('rx', 2).attr('width', Math.max(1, x(r.value))).attr('fill', r.hi ? theme.color.accent : theme.color.neutral).attr('fill-opacity', r.key === 'ante' ? 0.6 : 0.95);
         svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', lw + x(r.value) + 8).attr('y', y + 13).text(`${fmtHours(r.value)} · ${fmtAED(r.ex)}`);
       });
-      if (saved > 0 && !narrow) {
+      if (saved > 0) {
         const y0 = (rows.length) * rowH + 18;
         svg.append('text').attr('class', 'gnm-annot-sub').attr('x', lw).attr('y', y0).text(`${fmtHours(saved)} fewer AOG hours over two simulated years, ex post`);
       }
@@ -237,11 +290,11 @@ export async function render(el, ctx) {
 }
 
 // ----------------------------------------------------------------------------- pieces
-function optionCard(o, rec, inc, codes, optLabel, slack) {
+function optionCard(o, rec, inc, codes, optLabel, slack, note) {
   const st = optState(o, rec);
   const metric = (k, v, extra) => h('div', { class: 'aog-m' }, h('dt', {}, k), h('dd', { class: 'num' }, v, extra || null));
   const met = o.human_decision ? h('span', { class: 'faint' }, 'n/a') : o.wait_h == null ? h('span', { class: 'faint' }, '—') : o.deadline_met ? pill('ok', 'Met') : pill('urgent', 'Missed');
-  const rc = (o.reason_codes || []).map((c) => h('li', {}, h('span', { class: 'mono aog-code' }, c), h('span', { class: 'aog-code-txt' }, codes[c] || '')));
+  const rc = (o.reason_codes || []).map((c) => h('li', { title: c, dataset: { code: c } }, h('span', { class: 'aog-code' }, reasonLabel(c)), codes[c] ? h('span', { class: 'aog-code-txt' }, codes[c]) : null));
   return h('article', { class: `aog-opt aog-opt--${st.cls}`, dataset: { key: o.key, state: st.cls }, 'aria-label': `Option ${o.key}: ${optLabel(o)}` },
     h('div', { class: 'aog-opt-head' }, h('span', { class: 'aog-key mono' }, o.key), h('h4', { class: 'aog-opt-title' }, optLabel(o)), st.pill),
     o.human_decision ? h('p', { class: 'aog-human-note m-0' }, icon('alert'), 'Requires engineering/quality approval — human decision') : null,
@@ -251,6 +304,7 @@ function optionCard(o, rec, inc, codes, optLabel, slack) {
       metric('Cost', o.human_decision && !o.feasible ? '—' : fmtAEDfull(o.direct_cost)),
       metric('Exposure', o.exposure_aed == null ? '—' : fmtAED(o.exposure_aed)),
       h('div', { class: 'aog-m' }, h('dt', {}, 'Deadline'), h('dd', {}, met))),
+    note ? h('p', { class: 'aog-missed-note m-0', dataset: { role: 'missed-note' } }, icon('info'), h('span', {}, note)) : null,
     o.source ? h('div', { class: 'aog-src mono t-12 faint' }, `Source: ${o.source}${o.mode ? ` · ${o.mode.replace(/_/g, ' ')}` : ''}`) : null,
     rc.length ? h('ul', { class: 'aog-codes list-reset' }, rc) : null);
 }
@@ -280,57 +334,128 @@ function counterfactualCard(inc, cf, prov, optLabel) {
   });
 }
 
+/**
+ * Two-lane swimlane on a broken (ordinal) time axis: every step gets its own slot, steps in the same hour
+ * share a "T+0 h" bracket, and the gaps between brackets carry the elapsed hours. This separates the 7-steps-at-T+0
+ * cluster that a linear hour axis collapses into one point. Horizontal ≥ 560 px, vertical below.
+ */
 function drawTimeline(body, w, inc, slack) {
   const d3 = window.d3;
-  const steps = (inc.timeline || []).map((s, i) => ({ ...s, n: i + 1 }));
+  const steps = (inc.timeline || []).map((s, i) => ({ ...s, n: i + 1, lane: laneOf(s) }));
   if (!steps.length) { body.replaceChildren(h('p', { class: 'muted' }, 'No timeline exported.')); return; }
   const narrow = w < 560;
-  const tMin = Math.min(0, d3.min(steps, (s) => s.t_h)), tMax = Math.max(d3.max(steps, (s) => s.t_h), slack ?? 0, 1);
-  const groups = d3.groups(steps, (s) => s.t_h).sort((a, b) => a[0] - b[0]).map(([t, ss]) => [t, ss.length > 3 ? [{ ...ss[0], group: ss }] : ss]);
-  const maxStack = d3.max(groups, (g) => g[1].length);
-  const badge = narrow ? 18 : 22, gap = 4;
-  const m = { t: 16 + maxStack * (badge + gap), r: narrow ? 24 : 56, b: 44, l: narrow ? 20 : 40 };
-  const H = m.t + m.b + 24;
-  const svg = svgIn(body, w, H, `Timeline of ${inc.id}`);
-  const g = svg.append('g').attr('transform', `translate(${m.l},${m.t})`);
-  const iw = Math.max(60, w - m.l - m.r);
-  const x = d3.scaleLinear().domain([tMin, tMax]).range([0, iw]);
-  const axisY = 24;
-  // AOG interval band
+  // ordinal positions: slot = 1 unit, gap between time groups = GAP units
+  const GAP = 1.2;
+  const groups = [];
+  steps.forEach((s) => { const g = groups.at(-1); if (g && g.t === s.t_h) g.steps.push(s); else groups.push({ t: s.t_h, steps: [s] }); });
+  let pos = 0;
+  groups.forEach((g, gi) => { if (gi) { g.gapFrom = pos; pos += GAP; g.gapTo = pos; } g.from = pos; g.steps.forEach((s) => { s.p = pos + 0.5; pos += 1; }); g.to = pos; });
+  const total = pos;
   const aog = steps.find((s) => s.step === 'aog_start');
   const fit = steps.find((s) => s.step === 'fitted');
-  if (aog && fit && fit.t_h > aog.t_h) {
-    g.append('rect').attr('x', x(aog.t_h)).attr('width', Math.max(2, x(fit.t_h) - x(aog.t_h))).attr('y', axisY - 6).attr('height', 12).attr('rx', 2).attr('fill', theme.color.accent2).attr('fill-opacity', 0.28).attr('stroke', theme.color.accent2).attr('stroke-opacity', 0.6);
-    g.append('text').attr('class', 'gnm-label gnm-label--strong').attr('font-family', theme.font.mono).style('fill', theme.color.accent2).attr('x', (x(aog.t_h) + x(fit.t_h)) / 2).attr('y', axisY + 34).attr('text-anchor', 'middle').text(`AOG ${fmtHours(fit.t_h - aog.t_h)}`);
-  }
-  // axis
-  const ax = g.append('g').attr('transform', `translate(0,${axisY})`).call(d3.axisBottom(x).ticks(narrow ? 4 : 8).tickSize(4).tickFormat((v) => `${v >= 0 ? '+' : '−'}${Math.abs(v)}h`));
-  ax.attr('class', 'gnm-axis').selectAll('text').attr('font-family', theme.font.mono);
-  ax.select('.domain').attr('stroke', theme.color.lineStrong);
-  // deadline
-  if (slack != null && slack > 0 && slack <= tMax) {
-    g.append('line').attr('x1', x(slack)).attr('x2', x(slack)).attr('y1', -m.t + 8).attr('y2', axisY + 8).attr('stroke', theme.color.review).attr('stroke-dasharray', '3 3');
-    g.append('text').attr('class', 'gnm-label').style('fill', theme.color.review).attr('font-family', theme.font.mono).attr('x', x(slack) + 4).attr('y', -m.t + 14).text(`Deadline +${slack}h`);
-  } else if (slack === 0) {
-    g.append('text').attr('class', 'gnm-label').style('fill', theme.color.review).attr('font-family', theme.font.mono).attr('x', x(0)).attr('y', axisY + 34).attr('text-anchor', 'start').text(aog && fit && fit.t_h - aog.t_h > (tMax - tMin) * 0.3 ? '' : 'D0 · no slack');
-  }
-  // badges
-  groups.forEach(([t, ss]) => {
-    const cx = x(t);
-    g.append('line').attr('x1', cx).attr('x2', cx).attr('y1', axisY - 6 - ss.length * (badge + gap) + gap).attr('y2', axisY).attr('stroke', theme.color.lineStrong);
-    ss.forEach((s, j) => {
-      const cy = axisY - 10 - j * (badge + gap) - badge / 2;
-      const gg = g.append('g').attr('transform', `translate(${cx},${cy})`);
-      const isFit = s.step === 'fitted';
-      gg.append('rect').attr('x', -badge * 1.1).attr('y', -badge / 2).attr('width', badge * 2.2).attr('height', badge).attr('rx', 4)
-        .attr('fill', isFit ? theme.color.accent : theme.color.panel).attr('stroke', isFit ? theme.color.accent : s.evidence?.context ? theme.color.neutral : theme.color.lineStrong).attr('stroke-dasharray', s.evidence?.context ? '2 2' : null);
-      const grp = s.group;
-      const txt = grp ? `${String(grp[0].n).padStart(2, '0')}–${String(grp.at(-1).n).padStart(2, '0')}` : narrow ? String(s.n) : `${String(s.n).padStart(2, '0')} ${SHORT[s.step] || ''}`.trim();
-      gg.append('text').attr('text-anchor', 'middle').attr('dy', '0.35em').attr('font-family', theme.font.mono).attr('font-size', narrow ? 9 : 10).attr('fill', isFit ? theme.color.bg : theme.color.text).text(txt);
-      if (grp) gg.append('text').attr('class', 'gnm-label').attr('x', badge * 1.1 + 6).attr('dy', '0.35em').attr('font-size', 11).text(narrow ? `${grp.length} steps` : `${grp.length} steps in the same hour: ${grp.map((q) => SHORT[q.step] || q.step).join(' · ')}`);
-      withTooltip(gg, () => (grp ? { title: `Steps ${txt} · T+${fmtHours(s.t_h)}`, rows: grp.map((q) => [String(q.n).padStart(2, '0'), stepLabel(q.step)]) } : { title: `${String(s.n).padStart(2, '0')} · ${stepLabel(s.step)}`, rows: [['Time', `${(s.datetime || '').replace('T', ' ').replace('Z', '')} UTC`], ['T+', fmtHours(s.t_h)], ['Station', s.station || '—']], note: s.event }));
+  const aogH = aog && fit ? fit.t_h - aog.t_h : null;
+  const deadlineGroup = slack != null && slack > 0 ? groups.find((g) => g.t >= slack) : null;
+  const LANES = ['Desk decisions', 'Physical movement'];
+  const urgent = theme.series.urgent;
+  const stepNode = (gg, s, cx, cy) => {
+    const isFit = s.step === 'fitted';
+    const c = gg.append('g').attr('transform', `translate(${cx},${cy})`).attr('class', 'aog-sl-step').attr('tabindex', 0).attr('role', 'img')
+      .attr('aria-label', `${String(s.n).padStart(2, '0')} ${stepLabel(s.step)} at ${tLabel(s.t_h)}${s.station ? `, ${s.station}` : ''}`);
+    c.append('circle').attr('r', 10).attr('fill', isFit ? theme.color.accent : theme.color.panel)
+      .attr('stroke', isFit ? theme.color.accent : s.evidence?.context ? theme.color.neutral : theme.series.neutral).attr('stroke-dasharray', s.evidence?.context ? '2 2' : null).attr('stroke-width', 1.25);
+    c.append('text').attr('text-anchor', 'middle').attr('dy', '0.35em').attr('font-family', theme.font.mono).attr('font-size', 9).style('fill', isFit ? theme.color.bg : theme.color.text).text(String(s.n).padStart(2, '0'));
+    withTooltip(c, () => ({ title: `${String(s.n).padStart(2, '0')} · ${stepLabel(s.step)}`, rows: [['T+', fmtHours(s.t_h)], ['Station', s.station || '—']], note: s.event }));
+    return c;
+  };
+
+  if (!narrow) {
+    const m = { t: 34, r: 16, b: 40, l: 128 };
+    const laneH = 64;
+    const H = m.t + laneH * 2 + m.b;
+    const svg = svgIn(body, w, H, `Timeline of ${inc.id}: ${steps.length} steps in two lanes`);
+    const g = svg.append('g').attr('transform', `translate(${m.l},${m.t})`);
+    const iw = Math.max(120, w - m.l - m.r);
+    const x = d3.scaleLinear().domain([0, total]).range([0, iw]);
+    const laneY = (l) => l * laneH + laneH / 2 - 6;
+    // lanes
+    LANES.forEach((name, l) => {
+      g.append('rect').attr('x', -m.l + 8).attr('y', l * laneH).attr('width', iw + m.l - 8).attr('height', laneH - 4).attr('rx', 6).attr('fill', l ? 'rgba(185,200,214,0.035)' : 'rgba(185,200,214,0.06)');
+      svg.append('text').attr('class', 'gnm-label').attr('x', 18).attr('y', m.t + laneY(l)).attr('dy', '0.32em').style('fill', theme.color.muted).text(name);
     });
+    // brackets (same-hour groups) + gap labels (elapsed hours)
+    groups.forEach((gr, gi) => {
+      const x0 = x(gr.from) + 4, x1 = x(gr.to) - 4;
+      g.append('path').attr('d', `M${x0},-6V-12H${x1}V-6`).attr('fill', 'none').attr('stroke', theme.color.lineStrong);
+      g.append('text').attr('class', 'gnm-label gnm-label--mono').attr('x', (x0 + x1) / 2).attr('y', -18).attr('text-anchor', 'middle').style('fill', theme.color.text)
+        .text(`${tLabel(gr.t)}${gr.steps.length > 1 && x1 - x0 > 120 ? ` · ${gr.steps.length} steps` : ''}`);
+      if (gi) {
+        const gx = (x(gr.gapFrom) + x(gr.gapTo)) / 2, dt = gr.t - groups[gi - 1].t;
+        g.append('line').attr('x1', gx).attr('x2', gx).attr('y1', -4).attr('y2', laneH * 2 - 4).attr('stroke', theme.color.lineStrong).attr('stroke-dasharray', '2 4');
+        chipLabel(g, { x: gx, y: laneH - 2, text: `+${fmtHours(dt)}`, color: theme.color.muted });
+      }
+    });
+    // deadline (D3/D10): a reference line at the start of the first group at or after the slack
+    if (deadlineGroup) {
+      const dx = deadlineGroup.gapFrom != null ? (x(deadlineGroup.gapFrom) + x(deadlineGroup.gapTo)) / 2 + (deadlineGroup.t === slack ? x(GAP) / 2 : 0) : x(deadlineGroup.from);
+      refLine(g, { x1: dx, x2: dx, y1: -2, y2: laneH * 2 + 14 }); // labelled in the AOG caption below, which always sits beside it
+    }
+    // sequence path through the steps
+    g.append('path').attr('d', d3.line().x((s) => x(s.p)).y((s) => laneY(s.lane)).curve(d3.curveMonotoneX)(steps)).attr('fill', 'none').attr('stroke', theme.color.lineStrong).attr('stroke-width', 1);
+    // AOG interval
+    if (aog && fit && fit.p >= aog.p) {
+      const yb = laneH * 2 + 22;
+      g.append('rect').attr('x', x(aog.p)).attr('y', yb - 4).attr('width', Math.max(4, x(fit.p) - x(aog.p))).attr('height', 6).attr('rx', 3).attr('fill', urgent).attr('fill-opacity', 0.85);
+      g.append('text').attr('class', 'gnm-label gnm-label--strong').attr('x', x(aog.p) - 6).attr('y', yb).attr('dy', '0.1em').attr('text-anchor', 'end').style('fill', urgent)
+        .text(`AOG ${fmtHours(aogH)}${slack === 0 ? ' · grounded from removal (D0)' : deadlineGroup ? ` · from the ${tLabel(slack)} deadline (dashed)` : ''}`);
+    }
+    // steps + labels (alternate above/below inside the lane when slots are tight)
+    const slotW = x(1) - x(0);
+    steps.forEach((s, i) => {
+      const cx = x(s.p), cy = laneY(s.lane);
+      stepNode(g, s, cx, cy);
+      const below = slotW >= 84 || i % 2 === 0;
+      g.append('text').attr('class', 'gnm-label').attr('x', cx).attr('y', below ? cy + 24 : cy - 16).attr('text-anchor', 'middle').attr('font-size', 11)
+        .style('fill', s.step === 'fitted' ? theme.color.accent : theme.color.muted).text(truncate(stepShort(s.step), Math.max(48, slotW * (slotW < 84 ? 1.9 : 0.98))));
+    });
+    return;
+  }
+
+  // ---- vertical (phones): rows = steps, two lane columns, time on the left, gaps between same-hour groups
+  const rowH = 30, gapH = 26, m = { t: 26, l: 50, r: 16, b: 10 };
+  const ys = new Map(); let yy = 0;
+  groups.forEach((gr, gi) => { if (gi) yy += gapH; gr.y0 = yy; gr.steps.forEach((s) => { ys.set(s, yy + rowH / 2); yy += rowH; }); gr.y1 = yy; });
+  const H = m.t + yy + m.b;
+  const svg = svgIn(body, w, H, `Timeline of ${inc.id}: ${steps.length} steps in two lanes`);
+  const g = svg.append('g').attr('transform', `translate(0,${m.t})`);
+  const span = w - m.l - m.r;
+  const colWs = [span * 0.56, span * 0.44];
+  const laneX = (l) => m.l + (l ? colWs[0] : 0);
+  const colW = colWs[1];
+  LANES.forEach((name, l) => {
+    g.append('rect').attr('x', laneX(l) + 2).attr('y', -4).attr('width', colWs[l] - 4).attr('height', yy + 8).attr('rx', 6).attr('fill', l ? 'rgba(185,200,214,0.035)' : 'rgba(185,200,214,0.06)');
+    svg.append('text').attr('class', 'gnm-label').attr('x', laneX(l) + 10).attr('y', 12).style('fill', theme.color.muted).attr('font-size', 11).text(l ? 'Movement' : 'Desk');
   });
+  groups.forEach((gr, gi) => {
+    g.append('path').attr('d', `M${m.l - 6},${gr.y0 + 4}H${m.l - 10}V${gr.y1 - 4}H${m.l - 6}`).attr('fill', 'none').attr('stroke', theme.color.lineStrong);
+    g.append('text').attr('class', 'gnm-label gnm-label--mono').attr('x', m.l - 14).attr('y', (gr.y0 + gr.y1) / 2).attr('dy', '0.32em').attr('text-anchor', 'end').style('fill', theme.color.text).text(tLabel(gr.t).replace(' h', 'h'));
+    if (gi) g.append('text').attr('class', 'gnm-label gnm-label--mono').attr('x', laneX(1)).attr('y', gr.y0 - gapH / 2).attr('dy', '0.32em').attr('text-anchor', 'middle').attr('font-size', 10).style('fill', theme.color.faint).text(`⋯ +${fmtHours(gr.t - groups[gi - 1].t)} ⋯`);
+  });
+  g.append('path').attr('d', d3.line().x((s) => laneX(s.lane) + 18).y((s) => ys.get(s)).curve(d3.curveMonotoneY)(steps)).attr('fill', 'none').attr('stroke', theme.color.lineStrong);
+  steps.forEach((s) => {
+    const cx = laneX(s.lane) + 18, cy = ys.get(s);
+    stepNode(g, s, cx, cy);
+    g.append('text').attr('class', 'gnm-label').attr('x', cx + 16).attr('y', cy).attr('dy', '0.32em').attr('font-size', 11).style('fill', s.step === 'fitted' ? theme.color.accent : theme.color.muted).text(truncate(stepShort(s.step), colWs[s.lane] - 40));
+  });
+  if (aog && fit && ys.get(fit) >= ys.get(aog)) {
+    const xb = w - 6;
+    g.append('rect').attr('x', xb - 3).attr('y', ys.get(aog) - 8).attr('width', 6).attr('height', Math.max(8, ys.get(fit) - ys.get(aog) + 16)).attr('rx', 3).attr('fill', urgent).attr('fill-opacity', 0.85);
+    // label beside the start of the bar (the AOG-start row's movement cell is empty when the step is a desk step)
+    g.append('text').attr('class', 'gnm-label gnm-label--strong').attr('x', xb - 8).attr('y', ys.get(aog)).attr('dy', '0.32em').attr('text-anchor', 'end').style('fill', urgent).attr('font-size', 11).text(`AOG ${fmtHours(aogH)}`);
+  }
+  if (deadlineGroup) {
+    const dy = deadlineGroup.t === slack ? deadlineGroup.y0 - 2 : deadlineGroup.y0 - gapH / 2 + 8;
+    refLine(g, { x1: m.l, x2: w - m.r, y1: dy, y2: dy, label: 'deadline', labelAt: 'start', dx: -14, dy: -4, anchor: 'end' });
+  }
 }
 
 function drawExposure(body, w, opts, rec, optLabel) {
@@ -341,14 +466,14 @@ function drawExposure(body, w, opts, rec, optLabel) {
   const H = rows.length * rowH + 8;
   const svg = svgIn(body, w, H, 'Exposure by option');
   const vals = rows.map((o) => o.exposure_aed).filter((v) => v != null);
-  const x = d3.scaleLinear().domain([0, (d3.max(vals) || 1) * 1.02]).range([0, Math.max(40, w - lw - (narrow ? 120 : 170))]);
+  const x = d3.scaleLinear().domain([0, (d3.max(vals) || 1) * 1.02]).range([0, Math.max(40, w - lw - (narrow ? 150 : 200))]);
   rows.forEach((o, i) => {
     const y = i * rowH + (narrow ? 16 : 6);
     const isRec = o === rec, grey = o.indicative || o.greyed;
     const lab = `${o.key} · ${optLabel(o)}`;
     svg.append('text').attr('class', isRec ? 'gnm-label gnm-label--strong' : 'gnm-label').attr('x', 0).attr('y', narrow ? y - 4 : y + 11).style('fill', o.feasible || grey ? null : theme.color.faint).text(truncate(lab, narrow ? w : lw - 12));
     if (o.exposure_aed == null) {
-      svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).style('fill', theme.color.faint).attr('x', lw).attr('y', y + 12).text(`infeasible · ${(o.reason_codes || [])[0] || ''}`);
+      svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).style('fill', theme.color.faint).attr('x', lw).attr('y', y + 12).text(`Not available · ${reasonLabel((o.reason_codes || [])[0])}`);
       return;
     }
     const bar = svg.append('rect').attr('x', lw).attr('y', y + 2).attr('height', 14).attr('rx', 2).attr('width', Math.max(2, x(o.exposure_aed)))
@@ -356,6 +481,6 @@ function drawExposure(body, w, opts, rec, optLabel) {
       .attr('stroke', o.feasible || isRec ? null : theme.color.neutral).attr('stroke-dasharray', o.feasible ? null : '3 2');
     withTooltip(bar, () => ({ title: optLabel(o), rows: [['Wait', o.wait_h == null ? '—' : fmtHours(o.wait_h)], ['Direct cost', fmtAEDfull(o.direct_cost)], ['Exposure', fmtAEDfull(o.exposure_aed)]], note: o.feasible ? (isRec ? 'Recommended (rank 1)' : `Rank ${o.rank ?? '—'}`) : grey ? 'Not contracted (indicative)' : 'Infeasible: estimate shown with its reason' }));
     svg.append('text').attr('class', 'gnm-label').attr('font-family', theme.font.mono).attr('x', lw + Math.max(2, x(o.exposure_aed)) + 8).attr('y', y + 13)
-      .text(`${fmtAED(o.exposure_aed)} · ${o.wait_h == null ? '—' : fmtHours(o.wait_h)}${o.feasible ? '' : grey ? ' · not contracted' : ' · infeasible'}`);
+      .text(`${fmtAED(o.exposure_aed)} · ${o.wait_h == null ? '—' : fmtHours(o.wait_h)}${o.feasible ? '' : narrow ? ' · n/a' : grey ? ' · not contracted' : ' · infeasible'}`);
   });
 }

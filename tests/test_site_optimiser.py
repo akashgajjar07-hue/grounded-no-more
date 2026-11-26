@@ -81,3 +81,53 @@ def test_view_toggle_and_keyboard(site, browser):  # noqa: F811
         assert not problems, problems
     finally:
         ctx.close()
+
+
+# ---- design wave 2 (critic items #2, #3, #4, duplicate KPI, headline length)
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+def test_capital_wave2_design(site, browser, vp):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/capital", vp)
+    try:
+        heads = page.locator("#view .chart-headline").all_inner_texts()
+        assert heads and all(len(t.strip()) <= 90 for t in heads), heads
+        kpis = page.locator('[data-story="capital-kpis"] .kpi')
+        # one AOG tile with two deltas instead of the same AOG value twice
+        assert kpis.count() <= 3
+        assert page.locator('[data-story="capital-kpis"] .co-delta2').count() == 1
+        # capital delta is neutral, never red
+        cap = kpis.first
+        assert cap.locator(".kpi-delta.is-bad").count() == 0
+        assert "capital" in cap.locator(".kpi-delta").first.inner_text()
+        # no copper on P1/P2 policy labels; P0 keeps copper (baseline)
+        fills = page.evaluate("""() => [...document.querySelectorAll('[data-story="frontier-chart"] svg text.gnm-label--strong')]
+            .map((t) => [t.textContent.trim(), getComputedStyle(t).fill])""")
+        for txt, fill in fills:
+            if txt.startswith("P1") or txt.startswith("P2"):
+                assert "196, 127, 82" not in fill, (txt, fill)
+        # cost chart: every total label clears the end of its bar
+        overlaps = page.evaluate("""() => {
+            const svg = [...document.querySelectorAll('svg')].find((s) => (s.getAttribute('aria-label') || '').includes('Annual cost breakdown'));
+            if (!svg) return ['no svg'];
+            const rects = [...svg.querySelectorAll('rect')].map((r) => r.getBBox());
+            const bad = [];
+            svg.querySelectorAll('text.gnm-label--strong').forEach((t) => {
+                if (!/^AED/.test(t.textContent)) return;
+                const b = t.getBBox();
+                rects.forEach((r) => { if (r.width > 2 && b.x < r.x + r.width - 0.5 && b.x + b.width > r.x && b.y < r.y + r.height && b.y + b.height > r.y) bad.push(t.textContent); });
+            });
+            return bad;
+        }""")
+        assert not overlaps, overlaps
+        # allocation table keeps the decision columns at 390
+        card = page.locator('[data-story="allocation-table"]')
+        if vp == "390":
+            assert card.locator(".dts-row").first.is_visible()
+            assert "AOG H AVOIDED" in card.locator(".dts-metric").first.inner_text().upper()
+            sec = card.locator(".dts-secondary").first.inner_text()
+            assert "Units" in sec and "cap" in sec
+        else:
+            ths = card.locator("thead th").all_inner_texts()
+            assert any("CHANGE" in t.upper() for t in ths) and any("AVOIDED" in t.upper() for t in ths)
+        assert not problems, problems
+    finally:
+        ctx.close()

@@ -28,6 +28,41 @@ const TYPE_ICON = { OVERDUE_REPAIR: 'wrench', OUTSTATION_DEPLETION: 'map-pin', E
 const typeLabel = (t) => TYPE_LABEL[t] || String(t || '').toLowerCase().replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
 const sevPill = (s) => pill(s === 'info' ? 'info' : s, SEV_LABEL[s] || s);
 const NETWORK = 'Network';
+const nOr = (v) => (v === null || v === undefined || Number.isNaN(+v) ? null : +v);
+const wk1 = (v) => fmtNum(v, Number.isInteger(+v) ? 0 : 1);
+
+/** The scannable numbers of an exception (all optional; only depletion rows carry a target). */
+export function rowMetrics(a) {
+  const e = a.evidence || {};
+  const onHand = nOr(e.on_hand), target = nOr(e.target);
+  return {
+    stock: onHand != null && target != null ? { have: onHand + (nOr(e.inbound) || 0), target } : null,
+    aogH: nOr(e.aog_hours_lookback), d0: nOr(e.d0_requests_lookback), lookback: nOr(e.lookback_weeks),
+  };
+}
+/** One short phrase for the "Issue" column: the type's key number, not the whole rationale. */
+export function issueText(a) {
+  const e = a.evidence || {};
+  switch (a.type) {
+    case 'OUTSTATION_DEPLETION': return 'Below station target';
+    case 'OVERDUE_REPAIR': return e.weeks_overdue != null ? `${wk1(e.weeks_overdue)} wk overdue at shop` : 'Repair overdue';
+    case 'LEAD_TIME_DRIFT': return e.ratio != null ? `Lead time ${fmtNum(e.ratio, 1)}× quote` : 'Lead-time drift';
+    case 'EXCESS_DECLINING_DEMAND': return e.cover_weeks_at_recent_rate != null ? `${fmtInt(e.cover_weeks_at_recent_rate)} wk cover, demand falling` : 'Excess stock';
+    case 'EXPIRY_RISK': return e.cover_weeks_at_recent_rate != null && e.shelf_life_weeks != null ? `${fmtInt(e.cover_weeks_at_recent_rate)} wk cover vs ${fmtInt(e.shelf_life_weeks)} wk life` : 'Shelf-life risk';
+    case 'QUARANTINE_DOCS': return 'Certificate review';
+    case 'CONDEMNED_AWAITING_REPLACEMENT': return e.quoted_due_week != null ? `Replacement due ${fmtWeek(e.quoted_due_week)}` : 'Awaiting replacement';
+    default: return typeLabel(a.type);
+  }
+}
+/** Short title for the drawer: "{pn} · {station}: 0 of 2 on hand". The long rationale stays in the drawer body. */
+export function shortTitle(a) {
+  const e = a.evidence || {};
+  const stn = a.station || NETWORK;
+  const m = rowMetrics(a);
+  if (a.type === 'OUTSTATION_DEPLETION' && m.stock) return `${a.pn} · ${stn}: ${fmtInt(m.stock.have)} of ${fmtInt(m.stock.target)} on hand`;
+  if (a.type === 'OVERDUE_REPAIR' && e.weeks_overdue != null) return `${a.pn} · repair ${wk1(e.weeks_overdue)} wk past quoted due`;
+  return a.pn ? `${a.pn} · ${issueText(a)}` : a.summary;
+}
 
 function ensureCSS() {
   if (document.querySelector('link[data-view-css="planner-action-centre"]')) return;
@@ -193,22 +228,26 @@ export async function render(el, ctx) {
   const topType = types[0];
   el.append(pageHead({
     num: '08', eyebrow: 'Planner Action Centre',
-    title: asOf != null ? `Week ${asOf}: ${fmtInt(all.length)} exceptions, ${fmtInt(nSev.urgent)} urgent` : `${fmtInt(all.length)} exceptions this week`,
+    title: asOf != null ? `${fmtWeek(asOf)}: ${fmtInt(all.length)} exceptions, ${fmtInt(nSev.urgent)} urgent` : `${fmtInt(all.length)} exceptions this week`,
     lede: 'The weekly exception inbox for Falcon Hub Airways (fictional). Each exception carries the numbers behind it, a recommended action, an owner and a due week. Recommendations support a planner; they do not replace engineering, quality or airworthiness judgement.',
     meta: [provChip(metaProv), h('span', { class: 'chip chip-mono' }, asOf != null ? `As of ${fmtWeek(asOf)}` : 'As-of week not exported')],
   }));
 
   // ---- summary row: severity counts + where-the-work-is chart
-  const sevTiles = h('div', { class: 'pac-sevtiles' }, SEV.map((s) => h('button', {
-    type: 'button', class: 'pac-sevtile', dataset: { sev: s }, 'aria-label': `Show ${SEV_LABEL[s].toLowerCase()} exceptions (${nSev[s]})`,
-    onclick: () => { f.severity = f.severity === s ? 'all' : s; sync(); },
-  }, h('span', { class: 'pac-sevtile-n num' }, fmtInt(nSev[s])), sevPill(s))));
-  const ownerCounts = owners.map((o) => ({ o, n: count((a) => a.owner === o), u: count((a) => a.owner === o && a.severity === 'urgent') })).sort((a, b) => b.n - a.n);
+  // Ownership: who carries the work, as small stacked bars that also filter (no repeat of the severity counts).
+  const ownerCounts = owners.map((o) => ({ o, n: count((a) => a.owner === o), ...Object.fromEntries(SEV.map((sv) => [sv, count((a) => a.owner === o && a.severity === sv)])) })).sort((a, b) => b.urgent - a.urgent || b.n - a.n);
+  const maxOwner = Math.max(1, ...ownerCounts.map((r) => r.n));
+  const ownerList = h('ul', { class: 'pac-ownlist list-reset' }, ownerCounts.map((r) => h('li', {}, h('button', {
+    type: 'button', class: 'pac-own', dataset: { owner: r.o }, 'aria-pressed': 'false', 'aria-label': `${r.o}: ${r.n} open, ${r.urgent} urgent. Filter the inbox`,
+    onclick: () => { f.owner = f.owner === r.o ? '' : r.o; sync(); },
+  },
+  h('span', { class: 'pac-own-name' }, r.o),
+  h('span', { class: 'pac-own-n mono' }, `${fmtInt(r.n)}${r.urgent ? ` · ${fmtInt(r.urgent)} urgent` : ''}`),
+  h('span', { class: 'pac-own-bar', 'aria-hidden': 'true' }, SEV.filter((sv) => r[sv]).map((sv) => h('i', { class: `pac-own-seg pac-own-seg--${sv}`, style: { width: `${(r[sv] / maxOwner) * 100}%` } })))))));
   const summaryCard = card({
-    cls: 'span-4', kicker: 'This week', title: 'Severity and ownership', prov: metaProv,
-    body: h('div', { class: 'stack-3' }, sevTiles,
-      h('dl', { class: 'meta-list pac-owners' }, ownerCounts.flatMap((r) => [h('dt', {}, r.o), h('dd', { class: 'num' }, `${fmtInt(r.n)} open · ${fmtInt(r.u)} urgent`)])),
-      h('p', { class: 't-12 faint' }, 'Severity is shown as icon + text. Rules live in config/aog_lab.yaml; QUARANTINE_DOCS rows are a SIMULATED workflow illustration, not document data.')),
+    cls: 'span-4', kicker: 'This week', title: 'Who owns the work', prov: metaProv,
+    body: h('div', { class: 'stack-3' }, ownerList,
+      h('p', { class: 't-12 faint m-0' }, 'Click an owner to filter the inbox. Rules live in config/aog_lab.yaml; QUARANTINE_DOCS rows are a SIMULATED workflow illustration, not document data.')),
   });
   const chartCard = h('section', { class: 'card span-8', dataset: { story: 'action-types' } });
   const byType = types.map((t) => ({ t, label: typeLabel(t), ...Object.fromEntries(SEV.map((s) => [s, count((a) => a.type === t && a.severity === s)])), n: count((a) => a.type === t) }));
@@ -219,6 +258,7 @@ export async function render(el, ctx) {
     provenance: metaProv, source: 'actions.json',
     table: { columns: [{ key: 'label', label: 'Type' }, ...SEV.map((s) => ({ key: s, label: SEV_LABEL[s], num: true })), { key: 'n', label: 'Total', num: true }], rows: byType },
   });
+  frame.body.before(h('div', { class: 'pac-legend t-12', 'aria-hidden': 'true' }, SEV.filter((sv) => nSev[sv]).map((sv) => h('span', {}, h('i', { class: `pac-key pac-key--${sv}` }), `${SEV_LABEL[sv]} ${fmtInt(nSev[sv])}`))));
   const stopChart = responsive(frame.body, (w) => drawTypes(frame.body, w));
   function drawTypes(body, w) {
     const d3 = window.d3;
@@ -228,7 +268,7 @@ export async function render(el, ctx) {
     const svg = svgIn(body, w, H, 'Exceptions by type and severity');
     const bw = Math.max(40, w - lw - 120);
     const x = d3.scaleLinear().domain([0, d3.max(byType, (r) => r.n) || 1]).range([0, bw]);
-    const fill = { urgent: theme.color.urgent, review: theme.color.review, info: theme.color.neutral };
+    const fill = { urgent: theme.series.urgent, review: theme.series.review, info: theme.color.neutral };
     byType.forEach((r, i) => {
       const y = top0 + i * (narrow ? rowH + 16 : rowH);
       const g = svg.append('g').attr('transform', `translate(0,${y})`).style('cursor', 'pointer').attr('tabindex', 0).attr('role', 'button').attr('aria-label', `${r.label}: ${r.n} exceptions; filter`)
@@ -261,14 +301,19 @@ export async function render(el, ctx) {
   const shown = h('span', { class: 'pac-shown mono t-12', 'aria-live': 'polite' });
   const resetBtn = h('button', { type: 'button', class: 'btn btn--ghost btn--sm', onclick: () => { Object.assign(f, { severity: 'all', type: '', station: '', owner: '' }); sync(); } }, icon('close'), 'Clear filters');
   const csvBtn = h('button', { type: 'button', class: 'btn btn--sm', dataset: { action: 'export-csv' }, onclick: () => exportCSV() }, icon('download'), 'Export CSV');
-  const list = h('ul', { class: 'pac-list list-reset', role: 'list', 'aria-label': 'Exceptions' });
+  const list = h('ul', { class: 'pac-list list-reset', role: 'list', 'aria-label': 'Exceptions, grouped by part number' });
+  const gridHead = h('div', { class: 'pac-grid pac-grid-head', 'aria-hidden': 'true' },
+    h('span', {}, 'Severity'), h('span', {}, 'Part · station'), h('span', {}, 'Issue'), h('span', { class: 'is-num', title: 'Serviceable + inbound vs station target' }, 'On hand'), h('span', { class: 'is-num', title: 'AOG hours in the last 52 weeks' }, 'AOG h'), h('span', { class: 'is-num', title: 'D0 requests in the last 52 weeks' }, 'D0 req'), h('span', {}, 'Recommended action'), h('span', { class: 'is-num' }, 'Due'));
   const PAGE = 12;
+  const GROUP_PEEK = 3;
+  const openGroups = new Set();
   let expanded = false;
   const moreBtn = h('button', { type: 'button', class: 'btn btn--sm pac-more', dataset: { action: 'show-all' }, onclick: () => { expanded = !expanded; sync(); } });
   const inbox = card({
-    cls: 'mt-3', kicker: 'Exception inbox', title: 'Ranked by severity, then due week', prov: metaProv, story: 'action-inbox',
+    cls: 'mt-3', kicker: 'Exception inbox', title: 'Ranked by severity, then due week · grouped by part', prov: metaProv, story: 'action-inbox',
     actions: csvBtn,
-    body: h('div', { class: 'stack-3' }, h('div', { class: 'pac-filters' }, sevSeg, typeSel, stationSel, ownerSel), h('div', { class: 'row-between pac-shownrow' }, shown, resetBtn), list, moreBtn),
+    body: h('div', { class: 'stack-3' }, h('div', { class: 'pac-filters' }, sevSeg, typeSel, stationSel, ownerSel), h('div', { class: 'row-between pac-shownrow' }, shown, resetBtn), h('div', { class: 'pac-table' }, gridHead, list), moreBtn,
+      h('p', { class: 't-12 faint m-0' }, 'On hand = serviceable + inbound vs the station target. AOG h and D0 requests count the last 52 weeks (depletion rules only; — = not applicable). Open a row for the full rationale and evidence.')),
   });
   inbox.dataset.story = 'action-inbox';
   el.append(inbox);
@@ -286,16 +331,44 @@ export async function render(el, ctx) {
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
   }
 
-  function row(a) {
+  const num = (v, fmt = fmtInt) => (v == null ? h('span', { class: 'pac-na', title: 'Not applicable to this exception type' }, '—') : fmt(v));
+  function row(a, { inGroup = false } = {}) {
     const prov = a.evidence?.provenance === 'SIMULATED' || a.evidence?.simulated ? 'SIMULATED' : null;
-    return h('li', {},
-      h('button', { type: 'button', class: `pac-row pac-row--${a.severity}`, dataset: { id: a.exception_id }, 'aria-label': `${SEV_LABEL[a.severity] || a.severity}: ${a.summary}. Open evidence.`, onclick: () => open(a) },
-        h('span', { class: 'pac-row-sev' }, sevPill(a.severity)),
-        h('span', { class: 'pac-row-type', title: typeLabel(a.type) }, icon(a.type_icon || TYPE_ICON[a.type] || 'info')),
-        h('span', { class: 'pac-row-main' },
-          h('span', { class: 'pac-row-title' }, a.summary),
-          h('span', { class: 'pac-row-meta' }, h('span', { class: 'mono' }, a.exception_id), h('span', {}, typeLabel(a.type)), a.pn ? h('span', { class: 'mono' }, a.pn) : null, h('span', { class: 'mono' }, stationOf(a)), h('span', {}, a.owner || 'Owner not set'), prov ? provChip(prov) : null)),
-        h('span', { class: 'pac-row-due mono' }, h('span', { class: 'faint' }, 'Due '), a.due_week != null ? fmtWeek(a.due_week) : '—', icon('chevron-right'))));
+    const m = rowMetrics(a);
+    const stn = stationOf(a);
+    return h('li', { class: 'pac-li' },
+      h('button', { type: 'button', class: `pac-row pac-grid pac-row--${a.severity}${inGroup ? ' is-grouped' : ''}`, dataset: { id: a.exception_id, sev: a.severity }, 'aria-label': `${SEV_LABEL[a.severity] || a.severity}: ${shortTitle(a)}. ${a.recommended_action || ''}. Due ${a.due_week != null ? fmtWeek(a.due_week) : 'not set'}. Open evidence.`, onclick: () => open(a) },
+        h('span', { class: 'pac-c-sev' }, sevPill(a.severity)),
+        h('span', { class: 'pac-c-part mono' }, inGroup ? h('span', { class: 'pac-stn' }, h('span', { class: 'faint' }, '↳ '), stn) : h('span', {}, h('b', {}, a.pn || '—'), h('span', { class: 'faint' }, ' · '), stn)),
+        h('span', { class: 'pac-c-issue', title: typeLabel(a.type) }, icon(a.type_icon || TYPE_ICON[a.type] || 'info'), h('span', { class: 'pac-c-issue-t' }, issueText(a)), prov ? provChip(prov) : null),
+        h('span', { class: 'pac-c-stock is-num mono', dataset: { k: 'On hand' } }, m.stock ? h('span', { class: m.stock.have < m.stock.target ? 'pac-short' : '' }, `${fmtInt(m.stock.have)} / ${fmtInt(m.stock.target)}`) : num(null)),
+        h('span', { class: 'pac-c-aog is-num mono', dataset: { k: 'AOG h' } }, num(m.aogH)),
+        h('span', { class: 'pac-c-d0 is-num mono', dataset: { k: 'D0' } }, num(m.d0)),
+        h('span', { class: 'pac-c-action', title: a.recommended_action || '' }, a.recommended_action || 'No action recorded'),
+        h('span', { class: 'pac-c-due is-num mono' }, a.due_week != null ? fmtWeek(a.due_week) : '—', icon('chevron-right'))));
+  }
+  /** Same-PN exceptions collapse under one header ("GN-… · 6 stations · 63 AOG h max"); singletons stay plain rows. */
+  function groupsOf(rows) {
+    const map = new Map();
+    rows.forEach((a) => { const k = a.pn || a.exception_id; if (!map.has(k)) map.set(k, []); map.get(k).push(a); });
+    const gs = [...map.entries()].map(([pn, rs]) => ({ pn, rows: rs, sev: Math.min(...rs.map((a) => SEV_RANK[a.severity] ?? 9)), aog: Math.max(0, ...rs.map((a) => rowMetrics(a).aogH || 0)), first: rows.indexOf(rs[0]) }));
+    return gs.sort((a, b) => a.sev - b.sev || a.first - b.first);
+  }
+  const peek = (g) => (openGroups.has(g.pn) ? g.rows.length : Math.min(g.rows.length, GROUP_PEEK));
+  function groupBlock(g) {
+    if (g.rows.length === 1) return row(g.rows[0]);
+    const isOpen = openGroups.has(g.pn);
+    const nU = g.rows.filter((a) => a.severity === 'urgent').length;
+    const stations = new Set(g.rows.map(stationOf));
+    const sevKey = SEV[g.sev] || 'info';
+    const toggle = h('button', { type: 'button', class: 'pac-gtoggle btn btn--ghost btn--sm', 'aria-expanded': String(isOpen), dataset: { action: 'group-toggle', pn: g.pn }, onclick: () => { if (isOpen) openGroups.delete(g.pn); else openGroups.add(g.pn); sync(); } },
+      icon(isOpen ? 'arrow-up' : 'arrow-down'), isOpen ? 'Show fewer' : `Show ${fmtInt(g.rows.length - GROUP_PEEK)} more`);
+    return h('li', { class: `pac-group pac-group--${sevKey}`, dataset: { pn: g.pn } },
+      h('div', { class: 'pac-ghead' },
+        h('span', { class: 'pac-ghead-pn mono' }, g.pn),
+        h('span', { class: 'pac-ghead-meta' }, `${fmtInt(g.rows.length)} exceptions · ${fmtInt(stations.size)} ${stations.size === 1 ? 'station' : 'stations'}${nU ? ` · ${fmtInt(nU)} urgent` : ''}${g.aog ? ` · ${fmtInt(g.aog)} AOG h max` : ''}`),
+        g.rows.length > GROUP_PEEK ? toggle : null),
+      h('ul', { class: 'list-reset pac-grows' }, g.rows.map((a, i) => { const li = row(a, { inGroup: true }); if (i >= GROUP_PEEK && !isOpen) li.hidden = true; return li; })));
   }
 
   let activeDrawer = null;
@@ -308,10 +381,11 @@ export async function render(el, ctx) {
     const chart = evidenceChart(a);
     activeDrawer?.close();
     activeDrawer = drawer({
-      kicker: `${a.exception_id} · ${typeLabel(a.type)}`, title: a.summary,
+      kicker: `${a.exception_id} · ${typeLabel(a.type)}`, title: shortTitle(a),
       onClose: () => { if (alive) ctx.setParams({ id: '' }); activeDrawer = null; },
       body: h('div', { class: 'stack-3 pac-drawer' },
         h('div', { class: 'row-wrap' }, sevPill(a.severity), h('span', { class: 'chip chip-mono' }, a.type), provChip(prov)),
+        h('div', { class: 'pac-why' }, h('div', { class: 'card-kicker mb-1' }, 'Why it was raised'), h('p', { class: 'm-0' }, a.summary)),
         h('div', { class: 'pac-action' }, h('div', { class: 'card-kicker' }, 'Recommended action'), h('p', { class: 'm-0' }, a.recommended_action || 'No action recorded'),
           h('dl', { class: 'meta-list mt-2' }, ...[['Owner', a.owner || 'not set'], ['Due', a.due_week != null ? fmtWeek(a.due_week) : 'not set'], ['Raised', a.week != null ? fmtWeek(a.week) : 'not recorded'], ['Part', a.pn || '—'], ['Station', stationOf(a)]].flatMap(([k, v]) => [h('dt', {}, k), h('dd', { class: k === 'Part' || k === 'Station' ? 'mono' : '' }, v)]))),
         chart,
@@ -333,20 +407,31 @@ export async function render(el, ctx) {
     typeSel.querySelector('select').value = f.type;
     stationSel.querySelector('select').value = f.station;
     ownerSel.querySelector('select').value = f.owner;
-    sevTiles.querySelectorAll('.pac-sevtile').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sev === f.severity)));
+    ownerList.querySelectorAll('.pac-own').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.owner === f.owner)));
     const nU = rows.filter((a) => a.severity === 'urgent').length;
     shown.textContent = `Showing ${fmtInt(rows.length)} of ${fmtInt(all.length)} · ${fmtInt(nU)} urgent`;
     resetBtn.disabled = f.severity === 'all' && !f.type && !f.station && !f.owner;
-    const lim = expanded ? rows.length : PAGE;
-    list.replaceChildren(...(rows.length ? rows.slice(0, lim).map(row) : [h('li', { class: 'state' }, icon('info'), h('p', {}, 'No exceptions match these filters.'))]));
-    moreBtn.hidden = rows.length <= PAGE;
-    moreBtn.replaceChildren(icon(expanded ? 'arrow-up' : 'arrow-down'), expanded ? `Show the first ${PAGE} only` : `Show all ${fmtInt(rows.length)} exceptions (${fmtInt(rows.length - PAGE)} more)`);
+    // Page by whole groups: show groups until about PAGE visible rows, then "Show all".
+    const gs = groupsOf(rows);
+    let collapsedN = 0, vis = 0;
+    for (const g of gs) { if (vis >= PAGE) break; vis += peek(g); collapsedN++; }
+    const shownN = expanded ? gs.length : collapsedN;
+    const hiddenRows = gs.slice(collapsedN).reduce((n, g) => n + g.rows.length, 0);
+    list.replaceChildren(...(rows.length ? gs.slice(0, shownN).map(groupBlock) : [h('li', { class: 'state' }, icon('info'), h('p', {}, 'No exceptions match these filters.'))]));
+    gridHead.hidden = !rows.length;
+    moreBtn.hidden = hiddenRows === 0;
+    moreBtn.replaceChildren(icon(expanded ? 'arrow-up' : 'arrow-down'), expanded ? 'Show the top of the list only' : `Show all ${fmtInt(rows.length)} exceptions (${fmtInt(hiddenRows)} more across ${fmtInt(gs.length - collapsedN)} parts)`);
     ctx.setParams({ severity: f.severity === 'all' ? '' : f.severity, type: f.type, station: f.station, owner: f.owner });
     drawTypes(frame.body, Math.floor(frame.body.clientWidth) || 600);
   }
   sync();
 
   const deep = all.find((a) => a.exception_id === ctx.params.id);
-  if (deep) { if (current().indexOf(deep) >= PAGE) { expanded = true; sync(); } open(deep); }
+  if (deep) {
+    if (deep.pn) openGroups.add(deep.pn);
+    sync();
+    if (!list.querySelector(`.pac-row[data-id="${deep.exception_id}"]`)) { expanded = true; sync(); }
+    open(deep);
+  }
   return () => { alive = false; stopChart(); activeDrawer?.close(); };
 }

@@ -72,3 +72,43 @@ def test_picker_and_story_hook(site, browser):  # noqa: F811
         assert not problems, problems
     finally:
         ctx.close()
+
+
+# ---- design wave 2 (critic item #6)
+import re  # noqa: E402
+
+CODE_RE = re.compile(r"\b[A-Z]{2,}(?:_[A-Z]+)+\b")
+
+
+@pytest.mark.parametrize("vp", list(VIEWPORTS))
+@pytest.mark.parametrize("inc_id", [IDS[0], IDS[len(IDS) // 2]])
+def test_aog_wave2_design(site, browser, vp, inc_id):  # noqa: F811
+    inc = next(i for i in LAB["incidents"] if i["id"] == inc_id)
+    ctx, page, problems = open_page(browser, site + f"#/aog?incident={inc_id}", vp)
+    try:
+        heads = page.locator("#view .chart-headline").all_inner_texts()
+        assert all(len(t.strip()) <= 90 for t in heads), heads
+        # no raw enum codes as visible copy; codes survive in title attributes
+        opts_text = page.locator('[data-story="aog-options"]').inner_text()
+        assert not CODE_RE.search(opts_text), CODE_RE.findall(opts_text)
+        codes = {c for o in inc["options"] for c in o.get("reason_codes") or []}
+        titles = set(page.locator(".aog-codes li[title]").evaluate_all("(els) => els.map((e) => e.title)"))
+        assert codes <= titles
+        # no real calendar dates on screen (simulated weeks and T+ hours only)
+        assert not re.search(r"\b20\d\d-\d\d-\d\d\b", page.locator("#view").inner_text())
+        # cards: feasible group ordered by rank, then a "not available" group
+        feas = page.locator('.aog-optgroup[data-group="feasible"] .aog-opt').evaluate_all("(els) => els.map((e) => e.dataset.key)")
+        exp = [o["key"] for o in sorted((o for o in inc["options"] if o.get("feasible") and not o.get("human_decision") and not o.get("indicative") and "NOT_CONTRACTED" not in (o.get("reason_codes") or [])), key=lambda o: o.get("rank") or 99)]
+        assert feas == exp
+        assert "FEASIBLE (" in page.locator('.aog-optgroup[data-group="feasible"] .aog-optgroup-head h4').inner_text()
+        # MISSED on the recommended card is explained
+        rec = page.locator('.aog-opt[data-state="rec"]')
+        if rec.count() and "Missed" in rec.inner_text():
+            note = rec.locator('[data-role="missed-note"]').inner_text()
+            assert "ranked by exposure" in note.lower() or "lowest exposure" in note.lower()
+        # swimlane: every step has its own position (no stacked cluster at T+0)
+        pos = page.locator('[data-story="aog-timeline"] svg g.aog-sl-step').evaluate_all("(els) => els.map((e) => e.getAttribute('transform'))")
+        assert len(pos) == len(inc["timeline"]) and len(set(pos)) == len(pos)
+        assert not problems, problems
+    finally:
+        ctx.close()

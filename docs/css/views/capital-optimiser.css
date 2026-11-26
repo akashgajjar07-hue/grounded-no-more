@@ -5,15 +5,17 @@
 .co-key { display: inline-block; width: 10px; height: 10px; flex: none; }
 .co-key--front { border-radius: 50%; border: 1.5px solid var(--primary); background: var(--bg); }
 .co-key--dom { border-radius: 50%; background: var(--c-slate); opacity: 0.7; width: 8px; height: 8px; }
-.co-key--pol { border: 2px solid var(--c-copper); background: var(--bg); }
+.co-key--p0 { border: 2px solid var(--c-copper); background: var(--bg); }
+.co-key--pol { border: 2px solid var(--text-muted); background: var(--bg); }
 .co-key--lev { transform: rotate(45deg) scale(0.8); border: 1.5px solid var(--text-muted); }
 .co-key--sel { border-radius: 50%; border: 1px dashed var(--text-muted); }
 .co-sw { display: inline-block; width: 12px; height: 8px; border-radius: 2px; }
-.co-sw--aog_penalty { background: var(--c-copper); }
-.co-sw--holding_cost { background: rgba(185, 200, 214, 0.62); }
-.co-sw--repair_cost { background: rgba(185, 200, 214, 0.38); }
+.co-sw--aog_penalty { background: var(--text-muted); }
+.co-sw--holding_cost { background: rgba(185, 200, 214, 0.55); }
+.co-sw--repair_cost { background: rgba(185, 200, 214, 0.36); }
 .co-sw--expedite_cost { background: rgba(185, 200, 214, 0.22); }
-.co-sw--logistics_cost { background: rgba(185, 200, 214, 0.12); }
+.co-sw--logistics_cost { background: rgba(185, 200, 214, 0.14); }
+.co-sw--other { background: rgba(185, 200, 214, 0.09); }
 .co-side { display: flex; flex-direction: column; gap: var(--gutter); }
 .co-readout dd { font-size: 13px; overflow-wrap: anywhere; }
 .co-readout dd .mono { font-size: 13px; }
@@ -51,3 +53,30 @@
 .co-hero svg .gnm-annot-text, .co-hero svg .gnm-annot-sub, .co-hero svg .gnm-label { paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
 .co-var .data-table th, .co-var .data-table td { padding-left: 8px; padding-right: 8px; }
 .co-var .data-table td { height: 44px; }
+
+/* wave 2: KPI strip — one AOG tile with two deltas; 2-up on phones (third tile spans both) */
+.co-kpis .kpi { min-height: auto; }
+.co-kpis .kpi-foot { margin-top: auto; }
+.co-delta2 { margin-top: -6px; }
+@media (max-width: 767px) {
+  .co-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-1); }
+  .co-kpis > .kpi { grid-column: auto; padding: 12px; gap: 8px; }
+  .co-kpis--3 > .kpi:last-child { grid-column: 1 / -1; }
+  .co-kpis .kpi .kpi-value { font-size: var(--fs-28); }
+  .co-kpis .kpi-top { flex-wrap: wrap; gap: 4px; }
+  .co-kpis .kpi-delta { font-size: 13px; flex-wrap: wrap; }
+  .co-kpis .kpi-foot { flex-direction: column; align-items: flex-start; gap: 2px; padding-top: 8px; }
+  .co-kpis--3 > .kpi:last-child .kpi-foot { flex-direction: row; justify-content: space-between; }
+}
+/* wave 2: allocation table — whole rows only (header 40 + 12 × 32), fade hints at more, notes clear the border */
+.co-alloc .table-wrap { max-height: calc(40px + 12 * 32px); -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(180deg, #000 calc(100% - 28px), transparent); }
+.co-alloc .table-wrap:hover, .co-alloc .table-wrap:focus-within { -webkit-mask-image: none; mask-image: none; }
+.co-alloc-notes { margin-top: var(--s-2); }
+.co-alloc-more { display: none; width: 100%; justify-content: center; margin-top: var(--s-1); }
+@media (max-width: 480px) {
+  .co-alloc .table-wrap { -webkit-mask-image: none; mask-image: none; max-height: none; }
+  .co-alloc:not(.is-expanded) .dts-row:nth-child(n + 9) { display: none; }
+  .co-alloc.has-more .co-alloc-more { display: inline-flex; }
+}
+.dts-metric .co-two, .dts-secondary .co-two { flex-direction: row; align-items: baseline; gap: 4px; }
+.dts-metric .co-two small { display: none; }
