@@ -64,7 +64,7 @@
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: var(--s-1); }
 .topbar .menu-btn { display: none; }
 .rail-scrim { display: none; }
-.view { flex: 1; padding: var(--s-4) var(--gutter) var(--s-6); width: 100%; max-width: var(--max-w); margin: 0 auto; }
+.view { flex: 1; min-height: 100vh; min-height: 100svh; /* footer starts below the fold: no layout shift when the view renders (CLS) */ padding: var(--s-4) var(--gutter) var(--s-6); width: 100%; max-width: var(--max-w); margin: 0 auto; }
 .view:focus { outline: none; }
 .view-enter { animation: view-in var(--dur-slow) var(--ease) both; }
 @keyframes view-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
