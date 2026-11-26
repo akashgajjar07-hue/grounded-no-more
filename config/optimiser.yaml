@@ -1,0 +1,50 @@
+# GROUNDED NO MORE — optimiser (Aviation Readiness Frontier) parameters.
+# Economics (AOG penalty, carrying cost, repair acceleration cost) are NOT duplicated here:
+# they are read from config/assumptions.yaml (locked). Everything below is ASSUMED, chosen
+# before any frontier result was seen, and documented in docs/agent_notes/optimiser.md.
+
+demand_inputs:
+  source: forecasts                # forecasts (outputs/forecasting/final_forecasts.parquet) | history | <path>
+  history_weeks: [0, 103]          # rate window (history only; never weeks >= 104)
+  pipeline_ro_removed_before_week: 78   # ROs removed before this week are (nearly) all closed by week 103
+  lead_time_recent_from_week: 52   # C/E hub lead time = mean of reorder POs placed from this week (>= 2 POs), else quoted
+  base_policy: P2                  # P0 | P1 | P2 — starting allocation (C/E params + network rules); greedy reallocates rotables
+  reference_policies: [P0, P1, P2] # evaluated and frozen as labelled reference points (kind = policy)
+  provenance: ASSUMED
+
+model:
+  include_count_parts: true        # also offer C/E (s,S) +1 safety-stock increments (D0/D3 demand only)
+  count_part_classes_with_value: [D0, D3]
+  rotable_min_hub_ready_rate: 0.10 # planner floor: rotable hub float >= smallest S with P(pipeline < S) >= 0.10
+                                   # (the AOG desk's 5-day expedite buy is for exceptions, not routine supply)
+  max_outstation_units: 4          # rotable base-stock ceiling at an outstation
+  hub_ceiling_sd: 6                # rotable hub ceiling = ceil(mu + k*sqrt(mu)) + 2
+  count_part_max_increments_sd: 3  # C/E increments per station <= ceil(k*sqrt(mu)) + 2
+  provenance: ASSUMED
+
+frontier:
+  rotable_start: zero              # zero = re-optimise the rotable float from 0; base = only add/remove vs the base policy
+  budget_fractions: [0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5]   # x base (P2) allocation capital; rotable floor ~0.13
+  incremental_fractions: [1.1, 1.25]   # extra "base + greedy additions" candidates (no reallocation)
+  scenario_weeks: [78, 155]
+  kpi_weeks: [104, 155]
+  ci_level: 0.95
+  variants: [central, low_stress, high_stress]
+  full_variant_sweeps: true        # evaluate every candidate on the stress variants (engine is fast)
+  processes: null                  # null = cpu_count - 1
+  provenance: ASSUMED
+
+levers:
+  tat_cut_days: 10
+  extra_spares: [1, 2]
+  max_cut_share_of_work: 0.5       # a TAT cut may remove at most half of the shop work time
+  tat_top_n: 8                     # "TAT -10 d on top-N" lever candidate
+  provenance: ASSUMED
+
+tornado:
+  aog_penalty_factors: [0.5, 2.0]
+  tat_factors: [0.75, 1.25]        # applied in the engine via repair_tat_multiplier (all rotables), NOT costed as acceleration
+  lead_time_factors: [0.75, 1.25]  # applied by scaling the Scenario's pre-sampled lead-time draws (copy; sim code untouched)
+  carrying_cost: [0.15, 0.25]
+  expedite_off: true               # stress test: no AOG-desk expedite buying (PolicySpec flag), both policies
+  provenance: ASSUMED

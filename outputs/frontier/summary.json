@@ -1,0 +1,560 @@
+{
+  "provenance": "SIMULATED",
+  "split": "selection",
+  "seeds": [
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109,
+    110,
+    111,
+    112,
+    113,
+    114,
+    115,
+    116,
+    117,
+    118,
+    119
+  ],
+  "scenario_weeks": [
+    78,
+    155
+  ],
+  "kpi_weeks": [
+    104,
+    155
+  ],
+  "base_policy_id": "P2",
+  "demand_source": "forecasts",
+  "candidates_sha256": "c501ca5235d2811c92fde98ab9e071360ee2062b0746ad4a9ff7c783f646621f",
+  "n_candidates": 23,
+  "base_allocation_capital_aed": 22138207.44,
+  "recommendation_rule": "Stated before computing. Among the capital-only candidates (baseline/reference policies, budget points, base+additions, reposition), take the non-dominated set on the selection-seed means (minimise simulated capital and material AOG h/yr) and its lower convex hull, sorted by capital. Walking up the hull, each segment's marginal value is the AOG-hour reduction per extra AED 1M of capital. The break-even value implied by the AOG penalty is h* = carrying % x AED 1M / (baseline AED per AOG hour), i.e. the AOG hours whose penalty equals the extra annual holding cost of AED 1M. The recommended 'balanced' point is the last hull vertex before the first segment whose marginal value falls below h* (equivalently the hull point that minimises carrying % x capital + AED/h x AOG hours). If no segment falls below h*, the highest-capital vertex is recommended and flagged 'frontier not saturated'.",
+  "recommendation": {
+    "recommended": "I125",
+    "h_star_per_aed_1m": 9.416941694169417,
+    "aed_per_aog_hour": 21238.317757009347,
+    "carrying_pct": 0.2,
+    "hull": [
+      "B015",
+      "B020",
+      "B030",
+      "B050",
+      "B060",
+      "B080",
+      "I110",
+      "I125",
+      "B175",
+      "B200"
+    ],
+    "segments": [
+      {
+        "from": "B015",
+        "to": "B020",
+        "h_per_aed_1m": 1240.561886267018
+      },
+      {
+        "from": "B020",
+        "to": "B030",
+        "h_per_aed_1m": 995.0377856366766
+      },
+      {
+        "from": "B030",
+        "to": "B050",
+        "h_per_aed_1m": 133.68041790963215
+      },
+      {
+        "from": "B050",
+        "to": "B060",
+        "h_per_aed_1m": 76.73319722256515
+      },
+      {
+        "from": "B060",
+        "to": "B080",
+        "h_per_aed_1m": 71.93752929385815
+      },
+      {
+        "from": "B080",
+        "to": "I110",
+        "h_per_aed_1m": 64.71982798901134
+      },
+      {
+        "from": "I110",
+        "to": "I125",
+        "h_per_aed_1m": 27.120046109626625
+      },
+      {
+        "from": "I125",
+        "to": "B175",
+        "h_per_aed_1m": 1.4054377200194343
+      },
+      {
+        "from": "B175",
+        "to": "B200",
+        "h_per_aed_1m": 0.8226382531907381
+      }
+    ],
+    "frontier_saturated": true,
+    "min_holding_plus_penalty_on_hull": "I125"
+  },
+  "recommended": {
+    "kind": "incremental",
+    "label": "Base + greedy additions only, budget 1.25 x base allocation capital",
+    "budget_aed": 27672759.3,
+    "allocation_capital_aed": 27606462.440000013,
+    "model_aog_hours": 25.901480762205367,
+    "n_seeds": 20,
+    "capital_mean": 41599486.39478604,
+    "capital_lo": 41279257.61825419,
+    "capital_hi": 41919715.17131788,
+    "d_capital_vs_base_mean": 4927449.455879815,
+    "d_capital_vs_base_lo": 4761345.511877568,
+    "d_capital_vs_base_hi": 5093553.399882061,
+    "aog_hours_mean": 117.75,
+    "aog_hours_lo": 91.5183852630739,
+    "aog_hours_hi": 143.9816147369261,
+    "d_aog_hours_vs_base_mean": -310.25,
+    "d_aog_hours_vs_base_lo": -382.88551765508134,
+    "d_aog_hours_vs_base_hi": -237.61448234491863,
+    "total_cost_mean": 29373730.96988221,
+    "total_cost_lo": 28770345.32036759,
+    "total_cost_hi": 29977116.619396828,
+    "d_total_cost_vs_base_mean": -5611376.428999037,
+    "d_total_cost_vs_base_lo": -7032650.998029554,
+    "d_total_cost_vs_base_hi": -4190101.859968519,
+    "aog_penalty_mean": 2636250.0,
+    "aog_penalty_lo": 2064980.3053650125,
+    "aog_penalty_hi": 3207519.6946349875,
+    "holding_cost_mean": 8319897.278957209,
+    "holding_cost_lo": 8255851.52365084,
+    "holding_cost_hi": 8383943.034263577,
+    "expedite_cost_mean": 1138207.408925,
+    "expedite_cost_lo": 992341.8656259917,
+    "expedite_cost_hi": 1284072.9522240085,
+    "repair_cost_mean": 17140138.78199999,
+    "repair_cost_lo": 16695656.233930252,
+    "repair_cost_hi": 17584621.33006973,
+    "fill_rate_mean": 0.9807367048357527,
+    "fill_rate_lo": 0.9786073559176447,
+    "fill_rate_hi": 0.9828660537538607,
+    "aog_events_mean": 6.15,
+    "aog_events_lo": 5.01091752311929,
+    "aog_events_hi": 7.2890824768807105,
+    "d_capital_vs_P0_mean": 5360044.76524826,
+    "d_capital_vs_P0_lo": 4808482.977359995,
+    "d_capital_vs_P0_hi": 5911606.553136526,
+    "d_aog_hours_vs_P0_mean": -2819.75,
+    "d_aog_hours_vs_P0_lo": -3175.8452687563804,
+    "d_aog_hours_vs_P0_hi": -2463.6547312436196,
+    "d_total_cost_vs_P0_mean": -57552069.72075035,
+    "d_total_cost_vs_P0_lo": -65096341.97018131,
+    "d_total_cost_vs_P0_hi": -50007797.471319385,
+    "dominated": false,
+    "variant": "central",
+    "on_hull": true,
+    "recommended": true,
+    "indistinguishable_from_recommended": null
+  },
+  "base_policy": {
+    "kind": "policy",
+    "label": "P2 Network as built (base policy)",
+    "budget_aed": null,
+    "allocation_capital_aed": 22138207.44,
+    "model_aog_hours": 321.24197129078794,
+    "n_seeds": 20,
+    "capital_mean": 36672036.93890623,
+    "capital_lo": 36289437.837571084,
+    "capital_hi": 37054636.040241376,
+    "d_capital_vs_base_mean": 0.0,
+    "d_capital_vs_base_lo": 0.0,
+    "d_capital_vs_base_hi": 0.0,
+    "aog_hours_mean": 428.0,
+    "aog_hours_lo": 356.25812449924405,
+    "aog_hours_hi": 499.74187550075595,
+    "d_aog_hours_vs_base_mean": 0.0,
+    "d_aog_hours_vs_base_lo": 0.0,
+    "d_aog_hours_vs_base_hi": 0.0,
+    "total_cost_mean": 34985107.39888124,
+    "total_cost_lo": 33513273.756082468,
+    "total_cost_hi": 36456941.041680016,
+    "d_total_cost_vs_base_mean": 0.0,
+    "d_total_cost_vs_base_lo": 0.0,
+    "d_total_cost_vs_base_hi": 0.0,
+    "aog_penalty_mean": 9090000.0,
+    "aog_penalty_lo": 7660417.475751133,
+    "aog_penalty_hi": 10519582.524248866,
+    "holding_cost_mean": 7334407.387781245,
+    "holding_cost_lo": 7257887.567514216,
+    "holding_cost_hi": 7410927.208048274,
+    "expedite_cost_mean": 1279643.7291,
+    "expedite_cost_lo": 1138807.9825528115,
+    "expedite_cost_hi": 1420479.4756471887,
+    "repair_cost_mean": 17140138.78199999,
+    "repair_cost_lo": 16695656.233930252,
+    "repair_cost_hi": 17584621.33006973,
+    "fill_rate_mean": 0.9793159312044409,
+    "fill_rate_lo": 0.9772259685874539,
+    "fill_rate_hi": 0.981405893821428,
+    "aog_events_mean": 17.7,
+    "aog_events_lo": 13.885421916942846,
+    "aog_events_hi": 21.514578083057152,
+    "d_capital_vs_P0_mean": 432595.30936844385,
+    "d_capital_vs_P0_lo": -16036.795210680575,
+    "d_capital_vs_P0_hi": 881227.4139475683,
+    "d_aog_hours_vs_P0_mean": -2509.5,
+    "d_aog_hours_vs_P0_lo": -2853.7559123957576,
+    "d_aog_hours_vs_P0_hi": -2165.2440876042424,
+    "d_total_cost_vs_P0_mean": -51940693.29175131,
+    "d_total_cost_vs_P0_lo": -59269783.468487345,
+    "d_total_cost_vs_P0_hi": -44611603.115015276,
+    "dominated": true,
+    "variant": "central",
+    "on_hull": false,
+    "recommended": false,
+    "indistinguishable_from_recommended": false
+  },
+  "recommended_vs_base_policy": {
+    "net_benefit_mean": 5611376.428999037,
+    "net_benefit_lo": 4190101.859968519,
+    "net_benefit_hi": 7032650.998029554,
+    "aog_reduction_mean": 310.25,
+    "aog_reduction_lo": 237.61448234491863,
+    "aog_reduction_hi": 382.88551765508134,
+    "rec_aog_hours": 117.75,
+    "base_aog_hours": 428.0,
+    "rec_capital_aed": 41599486.39478604,
+    "base_capital_aed": 36672036.93890623
+  },
+  "recommended_vs_P0": {
+    "net_benefit_mean": 57552069.72075035,
+    "net_benefit_lo": 50007797.471319385,
+    "net_benefit_hi": 65096341.97018131,
+    "aog_reduction_mean": 2819.75,
+    "aog_reduction_lo": 2463.6547312436196,
+    "aog_reduction_hi": 3175.8452687563804,
+    "rec_aog_hours": 117.75,
+    "base_aog_hours": 2937.5,
+    "rec_capital_aed": 41599486.39478604,
+    "base_capital_aed": 36239441.62953778
+  },
+  "recommended_beats_base_policy_significantly": true,
+  "references": {
+    "P0": {
+      "capital_mean": 36239441.62953778,
+      "capital_lo": 35609383.831138484,
+      "capital_hi": 36869499.42793708,
+      "aog_hours_mean": 2937.5,
+      "aog_hours_lo": 2584.2134667184714,
+      "aog_hours_hi": 3290.7865332815286,
+      "total_cost_mean": 86925800.69063255,
+      "model_aog_hours": 3016.8023251045115
+    },
+    "P1": {
+      "capital_mean": 64320843.859361544,
+      "capital_lo": 63891873.89513727,
+      "capital_hi": 64749813.823585816,
+      "aog_hours_mean": 1677.15,
+      "aog_hours_lo": 1342.66977414035,
+      "aog_hours_hi": 2011.6302258596502,
+      "total_cost_mean": 63888394.06817231,
+      "model_aog_hours": 893.4699130570394
+    },
+    "P2": {
+      "capital_mean": 36672036.93890623,
+      "capital_lo": 36289437.837571084,
+      "capital_hi": 37054636.040241376,
+      "aog_hours_mean": 428.0,
+      "aog_hours_lo": 356.25812449924405,
+      "aog_hours_hi": 499.74187550075595,
+      "total_cost_mean": 34985107.39888124,
+      "model_aog_hours": 321.24197129078794
+    }
+  },
+  "non_dominated": [
+    "B015",
+    "B020",
+    "B030",
+    "B040",
+    "B050",
+    "B060",
+    "B070",
+    "B080",
+    "B090",
+    "B150",
+    "B175",
+    "B200",
+    "I110",
+    "I125",
+    "LEV_TAT10_TOP8",
+    "COMBO_B100_TAT10"
+  ],
+  "indistinguishable_vs_recommended": {
+    "B015": {
+      "d_aog_mean": 2590.0,
+      "d_aog_lo": 2201.055115128684,
+      "d_aog_hi": 2978.944884871316,
+      "indistinguishable": false
+    },
+    "B020": {
+      "d_aog_mean": 2033.1,
+      "d_aog_lo": 1673.5560344583103,
+      "d_aog_hi": 2392.64396554169,
+      "indistinguishable": false
+    },
+    "B030": {
+      "d_aog_mean": 628.6,
+      "d_aog_lo": 543.2451548924766,
+      "d_aog_hi": 713.9548451075234,
+      "indistinguishable": false
+    },
+    "B040": {
+      "d_aog_mean": 497.05,
+      "d_aog_lo": 417.06046041326346,
+      "d_aog_hi": 577.0395395867366,
+      "indistinguishable": false
+    },
+    "B050": {
+      "d_aog_mean": 343.25,
+      "d_aog_lo": 271.5893396154966,
+      "d_aog_hi": 414.9106603845034,
+      "indistinguishable": false
+    },
+    "B060": {
+      "d_aog_mean": 278.7,
+      "d_aog_lo": 222.5483098041782,
+      "d_aog_hi": 334.8516901958218,
+      "indistinguishable": false
+    },
+    "B070": {
+      "d_aog_mean": 181.25,
+      "d_aog_lo": 139.75578249348234,
+      "d_aog_hi": 222.74421750651766,
+      "indistinguishable": false
+    },
+    "B080": {
+      "d_aog_mean": 123.8,
+      "d_aog_lo": 88.92359578614344,
+      "d_aog_hi": 158.67640421385656,
+      "indistinguishable": false
+    },
+    "B090": {
+      "d_aog_mean": 50.35,
+      "d_aog_lo": 27.455140980234702,
+      "d_aog_hi": 73.2448590197653,
+      "indistinguishable": false
+    },
+    "B150": {
+      "d_aog_mean": -6.1,
+      "d_aog_lo": -42.05685286580777,
+      "d_aog_hi": 29.856852865807767,
+      "indistinguishable": true
+    },
+    "B175": {
+      "d_aog_mean": -14.9,
+      "d_aog_lo": -47.13310692284255,
+      "d_aog_hi": 17.333106922842553,
+      "indistinguishable": true
+    },
+    "B200": {
+      "d_aog_mean": -19.05,
+      "d_aog_lo": -52.06356330618864,
+      "d_aog_hi": 13.963563306188636,
+      "indistinguishable": true
+    },
+    "COMBO_B100_TAT10": {
+      "d_aog_mean": 21.95,
+      "d_aog_lo": -11.274850708616572,
+      "d_aog_hi": 55.174850708616574,
+      "indistinguishable": true
+    },
+    "I110": {
+      "d_aog_mean": 82.5,
+      "d_aog_lo": 58.24415097406764,
+      "d_aog_hi": 106.75584902593236,
+      "indistinguishable": false
+    },
+    "LEV_TAT10_TOP8": {
+      "d_aog_mean": 206.95,
+      "d_aog_lo": 145.45480881472386,
+      "d_aog_hi": 268.4451911852761,
+      "indistinguishable": false
+    },
+    "P2": {
+      "d_aog_mean": 310.25,
+      "d_aog_lo": 237.61448234491863,
+      "d_aog_hi": 382.88551765508134,
+      "indistinguishable": false
+    }
+  },
+  "recommendation_stability": [
+    {
+      "factor": "aog_penalty",
+      "setting": "x0.5",
+      "recommended": "I125"
+    },
+    {
+      "factor": "aog_penalty",
+      "setting": "x2.0",
+      "recommended": "I125"
+    },
+    {
+      "factor": "carrying_cost",
+      "setting": "0.15",
+      "recommended": "I125"
+    },
+    {
+      "factor": "carrying_cost",
+      "setting": "0.25",
+      "recommended": "I125"
+    }
+  ],
+  "variants": {
+    "low_stress": {
+      "recommended_point_vs_base_policy": {
+        "net_benefit_mean": -951368.9591445815,
+        "net_benefit_lo": -1173841.3360386812,
+        "net_benefit_hi": -728896.5822504817,
+        "aog_reduction_mean": 3.45,
+        "aog_reduction_lo": -3.9475813529640975,
+        "aog_reduction_hi": 10.847581352964099,
+        "rec_aog_hours": 34.9,
+        "base_aog_hours": 38.35,
+        "rec_capital_aed": 40566858.229607716,
+        "base_capital_aed": 35130214.2176348
+      },
+      "recommended_point_vs_P0": {
+        "net_benefit_mean": 25100182.07760159,
+        "net_benefit_lo": 20026321.170932777,
+        "net_benefit_hi": 30174042.9842704,
+        "aog_reduction_mean": 1291.8,
+        "aog_reduction_lo": 1050.5071233189933,
+        "aog_reduction_hi": 1533.0928766810066,
+        "rec_aog_hours": 34.9,
+        "base_aog_hours": 1326.7,
+        "rec_capital_aed": 40566858.229607716,
+        "base_capital_aed": 32141868.188240666
+      },
+      "references": {
+        "P0": {
+          "capital_mean": 32141868.188240666,
+          "aog_hours_mean": 1326.7
+        },
+        "P1": {
+          "capital_mean": 61648848.87568668,
+          "aog_hours_mean": 172.1
+        },
+        "P2": {
+          "capital_mean": 35130214.2176348,
+          "aog_hours_mean": 38.35
+        }
+      },
+      "rule_would_recommend": "P2",
+      "central_recommended_dominated": true
+    },
+    "high_stress": {
+      "recommended_point_vs_base_policy": {
+        "net_benefit_mean": 10902959.815953014,
+        "net_benefit_lo": 8965361.719269723,
+        "net_benefit_hi": 12840557.912636306,
+        "aog_reduction_mean": 567.9,
+        "aog_reduction_lo": 469.6537071578261,
+        "aog_reduction_hi": 666.1462928421738,
+        "rec_aog_hours": 279.95,
+        "base_aog_hours": 847.85,
+        "rec_capital_aed": 42914969.963381566,
+        "base_capital_aed": 38570164.214771636
+      },
+      "recommended_point_vs_P0": {
+        "net_benefit_mean": 68772375.33216967,
+        "net_benefit_lo": 57840963.85757504,
+        "net_benefit_hi": 79703786.8067643,
+        "aog_reduction_mean": 3314.5,
+        "aog_reduction_lo": 2809.141599886119,
+        "aog_reduction_hi": 3819.858400113881,
+        "rec_aog_hours": 279.95,
+        "base_aog_hours": 3594.45,
+        "rec_capital_aed": 42914969.963381566,
+        "base_capital_aed": 38506341.95272999
+      },
+      "references": {
+        "P0": {
+          "capital_mean": 38506341.95272999,
+          "aog_hours_mean": 3594.45
+        },
+        "P1": {
+          "capital_mean": 66493295.71001784,
+          "aog_hours_mean": 2191.05
+        },
+        "P2": {
+          "capital_mean": 38570164.214771636,
+          "aog_hours_mean": 847.85
+        }
+      },
+      "rule_would_recommend": "B125",
+      "central_recommended_dominated": false
+    }
+  },
+  "flagged_more_than_doubles_p0": {
+    "recommended": {
+      "GN-21-R015": "P0 float + seeded loop below the forecast pipeline (P0 sized on quoted MTBUR/TAT): pipeline mean 1.2 units (10 removals/yr x 46 d, completed-RO trimmed mean) vs 1 P0 base_stock units + 0 seeded loop units; D0 share 0%; AOG penalty AED 26,790/h vs unit cost AED 36,714 (holding AED 7,343/yr per unit); last hub unit avoids 0.00 modelled AOG h/yr = AED 0/yr",
+      "GN-21-R020": "greedy marginal value: pipeline mean 0.8 units (4 removals/yr x 71 d, completed-RO trimmed mean) vs 1 P0 base_stock units + 0 seeded loop units; D0 share 0%; AOG penalty AED 22,180/h vs unit cost AED 259,674 (holding AED 51,935/yr per unit); last hub unit avoids 5.51 modelled AOG h/yr = AED 122,321/yr",
+      "GN-24-R003": "greedy marginal value: pipeline mean 1.9 units (19 removals/yr x 36 d, completed-RO trimmed mean) vs 2 P0 base_stock units + 2 seeded loop units; D0 share 0%; AOG penalty AED 15,000/h vs unit cost AED 475,393 (holding AED 95,079/yr per unit); last hub unit avoids 4.41 modelled AOG h/yr = AED 66,121/yr",
+      "GN-24-R017": "greedy marginal value: pipeline mean 1.8 units (16 removals/yr x 41 d, completed-RO trimmed mean) vs 1 P0 base_stock units + 1 seeded loop units; D0 share 3%; AOG penalty AED 18,515/h vs unit cost AED 18,049 (holding AED 3,610/yr per unit); last hub unit avoids 0.15 modelled AOG h/yr = AED 2,839/yr",
+      "GN-24-R026": "greedy marginal value: pipeline mean 0.7 units (3 removals/yr x 85 d, completed-RO trimmed mean) vs 1 P0 base_stock units + 0 seeded loop units; D0 share 0%; AOG penalty AED 30,000/h vs unit cost AED 15,906 (holding AED 3,181/yr per unit); last hub unit avoids 0.44 modelled AOG h/yr = AED 13,246/yr",
+      "GN-24-R039": "outstation units avoid AOG transport for D0 demand: pipeline mean 4.7 units (19 removals/yr x 88 d, completed-RO trimmed mean) vs 4 P0 base_stock units + 3 seeded loop units; D0 share 3%; AOG penalty AED 30,000/h vs unit cost AED 17,143 (holding AED 3,429/yr per unit); last hub unit avoids 0.13 modelled AOG h/yr = AED 3,988/yr",
+      "GN-27-R037": "greedy marginal value: pipeline mean 2.3 units (18 removals/yr x 48 d, completed-RO trimmed mean) vs 2 P0 base_stock units + 2 seeded loop units; D0 share 0%; AOG penalty AED 23,256/h vs unit cost AED 240,879 (holding AED 48,176/yr per unit); last hub unit avoids 3.38 modelled AOG h/yr = AED 78,714/yr",
+      "GN-28-R031": "high D0 penalty x low unit cost; outstation units avoid AOG transport for D0 demand: pipeline mean 20.7 units (78 removals/yr x 96 d, completed-RO trimmed mean) vs 15 P0 base_stock units + 17 seeded loop units; D0 share 94%; AOG penalty AED 19,719/h vs unit cost AED 55,687 (holding AED 11,137/yr per unit); last hub unit avoids 0.54 modelled AOG h/yr = AED 10,597/yr",
+      "GN-29-R005": "greedy marginal value: pipeline mean 1.8 units (19 removals/yr x 34 d, completed-RO trimmed mean) vs 1 P0 base_stock units + 1 seeded loop units; D0 share 0%; AOG penalty AED 30,000/h vs unit cost AED 352,416 (holding AED 70,483/yr per unit); last hub unit avoids 3.07 modelled AOG h/yr = AED 92,082/yr",
+      "GN-29-R008": "greedy marginal value: pipeline mean 1.8 units (13 removals/yr x 51 d, completed-RO trimmed mean) vs 1 P0 base_stock units + 1 seeded loop units; D0 share 0%; AOG penalty AED 20,695/h vs unit cost AED 361,036 (holding AED 72,207/yr per unit); last hub unit avoids 0.62 modelled AOG h/yr = AED 12,840/yr",
+      "GN-29-R034": "greedy marginal value: pipeline mean 0.6 units (12 removals/yr x 19 d, completed-RO trimmed mean) vs 1 P0 base_stock units + 1 seeded loop units; D0 share 0%; AOG penalty AED 24,711/h vs unit cost AED 208,951 (holding AED 41,790/yr per unit); last hub unit avoids 5.21 modelled AOG h/yr = AED 128,811/yr",
+      "GN-32-R014": "high D0 penalty x low unit cost; outstation units avoid AOG transport for D0 demand: pipeline mean 3.6 units (42 removals/yr x 31 d, completed-RO trimmed mean) vs 5 P0 base_stock units + 5 seeded loop units; D0 share 95%; AOG penalty AED 19,161/h vs unit cost AED 47,977 (holding AED 9,595/yr per unit); last hub unit avoids 1.00 modelled AOG h/yr = AED 19,089/yr",
+      "GN-32-R018": "greedy marginal value: pipeline mean 1.8 units (14 removals/yr x 47 d, completed-RO trimmed mean) vs 1 P0 base_stock units + 1 seeded loop units; D0 share 0%; AOG penalty AED 19,161/h vs unit cost AED 40,208 (holding AED 8,042/yr per unit); last hub unit avoids 0.00 modelled AOG h/yr = AED 0/yr",
+      "GN-32-R019": "greedy marginal value: pipeline mean 1.1 units (5 removals/yr x 74 d, completed-RO trimmed mean) vs 1 P0 base_stock units + 1 seeded loop units; D0 share 0%; AOG penalty AED 15,000/h vs unit cost AED 22,903 (holding AED 4,581/yr per unit); last hub unit avoids 0.86 modelled AOG h/yr = AED 12,972/yr",
+      "GN-32-R029": "greedy marginal value: pipeline mean 2.6 units (23 removals/yr x 41 d, completed-RO trimmed mean) vs 2 P0 base_stock units + 2 seeded loop units; D0 share 0%; AOG penalty AED 15,000/h vs unit cost AED 106,774 (holding AED 21,355/yr per unit); last hub unit avoids 1.09 modelled AOG h/yr = AED 16,404/yr",
+      "GN-33-R021": "greedy marginal value: pipeline mean 3.9 units (19 removals/yr x 76 d, completed-RO trimmed mean) vs 3 P0 base_stock units + 2 seeded loop units; D0 share 0%; AOG penalty AED 24,711/h vs unit cost AED 31,107 (holding AED 6,221/yr per unit); last hub unit avoids 0.17 modelled AOG h/yr = AED 4,202/yr",
+      "GN-34-R012": "P0 float + seeded loop below the forecast pipeline (P0 sized on quoted MTBUR/TAT); outstation units avoid AOG transport for D0 demand: pipeline mean 4.8 units (21 removals/yr x 82 d, completed-RO trimmed mean) vs 2 P0 base_stock units + 2 seeded loop units; D0 share 0%; AOG penalty AED 15,000/h vs unit cost AED 15,257 (holding AED 3,051/yr per unit); last hub unit avoids 0.17 modelled AOG h/yr = AED 2,545/yr",
+      "GN-34-R022": "greedy marginal value: pipeline mean 1.4 units (12 removals/yr x 44 d, completed-RO trimmed mean) vs 1 P0 base_stock units + 1 seeded loop units; D0 share 0%; AOG penalty AED 19,719/h vs unit cost AED 185,832 (holding AED 37,166/yr per unit); last hub unit avoids 1.38 modelled AOG h/yr = AED 27,305/yr",
+      "GN-35-R040": "greedy marginal value: pipeline mean 0.2 units (3 removals/yr x 21 d, completed-RO trimmed mean) vs 1 P0 base_stock units + 0 seeded loop units; D0 share 0%; AOG penalty AED 15,000/h vs unit cost AED 21,335 (holding AED 4,267/yr per unit); last hub unit avoids 1.12 modelled AOG h/yr = AED 16,841/yr",
+      "GN-36-R007": "high D0 penalty x low unit cost; outstation units avoid AOG transport for D0 demand: pipeline mean 1.4 units (25 removals/yr x 20 d, completed-RO trimmed mean) vs 2 P0 base_stock units + 1 seeded loop units; D0 share 95%; AOG penalty AED 24,711/h vs unit cost AED 26,519 (holding AED 5,304/yr per unit); last hub unit avoids 0.35 modelled AOG h/yr = AED 8,711/yr",
+      "GN-36-R023": "greedy marginal value: pipeline mean 5.9 units (59 removals/yr x 37 d, completed-RO trimmed mean) vs 4 P0 base_stock units + 3 seeded loop units; D0 share 0%; AOG penalty AED 18,515/h vs unit cost AED 31,518 (holding AED 6,304/yr per unit); last hub unit avoids 0.29 modelled AOG h/yr = AED 5,332/yr",
+      "GN-36-R024": "greedy marginal value: pipeline mean 4.4 units (22 removals/yr x 73 d, completed-RO trimmed mean) vs 3 P0 base_stock units + 3 seeded loop units; D0 share 0%; AOG penalty AED 30,000/h vs unit cost AED 126,327 (holding AED 25,265/yr per unit); last hub unit avoids 0.83 modelled AOG h/yr = AED 24,803/yr",
+      "GN-36-R036": "greedy marginal value: pipeline mean 3.5 units (27 removals/yr x 46 d, completed-RO trimmed mean) vs 3 P0 base_stock units + 3 seeded loop units; D0 share 0%; AOG penalty AED 22,180/h vs unit cost AED 68,360 (holding AED 13,672/yr per unit); last hub unit avoids 1.36 modelled AOG h/yr = AED 30,134/yr",
+      "GN-49-R033": "greedy marginal value: pipeline mean 0.5 units (4 removals/yr x 39 d, completed-RO trimmed mean) vs 1 P0 base_stock units + 0 seeded loop units; D0 share 0%; AOG penalty AED 19,161/h vs unit cost AED 57,100 (holding AED 11,420/yr per unit); last hub unit avoids 1.52 modelled AOG h/yr = AED 29,169/yr",
+      "GN-49-R038": "high D0 penalty x low unit cost; outstation units avoid AOG transport for D0 demand: pipeline mean 0.6 units (8 removals/yr x 29 d, completed-RO trimmed mean) vs 1 P0 base_stock units + 0 seeded loop units; D0 share 93%; AOG penalty AED 19,161/h vs unit cost AED 114,344 (holding AED 22,869/yr per unit); last hub unit avoids 1.18 modelled AOG h/yr = AED 22,539/yr"
+    },
+    "rule": "rotable PN whose proposed network units > 2 x P0 units (or >= 2 when P0 holds 0); reason recorded per row in allocations.json"
+  },
+  "aog_desk_dependence": "Every policy here, P0/P1/P2 included, leans on the engine's AOG-desk emergency buy (SIM-5: an expedited rotable arrives in at most 5 days at a 15% premium), which in practice means access to an AOG exchange/loan market; with that switched off, material AOG rises by one to two orders of magnitude for every policy (tornado row 'aog_desk_expedite off'), so the frontier is conditional on such a market existing for each PN.",
+  "lever_findings": {
+    "tat_vs_buy_1": [
+      "GN-24-R003: cutting TAT (tat_cut_10d) avoids 5 AOG h/yr for AED 76,853/yr, vs 4 h/yr for AED 95,079/yr holding cost by buying 1 spares.",
+      "GN-36-R024: buying 1 spares avoids 13 AOG h/yr for AED 25,265/yr, vs 12 h/yr for AED 87,152/yr by cutting TAT (tat_cut_10d).",
+      "GN-34-R012: buying 1 spares avoids 11 AOG h/yr for AED 3,051/yr, vs 10 h/yr for AED 85,096/yr by cutting TAT (tat_cut_10d).",
+      "GN-24-R017: buying 1 spares avoids 10 AOG h/yr for AED 3,610/yr, vs 9 h/yr for AED 62,955/yr by cutting TAT (tat_cut_10d).",
+      "GN-27-R037: buying 1 spares avoids 9 AOG h/yr for AED 48,176/yr, vs 9 h/yr for AED 70,853/yr by cutting TAT (tat_cut_10d).",
+      "GN-49-R033: buying 1 spares avoids 9 AOG h/yr for AED 11,420/yr, vs 4 h/yr for AED 17,598/yr by cutting TAT (tat_cut_10d).",
+      "GN-49-R038: buying 1 spares avoids 8 AOG h/yr for AED 22,869/yr, vs 6 h/yr for AED 30,624/yr by cutting TAT (tat_cut_10d).",
+      "GN-32-R019: buying 1 spares avoids 4 AOG h/yr for AED 4,581/yr, vs 2 h/yr for AED 21,673/yr by cutting TAT (tat_cut_10d).",
+      "GN-24-R026: buying 1 spares avoids 3 AOG h/yr for AED 3,181/yr, vs 1 h/yr for AED 11,339/yr by cutting TAT (tat_cut_10d)."
+    ],
+    "tat_vs_buy_2": [
+      "GN-36-R024: buying 2 spares avoids 23 AOG h/yr for AED 50,531/yr, vs 12 h/yr for AED 87,152/yr by cutting TAT (tat_cut_10d).",
+      "GN-36-R036: buying 2 spares avoids 23 AOG h/yr for AED 27,344/yr, vs 17 h/yr for AED 109,071/yr by cutting TAT (tat_cut_10d).",
+      "GN-34-R012: buying 2 spares avoids 19 AOG h/yr for AED 6,103/yr, vs 10 h/yr for AED 85,096/yr by cutting TAT (tat_cut_10d).",
+      "GN-32-R035: buying 2 spares avoids 13 AOG h/yr for AED 8,442/yr, vs 9 h/yr for AED 98,305/yr by cutting TAT (tat_cut_10d).",
+      "GN-24-R017: buying 2 spares avoids 13 AOG h/yr for AED 7,219/yr, vs 9 h/yr for AED 62,955/yr by cutting TAT (tat_cut_10d).",
+      "GN-36-R007: buying 2 spares avoids 11 AOG h/yr for AED 10,607/yr, vs 11 h/yr for AED 89,148/yr by cutting TAT (tat_cut_10d).",
+      "GN-32-R019: buying 2 spares avoids 5 AOG h/yr for AED 9,161/yr, vs 2 h/yr for AED 21,673/yr by cutting TAT (tat_cut_10d).",
+      "GN-24-R026: buying 2 spares avoids 3 AOG h/yr for AED 6,363/yr, vs 1 h/yr for AED 11,339/yr by cutting TAT (tat_cut_10d)."
+    ]
+  },
+  "model_vs_sim_corr_aog": 0.958460631628329,
+  "runtime_s": 53.0
+}
