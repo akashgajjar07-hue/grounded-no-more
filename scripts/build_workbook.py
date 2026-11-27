@@ -369,6 +369,7 @@ def sheet_readme(wb, d):
         ("Stress worlds", f"The three simulated worlds differ only in {sw['text']}. {sw['ranges_note']}"),
         ("Calibration", d["method"]["calibration_note"]["text"]),
         ("How to read", k["reading_note"]),
+        ("Emergency routes", k["headline"]["honest"]["routes_line"]),   # v2.2 (5.1): read from kpis.json
         ("Archive note", "A v1 world was archived after a domain review; see archive/v1."),
     ]
     for a, b in lines:

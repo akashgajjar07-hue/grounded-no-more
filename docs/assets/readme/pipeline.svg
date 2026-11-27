@@ -55,7 +55,7 @@
   <text x="458" y="70" class="k">03 OBSERVE</text>
   <rect x="458" y="82" width="176" height="140" rx="8" class="bx"/>
   <text x="472" y="106" class="h">Airline history</text>
-  <text x="472" y="128" class="s">104 weeks under legacy</text>
+  <text x="472" y="128" class="s">104 weeks under P0 rules</text>
   <text x="472" y="146" class="s">rules (P0): requests,</text>
   <text x="472" y="164" class="s">ROs, POs, transfers,</text>
   <text x="472" y="182" class="s">AOG events</text>

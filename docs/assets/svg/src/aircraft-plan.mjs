@@ -1,6 +1,6 @@
 // Wave A: two ORIGINAL orthographic plan views, generated from parameters (no traced OEM drawings).
-//   aircraft-narrowbody.svg — single-aisle twin archetype (A320-family proportions)
-//   aircraft-widebody.svg   — twin-aisle twin archetype (787-family proportions; no bleed-system callouts)
+//   aircraft-narrowbody.svg — single-aisle twin archetype (single-aisle proportions)
+//   aircraft-widebody.svg   — twin-aisle twin archetype (twin-aisle proportions; no bleed-system callouts)
 // Geometry is in metres (x lateral, + = right/starboard seen from above; y = aft from the nose tip) and scaled to px.
 // Stroke hierarchy (DESIGN_SYSTEM.md §4): silhouette 1.8 px #B9C8D6 · major structure 1.1 px #71899C · secondary
 // 0.7 px #51697D · construction 0.5 px dashed #334C61 · selected system 2.25 px #22C7B8 · unselected systems 0.9 px
@@ -233,7 +233,7 @@ function plan(spec) {
 // ---------- archetypes ----------
 const NB = {
   id: 'narrowbody', sheet: '01', title: 'SINGLE-AISLE TWIN ARCHETYPE — PLAN VIEW', sheetTitle: 'NARROWBODY ARCHETYPE · PLAN',
-  desc: 'Original orthographic plan view of a single-aisle twin-engine airliner archetype (A320-family proportions), generated from parameters. Shaded ATA areas are indicative zones, not component locations. Not an OEM drawing; not engineering data.',
+  desc: 'Original orthographic plan view of a single-aisle twin-engine airliner archetype (single-aisle proportions), generated from parameters. Shaded ATA areas are indicative zones, not component locations. Not an OEM drawing; not engineering data.',
   K: 21, L: 37.6, R: 1.98, noseLen: 5.2, tailStart: 27.2, tailHalf: 0.3, span: 35.8, leRoot: 13.0, sweep: 26, rootChord: 6.3,
   kinkFrac: 0.33, kinkChord: 3.6, tipChord: 1.55, rake: 0, eng: 5.75, nacLen: 4.3, nacR: 1.05, nacFwd: 2.6,
   hsSpan: 12.45, hsLe: 31.6, hsSweep: 30, hsRoot: 3.4, hsTip: 1.3, finLe: 29.6, finRoot: 6.4,
@@ -262,7 +262,7 @@ const NB = {
 
 const WB = {
   id: 'widebody', sheet: '02', title: 'TWIN-AISLE TWIN ARCHETYPE — PLAN VIEW', sheetTitle: 'WIDEBODY ARCHETYPE · PLAN',
-  desc: 'Original orthographic plan view of a twin-aisle twin-engine airliner archetype (787-family proportions), generated from parameters. Shaded ATA areas are indicative zones, not component locations. Not an OEM drawing; not engineering data.',
+  desc: 'Original orthographic plan view of a twin-aisle twin-engine airliner archetype (twin-aisle proportions), generated from parameters. Shaded ATA areas are indicative zones, not component locations. Not an OEM drawing; not engineering data.',
   K: 14, L: 57, R: 2.88, noseLen: 7.4, tailStart: 42.5, tailHalf: 0.4, span: 60, leRoot: 19.8, sweep: 32, rootChord: 10.4,
   kinkFrac: 0.3, kinkChord: 6.2, tipChord: 1.7, rake: 4.6, eng: 9.7, nacLen: 6.6, nacR: 1.6, nacFwd: 4.0,
   hsSpan: 19.6, hsLe: 47.6, hsSweep: 34, hsRoot: 5.0, hsTip: 1.7, finLe: 44.8, finRoot: 9.6,

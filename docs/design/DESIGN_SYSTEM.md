@@ -208,7 +208,7 @@ import { chartFrame, lineChart, dotWhiskerChart, barList, plot, responsive, svgI
          fmtWeek, fmtWeekRange, fmtCapitalDelta, fmtByUnit } from '../charts/theme.js';
 
 const f = chartFrame(card, {
-  headline: 'P2 cuts AOG hours by 45% versus legacy rules',
+  headline: 'P2 cuts AOG hours by 45% versus the Simple Rulebook',
   subtitle: 'AOG hours / year · mean and 95% CI · 20 paired holdout seeds · weeks 104–155',
   provenance: 'SIMULATED', source: 'policies.json',
   table: { columns: [{ key: 'policy', label: 'Policy' }, { key: 'mean', label: 'Mean', num: true, format: fmtHours }], rows },

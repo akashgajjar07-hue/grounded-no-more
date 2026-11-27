@@ -1,5 +1,7 @@
 > **AI-generated review used during development — not a review by a human aviation professional.**
 
+> Edited for publication (v2.2): wording about the intended audience was replaced with neutral terms such as "reviewer". The findings are unchanged.
+
 # GROUNDED NO MORE: third independent design critique
 
 Reviewer stance: principal product designer at a data-visualisation studio, seeing the build for the first time.
@@ -39,7 +41,7 @@ It **still does not reach 4.5**. Three kinds of problem hold it back:
    - Network paints P2 teal while I125 is the recommendation everywhere else.
    - The Rotables lever table gives its teal ✓ to a lever that costs 17× more, while Capital says buying a spare is the cheaper lever.
    - GN-36-R007 is paired with FRA beside a 120 h "worst station" figure that actually belongs to AUH.
-3. **The float calculator opens on a misleading default.** It opens on P0 (S = 10) and shows **99.0 % availability**. A hiring manager reads that as "the legacy plan was already fine", which contradicts the 2,871 AOG h/yr headline.
+3. **The float calculator opens on a misleading default.** It opens on P0 (S = 10) and shows **99.0 % availability**. A reviewer reads that as "the starting-point plan was already fine", which contradicts the 2,871 AOG h/yr headline.
 
 **Overall average: 4.22 / 5** (target ≥ 4.5; round 2 scored 4.23 and round 1 scored 3.61). The colour and copy gains were offset
 by the new mobile defect and by the cross-screen contradictions. **Story mode: 4.36** (round 2: 4.14).
@@ -241,7 +243,7 @@ What costs points:
 ## 5. Top remaining issues, ranked (with precise fixes)
 
 ### 1. Fix the Network mobile stations table (F1)
-**Gain:** about +0.6 on Network mobile and +0.3 on polish. This is the only defect a recruiter will see within 10 seconds on a phone.
+**Gain:** about +0.6 on Network mobile and +0.3 on polish. This is the only defect a reviewer will see within 10 seconds on a phone.
 
 **Fix:**
 - Stacked-row metric slot: `white-space: nowrap`, `max-width: 60%`.

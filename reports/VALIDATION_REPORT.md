@@ -6,7 +6,7 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 
 ## 1. Tests
 
-556 tests, 1 failures, 0 errors, 0 skipped, 378 s, run at 2026-11-26T17:29:28.559334+05:30 (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast, slow and browser suites in one serial run).
+396 tests, 0 failures, 0 errors, 0 skipped, 497 s, run at 2026-11-27T15:06:52.821734+05:30 (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -m "not browser" -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast and slow suites; the Playwright browser suite (`-m browser`) runs separately and is not counted in this file).
 
 | Area | Test modules | Tests | Failed | Skipped |
 |---|---|---|---|---|
@@ -16,14 +16,15 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 | Optimiser / Readiness Frontier (guardrails, levers) | `test_optim_frontier`, `test_optim_greedy`, `test_optim_levers` | 32 | 0 | 0 |
 | AOG Response Lab and Planner Action Centre | `test_aog_actions`, `test_aog_incidents`, `test_aog_options` | 34 | 0 | 0 |
 | Freeze and holdout discipline | `test_freeze` | 3 | 0 | 0 |
-| Site data export, reconciliation, rendered docs | `test_reconciliation`, `test_site_data`, `test_docs_rendered` | 48 | 0 | 0 |
-| SQL, workbook, notebooks | `test_sql`, `test_workbook`, `test_notebooks` | 63 | 0 | 0 |
-| Web app screens (browser) | `test_site_actions`, `test_site_aog`, `test_site_forecast`, `test_site_method`, `test_site_mission`, `test_site_network`, `test_site_optimiser`, `test_site_overlays`, `test_site_parts`, `test_site_rotables`, `test_site_shared_apis`, `test_site_wave3_shared`, `test_site_waveA`, `test_site_waveB` | 190 | 1 | 0 |
-| **Total** | 45 modules | **556** | **1** | **0** |
+| Site data export, reconciliation, rendered docs | `test_reconciliation`, `test_site_data`, `test_docs_rendered` | 73 | 0 | 0 |
+| SQL, workbook, notebooks | `test_sql`, `test_workbook`, `test_notebooks` | 64 | 0 | 0 |
+| Public-surface word gate and privacy | `test_public_scan` | 4 | 0 | 0 |
+| Web app screens (browser) | not in this file (run separately) | — | — | — |
+| **Total** | 32 modules | **396** | **0** | **0** |
 
-Failing in this run: `test_site_waveA::test_navigation_groups_and_shortcuts`.
+No test failed.
 
-Doc rendering is verified by `tests/test_docs_rendered.py`: no result placeholder survives, the README results table and headline match `docs/data/kpis.json`, the outstation sentence (8 vs 44 outstation rotables) is present, the scope line sits beside the headline numbers, the capital table shows the gross lines, the README opening makes no percentage or paired-difference claim, the calibration wording is present here and in METHODOLOGY, the rendered docs contain no forbidden wording or manufacturer names, and the README never claims a result "at every tested setting".
+Doc rendering is verified by `tests/test_docs_rendered.py`: every result key is filled, the README results table and headline match `docs/data/kpis.json`, the outstation sentence (8 vs 44 outstation rotables) is present, the scope line sits beside the headline numbers, the capital table shows the gross lines, the README opening makes no percentage or paired-difference claim, the calibration wording is present here and in METHODOLOGY, the rendered docs contain no forbidden wording or manufacturer names, and the README never claims a result "at every tested setting".
 
 ## 2. Calibration (P0 only, locked before any P1/P2/optimiser run)
 
@@ -40,13 +41,13 @@ How P0 got there, central world, history weeks 0–103:
 | 3. Realism corrections A | V2-SIM-13..15: planned brake supply, AOG route retries, hub wheel shop | 0.678 | 1,712 | 97 | no |
 | 4. Calibration V1 (locked) | quote accuracy only (V2-SIM-CAL) | 0.815 | 1,282 | 74 | yes |
 
-Diagnosis: with P0's own assumptions true the engine reproduces Poisson availability (simulated rotable fill 0.943 against a demand-weighted analytic 0.948; it was 0.872 on paper before the V2-SIM-10 fix). What remains is intended realism. Switching one factor off at a time from the as-built fill of 0.669: quoted-vs-true removal rates +0.18, quoted-vs-true TAT +0.07, unstocked outstation demand under the legacy line-station rule +0.10, and NFF works the other way (−0.09 if removed). Variants measured in memory before anything was applied:
+Diagnosis: with P0's own assumptions true the engine reproduces Poisson availability (simulated rotable fill 0.943 against a demand-weighted analytic 0.948; it was 0.872 on paper before the V2-SIM-10 fix). What remains is intended realism. Switching one factor off at a time from the as-built fill of 0.669: quoted-vs-true removal rates +0.18, quoted-vs-true TAT +0.07, unstocked outstation demand under the starting-point line-station rule +0.10, and NFF works the other way (−0.09 if removed). Variants measured in memory before anything was applied:
 
 | Variant (measured in memory, nothing applied) | Rotable fill, history / selection | Material AOG h/yr, history / selection | Events/yr, history / selection | All in band |
 |---|---|---|---|---|
 | V0 raw P0 (after A) | 0.678 / 0.673 | 1,712 / 1,907 | 97 / 90 | no |
 | V1 quote accuracy (chosen) | 0.815 / 0.809 | 1,282 / 1,435 | 74 / 72 | yes |
-| V2 legacy line-kit | 0.711 / 0.705 | 1,246 / 1,445 | 68 / 63 | no |
+| V2 line-station kit | 0.711 / 0.705 | 1,246 / 1,445 | 68 / 63 | no |
 | V3 = V1 + V2 | 0.832 / 0.830 | 1,052 / 1,142 | 59 / 54 | no |
 | V4 = V3 + AOG market (reference) | 0.831 / 0.830 | 912 / 976 | 57 / 52 | no |
 
@@ -58,7 +59,7 @@ Applied (V1, fewest changes): `quoted_mtbur_optimism` 1.10, `quoted_mtbur_noise_
 | low stress (×1.08) | AOG 1,200, fill 0.85 | 0.846 / 0.836 | 1,123 / 1,226 | 66 / 63 | no |
 | high stress (×0.96) | AOG 2,700, fill 0.78 | 0.780 / 0.781 | 1,632 / 1,558 | 84 / 76 | yes |
 
-Stress worlds: reliability scaled ×0.96 / ×1.00 / ×1.08 — a narrow range. Band ends: the low-stress world reaches the AOG end of the band (pooled history and selection 1,174 h/yr; band end 1,200) at 0.841 rotable fill, and the high-stress world reaches the fill end (0.781; band end 0.78) at about 1,595 h/yr, well short of the 2,700 h end, because fill binds first. The lock (`outputs/freeze/calibration_lock.json`, 12 hashed files, enforced by `tests/test_calibration_lock.py`) was written at `f44493c` and re-written only after the non-calibration fixes V2-SIM-17/18 at `40c25d5`.
+Stress worlds: reliability scaled ×0.96 / ×1.00 / ×1.08 — a narrow range. Band ends: the low-stress world reaches the AOG end of the band (pooled history and selection 1,174 h/yr; band end 1,200) at 0.841 rotable fill, and the high-stress world reaches the fill end (0.781; band end 0.78) at about 1,595 h/yr, well short of the 2,700 h end, because fill binds first. The lock (`outputs/freeze/calibration_lock.json`, 12 hashed files, enforced by `tests/test_calibration_lock.py`) was written at `c2ef333` and re-written only after the non-calibration fixes V2-SIM-17/18 at `52410a4`.
 
 ## 3. Freeze and holdout chain
 
@@ -66,21 +67,20 @@ Frozen at 2026-11-26 08:43:36 UTC: 19 artefacts (forecast champions, P0/P1/P2 pa
 
 v2 commit chain (`git log --oneline`, oldest first). The calibration lock precedes every P1/P2/optimiser commit, the freeze precedes the holdout-results commit, and the post-plan check comes after both:
 
-- `5d24ab8` Archive v1 (tag v1-archive); start v2 rebuild — D012
-- `d643529` v2 simulator (UNCALIBRATED, not locked): type-exclusive catalogue, curated deadlines/QPA/prices, NFF, exchange/loan + local borrow + robbery + local buy (no pool growth), deferred-item sourcing fix, AOG fitting time + per-event cost, OEM Poisson P0; P0 diagnostics only — no P1/P2 run
-- `c06395b` v2 P0 gap diagnosis: fix P0 ready-rate vs fill-rate mismatch (V2-SIM-10), P0 pipeline transport weighting (V2-SIM-11), reservation blocking bug (V2-SIM-12); raw P0 rerun — still uncalibrated, not locked
-- `be4629d` v2 realism corrections before calibration: wheel/tyre hub shop (2-7 d TAT), brake notice-time supply (V2-SIM-13), AOG route retries (V2-SIM-14), band recorded (V2-SIM-16); raw P0 rerun — not tuned, not locked
-- `e7d5bbd` v2 calibration variants V1–V4 measured in memory (nothing applied): V1 quote-accuracy is the only in-band candidate
-- `f44493c` v2 CALIBRATION LOCK: V1 quote-accuracy settings (user-approved), stress worlds at band ends, holdout seeds 2000–2019 — locked BEFORE any v2 P1/P2/optimiser run
-- `2bdbea1` v2: AOG Response Lab + Planner Action Centre rebuilt on v2 history (v2 routes, robbery never ranked, AV-21 queue-jump, no fake quarantine data)
-- `1588365` v2: forecasting champions + P1/P2 paired selection evaluation (3 worlds), selection seeds only
-- `40c25d5` v2 bug fixes before freeze: re-open needs whose earmarked shelf-life units expire on arrival (V2-SIM-17); atomic scenario cache (V2-SIM-18); re-lock; policy results reproduce unchanged
-- `3874f15` v2: Readiness Frontier with AV-09 guardrails (selection only); recommended I125; candidates.json a8a22af8
-- `25a6c47` v2 FREEZE: champions, P0/P1/P2 tables, frontier candidates, configs hashed before the v2 holdout (seeds 2000–2019); v1 holdout archived
-- `1592c95` v2 HOLDOUT: seeds 2000–2019, run once after freeze 25a6c47 (no forced reruns)
-- `8156da3` Post-plan robustness check: frozen I125/P2/P0 on holdout seeds in low/high stress worlds (D015)
-- `830c58a` v2 site export: P2-led headline framing (vs legacy OEM-quote P0 with 8 outstation rotables), I125 as frontier option, honest findings, brake disclosure; reconciliation recomputes v2 headline
-- `1f0ea9f` v2 regeneration brief
+- `e6c943f` Archive v1 (tag v1-archive); start v2 rebuild — D012
+- `e55c9d3` v2 simulator (UNCALIBRATED, not locked): type-exclusive catalogue, curated deadlines/QPA/prices, NFF, exchange/loan + local borrow + robbery + local buy (no pool growth), deferred-item sourcing fix, AOG fitting time + per-event cost, OEM Poisson P0; P0 diagnostics only — no P1/P2 run
+- `f65935d` v2 P0 gap diagnosis: fix P0 ready-rate vs fill-rate mismatch (V2-SIM-10), P0 pipeline transport weighting (V2-SIM-11), reservation blocking bug (V2-SIM-12); raw P0 rerun — still uncalibrated, not locked
+- `905988b` v2 realism corrections before calibration: wheel/tyre hub shop (2-7 d TAT), brake notice-time supply (V2-SIM-13), AOG route retries (V2-SIM-14), band recorded (V2-SIM-16); raw P0 rerun — not tuned, not locked
+- `6467e5c` v2 calibration variants V1–V4 measured in memory (nothing applied): V1 quote-accuracy is the only in-band candidate
+- `c2ef333` v2 CALIBRATION LOCK: V1 quote-accuracy settings (user-approved), stress worlds at band ends, holdout seeds 2000–2019 — locked BEFORE any v2 P1/P2/optimiser run
+- `67cd748` v2: AOG Response Lab + Planner Action Centre rebuilt on v2 history (v2 routes, robbery never ranked, AV-21 queue-jump, no fake quarantine data)
+- `2cea63d` v2: forecasting champions + P1/P2 paired selection evaluation (3 worlds), selection seeds only
+- `52410a4` v2 bug fixes before freeze: re-open needs whose earmarked shelf-life units expire on arrival (V2-SIM-17); atomic scenario cache (V2-SIM-18); re-lock; policy results reproduce unchanged
+- `c3330e1` v2: Readiness Frontier with AV-09 guardrails (selection only); recommended I125; candidates.json a8a22af8
+- `2a45af9` v2 FREEZE: champions, P0/P1/P2 tables, frontier candidates, configs hashed before the v2 holdout (seeds 2000–2019); v1 holdout archived
+- `ecad6d8` v2 HOLDOUT: seeds 2000–2019, run once after freeze 2a45af9 (no forced reruns)
+- `c0e43c7` Post-plan robustness check: frozen I125/P2/P0 on holdout seeds in low/high stress worlds (D015)
+- `ced9d6a` v2 site export: P2-led headline framing (vs starting-point OEM-quote P0 with 8 outstation rotables), I125 as frontier option, honest findings, brake disclosure; reconciliation recomputes v2 headline
 
 Holdout runs logged in `outputs/freeze/holdout_log.json` (the archived v1 entries are kept):
 
@@ -128,17 +128,17 @@ Most of them overstated P0's downtime and the size of the improvement. For trans
 
 | Policy (v1, archived) | Material AOG h/yr [95% CI] | Spare capital |
 |---|---|---|
-| P0 legacy (stock to pipeline mean) | 2,871 [2,459–3,282] | AED 36.8M |
+| P0 Simple Rulebook (stock to pipeline mean) | 2,871 [2,459–3,282] | AED 36.8M |
 | P1 local optimised | 1,626 [1,243–2,008] | AED 64.6M |
 | P2 network | 533 [419–646] | AED 37.0M |
 | I125 v1 frontier pick | 223 [174–272] | AED 41.9M |
 
 v1 commit chain:
 
-- `8b7a631` Phase 2: simulator + event engine, P0 legacy baseline, calibration (P0 only) locked before any P1/P2 run
-- `e3dd9fc` Holdout runner (dry-run verified on selection data), freeze script, truth-recovery evaluation
-- `95dfce5` FREEZE: champions, P0/P1/P2 tables (all variants), frontier candidate set, configs hashed before holdout
-- `ccf6f2b` HOLDOUT: policy (3 variants), frontier candidates, forecast champions on history continuation, truth recovery — run once after freeze (one logged forced rerun of a block that crashed before output; see D010)
+- `b35d833` Phase 2: simulator + event engine, P0 Simple Rulebook baseline, calibration (P0 only) locked before any P1/P2 run
+- `3cbc96c` Holdout runner (dry-run verified on selection data), freeze script, truth-recovery evaluation
+- `5a1cdda` FREEZE: champions, P0/P1/P2 tables (all variants), frontier candidate set, configs hashed before holdout
+- `94d8796` HOLDOUT: policy (3 variants), frontier candidates, forecast champions on history continuation, truth recovery — run once after freeze (one logged forced rerun of a block that crashed before output; see D010)
 
 v2 fixed the problems as domain corrections chosen before any v2 result, recalibrated P0 only, locked, and ran on fresh holdout seeds (2000–2019), because the v1 seeds had been seen.
 
@@ -216,13 +216,13 @@ Optimiser proxy vs simulation: the analytic model predicts 2,507 h a year for P0
 
 Greedy check: on a small separable, convex toy case the greedy allocation equals the brute-force optimum at every greedy breakpoint (unit test `tests/test_optim_greedy.py::test_greedy_equals_brute_force_at_breakpoints`, passing); no exact comparison exists for the full, non-separable network problem.
 
-AOG reconstruction: 2,564 of 2,564 history material AOG hours reconstructed request by request across 148 incidents (reconciles). Counterfactual: history took the rank-1 option in 117 of 148 requests; excluding the 12 robbery cases (never ranked), the actual route gave 2,353 h against 2,367 h for the ranked option, so the legacy AOG desk already takes about the best per-incident route and the lever is positioning.
+AOG reconstruction: 2,564 of 2,564 history material AOG hours reconstructed request by request across 148 incidents (reconciles). Counterfactual: history took the rank-1 option in 117 of 148 requests; excluding the 12 robbery cases (never ranked), the actual route gave 2,353 h against 2,367 h for the ranked option, so the starting-point AOG desk already takes about the best per-incident route and the lever is positioning.
 
 ## 8. Known limitations that bear on validity
 
 - The world, the methods and the evaluation were designed by the same author; the reliability model has a structural home advantage.
 - Every policy depends on the AOG recovery routes: with the routes switched off (selection seeds, a structural stress) material AOG rises from 1,727 h to 42,070 h a year under P0, from 235 h to 18,320 h under P2 and from 92 h to 11,080 h under I125.
-- The P0 calibration lever was quote accuracy, and the legacy line-station rule is a deliberate weakness of P0.
+- The P0 calibration lever was quote accuracy, and the starting-point line-station rule is a deliberate weakness of P0.
 - Confidence intervals reflect seed-to-seed noise in one simulated world, not parameter uncertainty. Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, suppliers or contracts.
 - The downtime clock starts when the part is removed (for no-go items; for deferrable items, when the rectification window runs out), not at the next scheduled departure, and overnight and other non-flying hours count in full. Fitting and release-to-service time is included. A departure-based count would be lower for every plan.
 - Full list: [LIMITATIONS.md](../LIMITATIONS.md).

@@ -1,5 +1,7 @@
 > **AI-generated review used during development — not a review by a human aviation professional.**
 
+> Edited for publication (v2.2): wording about the intended audience was replaced with neutral terms such as "reviewer". The findings are unchanged.
+
 # GROUNDED NO MORE: second independent design critique
 
 Reviewer stance: principal product designer at a data-visualisation studio, seeing the build for the first time.
@@ -30,7 +32,7 @@ the headline-first chart frames, the AOG swimlane and the action centre are port
    another. One rotable shows S = 10/21/23 in one place and 5/16/18 in another. ATA 32 is URGENT on the hero but REVIEW on
    Parts. A chapter shows an OK pill next to "2 urgent".
 3. **Copy and templating defects** an expert reader will notice: "(AUH)" printed twice, "option(s)", raw enums,
-   `h 200` axis ticks, "LinkedIn: add link", and a footnote clipped at 390 px.
+   `h 200` axis ticks, the placeholder social link, and a footnote clipped at 390 px.
 4. **Story mode frames its own subject badly.** At 1440, headlines slide under the sticky bar. At 390, the bottom
    sheet covers the inputs or table the step is talking about.
 
@@ -125,7 +127,7 @@ states the result with numbers, and four KPI instruments.
 - At 390, "Showing 75 of 75 · 28 / urgent" orphans a word, and the Owner select sits alone at half width.
 
 **Method (4.19).**
-- The author card ships a **"LinkedIn: add link" placeholder chip**.
+- The author card ships a **placeholder social-link chip**.
 - The pytest card stretches to match the right column, leaving about 1,000 px of empty card.
 - Timestamps are raw ISO (`2026-11-26T02:25:21Z`).
 - At 390, the register's stacked rows truncate keys to "**m…**" and "calendar.…", and source names truncate to "Car Parts Datas…" and "Synthetic …". The key is the primary datum and must not truncate.
@@ -150,7 +152,7 @@ Navigation works: Next/Back, → and Esc, the 8-segment progress bar, and Finish
 | F1 | Workspace shortcuts 1–8/0 do nothing while a drawer is open. The drawer neither closes nor navigates. | `#/parts`, open a row, press `3`; or `#/parts?ata=32&pn=GN-32-R014`, press `4`; or `#/actions`, open a row, press `1`. The hash and drawer stay unchanged. | Medium (the shortcut contract in the DS and the help modal is silently broken) |
 | F2 | AOG counterfactual footnote clipped at 390 px (right edge 409 px). | `#/aog?incident=AOG-0001` at 390 | Medium |
 | F3 | Replay axis ticks render as `h 200` instead of `200 h`. | `#/network?station=BOM`, PS1 replay strip | Low |
-| F4 | Template and copy leaks: "(AUH)" printed twice, "option(s)", unformatted AED, raw enums `OVERDUE_REPAIR`/`EU_VENDOR`, `47977`, raw ISO timestamps, the "LinkedIn: add link" placeholder. | AOG recommendation card, actions drawer, float calc, method | Low (but very visible to experts) |
+| F4 | Template and copy leaks: "(AUH)" printed twice, "option(s)", unformatted AED, raw enums `OVERDUE_REPAIR`/`EU_VENDOR`, `47977`, raw ISO timestamps, the placeholder social link. | AOG recommendation card, actions drawer, float calc, method | Low (but very visible to experts) |
 | F5 | The capital slider has no `aria-valuetext`, so screen readers announce "41850000". | `#/capital`, slider | Low (accessibility) |
 
 Verified as working:
@@ -186,7 +188,7 @@ Verified as working:
    - Format the unit-cost input with `fmtInt`.
    - Show timestamps as `26 Nov 02:25 UTC`.
    - Use `×` for every multiplier in the tornado.
-   - Hide the LinkedIn chip until there is a URL.
+   - Hide the social-link chip until there is a URL.
    - Fix the replay tick formatter to `fmtHours`.
 4. **Story framing.**
    - In `storyMode`, scroll so `target.top = topbarHeight + 16` and never 4. Pass the top bar as an obstacle to `storyCardPosition`.

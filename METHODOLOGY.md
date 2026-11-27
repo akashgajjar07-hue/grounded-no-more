@@ -54,7 +54,7 @@ Plan names used throughout: **Simple Rulebook (naive reference)** `P0`, **Each A
 
 **Wheels and brakes** (V2-SIM-3, V2-SIM-15). Wheel-and-tyre assemblies are rebuilt in the AUH wheel and tyre shop in 2–7 days at 15–35% of unit cost. Brakes are type-specific and wear-planned: their removals are known 5–10 days ahead and rectified at AUH (section 4).
 
-**Planted situations.** Four documented demo situations (PS1–PS4) give the planner screens something real to find: PS1 GN-32-R014 (Nose wheel steering actuator (NB)), an unscheduled D0 rotable that the legacy rule does not stock at BOM; an overdue repair order at the EU vendor; a declining consumable creating excess; and a lead-time jump on one expendable around week 70.
+**Planted situations.** Four documented demo situations (PS1–PS4) give the planner screens something real to find: PS1 GN-32-R014 (Nose wheel steering actuator (NB)), an unscheduled D0 rotable that the Simple Rulebook does not stock at BOM; an overdue repair order at the EU vendor; a declining consumable creating excess; and a lead-time jump on one expendable around week 70.
 
 **Scenarios.** `generate_scenario(world, truth, seed, week_from, week_to)` returns the exogenous events for one seed: flights, the maintenance schedule, removals and material requests, plus pre-sampled repair durations, condemnation and NFF flags, PO lead-time streams and the per-request uniforms the AOG routes use. Downstream code receives only this `Scenario`, never the truth.
 
@@ -141,7 +141,7 @@ A removed core travels to AUH, then to its shop (the AUH in-house shop, the whee
 
 > The target range for the starting-point policy was an exploratory assumption chosen after diagnosing the model, not benchmarked against real airline KPIs. A line-kit variant (≈1,052 h) was measured but not adopted because it fell outside that range. All results are conditional on this choice.
 
-**Band (V2-SIM-16): an ASSUMED target range set by the author after the P0 gap diagnosis and before any policy comparison; author judgement, not an external benchmark:** P0 network rotable immediate fill 0.78–0.85, material AOG 1,200–2,700 h/yr, AOG events 60–100/yr. It describes a legacy OEM-quote operation with no line-station units for low-volume D0 parts; the v1 band (rotable fill 0.80–0.88, AOG 1,500–3,500 h/yr, events 60–250/yr) is kept in the config for reference only.
+**Band (V2-SIM-16): an ASSUMED target range set by the author after the P0 gap diagnosis and before any policy comparison; author judgement, not an external benchmark:** P0 network rotable immediate fill 0.78–0.85, material AOG 1,200–2,700 h/yr, AOG events 60–100/yr. It describes a simple OEM-quote operation with no line-station units for low-volume D0 parts; the v1 band (rotable fill 0.80–0.88, AOG 1,500–3,500 h/yr, events 60–250/yr) is kept in the config for reference only.
 
 **History of the P0 numbers.** Each step below is a domain or engine correction made before calibration, then the calibration itself. None was chosen by looking at P1, P2 or the optimiser, which did not exist yet:
 
@@ -152,7 +152,7 @@ A removed core travels to AUH, then to its shop (the AUH in-house shop, the whee
 | 3. Realism corrections A | V2-SIM-13..15: planned brake supply, AOG route retries, hub wheel shop | 0.678 | 1,712 | 97 | no |
 | 4. Calibration V1 (locked) | quote accuracy only (V2-SIM-CAL) | 0.815 | 1,282 | 74 | yes |
 
-**The diagnosis** (`outputs/calibration/v2_p0_gap_diagnosis.md`): with P0's own assumptions true the engine reproduces Poisson availability (simulated rotable fill 0.943 against a demand-weighted analytic 0.948; it was 0.872 on paper before the V2-SIM-10 fix). What remains is intended realism. Switching one factor off at a time from the as-built fill of 0.669: quoted-vs-true removal rates +0.18, quoted-vs-true TAT +0.07, unstocked outstation demand under the legacy line-station rule +0.10, and NFF works the other way (−0.09 if removed). Reaching the band therefore needed either more accurate quotes, a change to the legacy rule, or a looser band.
+**The diagnosis** (`outputs/calibration/v2_p0_gap_diagnosis.md`): with P0's own assumptions true the engine reproduces Poisson availability (simulated rotable fill 0.943 against a demand-weighted analytic 0.948; it was 0.872 on paper before the V2-SIM-10 fix). What remains is intended realism. Switching one factor off at a time from the as-built fill of 0.669: quoted-vs-true removal rates +0.18, quoted-vs-true TAT +0.07, unstocked outstation demand under the starting-point line-station rule +0.10, and NFF works the other way (−0.09 if removed). Reaching the band therefore needed either more accurate quotes, a change to the starting-point rule, or a looser band.
 
 **The choice.** The raw P0 and four variants were measured in memory with nothing applied (`outputs/calibration/v2_p0_variants.json`):
 
@@ -160,7 +160,7 @@ A removed core travels to AUH, then to its shop (the AUH in-house shop, the whee
 |---|---|---|---|---|
 | V0 raw P0 (after A) | 0.678 / 0.673 | 1,712 / 1,907 | 97 / 90 | no |
 | V1 quote accuracy (chosen) | 0.815 / 0.809 | 1,282 / 1,435 | 74 / 72 | yes |
-| V2 legacy line-kit | 0.711 / 0.705 | 1,246 / 1,445 | 68 / 63 | no |
+| V2 line-station kit | 0.711 / 0.705 | 1,246 / 1,445 | 68 / 63 | no |
 | V3 = V1 + V2 | 0.832 / 0.830 | 1,052 / 1,142 | 59 / 54 | no |
 | V4 = V3 + AOG market (reference) | 0.831 / 0.830 | 912 / 976 | 57 / 52 | no |
 
@@ -176,7 +176,7 @@ Only V1 quote accuracy lands inside the band, and it is also the fewest-changes 
 
 In short, the low-stress world reaches the AOG end of the band (pooled history and selection 1,174 h/yr; band end 1,200) at 0.841 rotable fill, and the high-stress world reaches the fill end (0.781; band end 0.78) at about 1,595 h/yr, well short of the 2,700 h end, because fill binds first. Both are disclosed as they came out (D013).
 
-**Lock.** `outputs/freeze/calibration_lock.json` hashes 12 files (the config, the catalogue, `src/gnm/sim/*.py` and the P0 summary) and `tests/test_calibration_lock.py` enforces it. Locked at commit `f44493c`, before any v2 P1/P2/optimiser run; re-locked only after the documented non-calibration fixes V2-SIM-17/18 at `40c25d5`, with policy results unchanged.
+**Lock.** `outputs/freeze/calibration_lock.json` hashes 12 files (the config, the catalogue, `src/gnm/sim/*.py` and the P0 summary) and `tests/test_calibration_lock.py` enforces it. Locked at commit `c2ef333`, before any v2 P1/P2/optimiser run; re-locked only after the documented non-calibration fixes V2-SIM-17/18 at `52410a4`, with policy results unchanged.
 
 ---
 
@@ -268,7 +268,7 @@ $$
 \text{EBO}(S) = \sum_{x > S} (x - S)\,P(X = x), \qquad \text{fill} = P(X \le S - 1)
 $$
 
-The protection level of every policy is defined on this fill, the quantity the engine measures as immediate fill (V2-SIM-10). EBO(S) − EBO(S+1) = P(X > S) falls as S rises, so each extra unit is worth less than the one before. A worked example is in the [study guide](STUDY_GUIDE.md). Rotable floats always use the Poisson pipeline; clustered removals make that optimistic, and the event engine (which simulates the clustering) is the referee.
+The protection level of every policy is defined on this fill, the quantity the engine measures as immediate fill (V2-SIM-10). EBO(S) − EBO(S+1) = P(X > S) falls as S rises, so each extra unit is worth less than the one before. The planner workbook ([`excel/grounded_no_more_planner_workbook.xlsx`](excel/grounded_no_more_planner_workbook.xlsx)) works this through with live formulas. Rotable floats always use the Poisson pipeline; clustered removals make that optimistic, and the event engine (which simulates the clustering) is the referee.
 
 ### 8.3 Consumables and expendables: (s, S)
 
@@ -382,14 +382,14 @@ Because both plans faced identical removals, repair times, lead times and route 
 1. Forecast champions, every PolicySpec parameter table (all worlds), the frontier candidate set and the configs are fixed using only training data and selection seeds.
 2. `scripts/freeze_all.py` writes `outputs/freeze/manifest.json` with SHA-256 hashes of 19 artefacts.
 3. The holdout runner refuses to start if any hash differs, and `evaluate()` refuses the holdout seeds during selection. `tests/test_freeze.py` checks this.
-4. Git history shows the freeze commit before the holdout-results commit: v1 archived at `5d24ab8`, calibration locked at `f44493c`, freeze at `25a6c47`, holdout results at `1592c95`.
+4. Git history shows the freeze commit before the holdout-results commit: v1 archived at `e6c943f`, calibration locked at `c2ef333`, freeze at `2a45af9`, holdout results at `ecad6d8`.
 5. The holdout is run once. Every run is appended to `outputs/freeze/holdout_log.json`: 3 main v2 runs and 1 post-plan run, 0 forced.
 
 Manifest hash (SHA-256 of `outputs/freeze/manifest.json`): `407689699aefd27f9969c34d752245353b45269b730937f2801783ffc7fe7205`.
 
 **Fresh seeds.** The v1 holdout seeds (retired v1 holdout (archived)) had been seen, so v2 uses 2000–2019 (D013). The v1 holdout had one disclosed forced rerun of a block that crashed before producing output (D010); its root cause, a non-atomic scenario cache, was fixed in V2-SIM-18 before the v2 freeze.
 
-**Post-plan check (D015).** After the main v2 holdout, the user asked how the frozen central-built I125 does in the stress worlds. P0, P2 and I125 were run once on the holdout seeds in the low- and high-stress worlds, paired against P2, with no re-selection, and logged at `8156da3`: low stress −85 h [−125 to −45] a year and total annual cost −AED 1.7M [−2.9 to −0.4] for +AED 7.7M capital (I125 62 h vs central-built P2 147 h); high stress −184 h [−239 to −128] a year and total annual cost −AED 5.0M [−6.8 to −3.1] for +AED 7.5M capital (I125 76 h vs central-built P2 260 h). It is labelled post-plan because it was not in the frozen run plan.
+**Post-plan check (D015).** After the main v2 holdout, the user asked how the frozen central-built I125 does in the stress worlds. P0, P2 and I125 were run once on the holdout seeds in the low- and high-stress worlds, paired against P2, with no re-selection, and logged at `c0e43c7`: low stress −85 h [−125 to −45] a year and total annual cost −AED 1.7M [−2.9 to −0.4] for +AED 7.7M capital (I125 62 h vs central-built P2 147 h); high stress −184 h [−239 to −128] a year and total annual cost −AED 5.0M [−6.8 to −3.1] for +AED 7.5M capital (I125 76 h vs central-built P2 260 h). It is labelled post-plan because it was not in the frozen run plan.
 
 ---
 
@@ -422,6 +422,6 @@ Each item is a documented non-calibration correction, decided before any result 
 | V2-SIM-13 | Engine | A wear-planned brake change triggers supply at notice when the hub will be short: a transfer, else a pre-arranged exchange/loan. |
 | V2-SIM-14 | Engine | A failed AOG route is retried with fresh paired draws while the need is open, instead of waiting weeks for a PO. |
 | V2-SIM-15 | Data | Wheel-and-tyre assemblies are rebuilt in a hub shop in days, not at the EU vendor in months. |
-| V2-SIM-16 | Decision | Calibration band recorded (ASSUMED plausibility band, author decision); the legacy line-station rule kept. |
+| V2-SIM-16 | Decision | Calibration band recorded (ASSUMED plausibility band, author decision); the starting-point line-station rule kept. |
 | V2-SIM-17 | Bug | A need whose earmarked shelf-life units expire on arrival is re-opened and re-routed. |
 | V2-SIM-18 | Bug | Atomic scenario-cache writes, so parallel workers cannot read a truncated file (the D010 root cause). |

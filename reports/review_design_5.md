@@ -1,5 +1,7 @@
 > **AI-generated review used during development — not a review by a human aviation professional.**
 
+> Edited for publication (v2.2): wording about the intended audience was replaced with neutral terms such as "reviewer". The findings are unchanged.
+
 # GROUNDED NO MORE: fifth independent design critique
 
 Reviewer stance: principal product designer at a data-visualisation studio, seeing the build cold.
@@ -187,7 +189,7 @@ DS = design-system consistency · P = polish/delight · M = responsive legibilit
 **About (4.29).**
 - Earns: clean and honest.
 - Costs:
-  - The six "Why I made these planning decisions" cards are empty dashed boxes. To a hiring manager that reads as
+  - The six "Why I made these planning decisions" cards are empty dashed boxes. To a reviewer that reads as
     unfinished.
   - The eyebrow renders as "— · ABOUT".
 
@@ -306,7 +308,7 @@ Defects:
 
 ## 7. What would get this to ≥ 4.5
 
-Issues 1–6 are the gate. They are the only things a hiring manager would notice in a five-minute skim:
+Issues 1–6 are the gate. They are the only things a reviewer would notice in a five-minute skim:
 - the overprinted AOG cards;
 - a filter that half-works;
 - 9 h vs 14 h on the first story step;

@@ -411,7 +411,7 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 
 ## calibration_targets
 
-> Legacy OEM-quote provisioning (Poisson 95%/90% on quoted data) with no line-station units for low-volume D0 parts; the legacy line-station rule (>= 4 quoted removals/yr) is kept - P2 is the remedy. Chosen by the user after the v2 P0 gap diagnosis and before any v2 P1/P2/optimiser result.
+> Starting-point OEM-quote provisioning (Poisson 95%/90% on quoted data) with no line-station units for low-volume D0 parts; the starting-point line-station rule (>= 4 quoted removals/yr) is kept - P2 is the remedy. Chosen by the user after the v2 P0 gap diagnosis and before any v2 P1/P2/optimiser result.
 
 | Key | Value | Provenance |
 |---|---|---|
@@ -423,7 +423,7 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 | `calibration_targets.sensitivity_variants.low_stress.rotable_immediate_fill_rate` | 0.85 | ASSUMED |
 | `calibration_targets.sensitivity_variants.high_stress.aog_hours_per_year` | 2700 | ASSUMED |
 | `calibration_targets.sensitivity_variants.high_stress.rotable_immediate_fill_rate` | 0.78 | ASSUMED |
-| `calibration_targets.p0_rule` | unchanged: legacy OEM-quote provisioning; line-station unit only for D0 PNs with >= 4 quoted removals/yr at that station | ASSUMED |
+| `calibration_targets.p0_rule` | unchanged: starting-point OEM-quote provisioning; line-station unit only for D0 PNs with >= 4 quoted removals/yr at that station | ASSUMED |
 | `calibration_targets.v1_band.immediate_fill_rate` | [0.93, 0.97] | ASSUMED |
 | `calibration_targets.v1_band.rotable_immediate_fill_rate` | [0.8, 0.88] | ASSUMED |
 | `calibration_targets.v1_band.aog_hours_per_year` | [1500, 3500] | ASSUMED |
@@ -476,7 +476,7 @@ Every configurable parameter in [`config/assumptions.yaml`](../config/assumption
 
 | Key | Value | Provenance |
 |---|---|---|
-| `planted_situations.PS1` | Understocked unscheduled D0 LRU at BOM (type-specific; legacy provisioning holds no line-station unit there because the optimistic quoted rate at BOM is < 4/yr) | SIMULATED |
+| `planted_situations.PS1` | Understocked unscheduled D0 LRU at BOM (type-specific; starting-point provisioning holds no line-station unit there because the optimistic quoted rate at BOM is < 4/yr) | SIMULATED |
 | `planted_situations.PS2` | Long-TAT rotable with an overdue repair order at the EU vendor | SIMULATED |
 | `planted_situations.PS3` | Declining-demand consumable creating excess stock | SIMULATED |
 | `planted_situations.PS4` | Lead-time jump on one expendable (supplier change) during history week ~70 | SIMULATED |

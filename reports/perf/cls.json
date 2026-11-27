@@ -1,4 +1,5 @@
 {
+ "status": "final for v2.1 (live site, 2026-11-26; same run as perf_summary.json): max CLS on load 0.0282.",
  "mission@1440": {
   "cls": 0.0012,
   "shifts": 1,

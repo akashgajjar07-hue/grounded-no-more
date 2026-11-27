@@ -1,4 +1,5 @@
 {
+ "status": "final for v2.1 (live site, 2026-11-26): all verdicts pass. Its 'weights' block was not captured (zeros) and is not a measurement. v2.2 changed text and documents only and was not re-measured.",
  "label": "live-v2.1-final",
  "generated": "2026-11-26T23:03:02",
  "targets": {

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Build the GROUNDED NO MORE v2 case-study deck (PPTX + PDF), the LinkedIn carousel (PDF, DRAFT) and the post draft.
+"""Build the GROUNDED NO MORE v2 case-study deck (PPTX + PDF).
 
-    python scripts/build_deck.py                      # deck + carousel + post draft
-    python scripts/build_deck.py --only deck          # just the deck (+ docs/downloads/case_study_deck.pdf)
+    python scripts/build_deck.py                      # the deck (+ docs/downloads/case_study_deck.pdf)
+    python scripts/build_deck.py --only deck          # same (kept for compatibility)
     python scripts/build_deck.py --build-dir /tmp/x   # keep intermediate assets / slide previews there
 
-Rules this script follows (internal release briefs, kept privately):
+Rules this script follows:
 * Every number shown is read from docs/data/*.json (and, for the calibration band ends, outputs/freeze/calibration_lock.json)
   at build time. Nothing is typed by hand. The only literals are design constants, layout and fixed prose.
 * The headline is the v2 HOLDOUT (seeds 2000-2019, central world): the Network Plan (P2) vs the Simple Rulebook (naive
@@ -19,7 +19,7 @@ Rules this script follows (internal release briefs, kept privately):
 * Fonts: the vendored woff2 files (docs/vendor/fonts, OFL) are converted to TTF in presentations/fonts so matplotlib can use them
   and so a PowerPoint user can install them. PPTX cannot embed fonts via python-pptx; without the fonts installed PowerPoint
   substitutes its defaults and every text box has slack for that.
-* Nothing is posted anywhere. The carousel and the post are drafts.
+* Nothing is posted anywhere.
 * v2.1 (v2.1 release brief): A3 display names with the code as a small tag, the verbatim scope line on every
   headline KPI, the A2 reading note, the A4 capital table (never the net alone), A5-A8 texts, the post-plan donor recount
   kept apart from the frozen numbers, and the E4 credit on every slide, all read from docs/data. `text_guards()` fails
@@ -44,8 +44,6 @@ DATA = ROOT / "docs" / "data"
 SVG_DIR = ROOT / "docs" / "assets" / "svg"
 FONT_SRC = ROOT / "docs" / "vendor" / "fonts"
 OUT = ROOT / "presentations"
-# v2.2 privacy: social-media drafts are written only to the git-ignored private/ folder, never to the public repo
-PRIVATE_OUT = ROOT / "private" / "presentations"
 FONT_OUT = OUT / "fonts"
 
 LIVE_URL = "https://akashgajjar07-hue.github.io/grounded-no-more/"
@@ -281,6 +279,7 @@ def compute_numbers():
     N["dn"] = k["display_names"]
     N["scope"] = k["scope_line"]
     N["reading"] = k["reading_note"]
+    N["routes_line"] = k["headline"]["honest"]["routes_line"]   # v2.2 (5.1): one plain line under the reading note
     N["credit"] = k["footer"]
     CREDIT["text"] = k["footer"]
     SCOPE["text"] = k["scope_line"]
@@ -1029,7 +1028,7 @@ class Charts:
         return self._save(fig, "actions")
 
     def kpi_bars(self, wpx, hpx):
-        """Holdout material AOG h/yr by policy, with capital (carousel)."""
+        """Holdout material AOG h/yr by policy, with capital (square format)."""
         N = self.N
         ids = [N["base_id"], "P1", N["core_id"], N["fo_id"]]
         two = {"P0": "Simple Rulebook", "P1": "Each Airport\nfor Itself", "P2": "Network Plan", "I125": "Network Plan\n+ Extra Spares"}
@@ -1268,21 +1267,22 @@ def build_deck(N, A, CH, bg, total=10):
           after=5, ls=1.08),
         P(R(sw["ranges_note"], "bodym", s=9, c=C["amber"]), ls=1.08)])
     s.card(48, 484, 1184, 186, line=blend(C["titanium"], C["card"], 0.3))
-    s.text(70, 500, 1140, 64, P(R(N["reading"], "body", s=10.6, c=C["ice"]), ls=1.15))
-    s.line(70, 582, 1210, 582, HAIR, 0.5)
-    s.text(70, 592, 560, 74, [
+    s.text(70, 494, 1140, 102, [P(R(N["reading"], "body", s=10.2, c=C["ice"]), after=4, ls=1.12),
+                                P(R(N["routes_line"], "body", s=9.6, c=C["amber"]), ls=1.1)])
+    s.line(70, 602, 1210, 602, HAIR, 0.5)
+    s.text(70, 610, 560, 56, [
         bullet([*named(N, "P1", s=9.2, b=True, short=True),
                 R(f" (each station sized alone) holds {cm['out1']} outstation repairable spares and still leaves "
                   f"{fmt_int(pols['P1']['kpi']['aog_hours']['mean'])} h/yr, most of it at the hub.", "bodym", s=9.2)],
                after=0, ls=1.08)])
-    s.text(650, 592, 560, 74, [
+    s.text(650, 610, 560, 56, [
         bullet([R("The price: ", "body", s=9.2, b=True, c=C["amber"]),
                 R(f"the shelf fill is {cm['fill']} pts lower, in cheap consumables "
                   f"({fmt_pct(bc[('P0', 'C')]['immediate_fill_rate'], 2)} → {fmt_pct(bc[('P2', 'C')]['immediate_fill_rate'], 2)}) "
                   f"and expendables; repairable-part fill rises {fmt_pct(bc[('P0', 'R')]['immediate_fill_rate'])} → "
                   f"{fmt_pct(bc[('P2', 'R')]['immediate_fill_rate'])}.", "bodym", s=9.2)], col=C["amber"], after=0,
                ls=1.08)])
-    s.footer(3, f"Source: docs/data/kpis.json (headline.core, reading_note, stress_worlds), policies.json · "
+    s.footer(3, f"Source: docs/data/kpis.json (headline.core, reading_note, routes_line, stress_worlds), policies.json · "
                 f"{N['seed_txt']}", total)
     S.append(s)
 
@@ -1773,231 +1773,6 @@ def build_deck(N, A, CH, bg, total=10):
 
 
 # --------------------------------------------------------------------------------------------------------------------
-# Carousel (1080 × 1080, PDF only) — DRAFT
-# --------------------------------------------------------------------------------------------------------------------
-def build_carousel(N, A, CH, bg):
-    S = []
-    k, core, fo, hon = N["kpi"], N["core"], N["fo"], N["hon"]
-    cid, bid, fid = N["core_id"], N["base_id"], N["fo_id"]
-    cm = common(N)
-    inc = N["inc"]
-    sv = N["sv"]
-    total = 7
-
-    def frame(s, n, eyebrow):
-        s.text(72, 64, 800, 22, P(R(f"{n:02d} / {total:02d} · {eyebrow.upper()}", "eyebrow", s=13)))
-        s.text(808, 64, 200, 22, P(R("DRAFT", "label", s=11, c=C["amber"], b=True), al="r"))
-        s.line(72, 1000, 1008, 1000, HAIR_BG, 1)
-        s.text(72, 1010, 760, 40, P(R(N["credit"], "small", s=10), ls=1.1))
-        s.text(808, 1012, 200, 22, P(R("swipe →" if n < total else "", "label", s=10.5, c=C["aero_teal"]), al="r"))
-
-    def scope(s, y):
-        s.text(72, y, 936, 22, P(R(N["scope"], "monos", s=11.5, c=C["aero_teal"])))
-
-    # 1 — hook (no results)
-    s = Slide(1080, 1080, bg)
-    frame(s, 1, "case study")
-    s.text(72, 120, 936, 200, [P(R("A single missing part", "title", s=52, sp=-1)),
-                               P(R("can ground an aircraft.", "title", s=52, sp=-1, c=C["aero_teal"]))])
-    s.text(72, 296, 936, 90, P(R("I simulated a fictional airline to learn where spares should sit, and what each extra "
-                                 "dirham of stock actually buys.", "lede", s=20, c=C["ice"]), ls=1.12))
-    s.image(60, 400, 470, 480, A["nb"])
-    s.image(540, 380, 490, 505, A["wb"])
-    s.text(72, 900, 936, 26, P(R(N["landing"]["text"], "mono", s=14, c=C["ice"])))
-    s.chip(72, 940, "SIMULATED", f"SIMULATED · {AIRLINE.upper()} · ORIGINAL SCHEMATICS")
-    S.append(s)
-
-    # 2 — results + capital table + reading note
-    s = Slide(1080, 1080, bg)
-    frame(s, 2, "what I found")
-    s.text(72, 112, 936, 60, P(R("A re-mixed stock, not a free move.", "title", s=38, sp=-0.5)))
-    s.text(72, 172, 936, 70, P(R(f"Hours aircraft waited for a part each year, on 20 fresh test runs. The {sn(N, cid)} "
-                                 f"cut {cm['red']} hours {cm['red_ci']} against the {dn(N, bid)}.", "lede", s=17.5,
-                                 c=C["ice"]), ls=1.12))
-    s.image(72, 250, 936, 300, CH.kpi_bars(600, 220))
-    scope(s, 556)
-    yb = capital_table(s, N, 72, 594, 936, size=14.5, label=False)
-    s.text(72, yb + 4, 936, 190, P(R(N["reading"], "bodym", s=13.5), ls=1.15))
-    S.append(s)
-
-    # 3 — why (with the escalation first)
-    esc = N["esc"]
-    s = Slide(1080, 1080, bg)
-    frame(s, 3, "why it works")
-    s.text(72, 120, 936, 150, P(R(f"At {inc['station']}, the {sn(N, bid)} held {sv['units']['P0']} of the part that "
-                                  f"grounded the aircraft.", "title", s=38, sp=-0.5), ls=1.1))
-    s.text(72, 276, 936, 110, P(R(f"The shelf at {inc['station']} is refilled from AUH in a few days. Palm's theorem says how "
-                                  f"many removals that resupply time has to cover. With {N['s_bom']} units at "
-                                  f"{inc['station']}, {fmt_pct(N['palm_bom'])} of no-go removals find one on the shelf.",
-                                  "lede", s=18.5), ls=1.15))
-    s.image(72, 396, 936, 330, CH.palm_pmf(620, 220, big=True))
-    s.text(72, 740, 440, 132, [P(R(f"{inc['aog_hours']} h", "big", s=48, c=C["copper"])),
-                               P(R(f"on the ground in {inc['id']}, one no-go removal", "bodym", s=15))])
-    s.text(540, 740, 470, 132, [P(R(fmt_pct(N["palm_bom"]), "big", s=48, c=C["aero_teal"])),
-                                P(R(f"chance of a spare on the shelf with {N['s_bom']} units", "bodym", s=15))])
-    s.text(72, 880, 936, 100, P(R("But first: ", "body", s=16, b=True, c=C["amber"]), R(esc["text"], "bodym", s=16),
-                                ls=1.15))
-    S.append(s)
-
-    # 4 — frontier option + insight
-    shifts = {r["setting"]: r["recommended"] for r in fo["rule_shifts"]}
-    ins = N["ins"]
-    s = Slide(1080, 1080, bg)
-    frame(s, 4, "the frontier option")
-    s.text(72, 120, 936, 70, P(R(f"If you invest an additional {cm['fo_cap']}…", "title", s=38, sp=-0.5)))
-    s.text(72, 188, 936, 110, P(R(f"…a rule written before the test stops at the {sn(N, fid)}: a further {cm['fo_red']} "
-                                  f"hours a year {cm['fo_red_ci']} below the {sn(N, cid)}. An option, not the headline.",
-                                  "lede", s=19), ls=1.15))
-    s.image(72, 300, 936, 436, CH.frontier(580, 280, compact=True))
-    scope(s, 740)
-    s.text(72, 782, 936, 200, [
-        P(R(ins["text"], "body", s=19, c=C["ice"], b=True), after=8, ls=1.12),
-        P(R("Levers: " + ins["levers_text"], "mono", s=14, c=C["aero_teal"]), after=8),
-        bullet([R(f"The pick moves with the hourly cost: {shifts.get('x0.5')} at ×0.5, {shifts.get('x2.0')} at ×2.",
-                  "bodym", s=15)], col=C["amber"], after=0, ls=1.12),
-    ])
-    S.append(s)
-
-    # 5 — honest findings
-    ro = hon["routes_off"]
-    hp = N["donor"]["historical_p0"]
-    s = Slide(1080, 1080, bg)
-    frame(s, 5, "what surprised me")
-    s.text(72, 120, 936, 80, P(R("Findings that cut the other way.", "title", s=40, sp=-0.5)))
-    items = [
-        (f"{hon['forecast_champions_best']} of {hon['forecast_cells']}",
-         "groups of parts where the forecasting method chosen in advance was also best on unseen data."),
-        (f"{hon['mtbur_history_error'] * 100:.0f}% vs {hon['mtbur_quote_error'] * 100:.0f}%",
-         "how far the airline's own history sits from the truth on how often a part comes off, versus supplier quotes."),
-        (f"−{cm['fill']} pts", "chance the part is on the shelf under the Network Plan. Fewer groundings, slightly more "
-                               "waiting for cheap parts."),
-        (f"{fmt_int(ro['central_p2_aog_hours'])} → {fmt_int(ro['p2_aog_hours'])} h",
-         f"the {sn(N, cid)}'s hours a year if the emergency routes (borrowing, exchange) disappear."),
-        ("not counted", f"donor aircraft hours. In the {sn(N, bid)}'s history they were held about "
-                        f"{fmt_int(hp['gross_donor_hours_per_year'])} h a year, beside "
-                        f"{fmt_int(hp['counted_material_aog_hours_per_year'])} h counted in that same history."),
-    ]
-    yy = 222
-    for big_, txt in items:
-        s.text(72, yy, 370, 70, P(R(big_, "big", s=30, c=C["aero_teal"])))
-        s.text(450, yy + 4, 558, 140, P(R(txt, "bodym", s=16.5), ls=1.15))
-        s.line(72, yy + 136, 1008, yy + 136, HAIR_BG, 0.75)
-        yy += 148
-    scope(s, 966)
-    S.append(s)
-
-    # 6 — v1 -> v2
-    v1 = N["v1"]
-    cons = N["consistency"]
-    n_in = sum(1 for c in cons.values() if c["selection_inside_holdout_ci"])
-    s = Slide(1080, 1080, bg)
-    frame(s, 6, "I got it wrong first")
-    s.text(72, 120, 936, 150, P(R("My first version flattered the result.", "title", s=44, sp=-0.5), ls=1.05))
-    s.text(72, 296, 936, 160, P(R(f"A domain review of v1 found {len(v1['superseded_because'])} realism problems: parts "
-                                  "shared across fleet types, cheap consumables treated as no-go items, an always-available "
-                                  "5-day emergency buy, a straw-man baseline. So I archived v1 and rebuilt the world.",
-                                  "lede", s=20, c=C["ice"]), ls=1.15))
-    steps = [
-        ("Fix", "the domain errors first, before looking at any new result"),
-        ("Calibrate", "only the starting-point plan, to a target range I chose (an assumption, not a benchmark)"),
-        ("Freeze", f"{len(N['freeze']['artefacts'])} artefacts, hashed"),
-        ("Test once", f"on fresh seeds: {n_in} of {len(cons)} headline numbers landed inside the test's likely range"),
-    ]
-    yy = 500
-    for i, (h_, d_) in enumerate(steps, 1):
-        s.rect(72, yy, 52, 52, fill=blend(C["aero_teal"], C["midnight"], 0.15), line=C["aero_teal"], lw=1, r=26)
-        s.text(72, yy + 12, 52, 30, P(R(str(i), "mid", s=18, c=C["aero_teal"]), al="c"))
-        s.text(146, yy + 2, 862, 80, P(R(h_ + "  ", "body", s=19, b=True), R(d_, "bodym", s=18), ls=1.12))
-        yy += 92
-    s.text(72, 884, 936, 100, P(R("The v1 numbers are archived, not findings. The lesson: get the domain review before "
-                                  "the headline.", "body", s=18, c=C["amber"]), ls=1.15))
-    S.append(s)
-
-    # 7 — limits + author
-    s = Slide(1080, 1080, bg)
-    frame(s, 7, "honest limits")
-    s.text(72, 120, 936, 150, P(R("It is a simulation. Here is what that means.", "title", s=40, sp=-0.5), ls=1.1))
-    lim = [
-        f"{AIRLINE} does not exist; every airline number is simulated.",
-        f"The {dn(N, bid)} is a deliberately simple starting point, not a model of a competent airline.",
-        f"The three test worlds differ only in {N['sw']['text']}. {N['sw']['ranges_note']}",
-        "Results lean on the emergency routes (borrowing, exchange/loan) existing.",
-    ]
-    s.text(72, 270, 936, 470, [bullet([R(t, "bodym", s=18)], after=14, ls=1.15) for t in lim])
-    s.card(72, 760, 936, 210)
-    s.text(104, 784, 880, 170, [P(R("Akash Gajjar", "title", s=28), after=4),
-                                P(R("MSc Supply Chain Management, University of Liverpool (2025)", "bodym", s=15),
-                                    after=14),
-                                P(R(LIVE_URL.replace("https://", ""), "mono", s=14, c=C["aero_teal"]), after=4),
-                                P(R(REPO_URL.replace("https://", ""), "mono", s=14))])
-    S.append(s)
-    return S
-
-
-def write_linkedin_post(N, path):
-    """DRAFT post in the author's voice. Numbers are filled from docs/data; nothing is posted anywhere."""
-    core, fo, hon = N["core"], N["fo"], N["hon"]
-    cm = common(N)
-    inc = N["inc"]
-    sv = N["sv"]
-    ro = hon["routes_off"]
-    shifts = {r["setting"]: r["recommended"] for r in fo["rule_shifts"]}
-    hold = N["donor"]["holdout"]["robberies_per_year"]
-    hp = N["donor"]["historical_p0"]
-    cid, bid, fid = N["core_id"], N["base_id"], N["fo_id"]
-    v1h = {r["policy"]: r for r in N["v1"]["headline"]}
-    v1_gap = v1h["P0"]["aog_hours"] - v1h["P2"]["aog_hours"]
-    smaller = ("The improvement is smaller now, and I trust it more." if v1_gap > core["aog_reduction"]["mean"]
-               else "I trust the result more now.")
-    cap = "\n".join(f"- {lab}: {txt}" for lab, txt in cm["cap_rows"])
-    txt = f"""<!--
-DRAFT. DO NOT POST. Generated by scripts/build_deck.py from docs/data (data build {N['meta_sha']}).
-Akash: edit freely, check every number against the live app before posting, and post it yourself.
-Suggested attachment: private/presentations/linkedin_carousel.pdf (DRAFT) or docs/assets/readme/demo.gif.
--->
-
-# DRAFT — DO NOT POST — LinkedIn post (not posted)
-
-I have been teaching myself how aviation spare parts really work, and I built a project to do it.
-
-My background is retail inventory: forecasts, reorder points, shelves that should never be empty. Aviation materials planning looks similar until you meet a repairable part. A steering actuator is not consumed, it is repaired, so the question is not "how many do we sell?" but "how many are sitting in a repair shop right now, and is one where the aircraft is?"
-
-GROUNDED NO MORE is a simulation of a fictional airline, {AIRLINE}: {N['landing']['text']}. Nothing in it is real operator data. The airline does not exist, the history is simulated, and every assumption is written down with a provenance tag.
-
-It compares four plans, each facing identical events: the {dn(N, bid)}, {dn(N, 'P1')}, the {dn(N, cid)}, and the {dn(N, fid)}.
-
-What I found ({N['scope']}):
-
-1. Where the spares sit matters. The {dn(N, cid)} cut the hours aircraft waited for a part by {cm['red']} a year {cm['red_ci']} against the {dn(N, bid)}, which is deliberately simple, not a model of a competent airline. It is not a free move of stock:
-{cap}
-{cm['cap_note']}
-
-2. One missing part is enough. In the simulated history a nose wheel steering actuator comes off at {inc['station']}, the {sn(N, bid)} holds {sv['units']['P0']} there, and the aircraft waits {inc['aog_hours']} hours. With {N['s_bom']} units at {inc['station']}, {fmt_pct(N['palm_bom'])} of those removals find one on the shelf. But the first move for that part is not more stock: {N['esc']['text']}
-
-3. More capital is an option, not the answer. If you invest an additional {cm['fo_cap']}, a rule I wrote down before testing picks the {sn(N, fid)}: a further {cm['fo_red']} hours a year. But the pick moves with the downtime cost ({shifts.get('x0.5')} at half, {shifts.get('x2.0')} at double). The most useful insight: {N['ins']['text'][0].lower() + N['ins']['text'][1:]} The levers to compare: {N['ins']['levers_text']}.
-
-4. The honest bits. The forecasting methods I chose in advance were best on unseen data in only {hon['forecast_champions_best']} of {hon['forecast_cells']} groups. The airline's own history was about {hon['mtbur_history_error'] * 100:.0f}% off the truth on how often parts come off, supplier quotes about {hon['mtbur_quote_error'] * 100:.0f}%. The chance of finding a part on the shelf is about {cm['fill']} points lower under the Network Plan. Every plan leans on the emergency routes: switch them off and the Network Plan goes from {fmt_int(ro['central_p2_aog_hours'])} to {fmt_int(ro['p2_aog_hours'])} hours a year. The three test worlds differ only in {N['sw']['text']}. {N['sw']['ranges_note']}
-
-5. What is not counted. Aircraft that donate a part to another wait too, and those hours are not in the numbers above. A post-plan recount shows parts borrowed between our own aircraft fall from {hold[bid]['mean']:.1f} to {hold[cid]['mean']:.1f} a year, but donor hours in the test runs are not reconstructible from current logs. In the {sn(N, bid)}'s history alone, donor aircraft were held about {fmt_int(hp['gross_donor_hours_per_year'])} hours a year, beside {fmt_int(hp['counted_material_aog_hours_per_year'])} counted in that same history (an upper bound).
-
-6. I got it wrong first. A domain review of my first version found realism problems that flattered the result. I archived it, fixed the world before looking at new results, recalibrated only the starting point (to a target range I chose, not a benchmark), and tested once on fresh seeds. {smaller}
-
-It ends in a web app a materials planner could open on a Monday morning: a ranked action list, an AOG response lab and the capital-vs-readiness trade-off.
-
-I would really value feedback from people who do this for real, especially on what I have oversimplified.
-
-Live app: {LIVE_URL}
-Code: {REPO_URL}
-
-{N['credit']}
-
-#AviationMaintenance #SupplyChain #InventoryManagement
-"""
-    path.write_text(txt)
-    return txt
-
-
-# --------------------------------------------------------------------------------------------------------------------
 # v2.1 build guards: forbidden words / OEM names gone, verbatim texts present, no result on the title slide
 # --------------------------------------------------------------------------------------------------------------------
 def slide_texts(slides):
@@ -2017,7 +1792,7 @@ def _gate(texts, where):
     assert not bad, f"v2.1 text gate failed: {bad[:6]}"
 
 
-def text_guards(N, deck=None, carousel=None, post=None):
+def text_guards(N, deck=None):
     """Fail the build unless the v2.1 story is complete and clean (v2.1 release brief)."""
     names = [dn(N, c) for c in ("P0", "P1", "P2", "I125")]
     red = N["core"]["aog_reduction"]["mean"]
@@ -2051,27 +1826,12 @@ def text_guards(N, deck=None, carousel=None, post=None):
         for i, t in enumerate(T, 1):
             if fmt_int(hp["gross_donor_hours_per_year"]) in t:
                 assert fmt_int(hp["counted_material_aog_hours_per_year"]) in t and "HISTORICAL" in t.upper(), i
-    if carousel is not None:
-        T = slide_texts(carousel)
-        _gate(T, "carousel")
-        assert fmt_int(red) not in T[0] and f"{pct}%" not in T[0]
-        allt = " ".join(T)
-        for m in [N["scope"], N["reading"], N["cap_t"]["note"], N["ins"]["text"], N["esc"]["text"],
-                  *[r["text"] for r in N["cap_t"]["rows"]]]:
-            assert m in allt, f"carousel is missing: {m[:50]}"
-        assert all(N["credit"] in t for t in T)
-    if post is not None:
-        _gate([post], "post")
-        for m in [N["scope"], N["cap_t"]["note"], N["esc"]["text"], N["sw"]["ranges_note"], N["credit"], *names,
-                  *[r["text"] for r in N["cap_t"]["rows"]]]:
-            assert m in post, f"post is missing: {m[:50]}"
-        assert "DO NOT POST" in post
 
 
 # --------------------------------------------------------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--only", choices=["deck", "carousel"], default=None)
+    ap.add_argument("--only", choices=["deck"], default=None)
     ap.add_argument("--build-dir", default=None)
     a = ap.parse_args()
     OUT.mkdir(exist_ok=True)
@@ -2097,16 +1857,6 @@ def main():
         shutil.copy(OUT / "case_study_deck.pdf", DOWNLOADS / "case_study_deck.pdf")
         print(f"deck: {OUT / 'case_study_deck.pptx'} + .pdf ({len(slides)} slides; copied to {DOWNLOADS}); "
               f"previews {pngs[0].parent}")
-    if a.only in (None, "carousel"):
-        PRIVATE_OUT.mkdir(parents=True, exist_ok=True)
-        bgc = str(make_background(build / "bg-sq.png", 1080, 1080))
-        cs = build_carousel(N, A, CH, bgc)
-        text_guards(N, carousel=cs)
-        html_to_pdf_and_png(render_html(cs, 1080, 1080), 1080, 1080, PRIVATE_OUT / "linkedin_carousel.pdf", build,
-                            "carousel", scale=1)
-        print(f"carousel (DRAFT, private): {PRIVATE_OUT / 'linkedin_carousel.pdf'} ({len(cs)} slides)")
-        text_guards(N, post=write_linkedin_post(N, PRIVATE_OUT / "linkedin_post.md"))
-        print(f"post draft (DRAFT, private, not posted): {PRIVATE_OUT / 'linkedin_post.md'}")
 
 
 if __name__ == "__main__":

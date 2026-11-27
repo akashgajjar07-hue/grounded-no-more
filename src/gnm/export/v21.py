@@ -164,6 +164,11 @@ _WORDS = [
     (re.compile(rf"seeds {_V1}"), "the retired v1 holdout"),
     (re.compile(_V1), "retired v1 holdout"),
     (re.compile(r"\bnaive 9/9\b"), "naive (lowest-ranked)"),
+    # v2.2: the frozen config/outputs still call P0 "legacy"; product text says Simple Rulebook or starting-point
+    (re.compile(r"\bV2 legacy line-kit\b"), "V2 line-station kit"),
+    (re.compile(r"\bP0 legacy\b"), "P0 Simple Rulebook"),
+    (re.compile(r"\blegacy\b"), "starting-point"),
+    (re.compile(r"\bLegacy\b"), "Starting-point"),
 ]
 
 FORBIDDEN_PATTERNS = {
@@ -171,6 +176,7 @@ FORBIDDEN_PATTERNS = {
     "airline brand": re.compile(rf"\b{_BRAND}\b"),
     "forbidden word": re.compile(rf"\b{_W_VAL}\b|\b{_W_OPT}\b|" + "|".join(_PHRASES), re.I),
     "stale v1 string": re.compile(rf"{_V1}|seeds 1000\b|naive 9/9"),
+    "legacy wording": re.compile(r"\blegacy\b", re.I),
 }
 
 

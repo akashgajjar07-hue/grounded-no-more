@@ -20,7 +20,9 @@ DICT_OUT = ROOT / "data" / "data_dictionary.md"
 REG_OUT = ROOT / "docs" / "assumption_register.md"
 
 # v2.1 release labels: the locked config keeps its archetype strings (V21-0); rendered text uses generic names.
-RELABEL = [("A320-family archetype", "narrowbody archetype"), ("787-family archetype", "widebody archetype"),
+RELABEL = [("Legacy OEM-quote", "Starting-point OEM-quote"), ("legacy OEM-quote", "starting-point OEM-quote"),
+           ("legacy line-station", "starting-point line-station"), ("legacy provisioning", "starting-point provisioning"),
+           ("A320-family archetype", "narrowbody archetype"), ("787-family archetype", "widebody archetype"),
            ("A320-family", "narrowbody"), ("787-family", "widebody"), ("787 LRUs", "widebody LRUs")]
 
 

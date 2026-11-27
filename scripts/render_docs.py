@@ -191,6 +191,19 @@ def junit_counts() -> tuple[Counter, Counter, Counter, dict]:
     return n, bad, skip, suite
 
 
+def junit_scope(n: Counter) -> dict[str, str]:
+    """Describe the suites actually present in reports/junit.xml (v2.2: the file may hold the non-browser run only)."""
+    browser = any(m.startswith("test_site_") and m != "test_site_data" for m in n)
+    if browser:
+        return {"short": "fast, slow and browser suites, `GNM_RELEASE=1`",
+                "how": "from `GNM_RELEASE=1 pytest -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast, slow and "
+                       "browser suites in one serial run"}
+    return {"short": "fast and slow suites, `GNM_RELEASE=1`; the Playwright browser suite runs separately",
+            "how": "from `GNM_RELEASE=1 pytest -m \"not browser\" -p no:cacheprovider -q --junitxml=reports/junit.xml`, "
+                   "fast and slow suites; the Playwright browser suite (`-m browser`) runs separately and is not counted "
+                   "in this file"}
+
+
 def junit_case_passed(module: str, name: str) -> bool:
     for tc in junit_root().iter("testcase"):
         if tc.get("classname").endswith(module) and tc.get("name") == name:
@@ -343,7 +356,7 @@ def compute() -> dict[str, str]:  # noqa: C901, PLR0915 - one flat list of keys 
     V["core.capital_ci"] = ci_aed_m(*cap["ci"], 2)
     tc = core["total_cost_aed"]
     V["core.total_cost"] = fmt_aed_ci(tc["mean"], tc["ci"][0], tc["ci"][1], signed=True)
-    V["core.baseline_sentence"] = f"vs a legacy OEM-quote policy holding only {n_out['P0']} outstation rotables"
+    V["core.baseline_sentence"] = f"vs a starting-point OEM-quote policy holding only {n_out['P0']} outstation rotables"
     V["core.headline"] = (
         f"**Network positioning (P2) cuts material AOG by {V['core.aog_reduction']} a year "
         f"{V['core.aog_reduction_ci']} {V['core.baseline_sentence']}, for about {V['core.capital']} of spares "
@@ -509,7 +522,7 @@ def compute() -> dict[str, str]:  # noqa: C901, PLR0915 - one flat list of keys 
     V["cal.variants_table"] = "\n".join(vt)
     v3 = next(v for k, v in var.items() if k.startswith("V3"))
     V["limits.linekit"] = (
-        f"the in-memory variant V3 (the calibrated quote settings plus a legacy line-station kit of "
+        f"the in-memory variant V3 (the calibrated quote settings plus a line-station kit of "
         f"{v3['line_kit_units']} units; [METHODOLOGY section 6](METHODOLOGY.md#6-calibration-p0-only-and-the-lock)) gave "
         f"P0 {fmt_int(v3['history']['aog_hours_per_year'])} h/yr of history downtime instead of "
         f"{fmt_int(v1h['aog_hours_per_year'])} h, at {fmt_int(v3['history']['aog_events_per_year'])} events/yr "
@@ -527,7 +540,7 @@ def compute() -> dict[str, str]:  # noqa: C901, PLR0915 - one flat list of keys 
         f"{gap['analytic_weighted_hub']['postfix']:.3f}; it was {gap['analytic_weighted_hub']['prefix']:.3f} on paper "
         f"before the V2-SIM-10 fix). What remains is intended realism. Switching one factor off at a time from the "
         f"as-built fill of {full:.3f}: quoted-vs-true removal rates {gain('rates = quoted')}, quoted-vs-true TAT "
-        f"{gain('TAT mean = quoted')}, unstocked outstation demand under the legacy line-station rule "
+        f"{gain('TAT mean = quoted')}, unstocked outstation demand under the starting-point line-station rule "
         f"{gain('all rotable demand at AUH')}, and NFF works the other way ({gain('no NFF')} if removed)")
     ctab = ["| World (true-MTBUR scale) | Target | Rotable fill, history / selection | Material AOG h/yr, history / selection | Events/yr, history / selection | In the central band |",
             "|---|---|---|---|---|---|"]
@@ -765,7 +778,7 @@ def compute() -> dict[str, str]:  # noqa: C901, PLR0915 - one flat list of keys 
         f"history took the rank-1 option in {cf['history_took_best_option']} of {cf['requests_compared']} requests; "
         f"excluding the {cf['history_used_robbery']} robbery cases (never ranked), the actual route gave "
         f"{fmt_h(ex_r['actual_request_aog_h'])} against {fmt_h(ex_r['best_option_request_aog_h'])} for the ranked "
-        f"option, so the legacy AOG desk already takes about the best per-incident route and the lever is positioning")
+        f"option, so the starting-point AOG desk already takes about the best per-incident route and the lever is positioning")
     inc = next(i for i in aog["incidents"] if i["id"] == aog["ps1_incident_id"])
     ts = pd.Timestamp(inc["need_datetime"].replace("Z", ""))
     tz = {"BOM": 330, "CAI": 120, "JED": 180, "LHR": 0, "FRA": 60, "SIN": 480, "AUH": 240}[inc["station"]]
@@ -981,8 +994,8 @@ def compute() -> dict[str, str]:  # noqa: C901, PLR0915 - one flat list of keys 
     # ---------------------------------------------------------------- tests (junit)
     n, bad, skip, suite = junit_counts()
     tot_n, tot_bad, tot_skip = sum(n.values()), sum(bad.values()), sum(skip.values())
-    V["tests.summary"] = (f"{tot_n - tot_bad - tot_skip}/{tot_n} passing, {tot_bad} failing, {tot_skip} skipped (fast, "
-                          f"slow and browser suites, `GNM_RELEASE=1`; `reports/junit.xml`, run at "
+    V["tests.summary"] = (f"{tot_n - tot_bad - tot_skip}/{tot_n} passing, {tot_bad} failing, {tot_skip} skipped "
+                          f"({junit_scope(n)['short']}; `reports/junit.xml`, run at "
                           f"{suite['timestamp'][:16].replace('T', ' ')})")
     V.update(v21_keys(V, kpis=kpis, pol=pol, fo=fo, var=var, sp=sp, pm=pm, cal=cal))
     return V
@@ -997,7 +1010,12 @@ NAMES = {"P0": "Simple Rulebook (naive reference)", "P1": "Each Airport for Itse
 RELABEL = [("A320- and 787-family archetypes", "narrowbody and widebody archetypes"),
            ("A320-family and 787-family archetypes", "narrowbody and widebody archetypes"),
            ("A320-family archetype", "narrowbody archetype"), ("787-family archetype", "widebody archetype"),
-           ("A320-family", "narrowbody"), ("787-family", "widebody")]
+           ("A320-family", "narrowbody"), ("787-family", "widebody"),
+           # v2.2: frozen outputs still say "legacy"; product text uses the P0 display name or "starting-point"
+           ("V2 legacy line-kit", "V2 line-station kit"), ("P0 legacy", "P0 Simple Rulebook"),
+           ("Legacy OEM-quote", "Starting-point OEM-quote"), ("legacy OEM-quote", "starting-point OEM-quote"),
+           ("legacy line-station", "starting-point line-station"), ("legacy provisioning", "starting-point provisioning"),
+           ("legacy", "starting-point"), ("Legacy", "Starting-point")]
 RELABELLED_DOCS = {"README.md", "METHODOLOGY.md", "MODEL_CARD.md", "LIMITATIONS.md", "VALIDATION_REPORT.md"}
 POSTPLAN = ROOT / "outputs" / "postplan"
 
@@ -1110,6 +1128,11 @@ def v21_keys(V: dict[str, str], *, kpis, pol, fo, var, sp, pm, cal) -> dict[str,
             node = node.get(k_) if isinstance(node, dict) else None
         if node is not None and node != W[key]:
             raise SystemExit(f"{key} differs from the site export kpis.json {'/'.join(path)}")
+    # v2.2 (5.1): the routes-off line under the reading note, read from the site export (numbers never typed)
+    _rl = (kpis.get("headline", {}).get("honest", {}) or {}).get("routes_line")
+    if not _rl:
+        raise SystemExit("kpis.json headline.honest.routes_line is missing: run scripts/export_site.py")
+    W["v21.routes_line"] = _rl.replace("See Limitations.", "See [Limitations](LIMITATIONS.md#economics-and-decisions).")
     _esc = [v for v in json.loads((ROOT / "docs/data/parts.json").read_text()).get("parts", []) if v.get("escalation")]
     ps1_mult = round(_esc[0]["escalation"]["estimated_ratio"], 1) if _esc else float("nan")   # history estimate (V21-A7)
     W["v21.hero_part"] = (f"Removing {ps1_mult:g}× faster than quoted → escalate to reliability engineering and "
@@ -1233,6 +1256,7 @@ def validation_values(V: dict[str, str]) -> dict[str, str]:
         "Freeze and holdout discipline": ["test_freeze"],
         "Site data export, reconciliation, rendered docs": ["test_reconciliation", "test_site_data", "test_docs_rendered"],
         "SQL, workbook, notebooks": ["test_sql", "test_workbook", "test_notebooks"],
+        "Public-surface word gate and privacy": ["test_public_scan"],
         "Web app screens (browser)": [m for m in n if m.startswith("test_site_") and m != "test_site_data"],
     }
     rows = ["| Area | Test modules | Tests | Failed | Skipped |", "|---|---|---|---|---|"]
@@ -1240,6 +1264,9 @@ def validation_values(V: dict[str, str]) -> dict[str, str]:
     for area, mods in areas.items():
         mods = [m for m in mods if m in n]
         seen |= set(mods)
+        if not mods:   # e.g. the browser suite when junit.xml holds the non-browser run
+            rows.append(f"| {area} | not in this file (run separately) | — | — | — |")
+            continue
         rows.append(f"| {area} | {', '.join('`' + m + '`' for m in mods)} | {sum(n[m] for m in mods)} | "
                     f"{sum(bad[m] for m in mods)} | {sum(skip[m] for m in mods)} |")
     rest = [m for m in n if m not in seen]
@@ -1249,6 +1276,7 @@ def validation_values(V: dict[str, str]) -> dict[str, str]:
     rows.append(f"| **Total** | {len(n)} modules | **{sum(n.values())}** | **{sum(bad.values())}** | **{sum(skip.values())}** |")
     W = dict(V)
     W["val.tests_table"] = "\n".join(rows)
+    W["val.tests_how"] = junit_scope(n)["how"]
     W["val.tests_suite"] = (f"{suite['tests']} tests, {suite['failures']} failures, {suite['errors']} errors, "
                             f"{suite['skipped']} skipped, {float(suite['time']):.0f} s, run at {suite['timestamp']}")
     failed = [f"`{tc.get('classname').split('.')[-1]}::{tc.get('name')}`" for tc in junit_root().iter("testcase")

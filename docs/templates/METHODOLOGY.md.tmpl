@@ -54,7 +54,7 @@ Plan names used throughout: {{RESULT:v21.name.P0}}, {{RESULT:v21.name.P1}}, {{RE
 
 **Wheels and brakes** (V2-SIM-3, V2-SIM-15). Wheel-and-tyre assemblies are {{RESULT:config.wheel_shop}}. Brakes are type-specific and wear-planned: their removals are known {{RESULT:config.wear_notice}} ahead and rectified at AUH (section 4).
 
-**Planted situations.** Four documented demo situations (PS1–PS4) give the planner screens something real to find: PS1 {{RESULT:story.ps1}}, an unscheduled D0 rotable that the legacy rule does not stock at BOM; an overdue repair order at the EU vendor; a declining consumable creating excess; and a lead-time jump on one expendable around week 70.
+**Planted situations.** Four documented demo situations (PS1–PS4) give the planner screens something real to find: PS1 {{RESULT:story.ps1}}, an unscheduled D0 rotable that the Simple Rulebook does not stock at BOM; an overdue repair order at the EU vendor; a declining consumable creating excess; and a lead-time jump on one expendable around week 70.
 
 **Scenarios.** `generate_scenario(world, truth, seed, week_from, week_to)` returns the exogenous events for one seed: flights, the maintenance schedule, removals and material requests, plus pre-sampled repair durations, condemnation and NFF flags, PO lead-time streams and the per-request uniforms the AOG routes use. Downstream code receives only this `Scenario`, never the truth.
 
@@ -136,13 +136,13 @@ A removed core travels to AUH, then to its shop (the AUH in-house shop, the whee
 
 > {{RESULT:v21.calibration}}
 
-**Band (V2-SIM-16): an ASSUMED target range set by the author after the P0 gap diagnosis and before any policy comparison; author judgement, not an external benchmark:** {{RESULT:cal.band}}. It describes a legacy OEM-quote operation with no line-station units for low-volume D0 parts; the v1 band ({{RESULT:cal.v1_band}}) is kept in the config for reference only.
+**Band (V2-SIM-16): an ASSUMED target range set by the author after the P0 gap diagnosis and before any policy comparison; author judgement, not an external benchmark:** {{RESULT:cal.band}}. It describes a simple OEM-quote operation with no line-station units for low-volume D0 parts; the v1 band ({{RESULT:cal.v1_band}}) is kept in the config for reference only.
 
 **History of the P0 numbers.** Each step below is a domain or engine correction made before calibration, then the calibration itself. None was chosen by looking at P1, P2 or the optimiser, which did not exist yet:
 
 {{RESULT:cal.history_table}}
 
-**The diagnosis** (`outputs/calibration/v2_p0_gap_diagnosis.md`): {{RESULT:cal.diagnosis}}. Reaching the band therefore needed either more accurate quotes, a change to the legacy rule, or a looser band.
+**The diagnosis** (`outputs/calibration/v2_p0_gap_diagnosis.md`): {{RESULT:cal.diagnosis}}. Reaching the band therefore needed either more accurate quotes, a change to the starting-point rule, or a looser band.
 
 **The choice.** The raw P0 and four variants were measured in memory with nothing applied (`outputs/calibration/v2_p0_variants.json`):
 
@@ -225,7 +225,7 @@ $$
 \text{EBO}(S) = \sum_{x > S} (x - S)\,P(X = x), \qquad \text{fill} = P(X \le S - 1)
 $$
 
-The protection level of every policy is defined on this fill, the quantity the engine measures as immediate fill (V2-SIM-10). EBO(S) − EBO(S+1) = P(X > S) falls as S rises, so each extra unit is worth less than the one before. A worked example is in the [study guide](STUDY_GUIDE.md). Rotable floats always use the Poisson pipeline; clustered removals make that optimistic, and the event engine (which simulates the clustering) is the referee.
+The protection level of every policy is defined on this fill, the quantity the engine measures as immediate fill (V2-SIM-10). EBO(S) − EBO(S+1) = P(X > S) falls as S rises, so each extra unit is worth less than the one before. The planner workbook ([`excel/grounded_no_more_planner_workbook.xlsx`](excel/grounded_no_more_planner_workbook.xlsx)) works this through with live formulas. Rotable floats always use the Poisson pipeline; clustered removals make that optimistic, and the event engine (which simulates the clustering) is the referee.
 
 ### 8.3 Consumables and expendables: (s, S)
 
@@ -351,6 +351,6 @@ Each item is a documented non-calibration correction, decided before any result 
 | V2-SIM-13 | Engine | A wear-planned brake change triggers supply at notice when the hub will be short: a transfer, else a pre-arranged exchange/loan. |
 | V2-SIM-14 | Engine | A failed AOG route is retried with fresh paired draws while the need is open, instead of waiting weeks for a PO. |
 | V2-SIM-15 | Data | Wheel-and-tyre assemblies are rebuilt in a hub shop in days, not at the EU vendor in months. |
-| V2-SIM-16 | Decision | Calibration band recorded (ASSUMED plausibility band, author decision); the legacy line-station rule kept. |
+| V2-SIM-16 | Decision | Calibration band recorded (ASSUMED plausibility band, author decision); the starting-point line-station rule kept. |
 | V2-SIM-17 | Bug | A need whose earmarked shelf-life units expire on arrival is re-opened and re-routed. |
 | V2-SIM-18 | Bug | Atomic scenario-cache writes, so parallel workers cannot read a truncated file (the D010 root cause). |

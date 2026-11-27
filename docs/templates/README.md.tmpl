@@ -130,7 +130,7 @@ Nothing went "wrong" here. The removal rate, the repair turnaround and the posit
 ### Six questions this answers
 
 **1. Which parts drive material shortage exposure?**
-Of 120 part numbers, {{RESULT:parts.top_risk.count}} are flagged urgent (at least 25 hours a year of exposure: legacy-history material AOG plus modelled residual downtime under the frontier option). Together they account for {{RESULT:parts.top_risk.share_of_aog_hours_pct}} of the legacy (P0) history's material AOG hours. The top part is {{RESULT:parts.top_risk.rank1.pn}}, at {{RESULT:parts.top_risk.rank1.risk_hours}} hours a year, with the largest share of its history downtime at {{RESULT:parts.top_risk.rank1.station}}.
+Of 120 part numbers, {{RESULT:parts.top_risk.count}} are flagged urgent (at least 25 hours a year of exposure: material AOG in the Simple Rulebook history plus modelled residual downtime under the frontier option). Together they account for {{RESULT:parts.top_risk.share_of_aog_hours_pct}} of the Simple Rulebook (P0) history's material AOG hours. The top part is {{RESULT:parts.top_risk.rank1.pn}}, at {{RESULT:parts.top_risk.rank1.risk_hours}} hours a year, with the largest share of its history downtime at {{RESULT:parts.top_risk.rank1.station}}.
 
 **2. Which forecasting method wins, by demand class? Does the reliability model beat the Croston family?**
 Champions were frozen per demand class × part class on the selection window and re-scored once on the holdout: best in {{RESULT:honest.champions_best}} cells. For removal-driven parts (holdout) the exposure-based reliability model scores mean MASE {{RESULT:forecast.reliability.mase}} against {{RESULT:forecast.best_croston_family.mase}} for the best Croston-family method ({{RESULT:forecast.best_croston_family.method}}), a paired difference of {{RESULT:forecast.reliability_vs_croston.delta_mase}} (95% CI {{RESULT:forecast.reliability_vs_croston.delta_mase_ci}}). Verdict: {{RESULT:forecast.reliability_vs_croston.verdict}}. Where it does win is the upper quantile that stocking depends on: {{RESULT:forecast.reliability.pinball_summary}}.
@@ -171,6 +171,8 @@ Holdout: 52 weeks (weeks {{RESULT:seeds.kpi_weeks}}), {{RESULT:seeds.n}} paired 
 {{RESULT:v21.scope_line}}
 
 > {{RESULT:v21.reading_note}}
+
+{{RESULT:v21.routes_line}}
 
 {{RESULT:v21.ranges}}
 

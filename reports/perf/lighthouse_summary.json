@@ -1,4 +1,5 @@
 {
+ "status": "final for v2.1 (live site, 2026-11-26; same run as perf_summary.json). Release re-check: lighthouse_release.json.",
  "available": true,
  "results": {
   "mission:mobile": {

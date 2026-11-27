@@ -6,7 +6,7 @@ cells = [
 
 {HEADER}
 
-**Why this notebook exists.** Every later result (forecasts, policies, the capital frontier) is only as credible as the simulated world it runs on. A hiring manager, or a sceptical materials planner, should be able to check five things before trusting any of it:
+**Why this notebook exists.** Every later result (forecasts, policies, the capital frontier) is only as credible as the simulated world it runs on. A sceptical materials planner or reviewer should be able to check five things before trusting any of it:
 
 1. the v2 realism corrections are really in the data (type-specific parts, hypothetical rectification windows, planned brake changes, no-fault-found, AOG recovery routes instead of an outright AOG buy);
 2. the starting-point policy, the Simple Rulebook (naive reference) `P0`, was calibrated against a band fixed **before** any P1/P2 result existed, and we can see how that band was chosen;

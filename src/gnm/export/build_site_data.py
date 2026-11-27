@@ -495,7 +495,7 @@ def build_headline() -> dict:
     offx = tor.loc[("aog_desk_expedite", "off")] if off else None
     return {
         "core": {"id": "P2", "vs": "P0", "label": "network positioning",
-                 "baseline_label": f"a legacy OEM-quote policy holding only {out_rot['P0']} outstation rotables",
+                 "baseline_label": f"a starting-point OEM-quote policy holding only {out_rot['P0']} outstation rotables",
                  "outstation_rotables": out_rot, "remix": remix,
                  "aog_reduction": {"mean": -pc["aog_hours"]["mean"], "ci": [-pc["aog_hours"]["ci_hi"], -pc["aog_hours"]["ci_lo"]]},
                  "capital_aed": _ci(pc["spare_capital_aed"]), "total_cost_aed": _ci(pc["total_annual_cost_aed"]),
@@ -519,7 +519,13 @@ def build_headline() -> dict:
                    "routes_off": ({"p0_aog_hours": offx.p0_base_aog_hours, "p2_aog_hours": offx.base_aog_hours, "rec_aog_hours": offx.rec_aog_hours,
                                    "central_p0_aog_hours": tor.loc[("base case", "central")].p0_base_aog_hours,
                                    "central_p2_aog_hours": tor.loc[("base case", "central")].base_aog_hours} if off else None),
-                   "routes_note": summ.get("aog_desk_dependence", "")},
+                   "routes_note": summ.get("aog_desk_dependence", ""),
+                   # v2.2 (5.1): one plain line for README / deck / workbook / Mission Control; numbers from routes_off
+                   "routes_line": (
+                       "All four plans rely on emergency sourcing (borrowing from another aircraft, loans, local purchase). "
+                       "With those routes switched off, every plan's downtime rises sharply — e.g. Network Plan from "
+                       f"≈{fmt_int(sig(tor.loc[('base case', 'central')].base_aog_hours))} h to ≈{fmt_int(sig(offx.base_aog_hours))} h "
+                       "a year (selection runs). See Limitations." if off else None)},
         "provenance": "SIMULATED",
     }
 
@@ -675,7 +681,7 @@ def build_kpis() -> dict:
         "meta": meta("SIMULATED", ["outputs/holdout/frontier_points.csv", "outputs/frontier/summary.json",
                                    "outputs/frontier/selection_points.csv", "outputs/actions/actions.json"],
                      f"Mission Control KPIs (v2). value = {BASE_POLICY} network positioning, the CORE finding; baseline = {BASELINE} "
-                     f"legacy OEM-quote provisioning; reference = {rid}, the frontier option for additional capital (the rule's pick); "
+                     f"starting-point OEM-quote provisioning (Simple Rulebook); reference = {rid}, the frontier option for additional capital (the rule's pick); "
                      "headline = the computed site headline (core / frontier_option / honest). Holdout seeds 2000-2019, central variant, "
                      "KPI weeks 104-155 annualised; ci = 95% t-interval over 20 seeds. 'selection' repeats the same numbers on "
                      "selection seeds 100-119. No 'spark' field: there is no genuine time series for these KPIs, so none is "
@@ -1865,6 +1871,9 @@ def displayname(code: str) -> str:
     return f"Frontier point {code}" if re.fullmatch(r"[BI]\d{2,3}", str(code)) else str(code)
 
 
+STORY_BODY_MAX = 240   # v2.2: every step body fits the fixed-size tour card (desktop 360 x 340, phone sheet 300 px) unscrolled
+
+
 def build_story(data: dict) -> dict:
     """Story-mode steps. The narrated part is the planted PS1 part (incidents.json ps1_incident_id) and its station is that
     part's first replayed AOG incident; every number is read from the exported files or the history.
@@ -1915,15 +1924,15 @@ def build_story(data: dict) -> dict:
         art = "An" if part['risk_level'][0] in "aeiou" else "A"
         t2 = f"{art} {part['risk_level']} part inside a {sys_['risk_level']}-rated system"
     else:
-        lead = f"ATA {ata} rates {sys_['risk_level'].upper()}, led by {pn}, a {part['deadline']} {noun} with risk {risk}/100."
+        lead = f"ATA {ata} rates {sys_['risk_level'].upper()}, led by {pn} ({part['deadline']} {noun}), risk {risk}/100."
         t2 = f"{pn}: never in stock at {st}"
     # wave 5: cite the numbers the part drawer shows (52-week AOG hours, all stations and the worst station)
     if part.get("aog_h_52w_max_station_id") == st:
         body2 = (f"{lead} With {int(st_units.P0)} units at {st} under the Simple Rulebook, it caused {fmt_int(part['aog_h_52w'])} AOG h in "
-                 f"the last 52 weeks (W52–W103) of this simulation, {fmt_int(part['aog_h_52w_max_station'])} h of them at {st}.")
+                 f"W52–W103, {fmt_int(part['aog_h_52w_max_station'])} h of them at {st}.")
     else:
         body2 = (f"{lead} With {int(st_units.P0)} units at {st} under the Simple Rulebook, it caused {fmt_int(part['aog_h_52w'])} AOG h "
-                 "across all stations in the last 52 weeks (W52–W103) of this simulation.")
+                 "across all stations in W52–W103.")
 
     body3 = (f"Its weekly demand is {part['demand_class']} (ADI {part['adi']:.2f} weeks, CV² {part['cv2']:.2f} on training "
              "weeks W0–W77).")
@@ -1939,8 +1948,8 @@ def build_story(data: dict) -> dict:
         a_p2_st = float_calc(float(st_ff.removal_rate_day) * 30.0, rs_d, p2_st, 0.0)["availability"]
         st_txt = "over 99.9%" if a_p2_st > 0.9995 else fmt_pct(a_p2_st, 1)
         body4 = (f"Pooled over the {fl['pipeline_days']:.0f}-day repair loop, the Network Plan's {p2_s} spares cover {pool_txt} of removals. "
-                 f"At {st} the question is resupply: the Network Plan holds {p2_st} unit{'s' if p2_st != 1 else ''} there "
-                 f"(Simple Rulebook: {p0_st}), refilled from AUH in about {rs_d:.1f} days, so {st_txt} of D0 needs find a unit on the shelf.")
+                 f"At {st} the Network Plan holds {p2_st} unit{'s' if p2_st != 1 else ''} (Simple Rulebook: {p0_st}), refilled from AUH "
+                 f"in {rs_d:.1f} days: {st_txt} of D0 needs find one on the shelf.")
     else:
         body4 = f"Pooled over the repair loop, the Network Plan's {p2_s} spares cover {pool_txt} of removals."
     # wave C: narrated around P2 (the core recommendation); I125 is the frontier option.
@@ -1950,12 +1959,9 @@ def build_story(data: dict) -> dict:
     # v2.1: display names (no bare codes) and the scope wherever downtime totals appear
     n_pn = len(parts_)
     scope_txt = f"In this simulation, across {n_pn} modelled part numbers"
-    body5 = (f"{scope_txt}: at {st}, holdout material AOG falls from {fmt_int(net[('P0', st)]['aog_hours'])} h/yr under the Simple "
-             f"Rulebook to {fmt_int(net[('P2', st)]['aog_hours'])} under the Network Plan ({u_p2} rotables here). "
-             f"{displayname(rid)} "
-             + (f"adds {d_u} more here" if d_u > 0 else "adds none here")
-             + f" and takes network AOG to {fmt_int(pts[rid]['aog_hours'])} h/yr."
-             + (f" Each emergency hop from AUH takes {fmt_int(arc['aog_transport_h'])} h." if arc else ""))
+    body5 = (f"{scope_txt}: at {st}, holdout material AOG falls from {fmt_int(net[('P0', st)]['aog_hours'])} h/yr (Simple "
+             f"Rulebook) to {fmt_int(net[('P2', st)]['aog_hours'])} (Network Plan, {u_p2} rotables here). "
+             f"{displayname(rid)} takes network AOG to {fmt_int(pts[rid]['aog_hours'])} h/yr.")
     fo = data["kpis"]["headline"]["frontier_option"]
     shifts = "; ".join(f"{x['recommended']} at {x['setting'].replace('x', '×')} the hourly rate" for x in fo["rule_shifts"] if x["factor"] == "aog_penalty")
     body6 = (f"If you invest an additional {fmt_aed(fo['extra_capital_aed']['mean'])}, the pre-stated rule stops at {rid}: a further "
@@ -1971,18 +1977,20 @@ def build_story(data: dict) -> dict:
                   f"and {fmt_int(e['aog_hours_lookback'])} AOG h there in the last {e['lookback_weeks']} weeks (W{data['actions']['as_of_week'] + 1 - e['lookback_weeks']}–W{data['actions']['as_of_week']}).")
     elif act:
         body8 += f" Including: {act['summary']}."
-    if act and act.get("recommended_action") and len(body8) + len(act["recommended_action"]) + 10 <= 300:
-        body8 += f" Action: {act['recommended_action']}."
+    if act and act.get("recommended_action"):
+        _ra = act["recommended_action"].split(";")[0].strip()   # v2.2 card budget: the action itself, not its sourcing note
+        if len(body8) + len(_ra) + 10 <= STORY_BODY_MAX:
+            body8 += f" Action: {_ra}."
 
     aog_sel = ('[data-story="aog-incident-ps1"]' if inc["id"] == _p1["incident_id"] else f'[data-incident="{inc["id"]}"]') + ' [data-story="aog-timeline"]'
     # wave B: six steps following the v2 hero part (PS1): problem -> diagnose -> pipeline -> trade-offs -> action -> value
     core = data["kpis"]["headline"]["core"]
     _tl = {x["step"]: x["t_h"] for x in inc.get("timeline") or []}
     _at, _rel = _tl.get("fitted"), _tl.get("released")
-    _dur = (f"The part reached it after {fmt_int(_at)} h; with fitting, it was released at {fmt_int(_rel)} h. " if _at is not None and _rel is not None and _rel > _at
+    _dur = (f"The part arrived at {fmt_int(_at)} h; release came at {fmt_int(_rel)} h. " if _at is not None and _rel is not None and _rel > _at
             else f"It was on the ground {fmt_int(inc['aog_hours'])} h. ")
-    body_problem = (f"{inc['tail']} (fictional) is on the ground at {st}: a {part['deadline']} {noun} failed and none was held there. "
-                    + _dur + f"Ranked on what the desk knew then, the best route was: {inc['decision']['recommended_label']}.")
+    body_problem = (f"{inc['tail']} (fictional) is grounded at {st}: a {part['deadline']} {noun} failed with none held there. "
+                    + _dur + f"Best route on what the desk knew then: {inc['decision']['recommended_label']}.")
     # A4: never the net capital alone — gross buys and removals first, then the net (same rounding as the site table)
     rm6 = core.get("remix") or {}
     aedm = lambda v: f"AED {abs(float(v)) / 1e6:.1f}M"   # noqa: E731
@@ -1993,7 +2001,7 @@ def build_story(data: dict) -> dict:
               f"[{fmt_int(fo['aog_reduction']['ci'][0])}–{fmt_int(fo['aog_reduction']['ci'][1])}].")
     body_value = (f"{scope_txt}, the Network Plan cuts material AOG by {fmt_int(core['aog_reduction']['mean'])} h a year "
                   f"vs the Simple Rulebook. " + cap_txt + fo_txt)
-    if len(body_value) > 300:   # keep the gross + net capital lines; drop the frontier sentence first
+    if len(body_value) > STORY_BODY_MAX:   # keep the gross + net capital lines; drop the frontier sentence first
         body_value = body_value[: -len(fo_txt)].rstrip()
     steps = [
         # (route, story_id, selector, title, body)
@@ -2028,12 +2036,12 @@ def build_story(data: dict) -> dict:
     s_diag = (f"The {sys_['name'].lower()} group is the biggest risk, and one part leads it. "
               f"With {'no spare' if p0_st == 0 else f'{p0_st} spares'} at {c_st}, it kept planes grounded for "
               f"{fmt_int(part['aog_h_52w'])} hours across all airports in the last year.")
-    s_pipe = (f"Broken parts go away for repair for about {fl['pipeline_days']:.0f} days. To always have one ready, the airline needs "
-              f"enough spares to cover the ones away in repair. The Network Plan keeps {p2_s} in total, so a spare is almost always on the shelf."
+    s_pipe = (f"Broken parts spend about {fl['pipeline_days']:.0f} days in repair, so the airline needs spares to cover them. "
+              f"The Network Plan keeps {p2_s} in total, so one is almost always on the shelf."
               + (f" At {c_st} it keeps {p2_st}, refilled from {c_hub} in about {rs_d:.0f} days." if rs_d is not None else ""))
-    s_trade = (f"In this simulation, at {c_st}, the Simple Rulebook left planes grounded {fmt_int(net[('P0', st)]['aog_hours'])} hours a year. "
-               f"The Network Plan cuts that to {fmt_int(net[('P2', st)]['aog_hours'])} hours. "
-               f"Across all {n_pn} modelled part numbers, the Network Plan + Extra Spares brings the network total down to {fmt_int(pts[rid]['aog_hours'])} hours a year.")
+    s_trade = (f"In this simulation, planes at {c_st} were grounded {fmt_int(net[('P0', st)]['aog_hours'])} hours a year under the Simple Rulebook, "
+               f"and {fmt_int(net[('P2', st)]['aog_hours'])} under the Network Plan. "
+               f"Across all {n_pn} modelled part numbers, the Network Plan + Extra Spares brings the network total to {fmt_int(pts[rid]['aog_hours'])} hours a year.")
     s_act = f"The planner's list has {len(acts)} alerts this week, {nurg} of them urgent."
     if act and act["type"] == "OUTSTATION_DEPLETION":
         e = act["evidence"]
@@ -2042,9 +2050,9 @@ def build_story(data: dict) -> dict:
                   f"The advice is to send {need} there.")
     rm = core.get("remix") or {}
     s_value = (f"{scope_txt}, the Network Plan cuts grounded time by {fmt_int(core['aog_reduction']['mean'])} hours a year. "
-               + (f"It buys {rm['buy_units']} repairable spares (about {aedm(rm['buy_aed'])}) and removes {rm['shed_units']} (about {aedm(rm['shed_aed'])}). "
-                  f"Average stock value rises by about {aedm(netc)}. " if rm.get("buy_units") is not None else "")
-               + f"Spending {fmt_aed(fo['extra_capital_aed']['mean'])} more saves about {fmt_int(fo['aog_reduction']['mean'])} hours more.")
+               + (f"It buys {rm['buy_units']} repairable spares (about {aedm(rm['buy_aed'])}) and removes {rm['shed_units']} (about {aedm(rm['shed_aed'])}), "
+                  f"so stock value rises by about {aedm(netc)}." if rm.get("buy_units") is not None else
+                  f"Spending {fmt_aed(fo['extra_capital_aed']['mean'])} more saves about {fmt_int(fo['aog_reduction']['mean'])} hours more."))
     simple = [("1 · The problem", s_problem), ("2 · Find the cause", s_diag), ("3 · Repairs take time", s_pipe),
               ("4 · Compare the plans", s_trade), ("5 · What to do", s_act), ("6 · Is it worth it?", s_value)]
     ids = [sid for _, sid, _, _, _ in steps]

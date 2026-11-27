@@ -14,7 +14,7 @@ async function main() {
   const fixtureSlot = h('span');
   onFixture(() => { if (!fixtureSlot.childElementCount) fixtureSlot.append(fixtureChip()); });
 
-  root.append(pageHead({ eyebrow: 'Design system · Aerospace Titanium × Blueprint', title: 'Components gallery', lede: 'Every token, component, chart primitive and original illustration used by GROUNDED NO MORE. Screen agents compose these; see docs/design/DESIGN_SYSTEM.md for the rules.', meta: [fixtureSlot] }));
+  root.append(pageHead({ eyebrow: 'Design system · Aerospace Titanium × Blueprint', title: 'Components gallery', lede: 'Every token, component, chart primitive and original illustration used by GROUNDED NO MORE. Every screen is composed from these; see docs/design/DESIGN_SYSTEM.md for the rules.', meta: [fixtureSlot] }));
 
   // ------------------------------------------------------------------ 01 colour
   const sw = (name, varName, hex, note) => h('div', { class: 'swatch span-2 sm-span-6' }, h('div', { class: 'swatch-chip', style: { background: `var(${varName})` } }), h('div', { class: 'swatch-meta' }, h('b', {}, name), h('span', {}, hex), note ? h('div', { class: 'faint' }, note) : null));
@@ -83,7 +83,7 @@ async function main() {
   const f1 = chartFrame(c1, { headline: `${pn} demand is steady with a seasonal swing — the 8-week mean tracks it closely`, subtitle: 'Units per week · weeks 0–103 · 8-week mean ± 1 rolling s.d. · simulated calendar', provenance: 'SIMULATED', source: 'demand_history.json', table: { columns: [{ key: 'x', label: 'Week', format: fmtWeek }, { key: 'y', label: 'Qty', num: true }], rows: series } });
   const peak = series.reduce((a, b) => (b.y > a.y ? b : a), series[0]);
   lineChart(f1.body, { series: [{ id: 'weekly', label: 'Weekly', values: series, color: 'rgba(185,200,214,0.4)', primary: false, width: 1, curve: window.d3.curveLinear }, { id: 'mean', label: '8-wk mean', values: roll.map(({ x, y }) => ({ x, y })), color: theme.color.accent, primary: true }], bandColor: theme.color.accent, band: roll.map(({ x, lo, hi }) => ({ x, lo, hi })), x: { format: fmtWeek }, y: { format: fmtInt }, annotation: { x: peak.x, y: peak.y, title: `Peak W${peak.x}`, sub: `${peak.y} units` } });
-  const f2 = chartFrame(c2, { headline: 'P2 halves AOG hours versus legacy rules', subtitle: 'AOG hours / year · mean and 95% CI · 20 paired holdout seeds', provenance: 'SIMULATED', source: 'policies.json' });
+  const f2 = chartFrame(c2, { headline: 'P2 halves AOG hours versus the Simple Rulebook', subtitle: 'AOG hours / year · mean and 95% CI · 20 paired holdout seeds', provenance: 'SIMULATED', source: 'policies.json' });
   dotWhiskerChart(f2.body, { rows: pols.map((p) => ({ key: p.policy_id, label: `${p.policy_id} · ${p.label}`, value: p.kpi.aog_hours.mean, lo: p.kpi.aog_hours.ci_lo, hi: p.kpi.aog_hours.ci_hi, highlight: p.policy_id === 'P2' })), format: fmtHours, domain: [0, 500] });
   const f3 = chartFrame(c3, { headline: 'BOM carries the highest exposure of any outstation', subtitle: 'Risk score · 0–1 · per station', provenance: 'SIMULATED', source: 'network.json' });
   barList(f3.body, { rows: D.network.stations.slice().sort((a, b) => b.risk - a.risk).map((s) => ({ label: `${s.station} · ${s.name.split(',')[0]}`, value: s.risk, highlight: s.station === 'BOM' })), format: (v) => fmtPct(v, 0), max: 1 });
@@ -131,7 +131,7 @@ async function main() {
   for (const [host, name] of [[lcHost, 'rotable-lifecycle.svg'], [lcV, 'rotable-lifecycle-vertical.svg']]) { const svg = await inlineSVG(name); fillLifecycle(svg, D.rotables.lifecycle); host.append(svg); }
 
   // ------------------------------------------------------------------ 13 states + footer
-  root.append(section('13', 'States, notes & footer', h('div', { class: 'grid-12' }, card({ cls: 'span-4', title: 'Loading', body: stateBlock('loading') }), card({ cls: 'span-4', title: 'Empty', body: stateBlock('empty', 'No exceptions match this filter.') }), card({ cls: 'span-4', title: 'Error', body: stateBlock('error', 'This export could not be loaded.') })), h('div', { class: 'mt-3' }, stubNote('Stub note: marks a placeholder area a screen agent will replace.'))));
+  root.append(section('13', 'States, notes & footer', h('div', { class: 'grid-12' }, card({ cls: 'span-4', title: 'Loading', body: stateBlock('loading') }), card({ cls: 'span-4', title: 'Empty', body: stateBlock('empty', 'No exceptions match this filter.') }), card({ cls: 'span-4', title: 'Error', body: stateBlock('error', 'This export could not be loaded.') })), h('div', { class: 'mt-3' }, stubNote('Stub note: marks an area that is still to be built.'))));
   root.append(h('div', { class: 'mt-8' }, disclaimer({ meta: 'Falcon Hub Airways is fictional' })));
   document.documentElement.dataset.ready = 'true';
 }

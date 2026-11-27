@@ -1,5 +1,7 @@
 > **AI-generated review used during development — not a review by a human aviation professional.**
 
+> Edited for publication (v2.2): wording about the intended audience was replaced with neutral terms such as "reviewer". The findings are unchanged.
+
 # GROUNDED NO MORE: independent design critique
 
 Reviewer stance: principal product designer, data-visualisation studio. Fresh eyes, no prior context.
@@ -109,7 +111,7 @@ deviations:
   Forecast and Rotables in my first pass and blocked the "Start the story" click on Mission (Playwright:
   "scrim intercepts pointer events"). Reproduced: open the deep link, set `location.hash='#/forecast'`,
   and `.scrim.is-open` count is still 1. Number-key shortcuts are swallowed while it is open.
-- **Why it matters:** a hiring manager who uses Back lands on a dimmed, unclickable page. It is the
+- **Why it matters:** a reviewer who uses Back lands on a dimmed, unclickable page. It is the
   single most damaging thing a reviewer can hit.
 - **Fix:** in the router's `render` path, call `closeAllOverlays()` (drawer, modal, tooltip.hide) before
   the outgoing view's cleanup. Have `drawer()` register itself in a module-level `Set` that the router
@@ -208,7 +210,7 @@ deviations:
 - **Where:** in "3 of 6 selection-seed results fall inside the holdout 95% CI", the copper diamonds
   for Material AOG, Total annual cost and AOG events all sit at the far-left end of their rows. "Each
   row on its own scale" is clamping values that fall outside the CI-padded domain.
-- **Why it matters:** clamped values with no indicator undermine the screen whose job is credibility.
+- **Why it matters:** clamped values with no indicator undermine the screen whose purpose is credibility.
 - **Fix:** make each row's domain `[min(lo, sel) , max(hi, sel)]` padded by 10%. If clamping stays,
   draw a left-pointing chevron `‹` with the true value ("118 h ‹") in `--c-text-faint`. Add a shared
   "within CI ✓ / outside ✕" column header so ✓/✕ is not the only signal.
@@ -250,7 +252,7 @@ deviations:
     "REVIEW" while the text says "risk score 89/100", and the hero says URGENT.
   - Step 3's card covers the Intermittent and Insufficient columns of the spotlit chart.
   - At 390, step 1's card covers the aircraft, and step 3's card covers about 45% of the viewport.
-- **Why it matters:** story mode is the hiring-manager path. A spotlight that hides its subject, or
+- **Why it matters:** story mode is the reviewer path. A spotlight that hides its subject, or
   contradicts the status shown, costs trust in the first minute.
 - **Fix:**
   - Place the card with a collision solver: try right, left, below, then above the target rect, and

@@ -1,5 +1,7 @@
 > **AI-generated review used during development — not a review by a human aviation professional.**
 
+> Edited for publication (v2.2): wording about the intended audience was replaced with neutral terms such as "reviewer". The findings are unchanged.
+
 # Correctness review — GROUNDED NO MORE
 
 Reviewer: fresh-context correctness auditor (adversarial). Date: 2026-11-26. Repo HEAD `b950c5a`.
@@ -88,7 +90,7 @@ README.md 62, STUDY_GUIDE.md 48, MODEL_CARD.md 27, METHODOLOGY.md 8, LIMITATIONS
 - `forecast.*` (champions, holdout MASE/bias/PIS/coverage_80, reliability_vs_croston, truth_recovery)
 - `freeze.commit_sha`, `freeze.manifest_sha256`
 - `frontier.*` (recommended/baseline capital and AOG, recommendation_rule, sensitivity)
-- `interview.most_surprising_finding`, `meta.git_sha`, `meta.model_version`
+- `most_surprising_finding`, `meta.git_sha`, `meta.model_version`
 - `network.P2.*`, `network.P2_vs_P1.*` (see C-02)
 - `optim.greedy_gap_small_case_pct` (C-08)
 - `parts.top_risk.*`

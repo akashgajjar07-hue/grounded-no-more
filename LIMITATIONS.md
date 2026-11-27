@@ -26,7 +26,7 @@ Every headline number is across 120 modelled part numbers · simulated · downti
 
 **8. Rectification windows are simplified, not MEL.** D3 and D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions. They are elapsed-hour windows applied generically per part number. Real relief depends on the operator's approved MEL, the specific item, the redundancy remaining, and operational restrictions that this model does not cost.
 
-**9. The legacy line-station rule is a deliberate weakness of P0.** P0 puts a rotable at an outstation only where a D0 part has at least 4 quoted removals a year at that station, so low-volume D0 rotables (the nose wheel steering actuator, wheel-and-tyre assemblies) are not held where they fail. The D0 parts below account for 54% of P0's history downtime:
+**9. The starting-point line-station rule is a deliberate weakness of P0.** P0 puts a rotable at an outstation only where a D0 part has at least 4 quoted removals a year at that station, so low-volume D0 rotables (the nose wheel steering actuator, wheel-and-tyre assemblies) are not held where they fail. The D0 parts below account for 54% of P0's history downtime:
 
 | D0 part | Material AOG h/yr (P0 history, weeks 0–103) | Share at outstations | P0 outstation units | P2 outstation units |
 |---|---|---|---|---|
@@ -36,7 +36,7 @@ Every headline number is across 120 modelled part numbers · simulated · downti
 | GN-32-R016 Nose wheel and tyre assembly (NB) | 86 | 100% | 0 units | 5 |
 | GN-32-R037 Main wheel and tyre assembly (WB) | 71 | 100% | 0 units | 6 |
 
-Crew oxygen masks are expendables, so the line-station rule does not apply to them: P0's min/max rule holds them at every station that sees quoted demand, and 0% of the mask's history downtime was at outstations. The rule was kept on purpose (V2-SIM-16) because it is how a legacy OEM-quote operation provisions, and P2 is the remedy. A more careful legacy operator would narrow the P2 − P0 gap: the in-memory variant V3 (the calibrated quote settings plus a legacy line-station kit of 150 units; [METHODOLOGY section 6](METHODOLOGY.md#6-calibration-p0-only-and-the-lock)) gave P0 1,052 h/yr of history downtime instead of 1,282 h, at 59 events/yr (outside the band), and was not applied.
+Crew oxygen masks are expendables, so the line-station rule does not apply to them: P0's min/max rule holds them at every station that sees quoted demand, and 0% of the mask's history downtime was at outstations. The rule was kept on purpose (V2-SIM-16) because it is how a simple OEM-quote operation provisions, and P2 is the remedy. A more careful operator would narrow the P2 − P0 gap: the in-memory variant V3 (the calibrated quote settings plus a line-station kit of 150 units; [METHODOLOGY section 6](METHODOLOGY.md#6-calibration-p0-only-and-the-lock)) gave P0 1,052 h/yr of history downtime instead of 1,282 h, at 59 events/yr (outside the band), and was not applied.
 
 **10. Brakes: cost-per-landing contracts are not modelled.** Brakes are owned, type-specific, wear-planned rotables. Brake changes are planned at notice (5–10 days ahead); residual brake downtime only occurs when AUH is short and the exchange fails. Many operators buy brakes on a cost-per-landing contract with the supplier holding the pool, which would remove brakes from the airline's capital and from this trade-off. History downtime on the brake part numbers under P0: GN-32-R013 Carbon brake assembly (NB) 42 h/yr, GN-32-R036 Carbon brake assembly (WB) 38 h/yr.
 
@@ -119,7 +119,7 @@ Every finding in [`reports/review_aviation_v2.md`](reports/review_aviation_v2.md
 | ID | Severity | Finding, in short | Status | Where it is handled |
 |---|---|---|---|---|
 | AV2-01 | critical | Robbed donor aircraft downtime is not counted | Disclosed; next experiment | Item 29, item 41, README "What I found"; incremental donor unavailability below |
-| AV2-02 | critical | The legacy baseline fails where no real line-station list would (brakes at outstations, no re-provisioning) | Disclosed; next experiment | Display name "Simple Rulebook (naive reference)", item 30; P0-R below |
+| AV2-02 | critical | The Simple Rulebook (naive reference) fails where no real line-station list would (brakes at outstations, no re-provisioning) | Disclosed; next experiment | Display name "Simple Rulebook (naive reference)", item 30; P0-R below |
 | AV2-03 | critical | "Positioning the existing float" and the net capital alone misstate what the Network Plan does | Fixed | Capital table (bought, removed, net) on Results, Frontier and README |
 | AV2-04 | major | Wheels and tyres modelled as rare unscheduled removals | Disclosed | Items 31 and 40 |
 | AV2-05 | major | Outstation brakes in the Network Plan and Extra Spares plans | Disclosed (flagged invalid) | Item 32: lines flagged "invalid recommendation", kept in the frozen results |

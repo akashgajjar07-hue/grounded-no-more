@@ -6,13 +6,13 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 
 ## 1. Tests
 
-{{RESULT:val.tests_suite}} (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast, slow and browser suites in one serial run).
+{{RESULT:val.tests_suite}} (`reports/junit.xml`, {{RESULT:val.tests_how}}).
 
 {{RESULT:val.tests_table}}
 
 {{RESULT:val.failed_list}}
 
-Doc rendering is verified by `tests/test_docs_rendered.py`: no result placeholder survives, the README results table and headline match `docs/data/kpis.json`, the outstation sentence ({{RESULT:network.P0.outstation_rotables}} vs {{RESULT:network.P2.outstation_rotables}} outstation rotables) is present, the scope line sits beside the headline numbers, the capital table shows the gross lines, the README opening makes no percentage or paired-difference claim, the calibration wording is present here and in METHODOLOGY, the rendered docs contain no forbidden wording or manufacturer names, and the README never claims a result "at every tested setting".
+Doc rendering is verified by `tests/test_docs_rendered.py`: every result key is filled, the README results table and headline match `docs/data/kpis.json`, the outstation sentence ({{RESULT:network.P0.outstation_rotables}} vs {{RESULT:network.P2.outstation_rotables}} outstation rotables) is present, the scope line sits beside the headline numbers, the capital table shows the gross lines, the README opening makes no percentage or paired-difference claim, the calibration wording is present here and in METHODOLOGY, the rendered docs contain no forbidden wording or manufacturer names, and the README never claims a result "at every tested setting".
 
 ## 2. Calibration (P0 only, locked before any P1/P2/optimiser run)
 
@@ -112,7 +112,7 @@ AOG reconstruction: {{RESULT:aog.reconcile}}. Counterfactual: {{RESULT:aog.count
 
 - The world, the methods and the evaluation were designed by the same author; the reliability model has a structural home advantage.
 - Every policy depends on the AOG recovery routes: {{RESULT:honest.routes_off}}.
-- The P0 calibration lever was quote accuracy, and the legacy line-station rule is a deliberate weakness of P0.
+- The P0 calibration lever was quote accuracy, and the starting-point line-station rule is a deliberate weakness of P0.
 - Confidence intervals reflect seed-to-seed noise in one simulated world, not parameter uncertainty. {{RESULT:v21.ranges}}
 - {{RESULT:v21.aog_clock}}
 - Full list: [LIMITATIONS.md](../LIMITATIONS.md).

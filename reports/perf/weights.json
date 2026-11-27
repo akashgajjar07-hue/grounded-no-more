@@ -1,4 +1,5 @@
 {
+ "status": "interim baseline (superseded): the live-site run did not capture per-route byte counts (all zero); not a measurement. See perf_summary.json for the final Lighthouse, CLS and animation results.",
  "mission": {
   "js_bytes": 0,
   "view_js_bytes": 0,

@@ -21,4 +21,4 @@ Checked 2026-11-27 on `main` before tagging. Live site: https://akashgajjar07-hu
 | 15 | Live smoke, Chromium + WebKit | ✅ | Landing, tour Play (auto-advances), Results (scope line + capital note), Explore link, workbook download, cutaway. No console errors. `reports/audit/live_smoke.json` |
 | 16 | Final screenshots | ✅ | 25 compressed JPEGs from the live site (12 workspaces × Simple/Expert + cutaway), 3.3 MB, `reports/final_screens/` |
 | 17 | Repo hygiene | ✅ | No traces, videos, HTML reports or bulk audit cells tracked. Tracked tree 24 MB (docs/ 8.4 MB). History not rewritten (V21-R), so GitHub reports ≈ 495 MB |
-| 18 | Nothing posted anywhere | ✅ | LinkedIn post and carousel remain drafts in `presentations/` |
+| 18 | Nothing posted anywhere | ✅ | Social-media drafts are kept outside the public repo and were not posted |

@@ -9,13 +9,13 @@ Git tag: `v1-archive` (commit 06a6280). Archived on 2026-11-26 after the fresh a
 ## v1 holdout headline (central world, seeds 1000–1019)
 | Policy | Material AOG h/yr [95% CI] | Spare capital |
 |---|---|---|
-| P0 legacy (stock to pipeline mean) | 2,871 [2,459–3,282] | AED 36.8M |
+| P0 Simple Rulebook (stock to pipeline mean) | 2,871 [2,459–3,282] | AED 36.8M |
 | P1 local optimised | 1,626 [1,243–2,008] | AED 64.6M |
 | P2 network | 533 [419–646] | AED 37.0M |
 | I125 recommended | 223 [174–272] | AED 41.9M |
 
 ## Why it was superseded
-- Parts were shared across the A320- and 787-family archetypes (AV-01).
+- Parts were shared across the narrowbody and widebody archetypes (AV-01).
 - Cheap consumables were rated D0 and drove 29% of AOG (AV-02).
 - An always-available 5-day outright rotable buy grew the float (AV-03).
 - A straw-man P0 stocked to the pipeline mean (AV-04).

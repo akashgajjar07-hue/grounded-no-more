@@ -149,7 +149,7 @@ Nothing went "wrong" here. The removal rate, the repair turnaround and the posit
 ### Six questions this answers
 
 **1. Which parts drive material shortage exposure?**
-Of 120 part numbers, 11 are flagged urgent (at least 25 hours a year of exposure: legacy-history material AOG plus modelled residual downtime under the frontier option). Together they account for 95% of the legacy (P0) history's material AOG hours. The top part is GN-32-R014, Nose wheel steering actuator (NB), at 398 hours a year, with the largest share of its history downtime at BOM (35% of its history AOG hours).
+Of 120 part numbers, 11 are flagged urgent (at least 25 hours a year of exposure: material AOG in the Simple Rulebook history plus modelled residual downtime under the frontier option). Together they account for 95% of the Simple Rulebook (P0) history's material AOG hours. The top part is GN-32-R014, Nose wheel steering actuator (NB), at 398 hours a year, with the largest share of its history downtime at BOM (35% of its history AOG hours).
 
 **2. Which forecasting method wins, by demand class? Does the reliability model beat the Croston family?**
 Champions were frozen per demand class × part class on the selection window and re-scored once on the holdout: best in 3 of 9 cells. For removal-driven parts (holdout) the exposure-based reliability model scores mean MASE 0.918 against 0.907 for the best Croston-family method (TSB), a paired difference of +0.010 (95% CI [−0.014 to 0.036]). Verdict: the reliability model does not beat the best Croston-family method on MASE; the difference is not significant, so it is a tie on point accuracy (75 parts, 95% bootstrap CI over parts). Where it does win is the upper quantile that stocking depends on: it has the lowest q90 pinball loss of all methods for both expendables and rotables on the holdout (expendables 0.286 vs next best 0.290; rotables 0.228 vs next best 0.243).
@@ -190,6 +190,8 @@ Holdout: 52 weeks (weeks 104–155), 20 paired seeds (2000–2019), central worl
 *across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part*
 
 > How to read these numbers: simulated downtime of the aircraft waiting for the part, across 120 modelled part numbers. Downtime of aircraft that donated a part (cannibalisation) is shown separately, not included. The Simple Rulebook is a deliberately simplified starting point, not a model of a competent airline. Part costs, reliability and sourcing are assumed. These are not forecasts of achievable airline savings.
+
+All four plans rely on emergency sourcing (borrowing from another aircraft, loans, local purchase). With those routes switched off, every plan's downtime rises sharply — e.g. Network Plan from ≈235 h to ≈18,320 h a year (selection runs). See [Limitations](LIMITATIONS.md#economics-and-decisions).
 
 Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, suppliers or contracts.
 
@@ -235,7 +237,7 @@ Method details: [METHODOLOGY.md](METHODOLOGY.md). Model scope: [MODEL_CARD.md](M
 
 **Checked against real data too.** The forecasting code was also run on a REAL public benchmark. Dataset: Monash Car Parts (without missing values), 2,674 monthly series, licence CC BY 4.0, data provenance REAL (metrics DERIVED). Best eligible method IMAPA with mean MASE 1.056 [1.011–1.109]; the all-zero forecast scores 0.777, which is why zero is never allowed to be a champion. Attribution: Car Parts dataset, Monash Time Series Forecasting Archive (Godahewa, Bergmeir, Webb, Hyndman & Montero-Manso, 2021), Zenodo record 4656021, licensed CC BY 4.0; original data from Hyndman (2015), R package expsmooth.
 
-**Tests:** 555/556 passing, 1 failing, 0 skipped (fast, slow and browser suites, `GNM_RELEASE=1`; `reports/junit.xml`, run at 2026-11-26 17:29).
+**Tests:** 396/396 passing, 0 failing, 0 skipped (fast and slow suites, `GNM_RELEASE=1`; the Playwright browser suite runs separately; `reports/junit.xml`, run at 2026-11-27 15:06).
 
 ---
 
