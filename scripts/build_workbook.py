@@ -17,7 +17,9 @@ Usage:  python scripts/build_workbook.py [--out PATH]
 from __future__ import annotations
 
 import argparse
+from copy import copy
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -886,6 +888,68 @@ EXC_COLS = [("ID", "exception_id", 12), ("Week", "week", 7), ("Type", "type", 28
             ("Provenance", None, 12)]
 
 
+# v2.2 (review #39): the site's plain labels for the exception types (docs/js/views/planner-action-centre.js
+# SIMPLE_TYPE) and shop codes, so the workbook shows no raw enums.
+TYPE_PLAIN = {
+    "OUTSTATION_DEPLETION": "Station short of a spare",
+    "OVERDUE_REPAIR": "Repair is late",
+    "CONDEMNED_AWAITING_REPLACEMENT": "Scrapped part, new one not here yet",
+    "EXCESS_DECLINING_DEMAND": "Too much stock, use falling",
+    "EXPIRY_RISK": "Stock may expire before it is used",
+    "DONOR_NOT_REINSTATED": "Borrowed part not yet given back",
+    "LEAD_TIME_DRIFT": "Supplier slower than promised",
+    "OPEN_REQUIREMENT": "A plane is still waiting for a part",
+    "QUARANTINE_DOCS": "Paperwork check needed",
+    "KIT_SHORTAGE": "Kit short of a part",
+}
+SHOP_PLAIN = {"AUH_INHOUSE": "AUH in-house shop", "EU_VENDOR": "EU vendor shop", "ME_VENDOR": "Middle East vendor shop"}
+
+
+def plain_type(t: str) -> str:
+    return TYPE_PLAIN.get(t) or str(t).replace("_", " ").capitalize()
+
+
+def plain_text(v):
+    if isinstance(v, str):
+        for k, lab in SHOP_PLAIN.items():
+            v = v.replace(k, lab)
+    return v
+
+
+# Decision codes such as "(V2-SIM-10)" or "(V2-SIM-7, V2-AOG-2)" move from the prose into a "Ref" column.
+_CODE = r"(?:V2[1]?|AV2?|D|SIM|OPT|POL)-[A-Z0-9]+(?:-[A-Z0-9]+)*"
+CODE_PAREN = re.compile(rf"\s*\(({_CODE}(?:,\s*{_CODE})*)\)")
+CODE_TAIL = re.compile(rf";\s*({_CODE}(?:,\s*{_CODE})*)\)")
+
+
+def move_codes_to_ref(wb) -> None:
+    for ws in wb.worksheets:
+        found = []
+        for row in ws.iter_rows():
+            for c in row:
+                if isinstance(c.value, str) and not c.value.startswith("="):
+                    codes = CODE_PAREN.findall(c.value) + CODE_TAIL.findall(c.value)
+                    if codes:
+                        c.value = CODE_TAIL.sub(")", CODE_PAREN.sub("", c.value))
+                        found.append((c.row, ", ".join(codes)))
+        if not found:
+            continue
+        col = ws.max_column + 1
+        by_row = {}
+        for r, codes in found:
+            by_row.setdefault(r, []).append(codes)
+        for r, codes in by_row.items():
+            cell = ws.cell(row=r, column=col, value="Ref: " + "; ".join(codes))
+            cell.font = font("slate", 9, italic=True)
+            cell.alignment = Alignment(vertical="top")
+        ws.column_dimensions[get_column_letter(col)].width = 22
+        hdr = next((c.row for c in ws["B"] if c.value == "ID"), None)   # the exception table's header row
+        if hdr:
+            h_ = ws.cell(row=hdr, column=col, value="Ref")
+            src = ws.cell(row=hdr, column=2)
+            h_.font, h_.fill, h_.alignment = copy(src.font), copy(src.fill), Alignment(vertical="center")
+
+
 def exception_layout(actions: dict) -> dict:
     types = sorted({a["type"] for a in actions["actions"]})
     owners = list(actions.get("owners") or sorted({a["owner"] for a in actions["actions"]}))
@@ -914,7 +978,7 @@ def sheet_exceptions(wb, d):
     header_row(ws, 6, 2, ["Type", "urgent", "review", "info", "Total"])
     for i, t in enumerate(L["types"]):
         r = 7 + i
-        put(ws, f"B{r}", t, f=font("ice"))
+        put(ws, f"B{r}", plain_type(t), f=font("ice"))
         for j, sev in enumerate(("urgent", "review", "info")):
             put(ws, f"{get_column_letter(3 + j)}{r}",
                 f'=COUNTIFS({rng["type"]},$B{r},{rng["severity"]},"{sev}")', fmt=INT)
@@ -947,9 +1011,11 @@ def sheet_exceptions(wb, d):
             elif key == "expected_benefit":
                 v = _benefit_text(a.get(key))
             elif key == "constraints":
-                v = "; ".join(a.get(key) or [])
+                v = plain_text("; ".join(a.get(key) or []))
+            elif key == "type":
+                v = plain_type(a.get(key))
             else:
-                v = a.get(key)
+                v = plain_text(a.get(key))
             c = ws[f"{col}{r}"]
             c.value = v
             c.fill = F_CARD if j % 2 == 0 else F_MID
@@ -1179,7 +1245,7 @@ def sheet_routes(wb, d):
 
 
 def text_gate(wb) -> None:
-    """v2.1 text rules (internal development notes (kept privately)): scrub every text cell with the exporter's scrub (narrowbody /
+    """v2.1 text rules: scrub every text cell with the exporter's scrub (narrowbody /
     widebody archetype names, forbidden words), then fail the build if anything is left."""
     bad = []
     for ws in wb.worksheets:
@@ -1208,6 +1274,7 @@ def build(out: Path = OUT) -> Path:
     sheet_aog(wb, d)
     sheet_routes(wb, d)
     wb._sheets = [wb[n] for n in SHEETS]
+    move_codes_to_ref(wb)
     text_gate(wb)
     for ws in wb.worksheets:
         ws.sheet_properties.tabColor = HEX["aero_teal"] if "calculator" in ws.title else HEX["deep_steel"]

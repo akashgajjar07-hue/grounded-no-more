@@ -102,6 +102,12 @@ def ci_int(lo: float, hi: float) -> str:
     return _range(fmt_int(lo), fmt_int(hi), lo < 0 or hi < 0)
 
 
+def fmt_half_up1(x: float) -> str:
+    """One decimal, half away from zero: the same rule as the site's fmt1 (Math.round(|v| * 10) / 10)."""
+    v = math.floor(abs(x) * 10 + 0.5) / 10
+    return _neg(f"{-v if x < 0 else v:,.1f}")
+
+
 def ci_num(lo: float, hi: float, d: int = 2) -> str:
     return _range(fmt_num(lo, d), fmt_num(hi, d), lo < 0 or hi < 0)
 
@@ -590,6 +596,7 @@ def compute() -> dict[str, str]:  # noqa: C901, PLR0915 - one flat list of keys 
     V["freeze.cal_lock_files"] = str(len(lock["artefacts"]))
     V["meta.git_sha"] = kpis["meta"]["git_sha"]
     import tomllib
+    V["meta.release"] = "v2.2"   # release version shown on the site, deck and DECISIONS
     V["meta.model_version"] = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
 
     # ---------------------------------------------------------------- v1 archive
@@ -816,6 +823,16 @@ def compute() -> dict[str, str]:  # noqa: C901, PLR0915 - one flat list of keys 
     V["parts.top_risk.rank1.risk_hours"] = fmt_int(top["risk_hours"])
     stt = split[split.pn == top["pn"]].groupby("station").h.sum().sort_values(ascending=False)
     V["parts.top_risk.rank1.station"] = f"{stt.index[0]} ({fmt_pct(stt.iloc[0] / stt.sum(), 0)} of its history AOG hours)"
+    # v2.2 (review #8): name the metric next to every hours figure for the hero part
+    V["parts.top_risk.rank1.metric"] = (
+        f"{fmt_int(top['risk_hours'])} hours a year of exposure ({fmt_int(top['aog_hours_hist_per_yr'])} h/yr of "
+        f"waiting in the two-year Simple Rulebook history plus {fmt_int(top['residual_aog_h_per_yr'])} h/yr of modelled "
+        f"residual downtime)")
+    V["parts.top_risk.rank1.recent"] = (
+        f"in the last 52 history weeks it caused {fmt_int(top['aog_h_52w'])} h of waiting for the part across the "
+        f"network ({top['aog_events_52w']} events), most of it at {top['aog_h_52w_max_station_id']} "
+        f"({fmt_int(top['aog_h_52w_max_station'])} h)")
+    V["parts.top_risk.rank1.planted"] = str(top.get("planted") or "")
     ps1 = pm[pm.planted.astype(str).str.contains("PS1", na=False)]
     V["story.ps1"] = f"{ps1.index[0]} ({ps1.iloc[0].description})" if len(ps1) else "PS1"
 
@@ -1170,7 +1187,8 @@ def v21_keys(V: dict[str, str], *, kpis, pol, fo, var, sp, pm, cal) -> dict[str,
         W["v21.donor"] = "**Donor downtime, recounted (post-plan, exploratory).** " + W["v21.donor_body"]
     else:
         rob = ho.get("robberies_per_year", {})
-        rtxt = [f"{NAMES[pid]} `{pid}` {fmt_num(rob[pid]['mean'], 1)} {ci_num(*rob[pid]['ci'], 1)}"
+        rtxt = [f"{NAMES[pid]} `{pid}` {fmt_half_up1(rob[pid]['mean'])} "
+                f"{_range(fmt_half_up1(rob[pid]['ci'][0]), fmt_half_up1(rob[pid]['ci'][1]), min(rob[pid]['ci']) < 0)}"
                 for pid in ("P0", "P1", "P2") if "mean" in rob.get(pid, {})]
         rob_s = (f" What the logs do allow (post-plan, exploratory): parts borrowed from another of our aircraft per "
                  f"year in the test runs, {'; '.join(rtxt)}; for the {NAMES['I125']} `I125` this is not "

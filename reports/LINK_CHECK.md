@@ -14,12 +14,12 @@ Some GitHub links are built at run time. These were resolved by hand and checked
 **Result: 46 of 46 unique URLs return 200. None returns 404 or any other error.** Every relative repo link (51 of 51) points at a file tracked in git.
 
 **Fixed in this run.**
-- METHODOLOGY linked the removed study guide (`STUDY_GUIDE.md`), which is a 404 on GitHub. That sentence now points to the planner workbook (`docs/templates/METHODOLOGY.md.tmpl`), and METHODOLOGY.md was re-rendered.
-- No GitHub link to a removed file is left in the site, the docs, the deck or the workbook. The removed files are the study pack, study guide, progress log, agent notes, social-media drafts and walkthrough script.
+- METHODOLOGY linked a file that was moved out of the public repo, which is a 404 on GitHub. That sentence now points to the planner workbook (`docs/templates/METHODOLOGY.md.tmpl`), and METHODOLOGY.md was re-rendered.
+- No GitHub link to a file moved out of the public repo is left in the site, the docs, the deck or the workbook.
 
 **Caveats.**
 - GitHub links were checked against the current `main` on GitHub. That matches the working tree except for the METHODOLOGY fix above, which goes live when the lead pushes.
-- `reports/audit/links_downloads.json` (ROUTER) still lists a removed study-pack file. It is an audit artefact, not a page link. It is in the ROUTER requests in reports/PUBLIC_SCAN.md.
+- `reports/audit/links_downloads.json` (ROUTER) still lists a file moved out of the public repo. It is an audit artefact, not a page link. It is in the ROUTER requests in reports/PUBLIC_SCAN.md.
 - LIMITATIONS and reports/VALIDATION_REPORT.md link the AI review records (`reports/review_*.md`). If the lead moves those records out of the public repo, the links in the templates have to go first (DOCS).
 
 | Status | URL | Found in |

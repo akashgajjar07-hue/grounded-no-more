@@ -364,3 +364,46 @@ def test_donor_recount_is_postplan_and_separate(site):
     j = json.load(open(OUT / "postplan" / "donor_recount.json"))
     for pid, v in FROZEN_HOLDOUT_AOG.items():
         assert j["holdout"]["recipient_hours_per_year"][pid]["mean"] == pytest.approx(v, abs=1e-3)
+
+
+# ---------------------------------------------------------------------------------- v2.2: one number on every surface
+def _half_up1(x: float) -> str:
+    """The site's fmt1 rule (Math.round(|v| * 10) / 10), with the sign kept."""
+    v = math.floor(abs(x) * 10 + 0.5) / 10
+    return f"{-v if x < 0 else v:.1f}"
+
+
+def _deck_text() -> str:
+    pptx = pytest.importorskip("pptx")
+    p = ROOT / "presentations" / "case_study_deck.pptx"
+    if not p.exists():
+        pytest.skip("deck not built")
+    return "\n".join("".join(r.text for r in para.runs) for s in pptx.Presentation(str(p)).slides
+                     for sh in s.shapes if sh.has_text_frame for para in sh.text_frame.paragraphs)
+
+
+def test_donor_robbery_counts_agree_site_readme_deck():
+    """Borrowed-part counts use one value (kpis.json donor_recount) and the site's half-up rounding everywhere."""
+    rob = json.load(open(SITE / "kpis.json"))["donor_recount"]["holdout"]["robberies_per_year"]
+    readme = (ROOT / "README.md").read_text()
+    deck = _deck_text()
+    for pid in ("P0", "P1", "P2"):
+        r = rob[pid]
+        txt = _half_up1(r["mean"])
+        ci = (_half_up1(r["ci"][0]), _half_up1(r["ci"][1]))
+        assert f"`{pid}` {txt} [{ci[0]}–{ci[1]}]" in readme, (pid, txt)
+        assert f"{txt} [{ci[0]}–{ci[1]}]" in deck, (pid, txt)
+
+
+def test_test_counts_agree_junit_method_readme_validation_deck():
+    import xml.etree.ElementTree as ET
+    suite = next(ET.parse(ROOT / "reports" / "junit.xml").getroot().iter("testsuite")).attrib
+    total = int(suite["tests"]) - int(suite["skipped"])
+    passed = total - int(suite["failures"]) - int(suite["errors"])
+    val = json.load(open(SITE / "method.json"))["validation"]
+    assert (val["tests_passed"], val["tests_total"]) == (passed, total)
+    assert f"**Tests:** {passed}/{total} passing" in (ROOT / "README.md").read_text()
+    assert f"{suite['tests']} tests, {suite['failures']} failures" in (ROOT / "reports" / "VALIDATION_REPORT.md").read_text()
+    assert f"{passed}/{total}" in _deck_text()
+    # no internal test file names in user-visible validation text
+    assert "test_" not in json.dumps({k: v for k, v in val.items() if k != "command"})

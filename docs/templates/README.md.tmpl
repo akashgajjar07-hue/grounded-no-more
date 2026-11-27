@@ -123,6 +123,8 @@ It is {{RESULT:story.local_time}} at Mumbai. A narrowbody (fictional tail {{RESU
 
 BOM holds no serviceable spare. The {{RESULT:v21.plain.P0}} (`P0`) holds {{RESULT:story.P0_station_units}} units of this part at BOM and {{RESULT:story.P0_outstation_units}} at all six outstations together, because it puts a line-station unit only where a D0 part has at least 4 quoted removals a year at that station, and BOM's quoted rate for this part is below that. AUH has {{RESULT:story.auh_on_hand}} on the shelf. The AOG desk ships one on the next flight out: {{RESULT:story.wait_h}} in transit, then {{RESULT:story.fitting_h}} of fitting and release to service. In the simulated history this exact incident is {{RESULT:story.incident_id}}: {{RESULT:story.aog_hours}} of material-related downtime. The {{RESULT:v21.plain.P2}} (`P2`) holds {{RESULT:story.P2_station_units}} units at BOM and {{RESULT:story.P2_outstation_units}} across the outstations.
 
+**This part carries a planted reliability problem (test case PS1).** The model was built so that it is removed faster than the supplier quotes; the planning screens found that from the history alone, without being told. Finding it is a check that the method works, not a discovery about a real part.
+
 Nothing went "wrong" here. The removal rate, the repair turnaround and the positioning rule together made this grounding likely. That is the question this project answers at fleet scale: which parts, at which stations, carry the material shortage exposure, and what is the cheapest way to take it off the table.
 
 ---
@@ -130,7 +132,7 @@ Nothing went "wrong" here. The removal rate, the repair turnaround and the posit
 ### Six questions this answers
 
 **1. Which parts drive material shortage exposure?**
-Of 120 part numbers, {{RESULT:parts.top_risk.count}} are flagged urgent (at least 25 hours a year of exposure: material AOG in the Simple Rulebook history plus modelled residual downtime under the frontier option). Together they account for {{RESULT:parts.top_risk.share_of_aog_hours_pct}} of the Simple Rulebook (P0) history's material AOG hours. The top part is {{RESULT:parts.top_risk.rank1.pn}}, at {{RESULT:parts.top_risk.rank1.risk_hours}} hours a year, with the largest share of its history downtime at {{RESULT:parts.top_risk.rank1.station}}.
+Of 120 part numbers, {{RESULT:parts.top_risk.count}} are flagged urgent (at least 25 hours a year of exposure: material AOG in the Simple Rulebook history plus modelled residual downtime under the frontier option). Together they account for {{RESULT:parts.top_risk.share_of_aog_hours_pct}} of the Simple Rulebook (P0) history's material AOG hours. The top part is {{RESULT:parts.top_risk.rank1.pn}}, at {{RESULT:parts.top_risk.rank1.metric}}. The largest share of its two-year history downtime was at {{RESULT:parts.top_risk.rank1.station}}; {{RESULT:parts.top_risk.rank1.recent}}. It is the planted test case PS1 (see The story).
 
 **2. Which forecasting method wins, by demand class? Does the reliability model beat the Croston family?**
 Champions were frozen per demand class × part class on the selection window and re-scored once on the holdout: best in {{RESULT:honest.champions_best}} cells. For removal-driven parts (holdout) the exposure-based reliability model scores mean MASE {{RESULT:forecast.reliability.mase}} against {{RESULT:forecast.best_croston_family.mase}} for the best Croston-family method ({{RESULT:forecast.best_croston_family.method}}), a paired difference of {{RESULT:forecast.reliability_vs_croston.delta_mase}} (95% CI {{RESULT:forecast.reliability_vs_croston.delta_mase_ci}}). Verdict: {{RESULT:forecast.reliability_vs_croston.verdict}}. Where it does win is the upper quantile that stocking depends on: {{RESULT:forecast.reliability.pinball_summary}}.
@@ -212,7 +214,7 @@ These are results on simulated data from assumed parameters. They show how the m
 
 Method details: [METHODOLOGY.md](METHODOLOGY.md). Model scope: [MODEL_CARD.md](MODEL_CARD.md). Verification: [reports/VALIDATION_REPORT.md](reports/VALIDATION_REPORT.md).
 
-**Checked against real data too.** The forecasting code was also run on a REAL public benchmark. {{RESULT:monash.summary}}
+**Also run on a public intermittent-demand benchmark (car parts, not aviation).** The forecasting code was also run on a real public dataset. {{RESULT:monash.summary}}
 
 **Tests:** {{RESULT:tests.summary}}.
 
@@ -283,16 +285,10 @@ reports/                    junit results, VALIDATION_REPORT.md, reviews
 
 ---
 
-## Context
-
-Relevant to Abu Dhabi hub carriers and MRO organisations; independent project, not affiliated with any airline.
-
----
-
 ## Author
 
 **Akash Gajjar**
-MSc Supply Chain Management, University of Liverpool (2025). Retail operations and inventory experience at Primark and Uniqlo. Interested in materials planning, inventory analysis and supply chain planning in aviation and MRO.
+MSc Supply Chain Management, University of Liverpool (2025).
 
 - GitHub: [akashgajjar07-hue](https://github.com/akashgajjar07-hue)
 

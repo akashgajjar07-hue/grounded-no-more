@@ -101,6 +101,12 @@ def fmt_m(x, dp=1):
     return f"{x / 1e6:.{dp}f}"
 
 
+def half_up1(x):
+    """One decimal, half away from zero: the same rule as the site's fmt1 and render_docs.fmt_half_up1."""
+    v = math.floor(abs(x) * 10 + 0.5) / 10
+    return f"{-v if x < 0 else v:.1f}"
+
+
 def fmt_int(x):
     s = "−" if x < 0 else ""
     return f"{s}{abs(round(x)):,}"
@@ -1220,7 +1226,7 @@ def build_deck(N, A, CH, bg, total=10):
     s.image(704, 150, 528, 486, A["nb-32"])
     s.text(704, 646, 528, 16, P(R("ATA 32 ZONE HIGHLIGHTED · NARROWBODY ARCHETYPE · NOT A MANUFACTURER DRAWING", "label",
                                   s=7, c=C["faint"]), al="c"))
-    s.footer(2, "Source: docs/data/aog_lab.json, parts.json (escalation), rotables.json · simulated history weeks 0–103",
+    s.footer(2, "Source: simulated history weeks 0–103, docs/data",
              total)
     S.append(s)
 
@@ -1244,7 +1250,7 @@ def build_deck(N, A, CH, bg, total=10):
     blocks = [
         ("Hours waiting / yr", fmt_int(pr["aog_hours"]["mean"]),
          ci_txt([pr["aog_hours"]["ci_lo"], pr["aog_hours"]["ci_hi"]]), C["aero_teal"]),
-        ("Total annual cost", fmt_mm(pr["total_annual_cost_aed"]["mean"]),
+        ("Annual cost vs naive ref.", fmt_mm(pr["total_annual_cost_aed"]["mean"]),
          ci_m([pr["total_annual_cost_aed"]["ci_lo"], pr["total_annual_cost_aed"]["ci_hi"]]), C["ice"]),
         ("Shelf fill, pts", f"−{cm['fill']}", cm["fill_ci"], C["amber"]),
     ]
@@ -1282,8 +1288,7 @@ def build_deck(N, A, CH, bg, total=10):
                   f"and expendables; repairable-part fill rises {fmt_pct(bc[('P0', 'R')]['immediate_fill_rate'])} → "
                   f"{fmt_pct(bc[('P2', 'R')]['immediate_fill_rate'])}.", "bodym", s=9.2)], col=C["amber"], after=0,
                ls=1.08)])
-    s.footer(3, f"Source: docs/data/kpis.json (headline.core, reading_note, routes_line, stress_worlds), policies.json · "
-                f"{N['seed_txt']}", total)
+    s.footer(3, f"Source: simulated holdout, docs/data · {N['seed_txt']}", total)
     S.append(s)
 
     # 4 — Not a free move of stock: A4 capital table + where the stock goes + Palm ------------------------------------
@@ -1320,7 +1325,7 @@ def build_deck(N, A, CH, bg, total=10):
         P(R("OUTSTATION REPAIRABLE SPARES, P0 → P2", "label", s=7.2, c=C["faint"]), after=2),
         P(*[R(f"{st_['station']} {st_['by_policy']['P0']['rotable_units']}→{st_['by_policy']['P2']['rotable_units']}  ",
               "mono", s=8.4, c=C["ice"]) for st_ in N["stations"] if st_["role"] != "hub"])])
-    s.footer(4, "Source: docs/data/kpis.json (capital_table), network.json, rotables.json (station_view), forecast.json",
+    s.footer(4, "Source: simulated holdout and history, docs/data",
              total)
     S.append(s)
 
@@ -1336,7 +1341,7 @@ def build_deck(N, A, CH, bg, total=10):
     dcls = Counter(p["demand_class"] for p in N["parts"])
     s = Slide(bg=bg)
     s.header(5, "Forecasting, honestly", f"Methods chosen in advance were best in only {n_rank1} of {n_cells} groups",
-             f"{dcls.get('intermittent', 0)} of {N['n_parts']} part numbers are rarely and irregularly needed (ADI > 1.32 "
+             f"{dcls.get('intermittent', 0)} of {N['n_parts']} part numbers are needed only now and then (ADI > 1.32 "
              f"weeks, CV² < 0.49, training weeks 0–{N['split_week'] - 1}). Methods were fixed on earlier runs, then "
              "checked once on the fresh test runs.")
     s.card(48, 150, 560, 520)
@@ -1377,7 +1382,7 @@ def build_deck(N, A, CH, bg, total=10):
         P(R(f"Rarely-needed repairable parts: the chosen method '{lab.get(ir['champion'], ir['champion'])}' ranked "
             f"{ir['champion_rank']}/{ir['n_methods']}, kept as chosen. Repairable spares are sized on the reliability-"
             f"exposure rate (lower q90 pinball in {n_q90} of {len(rvc)} classes) instead.", "bodym", s=9.1), ls=1.08)])
-    s.footer(5, "Source: docs/data/forecast.json (champion_check, truth_recovery), parts.json · rolling origins, holdout",
+    s.footer(5, "Source: rolling-origin forecasts and the simulated holdout, docs/data",
              total)
     S.append(s)
 
@@ -1390,7 +1395,7 @@ def build_deck(N, A, CH, bg, total=10):
     ins = N["ins"]
     s = Slide(bg=bg)
     s.header(6, "Readiness Frontier · how much readiness each extra dirham buys",
-             f"Invest an additional {cm['fo_cap']}: a further {cm['fo_red']} fewer hours a year",
+             f"Invest an additional {cm['fo_cap']}: {cm['fo_red']} fewer hours a year",
              f"{len(N['points'])} frozen candidate plans, re-run on the 20 test runs. A rule written down before the test "
              f"walks up the frontier while AED 1M still removes ≥ {reco['h_star_per_aed_1m']:.1f} hours a year, and stops "
              f"at {fid}. It is an option for more capital, on top of the {sn(N, cid)}.")
@@ -1411,7 +1416,7 @@ def build_deck(N, A, CH, bg, total=10):
         bullet([R("Total annual cost ", "body", s=9.3, b=True),
                 R(f"{fmt_mm(fo['total_cost_aed']['mean'])}/yr {ci_m(fo['total_cost_aed']['ci'])} vs the {sn(N, cid)}.",
                   "bodym", s=9.3)], after=4),
-        bullet([R(f"Itself: ", "body", s=9.3, b=True),
+        bullet([R(f"With {sn(N, fid).replace(sn(N, cid), '').strip(' +')}: ", "body", s=9.3, b=True),
                 R(f"{fmt_int(i1['aog_hours'])} h/yr {ci_txt(i1['aog_ci'])} at {fmt_mm(i1['capital_aed'])} "
                   f"(earlier runs: {fmt_int(N['spt'][fid]['aog_hours'])} h).", "bodym", s=9.3)], after=4),
         bullet([R("The pick moves: ", "body", s=9.3, b=True),
@@ -1438,8 +1443,7 @@ def build_deck(N, A, CH, bg, total=10):
               + ("; " if v == "low_stress" else "."), "small", s=8, c=C["titanium"])
             for v in ("low_stress", "high_stress") if v in pp], after=5, ls=1.05),
         P(R(N["sw"]["ranges_note"], "small", s=8, c=C["amber"]), ls=1.05)])
-    s.footer(6, f"Source: docs/data/kpis.json (headline.frontier_option, frontier_insight), frontier.json · "
-                f"{N['seed_txt']} unless labelled", total)
+    s.footer(6, f"Source: simulated holdout, docs/data · {N['seed_txt']} unless labelled", total)
     S.append(s)
 
     # 7 — What it depends on (A5 calibration note) ------------------------------------------------------------------
@@ -1511,8 +1515,7 @@ def build_deck(N, A, CH, bg, total=10):
             s=8.7), ls=1.08, after=4),
         P(R(SCOPE["text"], "monos", s=7, c=C["aero_teal"]), ls=1.05),
     ])
-    s.footer(7, "Source: docs/data/frontier.json, kpis.json (stress_worlds), method.json (calibration_note), "
-                "outputs/freeze/calibration_lock.json · splits as labelled", total)
+    s.footer(7, "Source: simulated runs and the calibration lock, docs/data · splits as labelled", total)
     S.append(s)
 
     # 8 — Planner actions, AOG lab, and the donor recount (post-plan) -------------------------------------------------
@@ -1573,12 +1576,12 @@ def build_deck(N, A, CH, bg, total=10):
                after=3)]
     for c_ in (bid, "P1", cid, fid):
         r_ = hold["robberies_per_year"][c_]
-        val = (f"{r_['mean']:.1f} [{r_['ci'][0]:.1f}–{r_['ci'][1]:.1f}]" if "mean" in r_ else r_["status"])
+        val = (f"{half_up1(r_['mean'])} [{half_up1(r_['ci'][0])}–{half_up1(r_['ci'][1])}]" if "mean" in r_ else r_["status"])
         rows_.append(P(*named(N, c_, "bodym", s=8.6, short=True), R("  " + val, "mono", s=8.4,
                                                                       c=C["ice"] if "mean" in r_ else C["faint"]),
                        after=1))
     p2p0 = hold["robberies_paired"]["P2-P0"]
-    rows_.append(P(R(f"{cid} − {bid}: {p2p0['mean']:.1f} [{p2p0['ci'][0]:.1f}, {p2p0['ci'][1]:.1f}] a year".replace("-", "−"),
+    rows_.append(P(R(f"{cid} − {bid}: {half_up1(p2p0['mean'])} [{half_up1(p2p0['ci'][0])}, {half_up1(p2p0['ci'][1])}] a year".replace("-", "−"),
                      "monos", s=8, c=C["aero_teal"]), after=3))
     rows_.append(P(R(f"Donor hours in the test runs: {hold['donor_hours']}.", "small", s=7.8, c=C["titanium"]), ls=1.05))
     s.text(648, 484, 330, 182, rows_)
@@ -1591,8 +1594,7 @@ def build_deck(N, A, CH, bg, total=10):
         P(R(f"{fmt_int(hp['counted_material_aog_hours_per_year'])} h/yr", "mid", s=14, c=C["ice"]), after=0),
         P(R("counted waiting-for-part downtime, same history", "small", s=7.8), after=5),
         P(R(dr["label"].split(". ", 1)[1], "small", s=7.3, c=C["amber"]), ls=1.05)])
-    s.footer(8, "Source: docs/data/actions.json, aog_lab.json, kpis.json (donor_recount, decision V21-B) · history weeks "
-                "0–103 and holdout as labelled", total)
+    s.footer(8, "Source: simulated history weeks 0–103 and holdout as labelled, docs/data", total)
     S.append(s)
 
     # 9 — How it was protected -------------------------------------------------------------------------------------
@@ -1658,7 +1660,9 @@ def build_deck(N, A, CH, bg, total=10):
                                    P(R("headline numbers from earlier runs inside the test's likely range", "small",
                                        s=8), ls=1.05)])
     s.text(656, yy + 12, 172, 60, [P(R(f"{val['tests_passed']}/{val['tests_total']}", "mid", s=18, c=C["aero_teal"])),
-                                   P(R("tests passed, incl. reconciliation of site numbers", "small", s=8), ls=1.05)])
+                                   P(R("non-browser tests passed, incl. reconciliation of site numbers" if "non-browser" in (val.get("scope") or "")
+                                       else "tests passed, incl. reconciliation of site numbers", "small", s=7.6),
+                                     ls=1.05)])
     s.text(468, yy + 78, 360, 40, P(R(f"Earlier runs → test, hours/yr: {cid} "
                                       f"{fmt_int(cons['aog_hours']['selection_recommended'])} → "
                                       f"{fmt_int(cons['aog_hours']['holdout_recommended'])}, {fid} "
@@ -1678,8 +1682,7 @@ def build_deck(N, A, CH, bg, total=10):
             "ran its test on fresh seeds. v1 numbers are not findings.", "bodym", s=9.2), after=8, ls=1.08),
         P(R("Lesson: get the domain review before the headline, not after.", "body", s=9.4, c=C["amber"]), ls=1.08),
     ])
-    s.footer(9, f"Source: docs/data/method.json (assumptions, calibration, freeze, verification, v1_archive), kpis.json · "
-                f"data build {N['meta_sha']}", total)
+    s.footer(9, f"Source: docs/data and reports/junit.xml · data build {N['meta_sha']}", total)
     S.append(s)
 
     # 10 — Limitations, honest findings & author ----------------------------------------------------------------------
@@ -1744,8 +1747,7 @@ def build_deck(N, A, CH, bg, total=10):
                                 P(R("CODE", "label", s=7.5, c=C["faint"]), after=2),
                                 P(R(REPO_URL.replace("https://", ""), "mono", s=8.4))])
     s.image(848, 440, 362, 200, A["wb"])
-    s.footer(10, f"Source: docs/data/frontier.json, kpis.json (honest), parts.json (invalid_allocations), method.json · "
-                 f"data build {N['meta_sha']}", total)
+    s.footer(10, f"Source: simulated runs, docs/data · data build {N['meta_sha']}", total)
     S.append(s)
 
     notes = [

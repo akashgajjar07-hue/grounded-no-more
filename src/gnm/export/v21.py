@@ -169,6 +169,10 @@ _WORDS = [
     (re.compile(r"\bP0 legacy\b"), "P0 Simple Rulebook"),
     (re.compile(r"\blegacy\b"), "starting-point"),
     (re.compile(r"\bLegacy\b"), "Starting-point"),
+    # v2.2 (review #38): no raw lever codes or plural slips in exported prose
+    (re.compile(r" \((?:tat_cut_10d|buy_1|buy_2|tat_cut_\w+)\)"), ""),
+    (re.compile(r"\bbuying 1 spares\b"), "buying 1 spare"),
+    (re.compile(r"\bby cutting TAT\b"), "by cutting repair time by 10 days"),
 ]
 
 FORBIDDEN_PATTERNS = {

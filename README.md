@@ -64,7 +64,7 @@ Hours aircraft spent waiting for a part, per year, in the simulation: about 1,69
 
 **The most useful insight.** Faster repair can beat buying spares: with 25% shorter repair time, the extra-investment option loses its clear cost advantage. The levers to compare are: faster repair · pool access · better reliability · more spares.
 
-**Donor downtime.** Hours that donor aircraft (aircraft that gave up a part to another) spend waiting for a replacement are not reconstructible from current logs for the frozen test runs, so no per-plan figure is given. What the logs do allow (post-plan, exploratory): parts borrowed from another of our aircraft per year in the test runs, Simple Rulebook (naive reference) `P0` 33.2 [28.5–37.9]; Each Airport for Itself (simplified local comparator) `P1` 31.2 [27.1–35.4]; Network Plan `P2` 22.4 [18.4–26.6]; for the Network Plan + Extra Spares `I125` this is not reconstructible either. For scale only, in the historical record of the Simple Rulebook (naive reference) `P0` (history weeks 0–103, one simulated history, not the test runs), donor aircraft were held about 5,285 h a year, beside 1,282 h a year of counted waiting-for-part downtime in that same history. Gross donor hours are an upper bound: a donor may already be in maintenance or not scheduled to fly.
+**Donor downtime.** Hours that donor aircraft (aircraft that gave up a part to another) spend waiting for a replacement are not reconstructible from current logs for the frozen test runs, so no per-plan figure is given. What the logs do allow (post-plan, exploratory): parts borrowed from another of our aircraft per year in the test runs, Simple Rulebook (naive reference) `P0` 33.2 [28.5–37.9]; Each Airport for Itself (simplified local comparator) `P1` 31.3 [27.1–35.4]; Network Plan `P2` 22.5 [18.4–26.6]; for the Network Plan + Extra Spares `I125` this is not reconstructible either. For scale only, in the historical record of the Simple Rulebook (naive reference) `P0` (history weeks 0–103, one simulated history, not the test runs), donor aircraft were held about 5,285 h a year, beside 1,282 h a year of counted waiting-for-part downtime in that same history. Gross donor hours are an upper bound: a donor may already be in maintenance or not scheduled to fly.
 
 **Findings that do not flatter the method**, kept visible on purpose:
 
@@ -142,6 +142,8 @@ It is 17:30 local (12:00 UTC) at Mumbai. A narrowbody (fictional tail A6-FHW) ab
 
 BOM holds no serviceable spare. The Simple Rulebook (naive reference) (`P0`) holds 0 units of this part at BOM and 0 at all six outstations together, because it puts a line-station unit only where a D0 part has at least 4 quoted removals a year at that station, and BOM's quoted rate for this part is below that. AUH has 3 on the shelf. The AOG desk ships one on the next flight out: 9 h in transit, then 5 h of fitting and release to service. In the simulated history this exact incident is AOG-0001: 14 h of material-related downtime. The Network Plan (`P2`) holds 2 units at BOM and 6 across the outstations.
 
+**This part carries a planted reliability problem (test case PS1).** The model was built so that it is removed faster than the supplier quotes; the planning screens found that from the history alone, without being told. Finding it is a check that the method works, not a discovery about a real part.
+
 Nothing went "wrong" here. The removal rate, the repair turnaround and the positioning rule together made this grounding likely. That is the question this project answers at fleet scale: which parts, at which stations, carry the material shortage exposure, and what is the cheapest way to take it off the table.
 
 ---
@@ -149,7 +151,7 @@ Nothing went "wrong" here. The removal rate, the repair turnaround and the posit
 ### Six questions this answers
 
 **1. Which parts drive material shortage exposure?**
-Of 120 part numbers, 11 are flagged urgent (at least 25 hours a year of exposure: material AOG in the Simple Rulebook history plus modelled residual downtime under the frontier option). Together they account for 95% of the Simple Rulebook (P0) history's material AOG hours. The top part is GN-32-R014, Nose wheel steering actuator (NB), at 398 hours a year, with the largest share of its history downtime at BOM (35% of its history AOG hours).
+Of 120 part numbers, 11 are flagged urgent (at least 25 hours a year of exposure: material AOG in the Simple Rulebook history plus modelled residual downtime under the frontier option). Together they account for 95% of the Simple Rulebook (P0) history's material AOG hours. The top part is GN-32-R014, Nose wheel steering actuator (NB), at 398 hours a year of exposure (386 h/yr of waiting in the two-year Simple Rulebook history plus 12 h/yr of modelled residual downtime). The largest share of its two-year history downtime was at BOM (35% of its history AOG hours); in the last 52 history weeks it caused 464 h of waiting for the part across the network (25 events), most of it at CAI (177 h). It is the planted test case PS1 (see The story).
 
 **2. Which forecasting method wins, by demand class? Does the reliability model beat the Croston family?**
 Champions were frozen per demand class × part class on the selection window and re-scored once on the holdout: best in 3 of 9 cells. For removal-driven parts (holdout) the exposure-based reliability model scores mean MASE 0.918 against 0.907 for the best Croston-family method (TSB), a paired difference of +0.010 (95% CI [−0.014 to 0.036]). Verdict: the reliability model does not beat the best Croston-family method on MASE; the difference is not significant, so it is a tie on point accuracy (75 parts, 95% bootstrap CI over parts). Where it does win is the upper quantile that stocking depends on: it has the lowest q90 pinball loss of all methods for both expendables and rotables on the holdout (expendables 0.286 vs next best 0.290; rotables 0.228 vs next best 0.243).
@@ -235,9 +237,9 @@ These are results on simulated data from assumed parameters. They show how the m
 
 Method details: [METHODOLOGY.md](METHODOLOGY.md). Model scope: [MODEL_CARD.md](MODEL_CARD.md). Verification: [reports/VALIDATION_REPORT.md](reports/VALIDATION_REPORT.md).
 
-**Checked against real data too.** The forecasting code was also run on a REAL public benchmark. Dataset: Monash Car Parts (without missing values), 2,674 monthly series, licence CC BY 4.0, data provenance REAL (metrics DERIVED). Best eligible method IMAPA with mean MASE 1.056 [1.011–1.109]; the all-zero forecast scores 0.777, which is why zero is never allowed to be a champion. Attribution: Car Parts dataset, Monash Time Series Forecasting Archive (Godahewa, Bergmeir, Webb, Hyndman & Montero-Manso, 2021), Zenodo record 4656021, licensed CC BY 4.0; original data from Hyndman (2015), R package expsmooth.
+**Also run on a public intermittent-demand benchmark (car parts, not aviation).** The forecasting code was also run on a real public dataset. Dataset: Monash Car Parts (without missing values), 2,674 monthly series, licence CC BY 4.0, data provenance REAL (metrics DERIVED). Best eligible method IMAPA with mean MASE 1.056 [1.011–1.109]; the all-zero forecast scores 0.777, which is why zero is never allowed to be a champion. Attribution: Car Parts dataset, Monash Time Series Forecasting Archive (Godahewa, Bergmeir, Webb, Hyndman & Montero-Manso, 2021), Zenodo record 4656021, licensed CC BY 4.0; original data from Hyndman (2015), R package expsmooth.
 
-**Tests:** 396/396 passing, 0 failing, 0 skipped (fast and slow suites, `GNM_RELEASE=1`; the Playwright browser suite runs separately; `reports/junit.xml`, run at 2026-11-27 15:06).
+**Tests:** 398/398 passing, 0 failing, 0 skipped (fast and slow suites, `GNM_RELEASE=1`; the Playwright browser suite runs separately; `reports/junit.xml`, run at 2026-11-27 16:37).
 
 ---
 
@@ -306,16 +308,10 @@ reports/                    junit results, VALIDATION_REPORT.md, reviews
 
 ---
 
-## Context
-
-Relevant to Abu Dhabi hub carriers and MRO organisations; independent project, not affiliated with any airline.
-
----
-
 ## Author
 
 **Akash Gajjar**
-MSc Supply Chain Management, University of Liverpool (2025). Retail operations and inventory experience at Primark and Uniqlo. Interested in materials planning, inventory analysis and supply chain planning in aviation and MRO.
+MSc Supply Chain Management, University of Liverpool (2025).
 
 - GitHub: [akashgajjar07-hue](https://github.com/akashgajjar07-hue)
 

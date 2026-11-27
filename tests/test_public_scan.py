@@ -3,16 +3,17 @@
 1. No forbidden word in user-visible text on the product surfaces: the site (docs/index.html, docs/js, docs/css,
    docs/content, docs/data, docs/lab), the rendered docs (README, METHODOLOGY, MODEL_CARD, LIMITATIONS,
    reports/VALIDATION_REPORT.md), the deck text (presentations/case_study_deck.pptx) and the workbook text.
-   JS/CSS comments are stripped first (they are code, not copy). Code identifiers that happen to contain a word
-   (an HTML `placeholder` attribute, a `linkedin` config key) are allowed only through the explicit ALLOW list.
-2. Private material is not tracked by git: study pack, study guide, progress log, agent notes, social-media drafts and
-   the walkthrough script.
+   Categories: career / personal-prep terms, internal-process terms, placeholder / unfinished markers, OEM / airline
+   names, outdated policy wording. JS/CSS comments are stripped first (they are code, not copy). Code identifiers that
+   happen to contain a word (an HTML input attribute) are allowed only through the explicit ALLOW list.
+2. Files moved out of the public repo stay untracked by git.
 
 The deck PDF is rendered from the same slide spec as the PPTX (scripts/build_deck.py), so the PPTX text stands for it.
-reports/PUBLIC_SCAN.md lists every hit of the full-repo scan and how it was handled.
+reports/PUBLIC_SCAN.md lists the full-repo scan by category and how each hit was handled.
 """
 from __future__ import annotations
 
+import base64
 import json
 import re
 import subprocess
@@ -25,26 +26,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # The type numbers are assembled from fragments so this file does not trip other repo greps.
 _NB, _WB = "A3" + "20", "78" + "7"
+# The career / personal-prep and internal-process terms are stored base64-encoded and decoded at run time. This keeps
+# the word list itself from being displayed when someone reads this file on GitHub; it is not a secret. Decode with
+# base64.b64decode(...) to review the list.
+_B64 = lambda s: base64.b64decode(s).decode()  # noqa: E731
+_CAREER_I = ["XGJpbnRlcnZpZXc=", "bGlua2VkXHM/aW4=", "XGJyZWNydWl0", "XGJoaXIoPzplfGVzfGVkfGluZylcYg==", "XGJqb2JzP1xi", "Z2lybGZyaWVuZA=="]
+_CAREER_CS = ["XGJDRU9cYg=="]
+_INTERNAL_I = ["cHJvbXB0", "c3ViLT9hZ2VudA==", "YWdlbnRbIF8tXW5vdGVz"]
 TERMS = {
-    "interview": re.compile(r"\binterview", re.I),
-    "linkedin": re.compile(r"linked\s?in", re.I),
-    "recruiter": re.compile(r"\brecruit", re.I),
-    "CEO": re.compile(r"\bCEO\b"),
-    "hire": re.compile(r"\bhir(?:e|es|ed|ing)\b", re.I),
-    "job": re.compile(r"\bjobs?\b", re.I),
-    "girlfriend": re.compile(r"girlfriend", re.I),
-    "prompt": re.compile(r"prompt", re.I),
-    "subagent": re.compile(r"sub-?agent", re.I),
-    "agent notes": re.compile(r"agent[ _-]notes", re.I),
-    "TODO/FIXME/TBD": re.compile(r"\b(?:TODO|FIXME|TBD)\b"),
-    "add link": re.compile(r"add link", re.I),
-    "lorem": re.compile(r"\blorem\b", re.I),
+    **{f"career / personal-prep #{n}": re.compile(_B64(b), re.I) for n, b in enumerate(_CAREER_I, 1)},
+    **{f"career / personal-prep #{n}": re.compile(_B64(b)) for n, b in enumerate(_CAREER_CS, len(_CAREER_I) + 1)},
+    **{f"internal-process #{n}": re.compile(_B64(b), re.I) for n, b in enumerate(_INTERNAL_I, 1)},
+    "placeholder / unfinished": re.compile(r"\b(?:TODO|FIXME|TBD)\b|add link|\blorem\b|\bDRAFT\b"),
     "placeholder": re.compile(r"placeholder", re.I),
-    "DRAFT": re.compile(r"\bDRAFT\b"),
-    "airline brand": re.compile(r"\bEti" + r"had\b", re.I),
-    "manufacturer": re.compile(r"\b(?:Air" + r"bus|Boe" + r"ing)\b", re.I),
+    "OEM / airline name": re.compile(r"\bEti" + r"had\b|\b(?:Air" + r"bus|Boe" + r"ing)\b", re.I),
     "type number": re.compile(rf"\b{_NB}|(?<![\w.,]){_WB}(?![\d.,]*\d)(?!\s*(?:h\b|AED|units?\b|k\b|%|px|ms))"),
-    "legacy": re.compile(r"\blegacy\b", re.I),
+    "outdated policy wording": re.compile(r"\blegacy\b", re.I),
 }
 
 SITE_GLOBS = ["docs/index.html", "docs/js/**/*.js", "docs/css/**/*.css", "docs/content/*.md", "docs/data/*.json",
@@ -67,8 +64,8 @@ ALLOW = [
 PENDING = [
 ]
 
-PRIVATE_PATHS = ["study/", "STUDY_GUIDE.md", "PROGRESS.md", "docs/agent_notes/", "presentations/linkedin_",
-                 "presentations/video_script.md"]
+# Paths moved out of the public repo (base64 for the same reason as the terms above).
+PRIVATE_PATHS = [_B64(b) for b in ("c3R1ZHkv", "U1RVRFlfR1VJREUubWQ=", "UFJPR1JFU1MubWQ=", "ZG9jcy9hZ2VudF9ub3Rlcy8=", "cHJlc2VudGF0aW9ucy9saW5rZWRpbl8=", "cHJlc2VudGF0aW9ucy92aWRlb19zY3JpcHQubWQ=")]
 
 
 def _tracked() -> list[str]:
@@ -179,6 +176,6 @@ def test_private_material_not_tracked():
 
 def test_private_folder_is_ignored():
     gi = (ROOT / ".gitignore").read_text()
-    for entry in ("private/", "study/", "STUDY_GUIDE.md", "PROGRESS*.md", "docs/agent_notes/"):
+    for entry in ["private/", *(_B64(b) for b in ("c3R1ZHkv", "U1RVRFlfR1VJREUubWQ=", "UFJPR1JFU1MqLm1k", "ZG9jcy9hZ2VudF9ub3Rlcy8="))]:
         assert entry in gi.splitlines(), f".gitignore lacks {entry}"
     assert not [p for p in _tracked() if p.startswith("private/")]

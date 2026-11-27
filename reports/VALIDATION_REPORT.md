@@ -6,7 +6,7 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 
 ## 1. Tests
 
-396 tests, 0 failures, 0 errors, 0 skipped, 497 s, run at 2026-11-27T15:06:52.821734+05:30 (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -m "not browser" -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast and slow suites; the Playwright browser suite (`-m browser`) runs separately and is not counted in this file).
+398 tests, 0 failures, 0 errors, 0 skipped, 45 s, run at 2026-11-27T16:37:18.685541+05:30 (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -m "not browser" -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast and slow suites; the Playwright browser suite (`-m browser`) runs separately and is not counted in this file).
 
 | Area | Test modules | Tests | Failed | Skipped |
 |---|---|---|---|---|
@@ -16,11 +16,11 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 | Optimiser / Readiness Frontier (guardrails, levers) | `test_optim_frontier`, `test_optim_greedy`, `test_optim_levers` | 32 | 0 | 0 |
 | AOG Response Lab and Planner Action Centre | `test_aog_actions`, `test_aog_incidents`, `test_aog_options` | 34 | 0 | 0 |
 | Freeze and holdout discipline | `test_freeze` | 3 | 0 | 0 |
-| Site data export, reconciliation, rendered docs | `test_reconciliation`, `test_site_data`, `test_docs_rendered` | 73 | 0 | 0 |
+| Site data export, reconciliation, rendered docs | `test_reconciliation`, `test_site_data`, `test_docs_rendered` | 75 | 0 | 0 |
 | SQL, workbook, notebooks | `test_sql`, `test_workbook`, `test_notebooks` | 64 | 0 | 0 |
 | Public-surface word gate and privacy | `test_public_scan` | 4 | 0 | 0 |
 | Web app screens (browser) | not in this file (run separately) | — | — | — |
-| **Total** | 32 modules | **396** | **0** | **0** |
+| **Total** | 32 modules | **398** | **0** | **0** |
 
 No test failed.
 
@@ -227,7 +227,7 @@ AOG reconstruction: 2,564 of 2,564 history material AOG hours reconstructed requ
 - The downtime clock starts when the part is removed (for no-go items; for deferrable items, when the rectification window runs out), not at the next scheduled departure, and overnight and other non-flying hours count in full. Fitting and release-to-service time is included. A departure-based count would be lower for every plan.
 - Full list: [LIMITATIONS.md](../LIMITATIONS.md).
 
-**Donor downtime.** Hours that donor aircraft (aircraft that gave up a part to another) spend waiting for a replacement are not reconstructible from current logs for the frozen test runs, so no per-plan figure is given. What the logs do allow (post-plan, exploratory): parts borrowed from another of our aircraft per year in the test runs, Simple Rulebook (naive reference) `P0` 33.2 [28.5–37.9]; Each Airport for Itself (simplified local comparator) `P1` 31.2 [27.1–35.4]; Network Plan `P2` 22.4 [18.4–26.6]; for the Network Plan + Extra Spares `I125` this is not reconstructible either. For scale only, in the historical record of the Simple Rulebook (naive reference) `P0` (history weeks 0–103, one simulated history, not the test runs), donor aircraft were held about 5,285 h a year, beside 1,282 h a year of counted waiting-for-part downtime in that same history. Gross donor hours are an upper bound: a donor may already be in maintenance or not scheduled to fly.
+**Donor downtime.** Hours that donor aircraft (aircraft that gave up a part to another) spend waiting for a replacement are not reconstructible from current logs for the frozen test runs, so no per-plan figure is given. What the logs do allow (post-plan, exploratory): parts borrowed from another of our aircraft per year in the test runs, Simple Rulebook (naive reference) `P0` 33.2 [28.5–37.9]; Each Airport for Itself (simplified local comparator) `P1` 31.3 [27.1–35.4]; Network Plan `P2` 22.5 [18.4–26.6]; for the Network Plan + Extra Spares `I125` this is not reconstructible either. For scale only, in the historical record of the Simple Rulebook (naive reference) `P0` (history weeks 0–103, one simulated history, not the test runs), donor aircraft were held about 5,285 h a year, beside 1,282 h a year of counted waiting-for-part downtime in that same history. Gross donor hours are an upper bound: a donor may already be in maintenance or not scheduled to fly.
 
 ---
 

@@ -1660,6 +1660,30 @@ def parse_test_results(path: Path) -> dict:
             "tail": tail}
 
 
+def parse_junit(path: Path) -> dict:
+    """v2.2: test counts from reports/junit.xml (the same file README and VALIDATION_REPORT read). No test file names."""
+    import xml.etree.ElementTree as ET
+    if not path.exists():
+        return {"status": "not run", "tests_passed": None, "tests_total": None, "reason": f"{rel(path)} not found"}
+    root = ET.parse(path).getroot()
+    suite = next(root.iter("testsuite")).attrib
+    total, failed, errors, skipped = (int(suite.get(k, 0)) for k in ("tests", "failures", "errors", "skipped"))
+    mods = {tc.get("classname", "").split(".")[-1] for tc in root.iter("testcase")}
+    browser = any(m.startswith("test_site_") and m != "test_site_data" for m in mods)
+    scope = ("full suite: fast, slow and browser tests" if browser else
+             "non-browser suite: fast and slow tests; the Playwright browser suite runs separately")
+    passed = total - failed - errors - skipped
+    ts = dt.datetime.fromisoformat(suite["timestamp"])
+    ran_at = (ts.astimezone(dt.timezone.utc) if ts.tzinfo else ts.replace(tzinfo=dt.timezone.utc)).replace(microsecond=0)
+    return {"status": "pass" if failed == 0 and errors == 0 and passed > 0 else "fail",
+            "tests_passed": passed, "tests_failed": failed, "tests_errors": errors, "tests_skipped": skipped,
+            "tests_deselected": 0, "tests_total": total - skipped, "scope": scope,
+            "summary_line": f"{passed} of {total - skipped} tests passed, {failed + errors} failed ({scope})",
+            "command": ("GNM_RELEASE=1 pytest -p no:cacheprovider -q --junitxml=reports/junit.xml" if browser else
+                        'GNM_RELEASE=1 pytest -m "not browser" -p no:cacheprovider -q --junitxml=reports/junit.xml'),
+            "ran_at": ran_at.isoformat(), "tail": []}
+
+
 def _author_wording(t: str) -> str:
     """Site wording for decision/assumption text: the author made these choices before calibration (wave C)."""
     t = re.sub(r"(?:chosen by )?the user's fewest-changes rule", "the fewest-changes rule chosen before calibration", t)
@@ -1739,7 +1763,7 @@ def build_method() -> dict:
     assumptions = [{"key": r["key"], "value": str(r["value"]), "provenance": r["provenance"] or "ASSUMED",
                     "rationale": None if (r["rationale"] is None or (isinstance(r["rationale"], float) and math.isnan(r["rationale"]))) else str(r["rationale"])}
                    for r in ar.to_dict(orient="records")]
-    val = parse_test_results(ROOT / "reports" / "test_results.txt")
+    val = parse_junit(ROOT / "reports" / "junit.xml")
     cal = jload("outputs/calibration/p0_history_summary.json")
     checks = []
     hc = cal["variants"]["central"]["history"]
@@ -1777,7 +1801,9 @@ def build_method() -> dict:
                    "status": "pass" if aog["reconciles"] else "fail", "group": "reconciliation"})
     checks.append({"name": f"Frontier option chosen by the pre-stated rule is {recommended_id()} (selection seeds); P2 is the core recommendation",
                    "status": "pass", "group": "selection"})
-    checks.append({"name": "Unit/integration tests (pytest)", "status": val["status"], "group": "tests"})
+    checks.append({"name": (f"Automated tests: {val['tests_passed']} of {val['tests_total']} passed"
+                             if val.get("tests_total") else "Automated tests: not run"),
+                   "status": val["status"], "group": "tests", "detail": val.get("scope")})
     lic_rows = []
     lic_kind = "runtime"
     for line in (ROOT / "THIRD_PARTY_LICENSES.md").read_text().splitlines():
@@ -1821,11 +1847,11 @@ def build_method() -> dict:
                 a_[k_] = _author_wording(a_[k_])
     return {
         "meta": meta("DERIVED", ["data/source_manifest.csv", "config/assumptions.yaml (gnm.config.assumption_register)",
-                                 "reports/test_results.txt", "outputs/calibration/p0_history_summary.json",
+                                 "reports/junit.xml", "outputs/calibration/p0_history_summary.json",
                                  "outputs/freeze/manifest.json", "outputs/freeze/holdout_log.json",
                                  "outputs/aog_lab/summary.json", "THIRD_PARTY_LICENSES.md", "LIMITATIONS.md", "docs/DECISIONS.md"],
-                     "Method & provenance. validation parses reports/test_results.txt (pytest output written by the lead / "
-                     "exporter run); 'not run' if absent. Calibration targets are ASSUMED bands; achieved values are the "
+                     "Method & provenance. validation reads reports/junit.xml (the same test run README and "
+                     "VALIDATION_REPORT report); 'not run' if absent. Calibration targets are ASSUMED bands; achieved values are the "
                      "central P0 history. Freeze hashes from outputs/freeze/manifest.json."),
         "source_manifest": src,
         "assumptions": assumptions,
@@ -1961,7 +1987,7 @@ def build_story(data: dict) -> dict:
     scope_txt = f"In this simulation, across {n_pn} modelled part numbers"
     body5 = (f"{scope_txt}: at {st}, holdout material AOG falls from {fmt_int(net[('P0', st)]['aog_hours'])} h/yr (Simple "
              f"Rulebook) to {fmt_int(net[('P2', st)]['aog_hours'])} (Network Plan, {u_p2} rotables here). "
-             f"{displayname(rid)} takes network AOG to {fmt_int(pts[rid]['aog_hours'])} h/yr.")
+             f"Network-wide, the Network Plan's total is {fmt_int(pts['P2']['aog_hours'])} h/yr.")
     fo = data["kpis"]["headline"]["frontier_option"]
     shifts = "; ".join(f"{x['recommended']} at {x['setting'].replace('x', '×')} the hourly rate" for x in fo["rule_shifts"] if x["factor"] == "aog_penalty")
     body6 = (f"If you invest an additional {fmt_aed(fo['extra_capital_aed']['mean'])}, the pre-stated rule stops at {rid}: a further "
@@ -1970,11 +1996,12 @@ def build_story(data: dict) -> dict:
              f"If you invest an additional {fmt_aed(fo['extra_capital_aed']['mean'])}, the rule stops at {rid}.")
     body7 = (f"{inc['id']}: {inc['tail']} (fictional) grounded at {st} for {fmt_int(inc['aog_hours'])} h waiting for a {noun}. "
              f"Ranked on what the desk knew then, the top option was: {inc['decision']['recommended_label']}.")
-    body8 = f"The action centre raises {len(acts)} exceptions for W{data['actions']['as_of_week']}, {nurg} urgent."
+    body8 = (f"On today's starting-point stock (Simple Rulebook): {len(acts)} exceptions for "
+             f"W{data['actions']['as_of_week']}, {nurg} urgent.")
     if act and act["type"] == "OUTSTATION_DEPLETION":
         e = act["evidence"]
-        body8 += (f" At {st}, {pn} has {e['on_hand']} of {e['target']} on hand, with {e['d0_requests_lookback']} D0 requests "
-                  f"and {fmt_int(e['aog_hours_lookback'])} AOG h there in the last {e['lookback_weeks']} weeks (W{data['actions']['as_of_week'] + 1 - e['lookback_weeks']}–W{data['actions']['as_of_week']}).")
+        body8 += (f" At {st}, {pn} has {e['on_hand']} of {e['target']} on hand: {e['d0_requests_lookback']} D0 requests "
+                  f"and {fmt_int(e['aog_hours_lookback'])} AOG h there in W{data['actions']['as_of_week'] + 1 - e['lookback_weeks']}–W{data['actions']['as_of_week']}.")
     elif act:
         body8 += f" Including: {act['summary']}."
     if act and act.get("recommended_action"):
@@ -2010,7 +2037,7 @@ def build_story(data: dict) -> dict:
         (f"#/parts?ata={ata}&pn={pn}", "aircraft", '[data-story="aircraft"]', "2 · Diagnose the shortage", body2),
         (f"#/rotables?pn={pn}", "rotable-float-calc", '[data-story="rotable-float-calc"] .fc-results', "3 · The repair pipeline", body4),
         (f"#/network?station={st}", f"network-{st.lower()}", f'[data-story="network-{st.lower()}"]', "4 · Compare the trade-offs", body5),
-        ("#/actions", "action-inbox", (f'[data-story="action-inbox"] [data-id="{act["exception_id"]}"]' if act else '[data-story="action-inbox"]'),
+        (f"#/actions?station={st}", "action-inbox", (f'[data-story="action-inbox"] [data-id="{act["exception_id"]}"]' if act else '[data-story="action-inbox"]'),
          "5 · Recommend the action", body8),
         ("#/capital", "frontier-chart", '[data-story="frontier-chart"]', "6 · Business value on the Readiness Frontier", body_value),
     ]
@@ -2020,9 +2047,17 @@ def build_story(data: dict) -> dict:
     mobile = {
         "network-" + st.lower(): f'[data-story="network-{st.lower()}"] .np-pol',
         "frontier-chart": '[data-story="frontier-chart"] .chart-body',
-        "rotable-float-calc": '[data-story="rotable-float-calc"] .fc-station',
+        "rotable-float-calc": '[data-story="rotable-float-calc"] .fc-outs',   # v2.2: the KPI tiles (> 99.9 % on the shelf) the card cites
         "aog-incident-ps1": tl,
         "action-inbox": (f'[data-story="action-inbox"] [data-id="{act["exception_id"]}"]' if act else None),
+    }
+    # v2.2: smaller targets, in order, for when the step's target is taller than the free band of the viewport (the tour
+    # spotlights the first one that fits whole, so the light never runs past the screen edge)
+    fit = {
+        "aircraft": ['[data-story="aircraft"] svg'],
+        "rotable-float-calc": ['[data-story="rotable-float-calc"] .fc-outs', '[data-story="rotable-float-calc"] .fc-out.is-key'],
+        "network-" + st.lower(): [f'[data-story="network-{st.lower()}"] .np-pol'],
+        "frontier-chart": ['[data-story="frontier-chart"] .chart-body'],
     }
     # v2.1: Simple-mode (plain English) titles and bodies; every number is read from the same data as the expert text
     def city(code: str) -> str:
@@ -2035,18 +2070,18 @@ def build_story(data: dict) -> dict:
     s_problem = (f"A plane is stuck at {c_st}. A part it needs before its next flight broke, and no spare was kept there. " + gap_txt)
     s_diag = (f"The {sys_['name'].lower()} group is the biggest risk, and one part leads it. "
               f"With {'no spare' if p0_st == 0 else f'{p0_st} spares'} at {c_st}, it kept planes grounded for "
-              f"{fmt_int(part['aog_h_52w'])} hours across all airports in the last year.")
+              f"{fmt_int(part['aog_h_52w'])} hours across all airports in the last year of history.")
     s_pipe = (f"Broken parts spend about {fl['pipeline_days']:.0f} days in repair, so the airline needs spares to cover them. "
               f"The Network Plan keeps {p2_s} in total, so one is almost always on the shelf."
               + (f" At {c_st} it keeps {p2_st}, refilled from {c_hub} in about {rs_d:.0f} days." if rs_d is not None else ""))
     s_trade = (f"In this simulation, planes at {c_st} were grounded {fmt_int(net[('P0', st)]['aog_hours'])} hours a year under the Simple Rulebook, "
                f"and {fmt_int(net[('P2', st)]['aog_hours'])} under the Network Plan. "
-               f"Across all {n_pn} modelled part numbers, the Network Plan + Extra Spares brings the network total to {fmt_int(pts[rid]['aog_hours'])} hours a year.")
-    s_act = f"The planner's list has {len(acts)} alerts this week, {nurg} of them urgent."
+               f"Across all {n_pn} modelled part numbers, the Network Plan brings the network total to {fmt_int(pts['P2']['aog_hours'])} hours a year.")
+    s_act = f"The planner's list shows today's starting-point stock (Simple Rulebook): {len(acts)} alerts this week, {nurg} of them urgent."
     if act and act["type"] == "OUTSTATION_DEPLETION":
         e = act["evidence"]
         need = int(e["target"]) - int(e["on_hand"])
-        s_act += (f" {c_st} has {e['on_hand']} of the {e['target']} spares it should hold for this part. "
+        s_act += (f" {c_st} has {e['on_hand']} of the {e['target']} spares the Network Plan puts there for this part. "
                   f"The advice is to send {need} there.")
     rm = core.get("remix") or {}
     s_value = (f"{scope_txt}, the Network Plan cuts grounded time by {fmt_int(core['aog_reduction']['mean'])} hours a year. "
@@ -2064,9 +2099,9 @@ def build_story(data: dict) -> dict:
                      "Story-mode steps; bodies are templated at export time from the exported numbers. Each selector starts "
                      "with the data-story attribute the screen renders (story_id), optionally narrowed to a child element so "
                      "the step card does not cover its subject: " + ", ".join(ids) + ". mobile_selector (or null) is the narrower "
-                     "target used at <= 480 px (bottom-sheet layout); it also starts with the story_id hook. title_simple / body_simple are the Simple-mode (plain English) text, computed from the same numbers; title / body are the Expert text."),
+                     "target used at <= 480 px (bottom-sheet layout); it also starts with the story_id hook. fit_selectors are smaller fallback targets, in order, used when the target is taller than the free part of the viewport. title_simple / body_simple are the Simple-mode (plain English) text, computed from the same numbers; title / body are the Expert text."),
         "selector_ids": ids,
-        "steps": [{"route": r, "selector": sel, "mobile_selector": mobile.get(sid), "story_id": sid, "title": t, "body": b,
+        "steps": [{"route": r, "selector": sel, "mobile_selector": mobile.get(sid), "fit_selectors": fit.get(sid, []), "story_id": sid, "title": t, "body": b,
                    "title_simple": ts, "body_simple": bs, "provenance": "DERIVED"}
                   for (r, sid, sel, t, b), (ts, bs) in zip(steps, simple)],
     }

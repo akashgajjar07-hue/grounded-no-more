@@ -10,9 +10,9 @@ Result values are computed from `outputs/` and `docs/data/` by `scripts/render_d
 
 | | |
 |---|---|
-| Project | GROUNDED NO MORE, an independent educational portfolio project |
+| Project | GROUNDED NO MORE, an independent simulation project |
 | Author | Akash Gajjar |
-| Version | 0.1.0 (data export at git 3ddc918) |
+| Version | v2.2 (Python package 0.1.0; data export at git 017788c) |
 | Data | Fully synthetic airline, Falcon Hub Airways (fictional). Station coordinates REAL (OurAirports). |
 | Status | Demonstration. Not verified against any operator's data. |
 | Scope of headline numbers | across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part |

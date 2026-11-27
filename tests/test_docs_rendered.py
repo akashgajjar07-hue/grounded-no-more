@@ -250,7 +250,8 @@ def test_readme_opening_plain_sections():
     assert "How to read these numbers: simulated downtime of the aircraft waiting for the part" in opening
     assert "Likely ranges reflect simulation randomness only" in opening
     assert "Faster repair can beat buying spares" in opening
-    assert "Relevant to Abu Dhabi hub carriers" in _read("README.md")
+    # v2.2 (review #3): no employer/city targeting line in the README
+    assert "Relevant to Abu Dhabi hub carriers" not in _read("README.md")
 
 
 def _a5() -> str:
