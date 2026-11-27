@@ -1958,7 +1958,7 @@ def build_story(data: dict) -> dict:
                  f"W52–W103, {fmt_int(part['aog_h_52w_max_station'])} h of them at {st}.")
     else:
         body2 = (f"{lead} With {int(st_units.P0)} units at {st} under the Simple Rulebook, it caused {fmt_int(part['aog_h_52w'])} AOG h "
-                 "across all stations in W52–W103.")
+                 "in the last 52 weeks (W52–W103), all stations.")
 
     body3 = (f"Its weekly demand is {part['demand_class']} (ADI {part['adi']:.2f} weeks, CV² {part['cv2']:.2f} on training "
              "weeks W0–W77).")
@@ -1996,16 +1996,18 @@ def build_story(data: dict) -> dict:
              f"If you invest an additional {fmt_aed(fo['extra_capital_aed']['mean'])}, the rule stops at {rid}.")
     body7 = (f"{inc['id']}: {inc['tail']} (fictional) grounded at {st} for {fmt_int(inc['aog_hours'])} h waiting for a {noun}. "
              f"Ranked on what the desk knew then, the top option was: {inc['decision']['recommended_label']}.")
-    body8 = (f"On today's starting-point stock (Simple Rulebook): {len(acts)} exceptions for "
+    body8 = (f"Starting-point stock (Simple Rulebook): {len(acts)} exceptions for "
              f"W{data['actions']['as_of_week']}, {nurg} urgent.")
     if act and act["type"] == "OUTSTATION_DEPLETION":
         e = act["evidence"]
-        body8 += (f" At {st}, {pn} has {e['on_hand']} of {e['target']} on hand: {e['d0_requests_lookback']} D0 requests "
-                  f"and {fmt_int(e['aog_hours_lookback'])} AOG h there in W{data['actions']['as_of_week'] + 1 - e['lookback_weeks']}–W{data['actions']['as_of_week']}.")
+        body8 += (f" {st} has {e['on_hand']} of {e['target']} {pn} on hand ({e['d0_requests_lookback']} D0 requests, "
+                  f"{fmt_int(e['aog_hours_lookback'])} AOG h in W{data['actions']['as_of_week'] + 1 - e['lookback_weeks']}–W{data['actions']['as_of_week']}).")
     elif act:
         body8 += f" Including: {act['summary']}."
     if act and act.get("recommended_action"):
-        _ra = act["recommended_action"].split(";")[0].strip()   # v2.2 card budget: the action itself, not its sourcing note
+        # v2.2: the action as the action centre states it, sourcing note included (AUH may have none serviceable);
+        # the "(station target a -> b)" aside is dropped first to fit the card
+        _ra = re.sub(r"\s*\(station target [^)]*\)", "", act["recommended_action"]).strip()
         if len(body8) + len(_ra) + 10 <= STORY_BODY_MAX:
             body8 += f" Action: {_ra}."
 
@@ -2070,7 +2072,7 @@ def build_story(data: dict) -> dict:
     s_problem = (f"A plane is stuck at {c_st}. A part it needs before its next flight broke, and no spare was kept there. " + gap_txt)
     s_diag = (f"The {sys_['name'].lower()} group is the biggest risk, and one part leads it. "
               f"With {'no spare' if p0_st == 0 else f'{p0_st} spares'} at {c_st}, it kept planes grounded for "
-              f"{fmt_int(part['aog_h_52w'])} hours across all airports in the last year of history.")
+              f"{fmt_int(part['aog_h_52w'])} hours in the last 52 weeks, all airports.")
     s_pipe = (f"Broken parts spend about {fl['pipeline_days']:.0f} days in repair, so the airline needs spares to cover them. "
               f"The Network Plan keeps {p2_s} in total, so one is almost always on the shelf."
               + (f" At {c_st} it keeps {p2_st}, refilled from {c_hub} in about {rs_d:.0f} days." if rs_d is not None else ""))
@@ -2081,8 +2083,10 @@ def build_story(data: dict) -> dict:
     if act and act["type"] == "OUTSTATION_DEPLETION":
         e = act["evidence"]
         need = int(e["target"]) - int(e["on_hand"])
-        s_act += (f" {c_st} has {e['on_hand']} of the {e['target']} spares the Network Plan puts there for this part. "
-                  f"The advice is to send {need} there.")
+        hub_none = "none serviceable" in (act.get("recommended_action") or "")
+        s_act += (f" {c_st} has {e['on_hand']} of the {e['target']} spares the Network Plan puts there. "
+                  + (f"Get {need} for {st} by repair or exchange ({act.get('source') or 'AUH'} has none in stock)." if hub_none
+                     else f"The advice is to send {need} there."))
     rm = core.get("remix") or {}
     s_value = (f"{scope_txt}, the Network Plan cuts grounded time by {fmt_int(core['aog_reduction']['mean'])} hours a year. "
                + (f"It buys {rm['buy_units']} repairable spares (about {aedm(rm['buy_aed'])}) and removes {rm['shed_units']} (about {aedm(rm['shed_aed'])}), "

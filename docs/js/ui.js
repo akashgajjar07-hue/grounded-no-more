@@ -696,10 +696,11 @@ try { document.addEventListener('click', (e) => { if (e.target?.closest?.('.nav-
  * Tries right, left, below and above (then the four corners), each clamped to a 16 px margin, and returns the
  * candidate with the least overlap with the target (inflated by 16 px clearance); ties keep that order.
  * `top` is the smallest allowed card top (story mode passes the sticky top-bar height + 16 so the card never sits under
- * the bar). `only` (optional) restricts the candidates to one side (story mode keeps a step's side once chosen).
+ * the bar). `only` (optional) restricts the candidates to one side (story mode keeps a step's side once chosen);
+ * `avoid` (optional) lists rects (e.g. headings) to keep clear of when the target overlap ties.
  * Exported for tests and for any other anchored popover. → {left, top, side, overlap}
  */
-export function storyCardPosition(r, { cw, ch, vw, vh, gap = 24, margin = 16, clearance = 16, top: minTop = margin, only = null }) {
+export function storyCardPosition(r, { cw, ch, vw, vh, gap = 24, margin = 16, clearance = 16, top: minTop = margin, only = null, avoid = [] }) {
   const clampX = (x) => Math.max(margin, Math.min(x, vw - cw - margin));
   const clampY = (y) => Math.max(minTop, Math.min(y, vh - ch - margin));
   let cands = [
@@ -719,7 +720,10 @@ export function storyCardPosition(r, { cw, ch, vw, vh, gap = 24, margin = 16, cl
     const ox = Math.max(0, Math.min(c.left + cw, t.r) - Math.max(c.left, t.l));
     const oy = Math.max(0, Math.min(c.top + ch, t.b) - Math.max(c.top, t.t));
     const overlap = ox * oy;
-    if (!best || overlap < best.overlap - 1 || (Math.abs(overlap - best.overlap) <= 1 && i < best.i)) best = { ...c, overlap, i };
+    // secondary: rects the card should rather not cover (headings); never traded against covering the target
+    const soft = avoid.reduce((sum, a) => sum + Math.max(0, Math.min(c.left + cw, a.right) - Math.max(c.left, a.left)) * Math.max(0, Math.min(c.top + ch, a.bottom) - Math.max(c.top, a.top)), 0);
+    const better = !best || overlap < best.overlap - 1 || (Math.abs(overlap - best.overlap) <= 1 && (soft < best.soft - 1 || (Math.abs(soft - best.soft) <= 1 && i < best.i)));
+    if (better) best = { ...c, overlap, soft, i };
   });
   return best;
 }
@@ -739,29 +743,35 @@ async function prefetchRoute(route) {
 }
 
 /**
- * v2.2 tour engine: one calm rhythm for every step, same page or not.
- *   out (MOTION.fast 150 ms: card + spotlight + dim fade together) → move: navigate with a page cross-fade (View
- *   Transitions where supported: the old page is held as a still frame until the new one is fully ready, then a
- *   250 ms cross-fade; elsewhere #view fades out and in) and/or an instant scroll → measure ONCE → spotlight + dim in
- *   (MOTION.base 250 ms) → card in (200 ms) at its final place. Nothing glides; each element moves at most once.
- *   "Ready" = the route has rendered, the target exists with a real, stable size (no skeleton), its charts have drawn,
- *   stylesheets and fonts are loaded. Past 300 ms of waiting a small "Loading next step…" pill shows. While the tour is
- *   open html.tour-active makes lib/motion.js instant (no chart draw-ins or count-ups replay behind the card) and any CSS
- *   entry animation in #view is finished before the reveal.
- *  - The card has a fixed size per breakpoint (no height animation); its side is chosen once per step and it never
- *    covers the spotlit area. ≤ 480 px: a fixed-height bottom sheet; crossfades only.
+ * v2.2 tour engine (round 2): the dim stays down for the whole tour and the page changes UNDER it.
+ *   Step change: the card leaves (MOTION.fast 150 ms: a fade; on phones the opaque sheet slides down) while #view fades
+ *   out (150 ms) → navigate / scroll while the content is invisible (the sidebar, top bar and dim never change) → wait
+ *   until the step is ready → measure ONCE → #view fades back in with a 6 px rise (220 ms) while the ONE spotlight glides
+ *   from the old target to the new one (300 ms, transform only) → the card comes in (200 ms fade; phones: the sheet slides
+ *   up, opaque from its first frame) at its final place. Card content (text, Next/Finish, Back) changes only while the
+ *   card is hidden. About 0.7–0.8 s per step when the next page is prefetched.
+ *   "Ready" = the route has rendered (navigate() + window.__gnmRendered()), the target exists with a real, stable size (no
+ *   skeleton), its charts have drawn, stylesheets and fonts are loaded. Past 300 ms a small "Loading next step…" pill
+ *   shows. While the tour is open html.tour-active makes lib/motion.js instant (no chart draw-ins or count-ups replay)
+ *   and any CSS entry animation in #view is finished before the reveal.
+ *  - Framing: the target's top lands ~96 px (phones ~48 px) below the top bar so its heading shows; when the target is
+ *    taller than the free band (below the bar, above the viewport edge or the sheet) the first step.fit_selectors
+ *    element that fits is lit instead, so the spotlight always sits fully inside the band.
+ *  - The card is a fixed width with its height fitted to the step (it never animates while visible); its side is chosen
+ *    once per step, it never covers the spotlit area and it avoids covering headings. ≤ 480 px: a bottom sheet fitted to
+ *    its text (a 208 px peek when a full sheet would cover the target).
  *  - Text: Simple mode shows step.title_simple / step.body_simple, Expert mode step.title / step.body; a mode change
  *    while the tour is open re-frames the (re-rendered) target with the same rhythm.
- *  - Play auto-advances after MOTION.tourStep (7 s of reading time once the step is shown; with the ~1.1 s transition a step lasts ~8 s; opts.stepMs or window.__gnmTourStepMs override for
- *    tests). One rAF loop drives the timer AND the progress fill (transform: scaleX). The clock only runs once the step
- *    is shown. Pause freezes both. Next/Back/Esc work mid-transition (the newer request wins; nothing stacks).
- *  - prefers-reduced-motion: instant step changes (no fades, no page cross-fade); the tour still auto-advances.
- *  - While open, window.__gnmStory = api (tests): api.play(), api.pause(), api.go(n), api.state() →
- *    {index, playing, elapsed, stepMs, ready, loops, timers, gliding, phase, side}.
+ *  - Play auto-advances after MOTION.tourStep (7 s of reading time once the step is shown; ~8 s per step in all;
+ *    opts.stepMs or window.__gnmTourStepMs override for tests). One rAF loop drives the timer AND the progress fill
+ *    (transform: scaleX). Pause freezes both. Next/Back/Esc work mid-transition (the newer request wins; nothing stacks).
+ *  - prefers-reduced-motion: instant step changes (no fades, glides or slides); the tour still auto-advances.
+ *  - While open, window.__gnmStory = api (tests): api.play(), api.pause(), api.go(n), api.target(), api.state() →
+ *    {index, playing, elapsed, stepMs, ready, loops, timers, gliding, phase, side, held}.
  */
 export function storyMode({ steps, navigate, onExit, stepMs }) {
   const STEP_MS = () => +(stepMs || window.__gnmTourStepMs || MOTION.tourStep);
-  const T_OUT = MOTION.fast, T_SPOT = MOTION.base, T_CARD = 200, SLOW_MS = 300;
+  const T_OUT = MOTION.fast, T_FREEZE = 140, T_VIEW_IN = 220, T_GLIDE = 300, T_CARD = 200, T_SHEET = 260, SLOW_MS = 300, RISE = 6;
   let i = 0;
   let seq = 0;          // transition token: a newer go() / exit() makes every older await bail out
   let target = null;
@@ -838,17 +848,88 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
     trapFocus(cardEl, e);
   };
 
-  // ---------------------------------------------------------------- fades (opacity only; the newest call wins)
+  // ---------------------------------------------------------------- motion primitives (opacity / transform only)
   const anims = new Set();
+  const track = (a) => { anims.add(a); return a.finished.then(() => { anims.delete(a); }, () => { anims.delete(a); }); };
+  const smooth = () => !motionReduced();
   function fade(el, to, ms, easing = MOTION.ease.standard) {
     const from = +getComputedStyle(el).opacity;
     el.getAnimations().forEach((a) => a.cancel());
     el.style.opacity = String(to);
     el.classList.toggle('is-off', to === 0);
-    if (motionReduced() || !ms || Math.abs(from - to) < 0.01 || typeof el.animate !== 'function') return Promise.resolve();
-    const a = el.animate([{ opacity: from }, { opacity: to }], { duration: ms * Math.min(1, Math.abs(to - from) + 0.001), easing });
-    anims.add(a);
-    return a.finished.then(() => { anims.delete(a); }, () => { anims.delete(a); });
+    if (!smooth() || !ms || Math.abs(from - to) < 0.01 || typeof el.animate !== 'function') return Promise.resolve();
+    return track(el.animate([{ opacity: from }, { opacity: to }], { duration: ms * Math.min(1, Math.abs(to - from) + 0.001), easing }));
+  }
+  const isSheet = () => innerWidth <= 480;
+  /** The card leaves / arrives: a fade on desktop; the opaque phone sheet slides (never see-through). */
+  function cardOut() {
+    if (!isSheet() || cardEl.classList.contains('is-off') || !smooth() || typeof cardEl.animate !== 'function') return fade(cardEl, 0, T_OUT, MOTION.ease.exit);
+    cardEl.getAnimations().forEach((a) => a.cancel());
+    const a = cardEl.animate([{ transform: 'none' }, { transform: 'translateY(calc(100% + 24px))' }], { duration: T_OUT, easing: MOTION.ease.exit, fill: 'forwards' });
+    return track(a).then(() => { if (a.playState === 'finished') { cardEl.style.opacity = '0'; cardEl.classList.add('is-off'); a.cancel(); } });
+  }
+  function cardIn() {
+    if (!isSheet() || !smooth() || typeof cardEl.animate !== 'function') return fade(cardEl, 1, T_CARD, MOTION.ease.enter);
+    cardEl.getAnimations().forEach((a) => a.cancel());
+    cardEl.style.opacity = '1'; cardEl.classList.remove('is-off');
+    return track(cardEl.animate([{ transform: 'translateY(calc(100% + 24px))' }, { transform: 'none' }], { duration: T_SHEET, easing: MOTION.ease.enter }));
+  }
+  // The page change happens under a still copy of the outgoing content: #view is cloned into a fixed layer (same place,
+  // same pixels, animations frozen, inert), the real #view goes transparent behind it, the router renders and the tour
+  // scrolls unseen, then the copy fades out (150 ms) and the new content fades in with a 6 px rise (220 ms). The shell
+  // (sidebar, top bar), the dim and the spotlight never change; the old and new pages are never shown on top of each other.
+  const viewEl = () => document.getElementById('view');
+  let viewHidden = false, freezeEl = null;
+  function viewOut() {
+    const v = viewEl();
+    if (!v || viewHidden) return Promise.resolve();
+    viewHidden = true;
+    const r = v.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) {
+      const c = v.cloneNode(true);
+      c.removeAttribute('id'); c.removeAttribute('tabindex');
+      c.querySelectorAll('[id], [data-story], [data-id]').forEach((e) => { e.removeAttribute('id'); e.removeAttribute('data-story'); e.removeAttribute('data-id'); });
+      c.classList.remove('view-enter');
+      Object.assign(c.style, { top: `${Math.round(r.top)}px`, width: `${r.width}px`, height: `${r.height}px` });
+      // a viewport-sized clipping layer holds the copy (a page-tall fixed layer made WebKit drop tiles: white frames)
+      const wrap = h('div', { class: 'story-freeze', 'aria-hidden': 'true' }, c);
+      wrap.inert = true;
+      Object.assign(wrap.style, { left: `${Math.max(0, r.left)}px`, width: `${r.width}px` });
+      v.after(wrap);
+      freezeEl = wrap;
+    }
+    v.style.opacity = '0';
+    return Promise.resolve();
+  }
+  /** The still copy fades out; resolves part-way (≈ when it is mostly gone) so the new content can start rising. */
+  function freezeOut() {
+    const c = freezeEl;
+    freezeEl = null;
+    if (!c) return Promise.resolve();
+    if (!smooth() || typeof c.animate !== 'function') { c.remove(); return Promise.resolve(); }
+    const a = c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T_FREEZE, easing: MOTION.ease.standard, fill: 'forwards' });
+    track(a).then(() => c.remove());
+    return sleep(50);   // the new content starts rising as the copy passes ~40%: a short, faint overlap (never 50/50 text)
+  }
+  /** The new content comes in: opacity + a 6 px rise (after the still copy has mostly faded: never text over text). */
+  function riseIn() {
+    const v = viewEl();
+    if (!v || !viewHidden) return Promise.resolve();
+    viewHidden = false;
+    v.style.removeProperty('opacity');
+    if (!smooth() || typeof v.animate !== 'function') return Promise.resolve();
+    const a = v.animate([{ opacity: 0, transform: `translateY(${RISE}px)` }, { opacity: 1, transform: 'none' }], { duration: T_VIEW_IN, easing: MOTION.ease.enter });
+    a.id = 'gnm-tour-view';
+    return track(a);
+  }
+  function viewReset() {
+    const v = viewEl();
+    viewHidden = false;
+    freezeEl?.remove(); freezeEl = null;
+    document.querySelectorAll('.story-freeze').forEach((e) => e.remove());
+    if (!v) return;
+    v.style.removeProperty('opacity');
+    v.getAnimations().filter((a) => a.id === 'gnm-tour-view').forEach((a) => a.cancel());
   }
   function showLoading(on) {
     if (on === !loadEl.classList.contains('is-off')) return;
@@ -856,14 +937,10 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
   }
 
   // ---------------------------------------------------------------- geometry
-  const SHEET_MAX = 480; // px viewport width at or below which the card becomes a bottom sheet
-  const isSheet = () => innerWidth <= SHEET_MAX;
-  /** Bottom of the sticky top bar (0 if absent): story targets and the card stay below it. */
   const barBottom = () => { const b = document.querySelector('.topbar'); return b ? Math.max(0, Math.round(b.getBoundingClientRect().bottom)) : 0; };
-  const BAR_GAP = 16;
   const PAD = 8;
   let side = null;      // the card's side for this step (chosen once, when the step is measured)
-  let spotBox = null;
+  let spotBox = null;   // the spot's laid-out box (null = not on a target yet)
   function setPeek(on) {
     cardEl.classList.toggle('is-peek', !!on);
     grab.setAttribute('aria-expanded', String(!on));
@@ -871,69 +948,91 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
   }
   // fixed elements are placed by transform (left/top stay 0): moving them is never a layout shift (CLS)
   const setBox = (el, b) => Object.assign(el.style, { transform: `translate(${Math.round(b.left)}px, ${Math.round(b.top)}px)`, ...(b.width != null ? { width: `${Math.round(b.width)}px`, height: `${Math.round(b.height)}px` } : {}) });
-  /** Height the sheet will have (full or peek) — read from the CSS, no animation. */
-  const sheetH = () => (isSheet() ? cardEl.offsetHeight : 0);
-  /** The free band for the target: below the bar, above the bottom sheet (phones) or the viewport edge. */
+  /** The free band for the spotlight: below the top bar, above the viewport edge (desktop) or the sheet (phones). */
   function band() {
     const bar = barBottom();
-    return isSheet() ? { top: bar + 8, bottom: innerHeight - sheetH() - 8 } : { top: bar + BAR_GAP, bottom: innerHeight - BAR_GAP };
+    if (isSheet()) return { top: bar + 12, bottom: innerHeight - cardEl.offsetHeight - 12, offset: 48 };
+    return { top: bar + 16, bottom: innerHeight - 16, offset: 96 };
   }
-  /** Phones: choose full / peek once per step (peek when the full sheet would cover the target). */
-  function choosePeek(el) {
-    if (!isSheet()) { setPeek(false); return; }
-    if (peekUser != null) { setPeek(peekUser); return; }
-    setPeek(false);
-    const fullBand = band().bottom - band().top;
-    const hgt = el ? el.getBoundingClientRect().height : 0;
-    setPeek(hgt > fullBand);
+  const fits = (el, b = band()) => el.getBoundingClientRect().height + PAD * 2 <= b.bottom - b.top;
+  /**
+   * Choose the element to light: the target, or (when it is taller than the free band) the first fit_selectors element
+   * that fits whole. Phones: a full sheet first, then the peek sheet. → element
+   */
+  function chooseTarget(el, s) {
+    const cands = [el, ...((s.fit_selectors || []).map(query))].filter((x) => targetOk(x));
+    const pickFit = () => cands.find((x) => fits(x));
+    if (!isSheet()) return pickFit() || cands.reduce((a, b) => (b.getBoundingClientRect().height < a.getBoundingClientRect().height ? b : a), el);
+    setPeek(peekUser ?? false);
+    let got = pickFit();
+    if (!got && peekUser == null) { setPeek(true); got = pickFit(); }
+    return got || cands[cands.length - 1] || el;
   }
-  /** Where to scroll so the target's top sits at the top of the free band; null when it is already inside it. */
+  /** Scroll so the target's top sits `offset` px into the free band (less when the target needs the room). */
   function frameY(el) {
     const b = band();
     const r = el.getBoundingClientRect();
-    if (r.top >= b.top && r.bottom <= b.bottom) return null;
+    const room = b.bottom - b.top - r.height - PAD * 2;
+    const T = b.top + PAD + Math.max(0, Math.min(b.offset, room));
+    if (r.top >= T - 4 && r.bottom + PAD <= b.bottom && r.top - PAD >= b.top) return null;
     const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
-    const y = Math.min(max, Math.max(0, Math.round(scrollY + r.top - b.top)));
+    const y = Math.min(max, Math.max(0, Math.round(scrollY + r.top - T)));
     return Math.abs(y - scrollY) < 1 ? null : y;
   }
   const jumpTo = (y) => { if (y != null) window.scrollTo({ top: y, left: 0, behavior: 'instant' }); };
-  /** Lay out the spot and card (no animation) for target rect r; r = null → no spotlight, the card waits centred. */
-  function layout(r) {
+  /** Headings the floating card should rather not cover (page headline, chart headlines). */
+  const headingRects = () => [...document.querySelectorAll('#view h1, #view h2, #view .chart-headline, #view .page-lede')]
+    .map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight);
+  /** Where the spot and card go for target rect r (nothing is applied). r = null → no spotlight, the card centred. */
+  function plan(r) {
     const sheet = isSheet();
-    cardEl.classList.toggle('is-sheet', sheet);
-    if (!sheet) setPeek(false);
     const bar = barBottom();
     const b = band();
     const cw = sheet ? innerWidth : cardEl.offsetWidth || Math.min(360, innerWidth - 32);
-    const ch = cardEl.offsetHeight || 340;
-    if (!r) {
-      spotBox = null;
-      spot.classList.add('is-empty');
-      if (!sheet) setBox(cardEl, { left: (innerWidth - cw) / 2, top: Math.max(bar + BAR_GAP, (innerHeight - ch) / 2) });
-      return;
-    }
-    spot.classList.remove('is-empty');
-    // the spotlit area: the target clipped to the free band (a tall target is lit where it shows)
-    const top0 = Math.max(r.top - PAD, sheet ? b.top - 4 : bar + 4);
-    const bot0 = Math.min(r.bottom + PAD, sheet ? b.bottom + 4 : innerHeight - 4);
-    spotBox = { left: r.left - PAD, top: top0, width: r.width + PAD * 2, height: Math.max(0, bot0 - top0) };
-    setBox(spot, spotBox);
-    if (sheet) { cardEl.style.transform = ''; return; }
-    const vis = { left: spotBox.left, right: spotBox.left + spotBox.width, top: spotBox.top, bottom: spotBox.top + spotBox.height, width: spotBox.width, height: spotBox.height };
-    const pos = storyCardPosition(vis, { cw, ch, vw: innerWidth, vh: innerHeight, top: bar + BAR_GAP, gap: 20, clearance: 4, only: side });
-    side = pos.side;
-    setBox(cardEl, pos);
+    const ch = cardEl.offsetHeight || 260;
+    if (!r) return { spot: null, card: sheet ? null : { left: (innerWidth - cw) / 2, top: Math.max(bar + 16, (innerHeight - ch) / 2) } };
+    const top0 = Math.max(r.top - PAD, b.top - (sheet ? 0 : 8));
+    const bot0 = Math.min(r.bottom + PAD, b.bottom + (sheet ? 0 : 8));
+    const sp = { left: r.left - PAD, top: top0, width: r.width + PAD * 2, height: Math.max(0, bot0 - top0) };
+    if (sheet) return { spot: sp, card: null };
+    const vis = { left: sp.left, right: sp.left + sp.width, top: sp.top, bottom: sp.top + sp.height, width: sp.width, height: sp.height };
+    const pos = storyCardPosition(vis, { cw, ch, vw: innerWidth, vh: innerHeight, top: bar + 16, gap: 20, clearance: 4, only: side, avoid: headingRects() });
+    return { spot: sp, card: pos };
+  }
+  function apply(p) {
+    cardEl.classList.toggle('is-sheet', isSheet());
+    if (p.spot) { spotBox = p.spot; setBox(spot, p.spot); spot.classList.remove('is-empty'); } else { spotBox = null; spot.classList.add('is-empty'); }
+    if (p.card) { side = p.card.side ?? side; setBox(cardEl, p.card); } else if (isSheet()) cardEl.style.transform = '';
+  }
+  /** Move the ONE spotlight to its planned box: a 300 ms glide (translate + scale from where it is now), or a fade-in. */
+  function spotTo(p) {
+    const wasOn = !spot.classList.contains('is-off') && spotBox;
+    const from = wasOn ? spot.getBoundingClientRect() : null;
+    spot.getAnimations().filter((a) => a.id === 'gnm-spot-glide').forEach((a) => a.cancel());
+    apply(p);
+    if (!p.spot) return fade(spot, 0, T_OUT);
+    if (!wasOn || !from || !from.width) return fade(spot, 1, MOTION.base, MOTION.ease.enter);
+    if (!smooth() || typeof spot.animate !== 'function') return Promise.resolve();
+    const to = p.spot;
+    const sx = Math.max(0.3, from.width / Math.max(1, to.width)), sy = Math.max(0.3, from.height / Math.max(1, to.height));
+    if (Math.abs(from.left - to.left) < 1 && Math.abs(from.top - to.top) < 1 && Math.abs(sx - 1) < 0.01 && Math.abs(sy - 1) < 0.01) return Promise.resolve();
+    spot.style.transformOrigin = '0 0';
+    const a = spot.animate([
+      { transform: `translate(${from.left}px, ${from.top}px) scale(${sx}, ${sy})` },
+      { transform: `translate(${Math.round(to.left)}px, ${Math.round(to.top)}px)` },
+    ], { duration: T_GLIDE, easing: MOTION.ease.standard });
+    a.id = 'gnm-spot-glide';
+    return track(a);
   }
   /** Instant re-layout on resize / the reader's own scroll (steady state only; keeps the step's side). */
   function place() {
-    if (phase !== 'steady') return;
-    if (target && target.isConnected) layout(target.getBoundingClientRect());
+    if (phase !== 'steady' || !target || !target.isConnected) return;
+    apply(plan(target.getBoundingClientRect()));
   }
   let raf = 0;
   const onViewport = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(place); };
 
   // ---------------------------------------------------------------- readiness
-  const viewEl = () => document.getElementById('view');
   function viewReady() {
     const v = viewEl();
     return document.documentElement.dataset.ready === 'true' && (!v || v.style.visibility !== 'hidden')
@@ -957,15 +1056,14 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
     return query(s.selector);
   }
   /**
-   * Wait until the view is ready and the target is real and stable (same box on 3 checks, 40 ms apart), the fonts are
+   * Wait until the view is ready and the target is real and stable (same box on 2 checks, 40 ms apart), the fonts are
    * loaded and no stylesheet is pending. onSlow fires once past 300 ms. Gives up after 8 s (→ the best element or null).
    */
   async function waitTarget(s, my, onSlow) {
     const t0 = performance.now();
     let last = '', stable = 0, slow = false, el = null;
-    const fonts = document.fonts?.ready ? Promise.race([document.fonts.ready, sleep(1500)]).then(() => true) : Promise.resolve(true);
-    let fontsOk = false;
-    fonts.then(() => { fontsOk = true; });
+    let fontsOk = !document.fonts?.ready;
+    if (!fontsOk) Promise.race([document.fonts.ready, sleep(1500)]).then(() => { fontsOk = true; });
     while (my === seq) {
       const waited = performance.now() - t0;
       el = viewReady() ? pick(s, waited) : null;
@@ -973,170 +1071,86 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
         const r = el.getBoundingClientRect();
         const key = [r.left, r.top + scrollY, r.width, r.height].map(Math.round).join();
         if (key === last) stable += 1; else { last = key; stable = 0; }
-        if (stable >= 2 && fontsOk) return el;
+        if (stable >= 1 && fontsOk) return el;
       } else { last = ''; stable = 0; }
       if (!slow && waited > SLOW_MS) { slow = true; onSlow?.(); }
+      // the page could not render (error state) and the target will never come: show the step without a spotlight
+      if (waited > SLOW_MS && viewReady() && !el && viewEl()?.querySelector(':scope > .state--error, :scope > .state')) return null;
       if (waited > 8000) return el && el.isConnected ? el : null;
       await sleep(40);
     }
     return null;
   }
-  /** Finish any CSS entry animation inside #view (card rise, view-in, chart fades): the page is still behind the card. */
+  /** Finish any CSS entry animation inside #view (card rise, view-in, chart fades) before the content is shown. */
   function finishViewAnims() {
     const v = viewEl();
     if (!v || typeof document.getAnimations !== 'function') return;
     for (const a of document.getAnimations()) {
       const t = a.effect?.target;
-      if (!t || a.effect.pseudoElement || !(t === v || v.contains(t))) continue;
+      if (!t || a.effect.pseudoElement || a.id === 'gnm-tour-view' || !(t === v || v.contains(t))) continue;
       if (a.effect.getComputedTiming?.().iterations === Infinity) continue;
       try { a.finish(); } catch { /* not finishable */ }
     }
   }
 
-  // ---------------------------------------------------------------- page cross-fade
-  let vt = null, viewFade = null, holding = false;   // holding: the old page is shown as a still (View Transition paused)
-  const frames = (n) => new Promise((res) => { const f = () => (--n <= 0 ? res() : requestAnimationFrame(f)); requestAnimationFrame(f); });
-  const vtAnims = () => (typeof document.getAnimations === 'function' ? document.getAnimations().filter((a) => String(a.effect?.pseudoElement || '').startsWith('::view-transition')) : []);
-  function dropTransition() {
-    holding = false;
-    unshift(shiftY);
-    if (vt) { try { vt.skipTransition(); } catch { /* done */ } vt = null; }
-    if (viewFade) { viewFade.cancel(); viewFade = null; }
-  }
-  function fadeView(to, ms) {
-    const v = viewEl();
-    if (!v || typeof v.animate !== 'function') return Promise.resolve();
-    const from = viewFade ? +getComputedStyle(v).opacity : 1;
-    viewFade?.cancel();
-    const a = v.animate([{ opacity: from }, { opacity: to }], { duration: ms, easing: to ? MOTION.ease.enter : MOTION.ease.exit, fill: 'forwards' });
-    viewFade = a;
-    return a.finished.then(() => { if (to === 1 && viewFade === a) { a.cancel(); viewFade = null; } }, () => {});
-  }
-  /**
-   * Navigate to `want` behind a held still of the current page (the tour layer is already faded out), wait until the
-   * step is ready, frame the target, then cross-fade (250 ms). → the target element (or null).
-   */
-  async function crossTo(want, s, my) {
-    const smooth = !motionReduced();
-    let held = false, released = false;
-    if (smooth && typeof document.startViewTransition === 'function') {
-      try {
-        const t = document.startViewTransition(() => {});
-        vt = t;
-        t.finished.catch(() => {}); t.updateCallbackDone.catch(() => {});
-        await t.ready;
-        if (my !== seq) return null;
-        if (vt === t) { vtAnims().forEach((a) => a.pause()); held = true; holding = true; }
-        // let the compositor present the held still before the router starts its (main-thread heavy) render
-        await frames(2);
-        if (my !== seq) return null;
-      } catch { vt = null; }
-    }
-    if (smooth && !held) await fadeView(0, T_OUT);
-    if (my !== seq) return null;
-    const release = () => {
-      if (released) return null;
-      released = true;
-      holding = false;
-      if (held && vt) { const t = vt; vtAnims().forEach((a) => a.play()); return t.finished.catch(() => {}).then(() => { if (vt === t) vt = null; }); }
-      return smooth ? fadeView(1, T_SPOT) : null;
-    };
-    phase = 'move';
-    await navigate(want);
-    if (my !== seq) return null;
-    // router hook (app.js): resolves once the route is rendered, revealed and scrolled
-    try { await window.__gnmRendered?.(); } catch { /* older router: navigate() already waited */ }
-    if (my !== seq) return null;
-    // a ?section= step would let the router's ~0.7 s section settle re-scroll: let it finish before the tour frames
-    if (/[?&]section=/.test(want)) { await sleep(750); if (my !== seq) return null; }
-    phase = 'wait';
-    const el = await waitTarget(s, my, () => { release(); showLoading(true); });
-    if (my !== seq) return null;
-    finishViewAnims();
-    let y = null;
-    if (el) { choosePeek(el); y = frameY(el); }
-    if (y != null && holding) {
-      // never scroll during a View Transition (Chromium offsets the held still, WebKit drops it): the page content is
-      // shifted into its framed place with `translate` instead, and swapped for the real scroll once the cross-fade ends
-      shift(y - scrollY);
-      finishViewAnims();
-      await release();
-      unshift(y);
-    } else if (y != null && smooth) {
-      // slow path (the still was already released): fade the page out, jump, fade it back in
-      await (release() || Promise.resolve());
-      if (my !== seq) return null;
-      await fadeView(0, T_OUT);
-      if (my !== seq) return null;
-      jumpTo(y);
-      await fadeView(1, T_SPOT);
-    } else {
-      await (release() || Promise.resolve());
-      jumpTo(y);
-    }
-    if (my !== seq) return null;
-    finishViewAnims();
-    return el;
-  }
-  // content shift used while a View Transition holds the page (transform-free: `translate` never fights entry keyframes)
-  const shifted = () => [viewEl(), document.querySelector('.main > .disclaimer, #footer')].filter(Boolean);
-  let shiftY = null;   // the scroll the shifted content stands for
-  function shift(dy) { shiftY = scrollY + dy; shifted().forEach((e) => { e.style.translate = `0 ${-Math.round(dy)}px`; }); }
-  function unshift(y) {
-    const els = shifted().filter((e) => e.style.translate);
-    shiftY = null;
-    if (!els.length) return;
-    els.forEach((e) => e.style.removeProperty('translate'));
-    if (y != null) jumpTo(y);
-  }
-
   const text = (s, k) => (isSimple() && s[`${k}_simple`]) || s[k] || '';
-  function paintText() {
+  function paintCard() {
     const s = steps[i];
     stepEl.textContent = `STEP ${String(i + 1).padStart(2, '0')} / ${String(steps.length).padStart(2, '0')}`;
     titleEl.textContent = text(s, 'title');
     bodyEl.textContent = text(s, 'body');
+    back.disabled = i === 0;
+    next.textContent = i === steps.length - 1 ? 'Finish' : 'Next';
   }
 
-  /** Go to step n with the one rhythm (out → move → measure once → spotlight in → card in). keepClock: re-frame only. */
+  /** Go to step n (card out + content out → move unseen → measure once → content in + spotlight glide → card in). */
   async function go(n, { keepClock = false } = {}) {
     const my = ++seq;
-    dropTransition();
     i = Math.max(0, Math.min(steps.length - 1, n));
     const s = steps[i];
     if (!keepClock) { peekUser = null; elapsed = 0; lastT = 0; side = null; }
     ready = false;
     paintFill();
-    back.disabled = i === 0;
-    next.textContent = i === steps.length - 1 ? 'Finish' : 'Next';
     root.setAttribute('aria-busy', 'true');
-    // 1) out: card, spotlight and dim together
+    root.classList.add('is-moving');
+    // 1) out: the card, and the page content when the route changes (the dim and spotlight stay)
     phase = 'out';
-    await Promise.all([fade(cardEl, 0, T_OUT, MOTION.ease.exit), fade(spot, 0, T_OUT, MOTION.ease.exit)]);
-    if (my !== seq) return;
-    paintText();   // swapped while hidden: no text reflow on screen
-    // 2) move: another page (cross-fade) or this one (instant scroll)
-    let el = null;
     const cur = location.hash, want = s.route;
-    const differs = want && (cur.split('?')[0] !== want.split('?')[0] || (want.includes('?') && cur !== want));
-    if (differs) el = await crossTo(want, s, my);
-    else {
-      phase = 'wait';
-      el = await waitTarget(s, my, () => showLoading(true));
-      if (my !== seq) return;
-      finishViewAnims();
-      if (el) { choosePeek(el); jumpTo(frameY(el)); }
-    }
+    const differs = !!want && (cur.split('?')[0] !== want.split('?')[0] || (want.includes('?') && cur !== want));
+    await Promise.all([cardOut(), differs ? viewOut() : null]);
     if (my !== seq) return;
-    // 3) measure once, place, then spotlight in → card in
+    paintCard();   // content changes only while the card is hidden
+    // 2) move, unseen
+    if (differs) {
+      phase = 'move';
+      await navigate(want);
+      if (my !== seq) return;
+      try { await window.__gnmRendered?.(); } catch { /* navigate() already waited */ }
+      if (my !== seq) return;
+      // a ?section= step would let the router's ~0.7 s section settle re-scroll: let it finish first
+      if (/[?&]section=/.test(want)) { await sleep(750); if (my !== seq) return; }
+    }
+    phase = 'wait';
+    let el = await waitTarget(s, my, () => showLoading(true));
+    if (my !== seq) return;
+    finishViewAnims();
+    if (el) el = chooseTarget(el, s);
+    const y = el ? frameY(el) : null;
+    if (y != null && !viewHidden) { await viewOut(); if (my !== seq) return; }   // same page: scroll unseen too
+    jumpTo(y);
+    finishViewAnims();
+    // 3) measure once → content in + spotlight glide → card in
     target = el;
     showLoading(false);
-    layout(el ? el.getBoundingClientRect() : null);
+    const p = plan(el ? el.getBoundingClientRect() : null);
     phase = 'in';
-    if (el) { await fade(spot, 1, T_SPOT, MOTION.ease.enter); if (my !== seq) return; }
-    await fade(cardEl, 1, T_CARD, MOTION.ease.enter);
+    const glide = spotTo(p);
+    await freezeOut();
+    if (my !== seq) return;
+    await Promise.all([riseIn(), cardIn(), glide]);
     if (my !== seq) return;
     phase = 'steady';
+    root.classList.remove('is-moving');
     root.removeAttribute('aria-busy');
     if (document.activeElement !== playBtn) next.focus({ preventScroll: true });
     ready = true; lastT = 0; // the clock starts once the step is shown
@@ -1155,8 +1169,8 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
     if (loop) cancelAnimationFrame(loop);
     loop = 0;
     cancelAnimationFrame(raf);
-    dropTransition();
     anims.forEach((a) => a.cancel()); anims.clear();
+    viewReset();
     pending.forEach((id) => clearTimeout(id)); pending.clear();
     document.removeEventListener('keydown', onKey, true); document.removeEventListener('keyup', onKeyUp, true);
     document.removeEventListener('gnm:mode', onMode);
@@ -1179,14 +1193,15 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
       window.__gnmStory = api;
       opener = document.activeElement;
       document.documentElement.classList.add('tour-active');
-      paintText();
+      paintCard();
       cardEl.classList.toggle('is-sheet', isSheet());
       document.body.append(root);
       document.addEventListener('keydown', onKey, true); document.addEventListener('keyup', onKeyUp, true);
       document.addEventListener('gnm:mode', onMode);
       addEventListener('resize', onViewport);
       addEventListener('scroll', onViewport, true);
-      prefetchRoute(steps[0].route);
+      // every step's route module + data, in order (the first one is needed now; the rest load while it plays)
+      steps.reduce((p, st) => p.then(() => prefetchRoute(st.route)), Promise.resolve());
       const autoplay = performance.now() - tourClickAt < 1500;
       tourClickAt = -1e9;   // consumed: a later Story-button open stays paused
       go(0);
@@ -1197,7 +1212,7 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
     go,
     play: () => setPlaying(true),
     pause: () => setPlaying(false),
-    state: () => ({ index: i, playing, elapsed, stepMs: STEP_MS(), ready, loops: loop ? 1 : 0, timers: pending.size, gliding: false, phase, side, held: holding }),
+    state: () => ({ index: i, playing, elapsed, stepMs: STEP_MS(), ready, loops: loop ? 1 : 0, timers: pending.size, gliding: !!spot.getAnimations().find((a) => a.id === 'gnm-spot-glide'), phase, side, held: viewHidden }),
     /** The element the current step spotlights (null while it is being found). */
     target: () => target,
     get index() { return i; },

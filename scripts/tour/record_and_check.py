@@ -53,6 +53,9 @@ REPORTS = ROOT / "reports" / "tour"
 VIDEOS = ROOT / "private" / "tour_videos"
 COMBOS = [("chromium", 1440, 900), ("chromium", 390, 844), ("webkit", 1440, 900), ("webkit", 390, 844)]
 LUM_REL, LUM_ABS = 0.85, 3.0       # a transition frame may not be darker than 85% of the darker steady step, minus 3
+SWING = 0.10                       # ... and between steps (dim kept up) brightness stays within 10% of the two steady steps
+SWING_SWAP = 0.35                  # frames sampled during the ~150 ms content swap inside the spotlight: within 35%
+STEP_CHANGE_MAX = 1100             # ms from the step index changing to the new step being steady (target ~700-800)
 DUMP: Path | None = None
 STD_REL = 0.6                      # ... nor flatter (blank / displaced page) than 60% of the flatter steady step's contrast
 CLS_MAX, FPS_MIN = 0.001, 58.0
@@ -92,6 +95,9 @@ STATE_JS = r"""() => {
     viewBox: vr ? [vr.left, Math.max(vr.top, 0), vr.width, Math.min(vr.bottom, innerHeight) - Math.max(vr.top, 0)].map(Math.round) : null,
     bar: Math.round(document.querySelector('.topbar')?.getBoundingClientRect().bottom || 0),
     textFit: text ? [text.scrollHeight, text.clientHeight] : null, sheet: !!card?.classList.contains('is-sheet'), step: card?.querySelector('.story-step')?.textContent || '',
+    cardText: card ? [card.querySelector('.story-step')?.textContent, card.querySelector('h3')?.textContent, card.querySelector('.btn--primary')?.textContent, card.querySelector('.story-actions .btn--ghost:not(.story-skip):not(.story-play)')?.disabled].join('|') : '',
+    swap: document.getAnimations().some((a) => a.id === 'gnm-tour-view') || [...document.querySelectorAll('.story-freeze')].some((e) => e.getAnimations().length > 0),
+    cardAnim: card ? card.getAnimations().length > 0 : false, spotAnim: spot ? spot.getAnimations().length > 0 : false, vh: innerHeight,
   };
 }"""
 
@@ -189,9 +195,10 @@ def check_a(d: dict, engine: str) -> dict:
     moves, vis_moves = [], []
     for to, a, z in transitions(S):
         win = S[max(0, a - 1): z + 1]
-        pos = [tuple(s["card"][:2]) if s["card"] else None for s in win]
+        still = [s for s in win if not s["cardAnim"]]   # the phone sheet's slide in / out is its entrance, not a move
+        pos = [tuple(s["card"][:2]) if s["card"] else None for s in still]
         changes = sum(1 for p, q in zip(pos, pos[1:]) if p != q)
-        vis = sum(1 for s0, s1 in zip(win, win[1:]) if s0["cardOp"] > 0.01 and s1["cardOp"] > 0.01 and tuple(s0["card"][:2]) != tuple(s1["card"][:2]))
+        vis = sum(1 for s0, s1 in zip(still, still[1:]) if s0["cardOp"] > 0.01 and s1["cardOp"] > 0.01 and tuple(s0["card"][:2]) != tuple(s1["card"][:2]))
         moves.append({"to_step": to + 1, "position_changes": changes, "changes_while_visible": vis})
     steady_vis = 0
     for s0, s1 in zip(S, S[1:]):
@@ -203,7 +210,7 @@ def check_a(d: dict, engine: str) -> dict:
     # c: spotlight on a real target
     bad_spot, cover = [], []
     for s in S:
-        if s["spotOp"] > 0.01:
+        if s["spotOp"] > 0.01 and not s["spotAnim"] and s["phase"] in ("steady", "out"):
             sp, tg = s["spot"], s["target"]
             ok = bool(sp and sp[2] > 8 and sp[3] > 8 and tg and tg[2] > 8 and tg[3] > 8 and s["targetConnected"] and not s["targetSkeleton"])
             if ok and overlap(sp, tg) < 0.5 * sp[2] * sp[3] * 0.5:
@@ -216,6 +223,22 @@ def check_a(d: dict, engine: str) -> dict:
                     cover.append({"t": round(s["t"] - d["t0"]), "index": s["index"], "overlap_px2": round(ov), "card": s["card"], "spot": sp})
     res["c_spotlight_target"] = {"bad_samples": bad_spot[:10], "n_bad": len(bad_spot), "pass": not bad_spot}
     res["c2_card_covers_spot"] = {"bad_samples": cover[:10], "n_bad": len(cover), "pass": not cover}
+    # c4: the spotlight sits fully inside the visible band (below the top bar, above the viewport edge / the sheet)
+    outside = []
+    for s in S:
+        if s["phase"] == "steady" and s["spotOp"] > 0.01 and s["spot"] and not s["spotAnim"]:
+            sp = s["spot"]
+            low = (s["card"][1] if s["sheet"] and s["card"] else s["vh"]) - 1
+            if sp[1] < s["bar"] + 1 or sp[1] + sp[3] > low:
+                outside.append({"index": s["index"], "spot": sp, "bar": s["bar"], "band_bottom": low})
+    res["c4_spot_inside_band"] = {"bad_samples": outside[:10], "n_bad": len(outside), "pass": not outside}
+    # e: the card's content (counter, title, Next/Finish, Back) changes only while the card is hidden
+    swaps = [{"from": a["cardText"], "to": b["cardText"], "cardOp": [a["cardOp"], b["cardOp"]]} for a, b in zip(S, S[1:])
+             if a["cardText"] != b["cardText"] and a["cardOp"] > 0.01 and b["cardOp"] > 0.01]
+    res["e_card_content_changes_hidden"] = {"bad": swaps[:10], "n_bad": len(swaps), "pass": not swaps}
+    # f: step change time (from the step index changing to the new step being steady)
+    durs = [round(S[z]["t"] - S[a]["t"]) for to, a, z in transitions(S) if to > 0]
+    res["f_step_change_ms"] = {"per_transition": durs, "max": max(durs) if durs else None, "pass": bool(durs) and max(durs) <= STEP_CHANGE_MAX}
     # c3: text fits (steady samples)
     fits = {}
     for s in S:
@@ -278,6 +301,12 @@ def pass_b(pw, engine: str, w: int, h: int, url: str, step_ms: int, vid_dir: Pat
     t_wall0 = time.time() * 1000
     page.add_init_script(INIT_JS)
     open_tour(page, url, step_ms)
+    # sync mark for the video clock: a white 24 px square in the bottom-left corner for 400 ms, before the tour starts
+    t_mark = page.evaluate("""async () => { const d = document.createElement('div');
+      d.style.cssText = 'position:fixed;left:0;bottom:0;width:24px;height:24px;background:#fff;z-index:99999';
+      document.body.append(d); await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const t = Date.now(); await new Promise((r) => setTimeout(r, 400)); d.remove();
+      await new Promise((r) => setTimeout(r, 200)); return t; }""")
     page.evaluate(SAMPLER_JS.replace("window.__tour.samples.push(read())", "window.__tour.samples.push({ ...read(), wall: Date.now() })"), f"({STATE_JS})")
     page.locator('[data-story="mission-start"]').click()
     page.wait_for_function(DONE_JS, timeout=6 * (step_ms + 8000), polling=100)
@@ -291,7 +320,14 @@ def pass_b(pw, engine: str, w: int, h: int, url: str, step_ms: int, vid_dir: Pat
         return [], None
     frames = []
     walls = [x["wall"] for x in samples]
-    for t, jpg in decode_video(pw, Path(video)):
+    decoded = decode_video(pw, Path(video))
+    # align: the first frame showing the white sync square is wall time t_mark (falls back to the page creation time)
+    for t, jpg in decoded:
+        im = Image.open(io.BytesIO(jpg)).convert("L")
+        if ImageStat.Stat(im.crop((2, im.height - 20, 20, im.height - 2))).mean[0] > 200:
+            t_wall0 = t_mark - t * 1000
+            break
+    for t, jpg in decoded:
         wall = t_wall0 + t * 1000
         if wall < walls[0] - 60 or wall > walls[-1] + 60:
             continue
@@ -300,18 +336,31 @@ def pass_b(pw, engine: str, w: int, h: int, url: str, step_ms: int, vid_dir: Pat
     return frames, Path(video)
 
 
-def lum(fr: dict) -> tuple[float, float]:
+def lum(fr: dict, mask: list | None = None, bottom: float | None = None, region: tuple | None = None) -> tuple[float, float]:
     """(mean, stddev) luminance of the content area (#view inside the viewport, below the top bar). A blank or
-    displaced page shows as a large flat area: a low stddev."""
+    displaced page shows as a large flat area: a low stddev. mask: rects [x, y, w, h] left out (card slots);
+    bottom: crop the content area there (phones: the sheet)."""
     im = Image.open(io.BytesIO(fr["png"])).convert("L")
     vb = fr["viewBox"]
-    if vb and vb[2] > 20 and vb[3] > 20:
+    x0 = y0 = 0
+    if region:   # a fixed screen region (x0, y0, x1, y1): the same pixels for every frame of a transition
+        x0, y0 = int(region[0]), int(region[1])
+        im = im.crop((x0, y0, int(region[2]), int(region[3])))
+    elif vb and vb[2] > 20 and vb[3] > 20:
         x0, y0 = max(0, vb[0]), max(fr["bar"], vb[1])
         y1 = min(im.height, vb[1] + vb[3])
-        if fr.get("sheet") and fr.get("card"):
+        if bottom is not None:
+            y1 = min(y1, int(bottom))
+        elif fr.get("sheet") and fr.get("card"):
             y1 = min(y1, int(fr["card"][1]))   # phones: the bottom sheet is the card slot, not page content
         im = im.crop((x0, y0, min(im.width, vb[0] + vb[2]), y1))
-    st = ImageStat.Stat(im)
+    m = None
+    if mask:
+        m = Image.new("L", im.size, 255)
+        d = ImageDraw.Draw(m)
+        for r in mask:
+            d.rectangle([r[0] - x0, r[1] - y0, r[0] - x0 + r[2], r[1] - y0 + r[3]], fill=0)
+    st = ImageStat.Stat(im, m)
     return st.mean[0], st.stddev[0]
 
 
@@ -326,7 +375,7 @@ def check_b(frames: list[dict]) -> tuple[dict, list]:
             steady_sd.setdefault(f["index"], []).append(f["std"])
     steady_l = {k: statistics.median(v) for k, v in steady.items()}
     steady_s = {k: statistics.median(v) for k, v in steady_sd.items()}
-    dark, blank_card, blank_any = [], [], []
+    dark, blank_card, blank_any, swing, swing_all = [], [], [], [], []
     windows = []
     for to, a, z in transitions(F):
         win = F[a: z + 1]
@@ -338,7 +387,44 @@ def check_b(frames: list[dict]) -> tuple[dict, list]:
         floor = min(ref) * LUM_REL - LUM_ABS
         sref = [x for x in (steady_s.get(to - 1), steady_s.get(to)) if x is not None]
         sfloor = min(sref) * STD_REL
-        for f in win:
+        # brightness swing of the PAGE under the dim: measured with both neighbouring steps' card slots masked out (the card
+        # leaving and arriving is the intended change; the dim and the page must not pump)
+        if to > 0:
+            cards = [s for s in F if s["phase"] == "steady" and s["index"] in (to - 1, to) and s.get("card")]
+            sw_ref = {}
+            def f_bar_ok(c):
+                return c["card"][1] > c["bar"] + 100
+            tops = [c["card"][1] for c in cards if c.get("sheet") and f_bar_ok(c)]
+            sheet_top = min(tops) if tops else None
+            ref_f = cards[-1] if cards else win[-1]
+            region = (max(0, ref_f["viewBox"][0] if ref_f.get("viewBox") else 0), ref_f["bar"],
+                      ref_f["viewBox"][0] + ref_f["viewBox"][2] if ref_f.get("viewBox") else 10_000,
+                      sheet_top if (sheet_top and ref_f.get("sheet")) else ref_f["vh"])
+            def masked(f):
+                return lum(f, mask=[c["card"] for c in cards[:1] + cards[-1:]] if not f.get("sheet") else None, region=region)[0]
+            for k in (to - 1, to):
+                vals = [masked(s) for s in F if s["phase"] == "steady" and s["index"] == k][:12]
+                if vals:
+                    sw_ref[k] = statistics.median(vals)
+            if sw_ref:
+                lo, hi = min(sw_ref.values()) * (1 - SWING), max(sw_ref.values()) * (1 + SWING)
+                lo2, hi2 = min(sw_ref.values()) * (1 - SWING_SWAP), max(sw_ref.values()) * (1 + SWING_SWAP)
+                out = []
+                for f in win:
+                    m = masked(f)
+                    if f.get("swap"):   # the ~150 ms content swap inside the spotlight: its own, wider limit
+                        if not lo2 <= m <= hi2:
+                            swing.append({"to_step": to + 1, "phase": "swap", "lum": round(m, 1), "band": [round(lo2, 1), round(hi2, 1)], "hard": True})
+                        continue
+                    if not lo <= m <= hi:
+                        if DUMP:
+                            (DUMP / f"swing_{to + 1}_{f['phase']}_{m:.0f}.jpg").write_bytes(f["png"])
+                        out.append({"to_step": to + 1, "phase": f["phase"], "lum": round(m, 1), "band": [round(lo, 1), round(hi, 1)],
+                                    "hard": not lo2 <= m <= hi2})
+                swing_all.extend(out)
+                # outside the swap: up to two frames of the glide between targets of different size, within +-35%
+                if len(out) > 2 or any(o["hard"] for o in out):
+                    swing.extend(out)
             if f["lum"] < floor or f["std"] < sfloor:
                 if DUMP:
                     (DUMP / f"dark_{len(dark):02d}_{to + 1}_{f['phase']}.jpg").write_bytes(f["png"])
@@ -350,12 +436,20 @@ def check_b(frames: list[dict]) -> tuple[dict, list]:
             blank_card.append({"index": f["index"], "phase": f["phase"]})
         if empty and not f["held"]:
             blank_any.append({"index": f["index"], "phase": f["phase"], "lum": round(f["lum"], 1)})
-    flat = [{"index": f["index"], "phase": f["phase"], "std": round(f["std"], 1)} for f in F if f["std"] < 3]   # any flat frame at all
+    flat = [{"index": f["index"], "phase": f["phase"], "std": round(f["std"], 1), "viewBox": f["viewBox"], "card": f.get("card"), "bar": f["bar"]}
+            for f in F if f["std"] < 3]   # any flat frame at all
+    if DUMP:
+        for n_, f in enumerate([f for f in F if f["std"] < 3][:3]):
+            (DUMP / f"flat_{n_}_{f['index'] + 1}_{f['phase']}.jpg").write_bytes(f["png"])
     dt = [b["t"] - a["t"] for a, b in zip(F, F[1:])]
     res = {
         "a_no_dark_frames": {"steady_luminance": {k + 1: round(v, 1) for k, v in sorted(steady_l.items())},
                              "steady_contrast": {k + 1: round(v, 1) for k, v in sorted(steady_s.items())}, "dark_frames": dark[:10],
                              "n_dark": len(dark), "pass": not dark and len(steady_l) == 6},
+        "a_brightness_swing": {"failing": swing[:10], "outside_10pct": swing_all[:10], "n_outside_10pct": len(swing_all), "pass": not swing,
+                               "note": "steps 2-6, page under the dim with the card slots masked: every transition frame within 10% of the two "
+                                       "neighbouring steady steps, except up to two glide frames per transition within 35%; frames during the ~150 ms content swap inside the spotlight (old copy fading, new content rising) within 35%; "
+                                       "step 1 opens the dim"},
         "a_no_flat_frames": {"frames": flat[:10], "n": len(flat), "pass": not flat},
         "a_no_blank_view_with_card": {"frames": blank_card[:10], "n": len(blank_card), "pass": not blank_card},
         "a_no_blank_view_on_screen": {"frames": blank_any[:10], "n": len(blank_any), "pass": not blank_any},
@@ -422,7 +516,7 @@ def main() -> int:
     report = json.loads(out_path.read_text()) if (args.only and out_path.exists()) else {}
     report.setdefault("combos", {})
     report.update({"step_ms": step_ms, "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                   "thresholds": {"lum_rel": LUM_REL, "lum_abs": LUM_ABS, "std_rel": STD_REL, "cls_max": CLS_MAX, "fps_min": FPS_MIN}})
+                   "thresholds": {"swing": SWING, "step_change_max_ms": STEP_CHANGE_MAX, "lum_rel": LUM_REL, "lum_abs": LUM_ABS, "std_rel": STD_REL, "cls_max": CLS_MAX, "fps_min": FPS_MIN}})
     try:
         with sync_playwright() as pw:
             for engine, w, h in COMBOS:

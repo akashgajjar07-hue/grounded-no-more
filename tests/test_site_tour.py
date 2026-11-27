@@ -28,6 +28,9 @@ SAMPLE_JS = r"""async ([ms, act]) => {
       const st = window.__gnmStory?.state();
       const tgt = window.__gnmStory?.target?.();
       out.push({ t: performance.now() - t0, card: card ? box(card) : null, cardOp: card ? +getComputedStyle(card).opacity : 0,
+                 cardAnim: card ? card.getAnimations().length > 0 : false, spotAnim: spot ? spot.getAnimations().length > 0 : false,
+                 freezes: document.querySelectorAll('.story-freeze').length,
+                 text: card ? card.querySelector('.story-step').textContent + '|' + card.querySelector('.btn--primary').textContent : '',
                  spot: spot ? box(spot) : null, spotOp: spot ? +getComputedStyle(spot).opacity : 0, spots: document.querySelectorAll('.story-spot').length,
                  index: st?.index, phase: st?.phase, held: st?.held,
                  target: tgt && tgt.isConnected ? box(tgt) : null, skeleton: !!(tgt && (tgt.closest('.skeleton') || tgt.querySelector('.skeleton'))),
@@ -59,8 +62,9 @@ def _overlap(a, b):
 
 @pytest.mark.parametrize("vp", ["1440", "390"])
 def test_each_step_moves_card_once_and_never_blank(site, browser, vp):  # noqa: F811
-    """Every Next (same page and cross page): the card's box changes at most once and never while visible, the spotlight is
-    only shown on a real target, and #view is never hidden / empty while the card is visible."""
+    """Every Next: the dim stays up, a still copy holds the old page while the next one loads, the card's box changes at most
+    once and never while visible, its text changes only while hidden, the spotlight is only on a real target and sits fully
+    inside the free band, and #view is never hidden / empty while the card is visible."""
     ctx, page, problems = open_page(browser, site + "#/mission", vp, reduced=False)
     try:
         _start(page)
@@ -70,20 +74,33 @@ def test_each_step_moves_card_once_and_never_blank(site, browser, vp):  # noqa: 
             page.wait_for_function(READY, timeout=20000)
             assert all(f["spots"] == 1 for f in frames)
             assert all(f["tourActive"] for f in frames)
-            boxes = [tuple(f["card"]) for f in frames]
+            # the dim never lifts between steps: the spotlight stays visible throughout
+            assert all(f["spotOp"] > 0.99 for f in frames), ("dim lifted", k)
+            still = [f for f in frames if not f["cardAnim"]]   # the phone sheet's slide is its entrance, not a move
+            boxes = [tuple(f["card"][:2]) for f in still]
             changes = sum(1 for a, b in zip(boxes, boxes[1:]) if a != b)
             assert changes <= 1, (k, changes)
-            for a, b in zip(frames, frames[1:]):
+            for a, b in zip(still, still[1:]):
                 if a["cardOp"] > 0.01 and b["cardOp"] > 0.01:
                     assert a["card"] == b["card"], ("card moved while visible", k, a, b)
+            for a, b in zip(frames, frames[1:]):
+                if a["text"] != b["text"]:
+                    assert a["cardOp"] < 0.01 or b["cardOp"] < 0.01, ("card text changed while visible", k, a, b)
+            assert any(f["freezes"] == 1 for f in frames), "no still copy held the old page"
+            assert frames[-1]["freezes"] == 0
             for f in frames:
-                if f["spotOp"] > 0.01:
+                if f["spotOp"] > 0.01 and not f["spotAnim"] and f["phase"] == "steady":
                     assert f["target"] and f["target"][2] > 8 and f["target"][3] > 8 and not f["skeleton"], (k, f)
                     assert f["spot"][2] > 8 and f["spot"][3] > 8, (k, f)
                 if f["cardOp"] > 0.01:
                     assert not f["viewHidden"] and not f["viewEmpty"], ("blank view under a visible card", k, f)
             last = frames[-1]
             assert last["index"] == k and last["phase"] == "steady", last
+            # the spotlight sits fully inside the free band (below the top bar, above the viewport edge or the sheet)
+            bar = page.evaluate("document.querySelector('.topbar').getBoundingClientRect().bottom")
+            sheet = page.evaluate("document.querySelector('.story-card').classList.contains('is-sheet')")
+            low = last["card"][1] if sheet else page.evaluate("innerHeight")
+            assert last["spot"][1] >= bar and last["spot"][1] + last["spot"][3] <= low, (k, last["spot"], bar, low)
             # the card does not cover the spotlit area
             assert _overlap(last["card"], last["spot"]) <= 24 * min(last["card"][2], last["spot"][2]), last
         page.keyboard.press("Escape")
@@ -94,7 +111,7 @@ def test_each_step_moves_card_once_and_never_blank(site, browser, vp):  # noqa: 
         ctx.close()
 
 
-def test_card_has_fixed_size_and_text_fits(site, browser):  # noqa: F811
+def test_card_fixed_width_fitted_height_and_text_fits(site, browser):  # noqa: F811
     ctx, page, problems = open_page(browser, site + "#/mission", "1440", reduced=False)
     try:
         _start(page)
@@ -103,8 +120,11 @@ def test_card_has_fixed_size_and_text_fits(site, browser):  # noqa: F811
             if k:
                 page.keyboard.press("ArrowRight")
                 page.wait_for_function(f"window.__gnmStory.state().index === {k} && window.__gnmStory.state().ready", timeout=20000)
-            sizes.add(page.evaluate("(() => { const r = document.querySelector('.story-card').getBoundingClientRect(); return `${r.width}x${r.height}`; })()"))
+            sizes.add(page.evaluate("document.querySelector('.story-card').getBoundingClientRect().width"))
             fits.append(page.evaluate("(() => { const t = document.querySelector('.story-text'); return t.scrollHeight <= t.clientHeight + 1; })()"))
+            # the controls sit right under the text (no empty band inside the card)
+            gap = page.evaluate("document.querySelector('.story-lower').getBoundingClientRect().top - document.querySelector('.story-text').getBoundingClientRect().bottom")
+            assert -1 <= gap <= 4, gap
             # no height animation on the card (no FLIP layer, no running animation once steady)
             assert page.evaluate("document.querySelectorAll('.story-card-bg').length") == 0
             assert page.evaluate("document.querySelector('.story-card').getAnimations().length") == 0
