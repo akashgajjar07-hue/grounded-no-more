@@ -267,3 +267,5 @@ Nothing marked "fixed" is left. Every remaining hit is exempt, with its reason, 
 - **Pushed repo** (fresh clone of `main`, 567 files, 491 text and 76 binary): 325 matches. 320 are in exempt locations (frozen config and outputs, tests including this scan's own word list, labelled AI review records, code comments and identifiers). The other 5 are test names in `reports/junit.xml` containing the word "placeholder" (exempt: test identifiers). **No user-visible hits.**
 - **Files moved out of the public repo:** none present in the clone, and none in the history (`git log --all -- <path>` is empty for every moved path).
 - **Commit messages on GitHub:** 0 matches for the personal-terms and internal-process categories.
+
+Re-checked on the live site after the final push: 0 hits on 53 page views.

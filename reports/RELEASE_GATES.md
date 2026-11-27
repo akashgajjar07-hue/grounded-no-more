@@ -1,24 +1,26 @@
-# Release gates — v2.1 "Final portfolio release"
+# Release gates — v2.2 "Final portfolio release"
 
 Checked 2026-11-27 on `main` before tagging. Live site: https://akashgajjar07-hue.github.io/grounded-no-more/
 
 | # | Gate | Result | Evidence |
 |---|---|---|---|
-| 1 | Frozen v2 holdout results unchanged (P0 ≈ 1,690 h · P1 ≈ 566 h · P2 ≈ 210 h · I125 ≈ 76 h) | ✅ | `gnm.freeze.verify()`: 19 hashed artefacts match `outputs/freeze/manifest.json` |
-| 2 | No re-tuning, new policies, calibration or simulations | ✅ | v2.1 changes are wording, display, post-processing (donor recount, labelled post-plan) and site code only |
-| 3 | Non-browser test suite | ✅ 394 / 394 | `pytest -m "not browser"` |
-| 4 | Browser tests | ✅ | Full browser suite green before the final tour/router changes; afterwards every touched file re-run green (260 + 101 passed, 1 skipped). 1,071 tests collected in total, including 319 audit cells |
-| 5 | CI | ✅ | GitHub Actions `CI` green on the release commit |
-| 6 | "Every button works" audit | ✅ 0 failed · 0 disabled | 162 cells · 12,853 controls · 12,228 ok · 625 skipped (re-rendered / same-route no-ops). Chromium: all 27 targets × Simple/Expert × 1440/390. WebKit: all targets × Simple/Expert at 1440, plus a 390 smoke. `reports/INTERACTION_AUDIT.md` |
-| 7 | Firefox | ⚠️ not run | "Firefox not run — local launch failure" (Playwright Firefox: "Could not find profile folder"; V21-FF) |
-| 8 | Lighthouse ≥ 85 perf / ≥ 90 a11y (live) | ✅ | Landing: mobile 89 / 100, desktop 100 / 100. Capital: mobile 91 / 96, desktop 99 / 95. `reports/perf/lighthouse_release.json` |
-| 9 | CLS < 0.05 | ✅ | Max 0.028 across all routes on load (live); tour run 0.001 |
-| 10 | No long task > 200 ms, ~60 fps | ✅ | Tour 59.9 fps, 3 of 3,342 frames > 20 ms, longest task 39.8 ms (`reports/perf/tour_trace.json`). Slider and cutaway 58–60 fps |
-| 11 | Grep gate (forbidden words, OEM / airline names) on product surfaces | ✅ 0 hits | Site, docs, README, study pack, deck. The only workbook hits are a row number and a numeric cell value |
-| 12 | Scope line on every headline KPI | ✅ | Verified live on Results (smoke) and in the tests |
-| 13 | Simple / Expert readability (grade ≤ 9, no sentence > 25 words) | ✅ | Grades 3.1–6.1 across 12 pages (`reports/readability/`) |
-| 14 | Cutaway hero rule (hero only if mean ≥ 4.3) | ✅ applied | 4 rounds: 3.0 → 3.4 → 3.70 → 3.60, so it went to the Explore section and the hero is unchanged (V21-D2) |
-| 15 | Live smoke, Chromium + WebKit | ✅ | Landing, tour Play (auto-advances), Results (scope line + capital note), Explore link, workbook download, cutaway. No console errors. `reports/audit/live_smoke.json` |
-| 16 | Final screenshots | ✅ | 25 compressed JPEGs from the live site (12 workspaces × Simple/Expert + cutaway), 3.3 MB, `reports/final_screens/` |
-| 17 | Repo hygiene | ✅ | No traces, videos, HTML reports or bulk audit cells tracked. Tracked tree 24 MB (docs/ 8.4 MB). History not rewritten (V21-R), so GitHub reports ≈ 495 MB |
-| 18 | Nothing posted anywhere | ✅ | Social-media drafts are kept outside the public repo and were not posted |
+| 1 | Frozen v2 holdout results unchanged (P0 ≈ 1,690 h · P1 ≈ 566 h · P2 ≈ 210 h · I125 ≈ 76 h) | ✅ | `gnm.freeze.verify()`: 19 hashed artefacts match `outputs/freeze/manifest.json` (re-checked on the final tree) |
+| 2 | No re-tuning, new policies, calibration or simulations | ✅ | v2.2 changes are privacy cleanup, wording, display, site code, workbook cached values, and the brake-line sizing (read from the frozen plan) |
+| 3 | Privacy: private material out of the public repo, site and history | ✅ | Moved to the private repo `grounded-no-more-private`. History rewritten with filter-repo after a backup bundle; tags re-created. GitHub repo size 510,036 KB → 25,573 KB. Live site: 0 hits on 53 page views (`reports/PUBLIC_SCAN.md`). Old commit SHAs may stay reachable on GitHub by ID until GitHub Support purges its cache |
+| 4 | Forbidden-word gate | ✅ | `tests/test_public_scan.py` green. The last open repo hit (a DECISIONS.md wording) was fixed |
+| 5 | Non-browser test suite | ✅ 398 / 398 | `pytest -m "not browser"` on the final tree |
+| 6 | Browser tests | ✅ | 415 passed, 2 flaky on re-run (mission deep-link, network motion morph). After the parts badge fix: `tests/test_site_parts.py` 35 / 35 |
+| 7 | CI + Pages | ✅ | GitHub Actions `CI` and Pages deployment green on the release commit |
+| 8 | "Every button works" audit | ⚠️ partial, 0 failed | 91 cells, 6,312 controls, 6,072 ok, 0 failed, 240 skipped (Chromium 68 cells, WebKit 23). Stopped at the time limit; unfinished cells are listed as "not completed — time limit" in `reports/INTERACTION_AUDIT.md` §1b. The audit found one real bug, a dead click gap on parts ATA badges. It was fixed in ede9626 and verified by tests and a targeted Chromium/WebKit check at 1440 and 390 |
+| 9 | Firefox | ⚠️ not run | Local launch failure ("Could not find profile folder"; V21-FF) |
+| 10 | Every link works every time | ✅ | 6,450 internal link clicks, 0 failed; external 46 / 46 return 200; 51 / 51 relative repo links tracked (`reports/LINK_CHECK.md`) |
+| 11 | Tour: frame/video check | ✅ checker · ⚠️ critic | Frame checks pass in Chromium and WebKit at 1440 and 390: step change ≤ 1.2 s, 58–60 fps, CLS 0, spotlight still while the card shows, card text fits (`reports/tour/frame_check.json`). Fresh critic (smoothness / polish): 3.5/3.5 → 4.0/3.5 → 3.9/3.6, below the 4.5 bar; the time limit was reached |
+| 12 | Simple / Expert differ on every page, or say they read the same | ✅ | Every page differs except Planner, which carries the "reads the same" note; About was changed in v2.2. Readability grade ≤ 9 and no sentence > 25 words (`reports/readability/`) |
+| 13 | Lighthouse ≥ 85 perf / ≥ 90 a11y (live) | ✅ | Landing: mobile 88 / 100, desktop 100 / 100. Capital: mobile 91 / 96, desktop 99 / 95 (`reports/perf/lighthouse_release.json`) |
+| 14 | CLS < 0.05 and ~60 fps | ✅ | Live CLS on load max 0.028 across 26 route × width checks; tour 58–60 fps, 0 frames > 34 ms |
+| 15 | Workbook cached values | ✅ | 3,031 formula cells carry cached values. openpyxl `data_only=True` reads no empty and no error cells. Workbook tests and number reconciliation green |
+| 16 | No dangling commit hashes | ✅ | Every commit hash cited in tracked Markdown and report JSON resolves to a commit on `main` (pre-rewrite hashes mapped or replaced by the release tag) |
+| 17 | Flagged outstation brake lines sized | ✅ | Network Plan: 5 lines, 5 units, ≈ AED 0.99M (0.05 % of target units, 3.1 % of target stock value). Shown beside the flag on the site and in LIMITATIONS, read from the frozen plan |
+| 18 | Live smoke, Chromium + WebKit | ✅ | Landing, tour steps 1–6 and close, section deep link, Results scope line, workbook download, cutaway; no page errors (`reports/audit/live_smoke.json`) |
+| 19 | Final screenshots | ✅ | 25 compressed JPEGs from the live site (12 workspaces × Simple/Expert + cutaway), 3.4 MB, `reports/final_screens/` |
+| 20 | Nothing posted anywhere | ✅ | No social-media or public posting |

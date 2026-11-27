@@ -1,35 +1,312 @@
 {
- "status": "final: v2.1 release re-check on the live site.",
+ "status": "final: v2.2 release check on the live site.",
  "url": "https://akashgajjar07-hue.github.io/grounded-no-more/index.html",
- "label": "live-v2.1-release",
+ "label": "live-v2.2-release",
+ "generated": "2026-11-27T22:10:41",
  "results": {
-  "mission:mobile": {
-   "performance": 89,
+  "landing_mobile": {
+   "ok": true,
+   "url": "https://akashgajjar07-hue.github.io/grounded-no-more/index.html#/mission",
+   "preset": "mobile",
+   "seconds": 15,
+   "performance": 88,
    "accessibility": 100,
-   "cls": 0.007580806731615575,
-   "lcp_ms": 3541.554,
-   "tbt_ms": 22
+   "cls": 0.01457770090346452,
+   "lcp_ms": 3668.154,
+   "fcp_ms": 1268.154,
+   "tbt_ms": 62,
+   "si_ms": 3780.307513384465,
+   "lighthouse_version": "12.8.2",
+   "a11y_failures": [
+    {
+     "id": "aria-allowed-role",
+     "title": "Uses ARIA roles on incompatible elements",
+     "items": 5
+    },
+    {
+     "id": "label-content-name-mismatch",
+     "title": "Elements with visible text labels do not have matching accessible names.",
+     "items": 8
+    }
+   ],
+   "perf_opportunities": [
+    {
+     "id": "unused-javascript",
+     "title": "Reduce unused JavaScript",
+     "savings_ms": 750
+    },
+    {
+     "id": "server-response-time",
+     "title": "Initial server response time was short",
+     "savings_ms": 335
+    },
+    {
+     "id": "unminified-javascript",
+     "title": "Minify JavaScript",
+     "savings_ms": 150
+    },
+    {
+     "id": "render-blocking-resources",
+     "title": "Eliminate render-blocking resources",
+     "savings_ms": 83
+    }
+   ]
   },
-  "mission:desktop": {
+  "landing_desktop": {
+   "ok": true,
+   "url": "https://akashgajjar07-hue.github.io/grounded-no-more/index.html#/mission",
+   "preset": "desktop",
+   "seconds": 12,
    "performance": 100,
    "accessibility": 100,
-   "cls": 0.001286991069083268,
-   "lcp_ms": 654.777,
-   "tbt_ms": 0
+   "cls": 0.001891317310218019,
+   "lcp_ms": 651.944,
+   "fcp_ms": 291.94399999999996,
+   "tbt_ms": 0,
+   "si_ms": 661.2692802955496,
+   "lighthouse_version": "12.8.2",
+   "a11y_failures": [
+    {
+     "id": "aria-allowed-role",
+     "title": "Uses ARIA roles on incompatible elements",
+     "items": 5
+    },
+    {
+     "id": "label-content-name-mismatch",
+     "title": "Elements with visible text labels do not have matching accessible names.",
+     "items": 9
+    }
+   ],
+   "perf_opportunities": [
+    {
+     "id": "unused-javascript",
+     "title": "Reduce unused JavaScript",
+     "savings_ms": 120
+    },
+    {
+     "id": "server-response-time",
+     "title": "Initial server response time was short",
+     "savings_ms": 106
+    }
+   ]
   },
-  "capital:mobile": {
+  "capital_mobile": {
+   "ok": true,
+   "url": "https://akashgajjar07-hue.github.io/grounded-no-more/index.html#/capital",
+   "preset": "mobile",
+   "seconds": 13,
    "performance": 91,
    "accessibility": 96,
-   "cls": 0.02386816737766665,
-   "lcp_ms": 3537.73,
-   "tbt_ms": 38
+   "cls": 0.027764059653318154,
+   "lcp_ms": 3482.748,
+   "fcp_ms": 932.748,
+   "tbt_ms": 58,
+   "si_ms": 2188.396120390014,
+   "lighthouse_version": "12.8.2",
+   "a11y_failures": [
+    {
+     "id": "aria-prohibited-attr",
+     "title": "Elements use prohibited ARIA attributes",
+     "items": 11
+    },
+    {
+     "id": "heading-order",
+     "title": "Heading elements are not in a sequentially-descending order",
+     "items": 1
+    }
+   ],
+   "perf_opportunities": [
+    {
+     "id": "unused-javascript",
+     "title": "Reduce unused JavaScript",
+     "savings_ms": 750
+    },
+    {
+     "id": "unminified-javascript",
+     "title": "Minify JavaScript",
+     "savings_ms": 150
+    },
+    {
+     "id": "render-blocking-resources",
+     "title": "Eliminate render-blocking resources",
+     "savings_ms": 110
+    }
+   ]
   },
-  "capital:desktop": {
+  "capital_desktop": {
+   "ok": true,
+   "url": "https://akashgajjar07-hue.github.io/grounded-no-more/index.html#/capital",
+   "preset": "desktop",
+   "seconds": 14,
    "performance": 99,
    "accessibility": 95,
-   "cls": 0.001321836419753086,
-   "lcp_ms": 860.8765000000001,
-   "tbt_ms": 0
+   "cls": 0.0020880066325190427,
+   "lcp_ms": 867.538,
+   "fcp_ms": 507.538,
+   "tbt_ms": 0,
+   "si_ms": 1141.2629488333673,
+   "lighthouse_version": "12.8.2",
+   "a11y_failures": [
+    {
+     "id": "aria-prohibited-attr",
+     "title": "Elements use prohibited ARIA attributes",
+     "items": 11
+    },
+    {
+     "id": "heading-order",
+     "title": "Heading elements are not in a sequentially-descending order",
+     "items": 1
+    },
+    {
+     "id": "label-content-name-mismatch",
+     "title": "Elements with visible text labels do not have matching accessible names.",
+     "items": 1
+    }
+   ],
+   "perf_opportunities": [
+    {
+     "id": "server-response-time",
+     "title": "Initial server response time was short",
+     "savings_ms": 341
+    },
+    {
+     "id": "unused-javascript",
+     "title": "Reduce unused JavaScript",
+     "savings_ms": 120
+    }
+   ]
+  }
+ },
+ "cls_on_load": {
+  "mission@1440": {
+   "cls": 0.0018,
+   "shifts": 1,
+   "largest": 0.0018
+  },
+  "mission@390": {
+   "cls": 0.0047,
+   "shifts": 1,
+   "largest": 0.0047
+  },
+  "parts@1440": {
+   "cls": 0.0018,
+   "shifts": 1,
+   "largest": 0.0018
+  },
+  "parts@390": {
+   "cls": 0.0046,
+   "shifts": 1,
+   "largest": 0.0046
+  },
+  "forecast@1440": {
+   "cls": 0.0017,
+   "shifts": 1,
+   "largest": 0.0017
+  },
+  "forecast@390": {
+   "cls": 0.0046,
+   "shifts": 1,
+   "largest": 0.0046
+  },
+  "rotables@1440": {
+   "cls": 0.002,
+   "shifts": 5,
+   "largest": 0.0017
+  },
+  "rotables@390": {
+   "cls": 0.0059,
+   "shifts": 3,
+   "largest": 0.0047
+  },
+  "network@1440": {
+   "cls": 0.0018,
+   "shifts": 1,
+   "largest": 0.0018
+  },
+  "network@390": {
+   "cls": 0.0046,
+   "shifts": 1,
+   "largest": 0.0046
+  },
+  "capital@1440": {
+   "cls": 0.0019,
+   "shifts": 9,
+   "largest": 0.0017
+  },
+  "capital@390": {
+   "cls": 0.028,
+   "shifts": 2,
+   "largest": 0.0233
+  },
+  "aog@1440": {
+   "cls": 0.0017,
+   "shifts": 1,
+   "largest": 0.0017
+  },
+  "aog@390": {
+   "cls": 0.0046,
+   "shifts": 1,
+   "largest": 0.0046
+  },
+  "actions@1440": {
+   "cls": 0.0017,
+   "shifts": 1,
+   "largest": 0.0017
+  },
+  "actions@390": {
+   "cls": 0.0046,
+   "shifts": 1,
+   "largest": 0.0046
+  },
+  "method@1440": {
+   "cls": 0.0017,
+   "shifts": 1,
+   "largest": 0.0017
+  },
+  "method@390": {
+   "cls": 0.0046,
+   "shifts": 1,
+   "largest": 0.0046
+  },
+  "about@1440": {
+   "cls": 0.0018,
+   "shifts": 1,
+   "largest": 0.0018
+  },
+  "about@390": {
+   "cls": 0.0047,
+   "shifts": 1,
+   "largest": 0.0047
+  },
+  "glossary@1440": {
+   "cls": 0.0018,
+   "shifts": 1,
+   "largest": 0.0018
+  },
+  "glossary@390": {
+   "cls": 0.0047,
+   "shifts": 1,
+   "largest": 0.0047
+  },
+  "planner@1440": {
+   "cls": 0.0017,
+   "shifts": 1,
+   "largest": 0.0017
+  },
+  "planner@390": {
+   "cls": 0.0046,
+   "shifts": 1,
+   "largest": 0.0046
+  },
+  "lab/cutaway.html@1440": {
+   "cls": 0.0004,
+   "shifts": 1,
+   "largest": 0.0004
+  },
+  "lab/cutaway.html@390": {
+   "cls": 0,
+   "shifts": 0,
+   "largest": 0
   }
  }
 }
