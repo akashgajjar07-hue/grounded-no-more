@@ -411,6 +411,19 @@ export async function render(el, ctx) {
         if (!bad()) return;
       }
     });
+    // v2.2: a status word beside the badge leaves a gap between circle and word; one transparent hit area covering
+    // both keeps the whole badge clickable (the gap otherwise fell through to nothing)
+    spots.forEach((g) => {
+      const badge = g.querySelector('.hs-badge');
+      if (!badge) return;
+      let hit = badge.querySelector(':scope > .hs-hit');
+      if (!hit) { hit = svgEl('rect', { class: 'hs-hit', fill: 'transparent', 'pointer-events': 'all', 'aria-hidden': 'true' }); badge.insertBefore(hit, badge.firstChild); }
+      const bs = [...badge.querySelectorAll(':scope > circle, :scope > .hs-risk')].map((e) => { try { return e.getBBox(); } catch { return null; } }).filter((b) => b && b.width);
+      if (!bs.length) return;
+      const x0 = Math.min(...bs.map((b) => b.x)), y0 = Math.min(...bs.map((b) => b.y));
+      const x1 = Math.max(...bs.map((b) => b.x + b.width)), y1 = Math.max(...bs.map((b) => b.y + b.height));
+      hit.setAttribute('x', x0); hit.setAttribute('y', y0); hit.setAttribute('width', x1 - x0); hit.setAttribute('height', y1 - y0);
+    });
     drawHotspotCallout(svg, u, wpx);
   }
 
