@@ -1,10 +1,15 @@
-"""Guided tour motion (release polish): one persistent spotlight that glides, a scaleX progress bar that freezes on
-pause, instant steps under reduced motion, and auto-advance in both motion modes."""
+"""Guided tour (v2.2): one calm rhythm per step (out -> move -> spotlight in -> card in), a fixed-size card that moves at
+most once per transition and never covers its target, a page cross-fade on route changes with no blank view under a
+visible card, quiet page motion while the tour is open, a scaleX progress bar that freezes on pause, instant steps under
+reduced motion, and auto-advance in both motion modes. The full recorded frame check lives in
+scripts/tour/record_and_check.py (reports/tour/frame_check.json)."""
 from __future__ import annotations
+
+import json
 
 import pytest
 
-from _sitefx import browser, open_page, site  # noqa: F401
+from _sitefx import DOCS, browser, open_page, site  # noqa: F401
 
 pytestmark = pytest.mark.browser
 
@@ -12,18 +17,23 @@ READY = "window.__gnmStory && window.__gnmStory.state().ready"
 
 # sample the tour every animation frame for `ms` after `act` runs (in the page, so no round-trip gaps)
 SAMPLE_JS = r"""async ([ms, act]) => {
-  const spot = document.querySelector('.story-spot');
   const out = [];
   if (act === 'next') document.querySelector('.story .btn--primary').click();
   const t0 = performance.now();
+  const box = (el) => { const r = el.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]; };
   await new Promise((res) => {
     const f = () => {
-      const s = document.querySelector('.story-spot');
-      const cs = getComputedStyle(s);
-      out.push({ t: performance.now() - t0, same: s === spot, count: document.querySelectorAll('.story-spot').length,
-                 inline: s.style.transform, shadow: cs.boxShadow, opacity: cs.opacity,
+      const card = document.querySelector('.story-card'), spot = document.querySelector('.story-spot');
+      const view = document.getElementById('view');
+      const st = window.__gnmStory?.state();
+      const tgt = window.__gnmStory?.target?.();
+      out.push({ t: performance.now() - t0, card: card ? box(card) : null, cardOp: card ? +getComputedStyle(card).opacity : 0,
+                 spot: spot ? box(spot) : null, spotOp: spot ? +getComputedStyle(spot).opacity : 0, spots: document.querySelectorAll('.story-spot').length,
+                 index: st?.index, phase: st?.phase, held: st?.held,
+                 target: tgt && tgt.isConnected ? box(tgt) : null, skeleton: !!(tgt && (tgt.closest('.skeleton') || tgt.querySelector('.skeleton'))),
+                 viewHidden: !view || getComputedStyle(view).visibility === 'hidden', viewEmpty: !view.querySelector('.card, section, figure, h1, h2'),
                  anims: document.getAnimations().filter((a) => a.effect?.target?.closest?.('.story')).length,
-                 gliding: window.__gnmStory?.state().gliding, index: window.__gnmStory?.state().index, y: scrollY });
+                 y: scrollY, tourActive: document.documentElement.classList.contains('tour-active') });
       if (performance.now() - t0 < ms) requestAnimationFrame(f); else res();
     };
     requestAnimationFrame(f);
@@ -34,31 +44,88 @@ SAMPLE_JS = r"""async ([ms, act]) => {
 
 def _start(page, step_ms=60000):
     page.evaluate(f"window.__gnmTourStepMs = {step_ms}")
-    page.locator("#story-btn").click()
+    if page.locator("#story-btn").is_visible():
+        page.locator("#story-btn").click()
+    else:
+        page.locator("body").press("s")   # phones: the top-bar Story button is hidden; S opens the same tour
     page.wait_for_function(READY, timeout=20000)
 
 
-def test_one_spotlight_persists_and_glides(site, browser):  # noqa: F811
+def _overlap(a, b):
+    ox = max(0, min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0]))
+    oy = max(0, min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]))
+    return ox * oy
+
+
+@pytest.mark.parametrize("vp", ["1440", "390"])
+def test_each_step_moves_card_once_and_never_blank(site, browser, vp):  # noqa: F811
+    """Every Next (same page and cross page): the card's box changes at most once and never while visible, the spotlight is
+    only shown on a real target, and #view is never hidden / empty while the card is visible."""
+    ctx, page, problems = open_page(browser, site + "#/mission", vp, reduced=False)
+    try:
+        _start(page)
+        n = len(json.loads((DOCS / "data" / "story.json").read_text())["steps"])
+        for k in range(1, n):
+            frames = page.evaluate(SAMPLE_JS, [2600, "next"])
+            page.wait_for_function(READY, timeout=20000)
+            assert all(f["spots"] == 1 for f in frames)
+            assert all(f["tourActive"] for f in frames)
+            boxes = [tuple(f["card"]) for f in frames]
+            changes = sum(1 for a, b in zip(boxes, boxes[1:]) if a != b)
+            assert changes <= 1, (k, changes)
+            for a, b in zip(frames, frames[1:]):
+                if a["cardOp"] > 0.01 and b["cardOp"] > 0.01:
+                    assert a["card"] == b["card"], ("card moved while visible", k, a, b)
+            for f in frames:
+                if f["spotOp"] > 0.01:
+                    assert f["target"] and f["target"][2] > 8 and f["target"][3] > 8 and not f["skeleton"], (k, f)
+                    assert f["spot"][2] > 8 and f["spot"][3] > 8, (k, f)
+                if f["cardOp"] > 0.01:
+                    assert not f["viewHidden"] and not f["viewEmpty"], ("blank view under a visible card", k, f)
+            last = frames[-1]
+            assert last["index"] == k and last["phase"] == "steady", last
+            # the card does not cover the spotlit area
+            assert _overlap(last["card"], last["spot"]) <= 24 * min(last["card"][2], last["spot"][2]), last
+        page.keyboard.press("Escape")
+        page.wait_for_function("!document.querySelector('.story')")
+        assert not page.evaluate("document.documentElement.classList.contains('tour-active')")
+        assert not [p for p in problems if "pageerror" in p], problems
+    finally:
+        ctx.close()
+
+
+def test_card_has_fixed_size_and_text_fits(site, browser):  # noqa: F811
     ctx, page, problems = open_page(browser, site + "#/mission", "1440", reduced=False)
     try:
         _start(page)
-        page.evaluate("window.__spot0 = document.querySelector('.story-spot')")
-        glided = False
-        for _ in range(3):
-            frames = page.evaluate(SAMPLE_JS, [1400, "next"])
-            assert all(f["same"] and f["count"] == 1 for f in frames), "the spotlight node was re-created"
-            # the dim backdrop never changes (no blink): same shadow, fully opaque, every frame
-            assert len({f["shadow"] for f in frames}) == 1 and all(f["opacity"] == "1" for f in frames)
-            glided = glided or any(f["gliding"] and "scale(" in f["inline"] for f in frames)
-            page.wait_for_function(READY, timeout=20000)
-        assert glided, "no step change glided the spotlight"
-        assert page.evaluate("document.querySelector('.story-spot') === window.__spot0")
-        # settles with no residue: placed by a plain translate (never left/top, so it is not a layout shift)
-        tr = page.evaluate("document.querySelector('.story-spot').style.transform")
-        assert tr.startswith("translate(") and "scale(" not in tr, tr
-        assert page.evaluate("getComputedStyle(document.querySelector('.story-spot')).left") == "0px"
+        sizes, fits = set(), []
+        for k in range(6):
+            if k:
+                page.keyboard.press("ArrowRight")
+                page.wait_for_function(f"window.__gnmStory.state().index === {k} && window.__gnmStory.state().ready", timeout=20000)
+            sizes.add(page.evaluate("(() => { const r = document.querySelector('.story-card').getBoundingClientRect(); return `${r.width}x${r.height}`; })()"))
+            fits.append(page.evaluate("(() => { const t = document.querySelector('.story-text'); return t.scrollHeight <= t.clientHeight + 1; })()"))
+            # no height animation on the card (no FLIP layer, no running animation once steady)
+            assert page.evaluate("document.querySelectorAll('.story-card-bg').length") == 0
+            assert page.evaluate("document.querySelector('.story-card').getAnimations().length") == 0
+        assert len(sizes) == 1, sizes
+        assert all(fits), fits
         page.keyboard.press("Escape")
-        assert not [p for p in problems if "pageerror" in p], problems
+    finally:
+        ctx.close()
+
+
+def test_page_motion_is_quiet_while_tour_open(site, browser):  # noqa: F811
+    """lib/motion.js goes instant while html.tour-active is set (chart draw-ins / count-ups never replay behind the card)."""
+    ctx, page, problems = open_page(browser, site + "#/mission", "1440", reduced=False)
+    try:
+        q = "import('./js/lib/motion.js').then((m) => [m.dur('slow'), m.reducedMotion(), m.prefersReducedMotion()])"
+        assert page.evaluate(q) == [450, False, False]
+        _start(page)
+        assert page.evaluate(q) == [0, True, False]
+        page.keyboard.press("Escape")
+        page.wait_for_function("!document.querySelector('.story')")
+        assert page.evaluate(q) == [450, False, False]
     finally:
         ctx.close()
 
@@ -90,21 +157,45 @@ def test_progress_bar_scalex_freezes_on_pause(site, browser):  # noqa: F811
         ctx.close()
 
 
+def test_controls_mid_transition_cancel_cleanly(site, browser):  # noqa: F811
+    """Next / Back / Esc fired during a cross-page transition: the newest request wins, nothing stacks, focus returns."""
+    ctx, page, problems = open_page(browser, site + "#/mission", "1440", reduced=False)
+    try:
+        _start(page)
+        page.evaluate("window.__t = window.__gnmStory")
+        for _ in range(3):
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(120)
+        page.keyboard.press("ArrowLeft")
+        page.wait_for_function(READY, timeout=20000)
+        s = page.evaluate("window.__gnmStory.state()")
+        assert s["index"] == 2 and s["phase"] == "steady", s
+        assert page.evaluate("document.querySelectorAll('.story-spot').length") == 1
+        assert page.evaluate("+getComputedStyle(document.querySelector('.story-card')).opacity") == 1
+        page.keyboard.press("ArrowRight")
+        page.wait_for_timeout(200)          # mid transition
+        page.keyboard.press("Escape")
+        page.wait_for_function("!document.querySelector('.story')")
+        s = page.evaluate("window.__t.state()")
+        assert s["timers"] == 0 and s["loops"] == 0, s
+        assert page.evaluate("document.activeElement && !document.activeElement.closest('.story') && document.activeElement !== document.body")
+        assert page.evaluate("[...document.querySelectorAll('#view, .main > .disclaimer')].every((e) => !e.style.translate)")
+        assert not [p for p in problems if "pageerror" in p], problems
+    finally:
+        ctx.close()
+
+
 def test_reduced_motion_steps_are_instant(site, browser):  # noqa: F811
     ctx, page, problems = open_page(browser, site + "#/mission", "1440", reduced=True)
     try:
         _start(page)
         for _ in range(2):
             frames = page.evaluate(SAMPLE_JS, [900, "next"])
-            assert all("scale(" not in f["inline"] for f in frames), "spotlight glided under reduced motion"
-            assert len({f["inline"] for f in frames}) <= 4, "spotlight moved through intermediate positions"
-            assert all(f["anims"] == 0 for f in frames), "crossfade / card animation under reduced motion"
-            assert not any(f["gliding"] for f in frames)
+            assert all(f["anims"] == 0 for f in frames), "fade / card animation under reduced motion"
+            assert all(f["cardOp"] in (0, 1) and f["spotOp"] in (0, 1) for f in frames), "partial opacity under reduced motion"
             ys = [f["y"] for f in frames]
-            # no smooth scroll: only a few jumps (route change, framing, async-layout corrections); a 450 ms ramp would
-            # change the scroll position on ~25 consecutive frames
             changes = sum(1 for a, b in zip(ys, ys[1:]) if a != b)
-            assert changes <= 6, ys
+            assert changes <= 4, ys   # jumps, never a smooth ramp
             page.wait_for_function(READY, timeout=20000)
         page.keyboard.press("Escape")
     finally:
@@ -126,3 +217,26 @@ def test_tour_auto_advances(site, browser, reduced):  # noqa: F811
         assert not [p for p in problems if "pageerror" in p], problems
     finally:
         ctx.close()
+
+
+def test_rail_tour_button_opens_playing(site, browser):  # noqa: F811
+    ctx, page, problems = open_page(browser, site + "#/mission", "1440", reduced=False)
+    try:
+        page.evaluate("window.__gnmTourStepMs = 60000")
+        page.locator('.nav-item[data-route="tour"]').click()
+        page.wait_for_function("window.__gnmStory && window.__gnmStory.state().playing", timeout=2000)
+        page.keyboard.press("Escape")
+        # the top-bar Story button opens paused
+        page.locator("#story-btn").click()
+        page.wait_for_function("window.__gnmStory", timeout=2000)
+        page.wait_for_timeout(300)
+        assert not page.evaluate("window.__gnmStory.state().playing")
+        page.keyboard.press("Escape")
+    finally:
+        ctx.close()
+
+
+def test_story_text_fits_card_budget():
+    steps = json.loads((DOCS / "data" / "story.json").read_text())["steps"]
+    for s in steps:
+        assert len(s["body"]) <= 240 and len(s["body_simple"]) <= 240, (s["story_id"], len(s["body"]), len(s["body_simple"]))

@@ -3,9 +3,9 @@
  * Every function returns a real Element styled by css/components.css. Views compose these;
  * they should not invent new visual styles. See docs/design/DESIGN_SYSTEM.md for the API.
  */
-import { assetURL } from './data.js';
+import { assetURL, load as loadData } from './data.js';
 import { isSimple } from './lib/mode.js';
-import { MOTION, reducedMotion as motionReduced, tooltipFade, flip } from './lib/motion.js';
+import { MOTION, prefersReducedMotion as motionReduced, tooltipFade } from './lib/motion.js';
 
 // --------------------------------------------------------------------------- basics
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -681,24 +681,28 @@ export function fillLifecycle(svg, { counts = {}, flows = [] } = {}) {
 
 // --------------------------------------------------------------------------- story mode
 /**
- * Story-mode overlay: spotlight + step card. steps: [{route, selector, mobile_selector?, title, body}]
- * Targets are framed just under the sticky top bar (+16 px). At ≤ 480 px the card is a bottom sheet that collapses to
- * a peek strip (~25% of the viewport) when it would cover the target; the grab handle toggles it. `mobile_selector`
- * (optional) names a narrower element to spotlight on phones.
+ * Story-mode overlay (v2.2): a dimming spotlight + a fixed-size step card. steps: [{route, selector, mobile_selector?,
+ * title, body, title_simple?, body_simple?}]. Targets are framed just under the sticky top bar (+16 px). At ≤ 480 px the
+ * card is a fixed-height bottom sheet (a shorter "peek" height when the full sheet would cover the target; the grab
+ * handle toggles it); `mobile_selector` (optional) names a narrower element to spotlight on phones.
  * navigate(route) must return a Promise that resolves once the view has rendered.
  */
 let activeStory = null;
+// the rail's "60-second tour" (and the hero's) open the tour already playing: remember the last click on one of them
+let tourClickAt = -1e9;
+try { document.addEventListener('click', (e) => { if (e.target?.closest?.('.nav-item[data-route="tour"], [data-story="mission-start"]')) tourClickAt = performance.now(); }, true); } catch { /* no DOM */ }
 /**
  * Where to put a floating card of size cw × ch next to target rect r inside a vw × vh viewport.
  * Tries right, left, below and above (then the four corners), each clamped to a 16 px margin, and returns the
  * candidate with the least overlap with the target (inflated by 16 px clearance); ties keep that order.
  * `top` is the smallest allowed card top (story mode passes the sticky top-bar height + 16 so the card never sits under
- * the bar). Exported for tests and for any other anchored popover. → {left, top, side, overlap}
+ * the bar). `only` (optional) restricts the candidates to one side (story mode keeps a step's side once chosen).
+ * Exported for tests and for any other anchored popover. → {left, top, side, overlap}
  */
-export function storyCardPosition(r, { cw, ch, vw, vh, gap = 24, margin = 16, clearance = 16, top: minTop = margin }) {
+export function storyCardPosition(r, { cw, ch, vw, vh, gap = 24, margin = 16, clearance = 16, top: minTop = margin, only = null }) {
   const clampX = (x) => Math.max(margin, Math.min(x, vw - cw - margin));
   const clampY = (y) => Math.max(minTop, Math.min(y, vh - ch - margin));
-  const cands = [
+  let cands = [
     { side: 'right', left: r.right + gap, top: clampY(r.top) },
     { side: 'left', left: r.left - gap - cw, top: clampY(r.top) },
     { side: 'below', left: clampX(r.left), top: r.bottom + gap },
@@ -708,6 +712,7 @@ export function storyCardPosition(r, { cw, ch, vw, vh, gap = 24, margin = 16, cl
     { side: 'bottom-left', left: margin, top: vh - ch - margin },
     { side: 'top-left', left: margin, top: minTop },
   ].map((c) => ({ ...c, left: clampX(c.left), top: clampY(c.top) }));
+  if (only && cands.some((c) => c.side === only)) cands = cands.filter((c) => c.side === only);
   const t = { l: r.left - clearance, t: r.top - clearance, r: r.right + clearance, b: r.bottom + clearance };
   let best = null;
   cands.forEach((c, i) => {
@@ -718,87 +723,64 @@ export function storyCardPosition(r, { cw, ch, vw, vh, gap = 24, margin = 16, cl
   });
   return best;
 }
-// ---- tour-only motion helpers (the shared import line stays untouched: EASE arrives through a cached dynamic import)
-let tourEase = (p) => 1 - Math.pow(1 - p, 3);   // fallback until lib/motion.js resolves (it is already loaded)
-import('./lib/motion.js').then((m) => { if (m.EASE?.standard) tourEase = m.EASE.standard; }).catch(() => {});
-const TOUR_MIN_SCALE = 0.3; // the spot's 9999 px dim spread must still cover the viewport while it is scaled down
-/**
- * One rAF tween that scrolls the window AND moves the tour's fixed elements, on the same clock and easing
- * (MOTION.slow, standard), so the spotlight, the card and the page arrive together. Never uses CSS scroll-behavior.
- * moves: [{el, bx, by, dx, dy, sx, sy}] — each el is already laid out at its final box (placed by translate(bx, by),
- * never by left/top, so nothing here counts as a layout shift); it starts dx/dy away at scale sx/sy.
- * Returns {done: Promise, finish()} — finish() jumps to the end state (exit, user wheel/touch, a newer glide).
- */
-function tourGlide({ y0, y1, moves, ms = MOTION.slow, onFrame }) {
-  let id = 0, t0 = 0, resolve, over = false;
-  const done = new Promise((r) => { resolve = r; });
-  const paint = (e) => {
-    if (y1 !== y0) window.scrollTo(0, Math.round(y0 + (y1 - y0) * e));
-    for (const m of moves) {
-      const k = 1 - e;
-      m.el.style.transform = `translate(${m.bx + m.dx * k}px, ${m.by + m.dy * k}px)` + (m.sx !== 1 || m.sy !== 1 ? ` scale(${m.sx + (1 - m.sx) * e}, ${m.sy + (1 - m.sy) * e})` : '');
-    }
-    onFrame?.(e);
-  };
-  const end = (jumpScroll) => {
-    if (over) return;
-    over = true;
-    if (id) cancelAnimationFrame(id);
-    id = 0;
-    if (jumpScroll && y1 !== y0) window.scrollTo(0, y1);
-    for (const m of moves) { m.el.style.transform = `translate(${m.bx}px, ${m.by}px)`; m.el.style.willChange = ''; }
-    resolve();
-  };
-  moves.forEach((m) => { m.el.style.transformOrigin = '0 0'; m.el.style.willChange = 'transform'; });
-  paint(0);
-  const step = (t) => {
-    if (over) return;
-    if (!t0) t0 = t;
-    const p = Math.min(1, (t - t0) / ms);
-    paint(tourEase(p));
-    if (p < 1) id = requestAnimationFrame(step); else end(false);
-  };
-  id = requestAnimationFrame(step);
-  return { done, finish: (jumpScroll = false) => end(jumpScroll) };
+
+// ---- prefetch: the next step's route module and its data files (shared caches with the router)
+const prefetched = new Set();
+async function prefetchRoute(route) {
+  if (!route || prefetched.has(route) || document.documentElement.dataset.ready !== 'true') return;
+  prefetched.add(route);
+  try {
+    const app = await import('./app.js');   // already evaluated (it is the entry module): just reads ROUTES
+    const r = app.ROUTES?.find((x) => x.id === app.parseHash(route).id);
+    if (!r) return;
+    const mod = await import(r.module);     // './views/…' resolves to the same URL from ui.js and app.js
+    await Promise.all((mod.data || []).map((n) => loadData(n).catch(() => null)));
+  } catch { /* prefetch is best effort */ }
 }
+
 /**
- * v2.1 tour engine (release polish: one persistent spotlight, synced scroll + glide, crossfaded card).
- *  - Text: Simple mode shows step.title_simple / step.body_simple (plain English), Expert mode step.title / step.body;
- *    a mode change while the tour is open swaps the text and re-finds the target.
- *  - Play auto-advances every MOTION.tourStep (7 s; opts.stepMs or window.__gnmTourStepMs override for tests). One rAF
- *    loop drives the timer AND the current segment's progress fill (transform: scaleX, no CSS transition). The clock
- *    only runs once the step's target is framed. Pause reads the elapsed time up to that instant and freezes both.
- *    Next/Back work while playing (the clock restarts on the new step). At the last step the bar fills, playback stops
- *    and the button resets to Play (Play again restarts at step 1). Repeated play() never creates a second loop.
- *    Esc / Skip / exit() cancel the loop, the glide and every pending timer.
- *  - Step change: the card text fades out (MOTION.fast, exit) and back in (MOTION.base, enter, 6 px rise); a height
- *    change is FLIPped (background layer scaleY + the controls below it translateY). The ONE spotlight element glides
- *    (translate + scale, MOTION.slow) from wherever it is to the new target while the page scrolls on the same rAF
- *    clock (tourGlide) and the card glides to its new spot; the dim backdrop never changes. Reduced motion → instant
- *    steps (no glide, crossfade or smooth scroll); the tour still auto-advances (the bar steps once per second).
- *  - While open, window.__gnmStory = api (tests): api.play(), api.pause(), api.state() →
- *    {index, playing, elapsed, stepMs, ready, loops, timers, gliding}.
+ * v2.2 tour engine: one calm rhythm for every step, same page or not.
+ *   out (MOTION.fast 150 ms: card + spotlight + dim fade together) → move: navigate with a page cross-fade (View
+ *   Transitions where supported: the old page is held as a still frame until the new one is fully ready, then a
+ *   250 ms cross-fade; elsewhere #view fades out and in) and/or an instant scroll → measure ONCE → spotlight + dim in
+ *   (MOTION.base 250 ms) → card in (200 ms) at its final place. Nothing glides; each element moves at most once.
+ *   "Ready" = the route has rendered, the target exists with a real, stable size (no skeleton), its charts have drawn,
+ *   stylesheets and fonts are loaded. Past 300 ms of waiting a small "Loading next step…" pill shows. While the tour is
+ *   open html.tour-active makes lib/motion.js instant (no chart draw-ins or count-ups replay behind the card) and any CSS
+ *   entry animation in #view is finished before the reveal.
+ *  - The card has a fixed size per breakpoint (no height animation); its side is chosen once per step and it never
+ *    covers the spotlit area. ≤ 480 px: a fixed-height bottom sheet; crossfades only.
+ *  - Text: Simple mode shows step.title_simple / step.body_simple, Expert mode step.title / step.body; a mode change
+ *    while the tour is open re-frames the (re-rendered) target with the same rhythm.
+ *  - Play auto-advances after MOTION.tourStep (7 s of reading time once the step is shown; with the ~1.1 s transition a step lasts ~8 s; opts.stepMs or window.__gnmTourStepMs override for
+ *    tests). One rAF loop drives the timer AND the progress fill (transform: scaleX). The clock only runs once the step
+ *    is shown. Pause freezes both. Next/Back/Esc work mid-transition (the newer request wins; nothing stacks).
+ *  - prefers-reduced-motion: instant step changes (no fades, no page cross-fade); the tour still auto-advances.
+ *  - While open, window.__gnmStory = api (tests): api.play(), api.pause(), api.go(n), api.state() →
+ *    {index, playing, elapsed, stepMs, ready, loops, timers, gliding, phase, side}.
  */
 export function storyMode({ steps, navigate, onExit, stepMs }) {
   const STEP_MS = () => +(stepMs || window.__gnmTourStepMs || MOTION.tourStep);
+  const T_OUT = MOTION.fast, T_SPOT = MOTION.base, T_CARD = 200, SLOW_MS = 300;
   let i = 0;
-  let seq = 0; // guards against overlapping go() calls (fast ←/→)
+  let seq = 0;          // transition token: a newer go() / exit() makes every older await bail out
   let target = null;
-  const pending = new Set(); // every setTimeout the tour owns (cleared on exit)
+  let phase = 'idle';   // idle | out | move | wait | in | steady
+  const pending = new Set();   // every setTimeout the tour owns (cleared on exit)
   const sleep = (ms) => new Promise((r) => { const id = setTimeout(() => { pending.delete(id); r(); }, ms); pending.add(id); });
   const root = h('div', { class: 'story', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Guided tour' });
-  const spot = h('div', { class: 'story-spot is-idle' });
+  const spot = h('div', { class: 'story-spot is-off' });
+  const loadEl = h('div', { class: 'story-loading is-off', role: 'status' }, h('span', { class: 'story-loading-dot', 'aria-hidden': 'true' }), 'Loading next step…');
   const stepEl = h('div', { class: 'story-step', 'aria-live': 'polite' });
   const titleEl = h('h3', {});
   const bodyEl = h('p', {});
-  const textEl = h('div', { class: 'story-text' }, stepEl, titleEl, bodyEl);   // counter + title + body crossfade together
-  const bgEl = h('div', { class: 'story-card-bg', 'aria-hidden': 'true' });
+  const textEl = h('div', { class: 'story-text' }, stepEl, titleEl, bodyEl);
   const fills = steps.map(() => h('i', { class: 'story-fill' }));
   const prog = h('div', { class: 'story-progress', 'aria-hidden': 'true' }, fills.map((f) => h('span', {}, f)));
   const back = h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: () => go(i - 1) }, 'Back');
   const next = h('button', { class: 'btn btn--primary btn--sm', type: 'button', onclick: () => (i < steps.length - 1 ? go(i + 1) : exit()) }, 'Next');
   let peekUser = null; // null = automatic, true/false = the reader toggled the sheet on this step
-  const grab = h('button', { class: 'story-grab', type: 'button', 'aria-expanded': 'true', 'aria-label': 'Collapse the tour card', onclick: () => { setPeek(!cardEl.classList.contains('is-peek')); peekUser = cardEl.classList.contains('is-peek'); } }, h('span', { 'aria-hidden': 'true' }));
+  const grab = h('button', { class: 'story-grab', type: 'button', 'aria-expanded': 'true', 'aria-label': 'Collapse the tour card', onclick: () => { peekUser = !cardEl.classList.contains('is-peek'); setPeek(peekUser); if (phase === 'steady') place(); } }, h('span', { 'aria-hidden': 'true' }));
 
   // ---------------------------------------------------------------- playback clock (one rAF loop)
   let playing = false, elapsed = 0, lastT = 0, loop = 0, ready = false;
@@ -839,8 +821,8 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
   }
 
   const lower = h('div', { class: 'story-lower' }, prog, h('div', { class: 'story-actions' }, h('div', { class: 'row' }, h('button', { class: 'btn btn--ghost btn--sm story-skip', type: 'button', onclick: () => exit() }, 'Skip tour'), playBtn), h('div', { class: 'row' }, back, next)));
-  const cardEl = h('div', { class: 'story-card' }, bgEl, grab, textEl, lower);
-  root.append(spot, cardEl);
+  const cardEl = h('div', { class: 'story-card is-off' }, grab, textEl, lower);
+  root.append(spot, cardEl, loadEl);
   let opener = null;
   let spaceEat = false;
   // a button activates on Space keyup: swallow that keyup when the keydown already toggled Play
@@ -855,279 +837,338 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
     if (e.key === 'ArrowLeft' && i > 0) { e.preventDefault(); back.click(); }
     trapFocus(cardEl, e);
   };
-  /** Wait (up to `ms`) for the step's target to exist and have a size: views render charts asynchronously. */
-  async function waitFor(selector, ms = 10000, my = seq) {
-    const t0 = performance.now();
-    while (performance.now() - t0 < ms && my === seq) {
-      const el = selector ? document.querySelector(selector) : null;
-      if (el && el.getBoundingClientRect().height > 0) return el;
-      await sleep(100);
-    }
-    return null;
+
+  // ---------------------------------------------------------------- fades (opacity only; the newest call wins)
+  const anims = new Set();
+  function fade(el, to, ms, easing = MOTION.ease.standard) {
+    const from = +getComputedStyle(el).opacity;
+    el.getAnimations().forEach((a) => a.cancel());
+    el.style.opacity = String(to);
+    el.classList.toggle('is-off', to === 0);
+    if (motionReduced() || !ms || Math.abs(from - to) < 0.01 || typeof el.animate !== 'function') return Promise.resolve();
+    const a = el.animate([{ opacity: from }, { opacity: to }], { duration: ms * Math.min(1, Math.abs(to - from) + 0.001), easing });
+    anims.add(a);
+    return a.finished.then(() => { anims.delete(a); }, () => { anims.delete(a); });
   }
+  function showLoading(on) {
+    if (on === !loadEl.classList.contains('is-off')) return;
+    fade(loadEl, on ? 1 : 0, on ? T_OUT : 0);
+  }
+
+  // ---------------------------------------------------------------- geometry
   const SHEET_MAX = 480; // px viewport width at or below which the card becomes a bottom sheet
   const isSheet = () => innerWidth <= SHEET_MAX;
   /** Bottom of the sticky top bar (0 if absent): story targets and the card stay below it. */
   const barBottom = () => { const b = document.querySelector('.topbar'); return b ? Math.max(0, Math.round(b.getBoundingClientRect().bottom)) : 0; };
   const BAR_GAP = 16;
   const PAD = 8;
-  let spotBox = null;   // the spot's laid-out box {left, top, width, height} (null = not placed on a target yet)
-  let cardBox = null;   // the floating card's laid-out {left, top} (null = never placed)
-  let glide = null;     // the running tourGlide, if any
+  let side = null;      // the card's side for this step (chosen once, when the step is measured)
+  let spotBox = null;
   function setPeek(on) {
-    const h0 = cardEl.offsetHeight;
     cardEl.classList.toggle('is-peek', !!on);
     grab.setAttribute('aria-expanded', String(!on));
     grab.setAttribute('aria-label', on ? 'Expand the tour card' : 'Collapse the tour card');
-    slideSheet(h0);
-    onViewport();
   }
-  // fixed elements are placed by transform (left/top stay 0): moving them is then never a layout shift (CLS)
-  const setBox = (el, b) => Object.assign(el.style, { transform: `translate(${b.left}px, ${b.top}px)`, ...(b.width != null ? { width: `${b.width}px`, height: `${b.height}px` } : {}) });
-  /** The spotlight box for a target rect r (padded, never under the sticky bar). */
-  function spotFor(r, bar) {
-    const top0 = Math.max(r.top - PAD, bar + 4), bot0 = Math.min(r.bottom + PAD, innerHeight - 4);
-    return { left: r.left - PAD, top: top0, width: r.width + PAD * 2, height: Math.max(0, bot0 - top0) };
+  // fixed elements are placed by transform (left/top stay 0): moving them is never a layout shift (CLS)
+  const setBox = (el, b) => Object.assign(el.style, { transform: `translate(${Math.round(b.left)}px, ${Math.round(b.top)}px)`, ...(b.width != null ? { width: `${Math.round(b.width)}px`, height: `${Math.round(b.height)}px` } : {}) });
+  /** Height the sheet will have (full or peek) — read from the CSS, no animation. */
+  const sheetH = () => (isSheet() ? cardEl.offsetHeight : 0);
+  /** The free band for the target: below the bar, above the bottom sheet (phones) or the viewport edge. */
+  function band() {
+    const bar = barBottom();
+    return isSheet() ? { top: bar + 8, bottom: innerHeight - sheetH() - 8 } : { top: bar + BAR_GAP, bottom: innerHeight - BAR_GAP };
   }
-  /** Lay out the spot and card (no animation) for the target rect r (r may be a predicted, post-scroll rect). */
+  /** Phones: choose full / peek once per step (peek when the full sheet would cover the target). */
+  function choosePeek(el) {
+    if (!isSheet()) { setPeek(false); return; }
+    if (peekUser != null) { setPeek(peekUser); return; }
+    setPeek(false);
+    const fullBand = band().bottom - band().top;
+    const hgt = el ? el.getBoundingClientRect().height : 0;
+    setPeek(hgt > fullBand);
+  }
+  /** Where to scroll so the target's top sits at the top of the free band; null when it is already inside it. */
+  function frameY(el) {
+    const b = band();
+    const r = el.getBoundingClientRect();
+    if (r.top >= b.top && r.bottom <= b.bottom) return null;
+    const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
+    const y = Math.min(max, Math.max(0, Math.round(scrollY + r.top - b.top)));
+    return Math.abs(y - scrollY) < 1 ? null : y;
+  }
+  const jumpTo = (y) => { if (y != null) window.scrollTo({ top: y, left: 0, behavior: 'instant' }); };
+  /** Lay out the spot and card (no animation) for target rect r; r = null → no spotlight, the card waits centred. */
   function layout(r) {
     const sheet = isSheet();
     cardEl.classList.toggle('is-sheet', sheet);
-    if (!sheet && cardEl.classList.contains('is-peek')) cardEl.classList.remove('is-peek');
+    if (!sheet) setPeek(false);
     const bar = barBottom();
+    const b = band();
+    const cw = sheet ? innerWidth : cardEl.offsetWidth || Math.min(360, innerWidth - 32);
+    const ch = cardEl.offsetHeight || 340;
     if (!r) {
-      // no target (yet): an empty hole in the middle dims the page; the card waits centred
       spotBox = null;
-      setBox(spot, { left: innerWidth / 2, top: innerHeight / 2, width: 0, height: 0 });
-      if (!sheet) { cardBox = { left: (innerWidth - Math.min(380, innerWidth - 32)) / 2, top: Math.max(bar + BAR_GAP, innerHeight / 3) }; setBox(cardEl, cardBox); }
+      spot.classList.add('is-empty');
+      if (!sheet) setBox(cardEl, { left: (innerWidth - cw) / 2, top: Math.max(bar + BAR_GAP, (innerHeight - ch) / 2) });
       return;
     }
-    spotBox = spotFor(r, bar);
+    spot.classList.remove('is-empty');
+    // the spotlit area: the target clipped to the free band (a tall target is lit where it shows)
+    const top0 = Math.max(r.top - PAD, sheet ? b.top - 4 : bar + 4);
+    const bot0 = Math.min(r.bottom + PAD, sheet ? b.bottom + 4 : innerHeight - 4);
+    spotBox = { left: r.left - PAD, top: top0, width: r.width + PAD * 2, height: Math.max(0, bot0 - top0) };
     setBox(spot, spotBox);
-    spot.classList.remove('is-idle');
-    if (sheet) {
-      cardEl.style.transform = ''; cardBox = null;
-      // automatic peek: collapse to ~25% of the viewport when the expanded sheet would cover the target
-      if (peekUser == null) {
-        const hBefore = cardEl.offsetHeight;
-        const wasPeek = cardEl.classList.contains('is-peek');
-        if (wasPeek) cardEl.classList.remove('is-peek');
-        const sheetTop = innerHeight - cardEl.offsetHeight;
-        const covered = Math.min(r.bottom, innerHeight) - Math.max(r.top, sheetTop);
-        cardEl.classList.toggle('is-peek', covered > 24);
-        grab.setAttribute('aria-expanded', String(!cardEl.classList.contains('is-peek')));
-        if (wasPeek !== cardEl.classList.contains('is-peek')) slideSheet(hBefore);
-      }
-      return;
-    }
-    // clip the target rect to the visible area below the bar, so a tall target leaves room for the card
-    const vis = { left: r.left, right: r.right, top: Math.max(r.top, bar), bottom: Math.min(r.bottom, innerHeight), width: r.width };
-    vis.height = Math.max(0, vis.bottom - vis.top);
-    const ch = cardEl.offsetHeight || 240, cw = Math.min(380, innerWidth - 32);
-    const pos = storyCardPosition(vis, { cw, ch, vw: innerWidth, vh: innerHeight, top: bar + BAR_GAP });
-    // sub-pixel / few-px contact with the spotlight's bottom edge: nudge the card down into the bottom margin
-    const spotBot = spotBox.top + spotBox.height, spotL = spotBox.left, spotR = spotBox.left + spotBox.width;
-    const xHit = Math.min(pos.left + cw, spotR) > Math.max(pos.left, spotL);
-    const yOver = spotBot - pos.top;
-    if (xHit && yOver > 0 && yOver <= 12 && pos.top + yOver + ch <= innerHeight - 2) pos.top = Math.ceil(spotBot) + 1;
-    cardBox = { left: pos.left, top: pos.top };
-    setBox(cardEl, cardBox);
+    if (sheet) { cardEl.style.transform = ''; return; }
+    const vis = { left: spotBox.left, right: spotBox.left + spotBox.width, top: spotBox.top, bottom: spotBox.top + spotBox.height, width: spotBox.width, height: spotBox.height };
+    const pos = storyCardPosition(vis, { cw, ch, vw: innerWidth, vh: innerHeight, top: bar + BAR_GAP, gap: 20, clearance: 4, only: side });
+    side = pos.side;
+    setBox(cardEl, pos);
   }
-  /** Instant re-layout (resize, user scroll, peek, mode). Leaves the spot where it is while a step is in flight. */
+  /** Instant re-layout on resize / the reader's own scroll (steady state only; keeps the step's side). */
   function place() {
-    if (glide) return;
+    if (phase !== 'steady') return;
     if (target && target.isConnected) layout(target.getBoundingClientRect());
-    else if (!spotBox && !target) layout(null);
   }
   let raf = 0;
   const onViewport = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(place); };
-  const stopGlide = () => { glide?.finish(); glide = null; };
-  const onUserScroll = () => { if (glide) { stopGlide(); onViewport(); } }; // the reader's wheel / touch wins
 
-  /**
-   * Where to scroll so the target's top sits just under the sticky top bar (bar + 16 px on desktop, bar + 8 px on
-   * phones); null when the target is already fully inside the free band below the bar.
-   */
-  function frameY(el) {
-    const bar = barBottom();
+  // ---------------------------------------------------------------- readiness
+  const viewEl = () => document.getElementById('view');
+  function viewReady() {
+    const v = viewEl();
+    return document.documentElement.dataset.ready === 'true' && (!v || v.style.visibility !== 'hidden')
+      && [...document.querySelectorAll('link[rel="stylesheet"]')].every((l) => l.sheet || l.disabled);
+  }
+  /** A real target: connected, a real size, not a skeleton / state block, its charts drawn. */
+  function targetOk(el) {
+    if (!el || !el.isConnected) return false;
     const r = el.getBoundingClientRect();
-    const gapTop = isSheet() ? 8 : BAR_GAP;
-    const freeTop = bar + gapTop, freeBot = innerHeight - (isSheet() ? Math.round(innerHeight * 0.25) : BAR_GAP);
-    if (r.top >= freeTop && r.bottom <= freeBot) return null;
-    const max = Math.max(0, document.documentElement.scrollHeight - innerHeight);
-    const y = Math.min(max, Math.max(0, Math.round(scrollY + r.top - freeTop)));
-    return Math.abs(y - scrollY) < 1 ? null : y;
+    if (r.width < 8 || r.height < 8) return false;
+    if (el.matches('.skeleton, .state') || el.closest('.skeleton') || el.querySelector('.skeleton')) return false;
+    const bodies = el.matches('.chart-body') ? [el] : [...el.querySelectorAll('.chart-body')];
+    return bodies.every((b) => b.querySelector('svg, canvas, img, table, .state') && b.getBoundingClientRect().height > 8);
+  }
+  const query = (sel) => { try { return sel ? document.querySelector(sel) : null; } catch { return null; } };
+  function pick(s, waited) {
+    if (isSheet() && s.mobile_selector) {
+      const m = query(s.mobile_selector);
+      if (targetOk(m) || waited < 1500) return m;
+    }
+    return query(s.selector);
   }
   /**
-   * Move to el: scroll (if needed), spotlight and card glide together on one rAF clock; instant under reduced motion.
-   * Resolves when everything has arrived. Returns false when nothing needed to move.
+   * Wait until the view is ready and the target is real and stable (same box on 3 checks, 40 ms apart), the fonts are
+   * loaded and no stylesheet is pending. onSlow fires once past 300 ms. Gives up after 8 s (→ the best element or null).
    */
-  async function glideTo(el) {
-    const y0 = scrollY, y = frameY(el), y1 = y == null ? y0 : y;
-    const r0 = el.getBoundingClientRect();
-    const r = { left: r0.left, right: r0.right, width: r0.width, height: r0.height, top: r0.top - (y1 - y0), bottom: r0.bottom - (y1 - y0) };
-    const want = spotFor(r, barBottom());
-    if (y1 === y0 && spotBox && ['left', 'top', 'width', 'height'].every((k) => Math.abs(want[k] - spotBox[k]) < 1.5)) { layout(r); return false; }
-    // where things are on screen right now (mid-glide included), before the new layout is applied
-    const hadSpot = !!spotBox;
-    const sFrom = hadSpot ? spot.getBoundingClientRect() : null;
-    const cFrom = cardBox && !isSheet() ? cardEl.getBoundingClientRect() : null;
-    stopGlide();
-    layout(r);
-    if (motionReduced()) { if (y1 !== y0) window.scrollTo(0, y1); return true; }
-    const moves = [];
-    const to = spotBox;
-    let from = sFrom && sFrom.width > 1 ? sFrom : { left: 0, top: 0, width: innerWidth, height: innerHeight }; // first step: an iris from the whole page
-    if (to.width > 0 && to.height > 0) {
-      let fw = Math.max(from.width, to.width * TOUR_MIN_SCALE), fh = Math.max(from.height, to.height * TOUR_MIN_SCALE);
-      const cx = from.left + from.width / 2, cy = from.top + from.height / 2;
-      from = { left: cx - fw / 2, top: cy - fh / 2, width: fw, height: fh };
-      moves.push({ el: spot, bx: to.left, by: to.top, dx: from.left - to.left, dy: from.top - to.top, sx: fw / to.width, sy: fh / to.height });
+  async function waitTarget(s, my, onSlow) {
+    const t0 = performance.now();
+    let last = '', stable = 0, slow = false, el = null;
+    const fonts = document.fonts?.ready ? Promise.race([document.fonts.ready, sleep(1500)]).then(() => true) : Promise.resolve(true);
+    let fontsOk = false;
+    fonts.then(() => { fontsOk = true; });
+    while (my === seq) {
+      const waited = performance.now() - t0;
+      el = viewReady() ? pick(s, waited) : null;
+      if (el && targetOk(el)) {
+        const r = el.getBoundingClientRect();
+        const key = [r.left, r.top + scrollY, r.width, r.height].map(Math.round).join();
+        if (key === last) stable += 1; else { last = key; stable = 0; }
+        if (stable >= 2 && fontsOk) return el;
+      } else { last = ''; stable = 0; }
+      if (!slow && waited > SLOW_MS) { slow = true; onSlow?.(); }
+      if (waited > 8000) return el && el.isConnected ? el : null;
+      await sleep(40);
     }
-    if (cFrom && cardBox) {
-      const dx = cFrom.left - cardBox.left, dy = cFrom.top - cardBox.top;
-      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) moves.push({ el: cardEl, bx: cardBox.left, by: cardBox.top, dx, dy, sx: 1, sy: 1 });
+    return null;
+  }
+  /** Finish any CSS entry animation inside #view (card rise, view-in, chart fades): the page is still behind the card. */
+  function finishViewAnims() {
+    const v = viewEl();
+    if (!v || typeof document.getAnimations !== 'function') return;
+    for (const a of document.getAnimations()) {
+      const t = a.effect?.target;
+      if (!t || a.effect.pseudoElement || !(t === v || v.contains(t))) continue;
+      if (a.effect.getComputedTiming?.().iterations === Infinity) continue;
+      try { a.finish(); } catch { /* not finishable */ }
     }
-    if (!moves.length && y1 === y0) return true;
-    spot.classList.add('is-gliding');
-    spot.classList.toggle('is-iris', !hadSpot);
-    const g = (glide = tourGlide({ y0, y1, moves }));
-    await g.done;
-    if (glide === g) glide = null;
-    spot.classList.remove('is-gliding', 'is-iris');
-    return true;
+  }
+
+  // ---------------------------------------------------------------- page cross-fade
+  let vt = null, viewFade = null, holding = false;   // holding: the old page is shown as a still (View Transition paused)
+  const frames = (n) => new Promise((res) => { const f = () => (--n <= 0 ? res() : requestAnimationFrame(f)); requestAnimationFrame(f); });
+  const vtAnims = () => (typeof document.getAnimations === 'function' ? document.getAnimations().filter((a) => String(a.effect?.pseudoElement || '').startsWith('::view-transition')) : []);
+  function dropTransition() {
+    holding = false;
+    unshift(shiftY);
+    if (vt) { try { vt.skipTransition(); } catch { /* done */ } vt = null; }
+    if (viewFade) { viewFade.cancel(); viewFade = null; }
+  }
+  function fadeView(to, ms) {
+    const v = viewEl();
+    if (!v || typeof v.animate !== 'function') return Promise.resolve();
+    const from = viewFade ? +getComputedStyle(v).opacity : 1;
+    viewFade?.cancel();
+    const a = v.animate([{ opacity: from }, { opacity: to }], { duration: ms, easing: to ? MOTION.ease.enter : MOTION.ease.exit, fill: 'forwards' });
+    viewFade = a;
+    return a.finished.then(() => { if (to === 1 && viewFade === a) { a.cancel(); viewFade = null; } }, () => {});
+  }
+  /**
+   * Navigate to `want` behind a held still of the current page (the tour layer is already faded out), wait until the
+   * step is ready, frame the target, then cross-fade (250 ms). → the target element (or null).
+   */
+  async function crossTo(want, s, my) {
+    const smooth = !motionReduced();
+    let held = false, released = false;
+    if (smooth && typeof document.startViewTransition === 'function') {
+      try {
+        const t = document.startViewTransition(() => {});
+        vt = t;
+        t.finished.catch(() => {}); t.updateCallbackDone.catch(() => {});
+        await t.ready;
+        if (my !== seq) return null;
+        if (vt === t) { vtAnims().forEach((a) => a.pause()); held = true; holding = true; }
+        // let the compositor present the held still before the router starts its (main-thread heavy) render
+        await frames(2);
+        if (my !== seq) return null;
+      } catch { vt = null; }
+    }
+    if (smooth && !held) await fadeView(0, T_OUT);
+    if (my !== seq) return null;
+    const release = () => {
+      if (released) return null;
+      released = true;
+      holding = false;
+      if (held && vt) { const t = vt; vtAnims().forEach((a) => a.play()); return t.finished.catch(() => {}).then(() => { if (vt === t) vt = null; }); }
+      return smooth ? fadeView(1, T_SPOT) : null;
+    };
+    phase = 'move';
+    await navigate(want);
+    if (my !== seq) return null;
+    // router hook (app.js): resolves once the route is rendered, revealed and scrolled
+    try { await window.__gnmRendered?.(); } catch { /* older router: navigate() already waited */ }
+    if (my !== seq) return null;
+    // a ?section= step would let the router's ~0.7 s section settle re-scroll: let it finish before the tour frames
+    if (/[?&]section=/.test(want)) { await sleep(750); if (my !== seq) return null; }
+    phase = 'wait';
+    const el = await waitTarget(s, my, () => { release(); showLoading(true); });
+    if (my !== seq) return null;
+    finishViewAnims();
+    let y = null;
+    if (el) { choosePeek(el); y = frameY(el); }
+    if (y != null && holding) {
+      // never scroll during a View Transition (Chromium offsets the held still, WebKit drops it): the page content is
+      // shifted into its framed place with `translate` instead, and swapped for the real scroll once the cross-fade ends
+      shift(y - scrollY);
+      finishViewAnims();
+      await release();
+      unshift(y);
+    } else if (y != null && smooth) {
+      // slow path (the still was already released): fade the page out, jump, fade it back in
+      await (release() || Promise.resolve());
+      if (my !== seq) return null;
+      await fadeView(0, T_OUT);
+      if (my !== seq) return null;
+      jumpTo(y);
+      await fadeView(1, T_SPOT);
+    } else {
+      await (release() || Promise.resolve());
+      jumpTo(y);
+    }
+    if (my !== seq) return null;
+    finishViewAnims();
+    return el;
+  }
+  // content shift used while a View Transition holds the page (transform-free: `translate` never fights entry keyframes)
+  const shifted = () => [viewEl(), document.querySelector('.main > .disclaimer, #footer')].filter(Boolean);
+  let shiftY = null;   // the scroll the shifted content stands for
+  function shift(dy) { shiftY = scrollY + dy; shifted().forEach((e) => { e.style.translate = `0 ${-Math.round(dy)}px`; }); }
+  function unshift(y) {
+    const els = shifted().filter((e) => e.style.translate);
+    shiftY = null;
+    if (!els.length) return;
+    els.forEach((e) => e.style.removeProperty('translate'));
+    if (y != null) jumpTo(y);
   }
 
   const text = (s, k) => (isSimple() && s[`${k}_simple`]) || s[k] || '';
-  const paintStep = () => { stepEl.textContent = `STEP ${String(i + 1).padStart(2, '0')} / ${String(steps.length).padStart(2, '0')}`; };
   function paintText() {
     const s = steps[i];
-    paintStep();
+    stepEl.textContent = `STEP ${String(i + 1).padStart(2, '0')} / ${String(steps.length).padStart(2, '0')}`;
     titleEl.textContent = text(s, 'title');
     bodyEl.textContent = text(s, 'body');
   }
-  /**
-   * Crossfade the card text: out (MOTION.fast, opacity) → swap → in (MOTION.base, opacity + 6 px rise). A height
-   * change is FLIPped with transforms only: the background layer scales from the old height, the progress + buttons
-   * slide from their old place. Instant under reduced motion, on the first paint and in sheet mode (height only).
-   */
-  let textTok = 0, fadeOut = null;
-  async function swapText({ first = false } = {}) {
-    const tok = ++textTok;
-    const animate = !first && !motionReduced() && typeof textEl.animate === 'function';
-    if (animate) {
-      const o = +getComputedStyle(textEl).opacity;
-      textEl.getAnimations().forEach((a) => a.cancel());
-      if (o > 0.01) {
-        fadeOut = textEl.animate([{ opacity: o }, { opacity: 0 }], { duration: MOTION.fast * o, easing: MOTION.ease.exit, fill: 'forwards' });
-        try { await fadeOut.finished; } catch { /* cancelled by a newer step */ }
-      }
-      if (tok !== textTok || !root.isConnected) return;
-    }
-    const h0 = cardEl.offsetHeight;
-    paintText();
-    if (!animate) return;
-    const h1 = cardEl.offsetHeight;
-    textEl.getAnimations().forEach((a) => a.cancel());
-    textEl.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: MOTION.base, easing: MOTION.ease.enter });
-    if (h0 && h1 && Math.abs(h1 - h0) > 1 && !isSheet()) {
-      const opt = { duration: MOTION.base, easing: MOTION.ease.standard };
-      bgEl.animate([{ transform: `scaleY(${h0 / h1})` }, { transform: 'none' }], opt);
-      lower.animate([{ transform: `translateY(${h0 - h1}px)` }, { transform: 'none' }], opt);
-    } else if (isSheet()) slideSheet(h0);
-  }
-  /** Sheet mode: a height change (new text, peek) slides the sheet's top edge instead of jumping (transform only). */
-  function slideSheet(h0) {
-    const h1 = cardEl.offsetHeight;
-    if (!h0 || !h1 || Math.abs(h1 - h0) < 2 || motionReduced() || typeof cardEl.animate !== 'function') return;
-    cardEl.animate([{ transform: `translateY(${h1 - h0}px)` }, { transform: 'none' }], { duration: MOTION.base, easing: MOTION.ease.standard });
-  }
 
-  async function locate(s, my) {
-    target = null;
-    if (isSheet() && s.mobile_selector) target = await waitFor(s.mobile_selector, 2500, my);
-    if (my !== seq) return false;
-    if (!target) target = await waitFor(s.selector, 10000, my);
-    if (my !== seq) return false;
-    if (!target) { stopGlide(); layout(null); spot.classList.remove('is-idle'); } // nothing to show: dim the page
-    return true;
-  }
-  /**
-   * Frame the target: glide there, then re-check — views render charts asynchronously, so content above the target can
-   * still grow after the first move. Re-glide (short corrections) until it stops moving (max 4 passes).
-   */
-  async function settle(my) {
-    const el = target;   // local: closing the tour (Esc) mid-pass nulls the shared `target`
-    if (!el) return true;
-    cardEl.classList.toggle('is-sheet', isSheet());
-    for (let pass = 0; pass < 4; pass++) {
-      if (!el.isConnected || target !== el) break;
-      const moved = await glideTo(el);
-      if (my !== seq) return false;
-      if (!moved && pass > 0) break;
-      await sleep(motionReduced() ? 120 : 100);
-      if (my !== seq) return false;
-    }
-    return true;
-  }
-
-  async function go(n, { first = false } = {}) {
+  /** Go to step n with the one rhythm (out → move → measure once → spotlight in → card in). keepClock: re-frame only. */
+  async function go(n, { keepClock = false } = {}) {
     const my = ++seq;
+    dropTransition();
     i = Math.max(0, Math.min(steps.length - 1, n));
     const s = steps[i];
-    peekUser = null;
-    elapsed = 0; ready = false; lastT = 0;
-    const textDone = swapText({ first });
+    if (!keepClock) { peekUser = null; elapsed = 0; lastT = 0; side = null; }
+    ready = false;
     paintFill();
     back.disabled = i === 0;
     next.textContent = i === steps.length - 1 ? 'Finish' : 'Next';
     root.setAttribute('aria-busy', 'true');
-    if (s.route) {
-      const cur = location.hash, want = s.route;
-      const differs = cur.split('?')[0] !== want.split('?')[0] || (want.includes('?') && cur !== want);
-      if (differs) { stopGlide(); spot.classList.add('is-transit'); await navigate(want); }
+    // 1) out: card, spotlight and dim together
+    phase = 'out';
+    await Promise.all([fade(cardEl, 0, T_OUT, MOTION.ease.exit), fade(spot, 0, T_OUT, MOTION.ease.exit)]);
+    if (my !== seq) return;
+    paintText();   // swapped while hidden: no text reflow on screen
+    // 2) move: another page (cross-fade) or this one (instant scroll)
+    let el = null;
+    const cur = location.hash, want = s.route;
+    const differs = want && (cur.split('?')[0] !== want.split('?')[0] || (want.includes('?') && cur !== want));
+    if (differs) el = await crossTo(want, s, my);
+    else {
+      phase = 'wait';
+      el = await waitTarget(s, my, () => showLoading(true));
+      if (my !== seq) return;
+      finishViewAnims();
+      if (el) { choosePeek(el); jumpTo(frameY(el)); }
     }
     if (my !== seq) return;
-    if (!(await locate(s, my))) return;
-    await textDone;       // the card has its new height before it is placed
+    // 3) measure once, place, then spotlight in → card in
+    target = el;
+    showLoading(false);
+    layout(el ? el.getBoundingClientRect() : null);
+    phase = 'in';
+    if (el) { await fade(spot, 1, T_SPOT, MOTION.ease.enter); if (my !== seq) return; }
+    await fade(cardEl, 1, T_CARD, MOTION.ease.enter);
     if (my !== seq) return;
-    spot.classList.remove('is-transit');
-    if (!(await settle(my))) return;
-    place();
+    phase = 'steady';
     root.removeAttribute('aria-busy');
     if (document.activeElement !== playBtn) next.focus({ preventScroll: true });
-    ready = true; lastT = 0; // the clock starts once the step is framed
+    ready = true; lastT = 0; // the clock starts once the step is shown
+    prefetchRoute(steps[i + 1]?.route);
   }
-  // a reading-mode switch re-renders the view: swap the text and re-find the (new) target element
+  // a reading-mode switch re-renders the view: re-frame the (new) target with the same rhythm, clock kept
   const onMode = async () => {
-    paintText();
-    const my = seq;
     await sleep(60);
-    if (my !== seq || !root.isConnected) return;
-    ready = false;
-    if (await locate(steps[i], my)) { if (await settle(my)) { place(); ready = true; lastT = 0; } }
+    if (!root.isConnected) return;
+    go(i, { keepClock: true });
   };
   function exit() {
     seq++;
+    phase = 'idle';
     playing = false; ready = false;
     if (loop) cancelAnimationFrame(loop);
     loop = 0;
     cancelAnimationFrame(raf);
-    stopGlide();
-    textTok++;
+    dropTransition();
+    anims.forEach((a) => a.cancel()); anims.clear();
     pending.forEach((id) => clearTimeout(id)); pending.clear();
     document.removeEventListener('keydown', onKey, true); document.removeEventListener('keyup', onKeyUp, true);
     document.removeEventListener('gnm:mode', onMode);
     removeEventListener('resize', onViewport);
     removeEventListener('scroll', onViewport, true);
-    removeEventListener('wheel', onUserScroll);
-    removeEventListener('touchstart', onUserScroll);
     root.remove();
+    document.documentElement.classList.remove('tour-active');
     if (activeStory === api) activeStory = null;
     if (window.__gnmStory === api) delete window.__gnmStory;
     // focus back to what opened the tour; if that was the page itself (key S) or it is gone, to the main view
-    if (opener && opener !== document.body && opener.isConnected) opener.focus({ preventScroll: true });
-    else document.getElementById('view')?.focus({ preventScroll: true });
+    if (opener && opener !== document.body && opener.isConnected && !opener.closest?.('.story')) opener.focus({ preventScroll: true });
+    else viewEl()?.focus({ preventScroll: true });
     onExit?.();
   }
   const api = {
@@ -1137,22 +1178,28 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
       activeStory = api;
       window.__gnmStory = api;
       opener = document.activeElement;
+      document.documentElement.classList.add('tour-active');
+      paintText();
+      cardEl.classList.toggle('is-sheet', isSheet());
       document.body.append(root);
-      layout(null);
       document.addEventListener('keydown', onKey, true); document.addEventListener('keyup', onKeyUp, true);
       document.addEventListener('gnm:mode', onMode);
       addEventListener('resize', onViewport);
       addEventListener('scroll', onViewport, true);
-      addEventListener('wheel', onUserScroll, { passive: true });
-      addEventListener('touchstart', onUserScroll, { passive: true });
-      go(0, { first: true });
+      prefetchRoute(steps[0].route);
+      const autoplay = performance.now() - tourClickAt < 1500;
+      tourClickAt = -1e9;   // consumed: a later Story-button open stays paused
+      go(0);
+      if (autoplay) setPlaying(true);
       return api;
     },
     exit,
     go,
     play: () => setPlaying(true),
     pause: () => setPlaying(false),
-    state: () => ({ index: i, playing, elapsed, stepMs: STEP_MS(), ready, loops: loop ? 1 : 0, timers: pending.size, gliding: !!glide }),
+    state: () => ({ index: i, playing, elapsed, stepMs: STEP_MS(), ready, loops: loop ? 1 : 0, timers: pending.size, gliding: false, phase, side, held: holding }),
+    /** The element the current step spotlights (null while it is being found). */
+    target: () => target,
     get index() { return i; },
   };
   return api;

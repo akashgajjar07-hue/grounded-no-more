@@ -68,19 +68,14 @@
 .term-pop.is-on { opacity: 1; visibility: visible; transition: opacity var(--motion-fast) var(--ease-standard), visibility 0s; }
 
 /* ---- guided tour ---- */
-/* positions are set instantly and glided by JS (one rAF clock with the scroll); the ring softens while gliding */
-.story-spot { transition: none; }
-.story-spot::after { transition: opacity var(--motion-base) var(--ease-standard); }
-.story-spot.is-gliding::after { opacity: 0.35; transition-duration: var(--motion-fast); }
-.story-spot.is-iris::after { opacity: 0; }
-/* a route change is under way: the old hole now sits over the new page, so its ring fades out until the glide */
-.story-spot.is-transit::after { opacity: 0; }
-.story-card { transition: none; animation: story-card-in var(--motion-base) var(--ease-enter) backwards; }
-@keyframes story-card-in { from { opacity: 0; } to { opacity: 1; } }   /* opacity only: the card's transform is the glide's */
+/* v2.2: the tour moves nothing smoothly: positions are set while hidden, and JS fades opacity (Web Animations) */
+.story-spot, .story-card, .story-loading { transition: none; animation: none; }
 .story-progress span { position: relative; overflow: hidden; }
 .story-progress span.is-done, .story-progress span.is-current { background: var(--line-strong); }
 .story-fill { position: absolute; inset: 0; background: var(--primary); transform-origin: 0 50%; transform: scaleX(0); }
 .story-progress span.is-done .story-fill { transform: scaleX(1); }
+/* segments that are not the running one ease to full / empty (the running one is painted every frame, no transition) */
+.story-progress span:not(.is-current) .story-fill { transition: transform var(--motion-base) var(--ease-standard); }
 .story.is-playing .story-progress span.is-current .story-fill { will-change: transform; }
 
 /* ---- reduced motion: no movement, instant state changes ---- */
@@ -89,5 +84,5 @@
   .view-enter, .motion-stagger, .modal-card { animation: none !important; }
   .btn:active:not(:disabled), .seg button:active, .tab:active, .nav-item:active, .dts-row[role='button']:active { transform: none; }
   .seg-thumb, .tooltip, .term-pop, .story-card { transition: none !important; }
-  .story-card, .story-spot::after { animation: none !important; transition: none !important; }
+  .story-card, .story-spot, .story-fill { animation: none !important; transition: none !important; }
 }

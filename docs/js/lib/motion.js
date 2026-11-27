@@ -4,6 +4,10 @@
  * Rules: animate only transform / opacity; JS animation runs on requestAnimationFrame; will-change only while
  * animating; no layout reads inside animation loops; prefers-reduced-motion → no movement, instant state changes
  * (the guided tour still auto-advances).
+ * v2.2 tour quiet mode: while the guided tour is open (html.tour-active), reducedMotion() is true as well, so every
+ * helper here (dur, tx, chartTransition, tween, countUpOnce, staggerIn, flip) goes instant: chart draw-ins, count-ups
+ * and card rises never replay behind the tour card. prefersReducedMotion() is the reader's setting alone (the tour's
+ * own fades use it).
  *
  *   import { MOTION, reducedMotion, dur, countUpOnce, chartTransition, throttleRAF, tooltipFade, staggerIn } from '../lib/motion.js';
  *   countUpOnce(valueEl, 1480, (v) => fmtInt(v), { key: 'mission-aog-cut' });   // 600 ms ease-out, once per key per session
@@ -18,9 +22,14 @@ export const MOTION = Object.freeze({
   ease: Object.freeze({ standard: 'cubic-bezier(0.2, 0, 0, 1)', enter: 'cubic-bezier(0, 0, 0, 1)', exit: 'cubic-bezier(0.3, 0, 1, 1)' }),
 });
 
-export const reducedMotion = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
+/** The reader's prefers-reduced-motion setting (nothing else). */
+export const prefersReducedMotion = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
+/** The guided tour is open: page animations go instant (html.tour-active, set by storyMode in ui.js). */
+export const tourActive = () => { try { return document.documentElement.classList.contains('tour-active'); } catch { return false; } };
+/** No page motion: the reader asked for reduced motion, or the guided tour is open. */
+export const reducedMotion = () => prefersReducedMotion() || tourActive();
 
-/** Duration in ms for a token name ('fast' | 'base' | 'slow' | 'hero') or a number; 0 under reduced motion. */
+/** Duration in ms for a token name ('fast' | 'base' | 'slow' | 'hero') or a number; 0 under reduced motion / the tour. */
 export const dur = (d = 'base') => (reducedMotion() ? 0 : typeof d === 'number' ? d : MOTION[d] ?? MOTION.base);
 
 /** CSS cubic-bezier → easing function t∈[0,1] → progress (Newton–Raphson on x, as browsers do). */
