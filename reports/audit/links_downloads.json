@@ -186,7 +186,7 @@
   ],
   "problems": []
  },
- "generated": "2026-11-26T20:08:49",
+ "generated": "2026-11-27T15:36:17",
  "routes_webkit": {
   "rows": [
    {
@@ -457,6 +457,41 @@
     "ok": true
    },
    {
+    "href": "#/glossary?section=downtime-and-urgency",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/glossary?section=forecasting",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/glossary?section=parts",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/glossary?section=plans-and-money",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/glossary?section=repair",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/glossary?section=stock-and-network",
+    "kind": "route",
+    "ok": true
+   },
+   {
+    "href": "#/glossary?section=testing-and-results",
+    "kind": "route",
+    "ok": true
+   },
+   {
     "href": "#/method",
     "kind": "route",
     "ok": true
@@ -612,34 +647,6 @@
     "ok": true
    },
    {
-    "href": "#gl-cat-downtime-and-urgency",
-    "kind": "anchor"
-   },
-   {
-    "href": "#gl-cat-forecasting",
-    "kind": "anchor"
-   },
-   {
-    "href": "#gl-cat-parts",
-    "kind": "anchor"
-   },
-   {
-    "href": "#gl-cat-plans-and-money",
-    "kind": "anchor"
-   },
-   {
-    "href": "#gl-cat-repair",
-    "kind": "anchor"
-   },
-   {
-    "href": "#gl-cat-stock-and-network",
-    "kind": "anchor"
-   },
-   {
-    "href": "#gl-cat-testing-and-results",
-    "kind": "anchor"
-   },
-   {
     "href": "#view",
     "kind": "anchor"
    },
@@ -672,8 +679,8 @@
  },
  "downloads_on_disk": {
   "files": {
-   "case_study_deck.pdf": 1693301,
-   "grounded_no_more_planner_workbook.xlsx": 119589
+   "case_study_deck.pdf": 1696896,
+   "grounded_no_more_planner_workbook.xlsx": 119751
   },
   "problems": {}
  },
@@ -681,7 +688,7 @@
   "rows": [
    {
     "href": "downloads/case_study_deck.pdf",
-    "bytes": 1693301,
+    "bytes": 1696896,
     "pages": [
      "about:expert",
      "about:simple",
@@ -692,7 +699,7 @@
    },
    {
     "href": "downloads/grounded_no_more_planner_workbook.xlsx",
-    "bytes": 119589,
+    "bytes": 119751,
     "pages": [
      "about:expert",
      "about:simple",
@@ -707,11 +714,11 @@
  "download_buttons": {
   "files": {
    "downloads/grounded_no_more_planner_workbook.xlsx": {
-    "bytes": 119589,
+    "bytes": 119751,
     "problem": null
    },
    "downloads/case_study_deck.pdf": {
-    "bytes": 1693301,
+    "bytes": 1696896,
     "problem": null
    },
    "actions:export-csv": {
@@ -743,165 +750,5 @@
    }
   },
   "problems": []
- },
- "external_links": {
-  "checked": 14,
-  "rows": [
-   {
-    "url": "https://akashgajjar07-hue.github.io/grounded-no-more/",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://akashgajjar07-hue.github.io/grounded-no-more/",
-    "ok": true,
-    "found_on": [
-     "README.md"
-    ]
-   },
-   {
-    "url": "https://davidmegginson.github.io/ourairports-data/airports.csv",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://davidmegginson.github.io/ourairports-data/airports.csv",
-    "ok": true,
-    "found_on": [
-     "method:expert",
-     "method:simple",
-     "method?section=next:simple"
-    ]
-   },
-   {
-    "url": "https://github.com/akashgajjar07-hue",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://github.com/akashgajjar07-hue",
-    "ok": true,
-    "found_on": [
-     "README.md",
-     "about:simple",
-     "about?section=mro:simple",
-     "method:simple"
-    ]
-   },
-   {
-    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/actions/workflows/ci.yml",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/actions/workflows/ci.yml",
-    "ok": true,
-    "found_on": [
-     "README.md"
-    ]
-   },
-   {
-    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/actions/workflows/ci.yml/badge.svg",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/actions/workflows/ci.yml/badge.svg",
-    "ok": true,
-    "found_on": [
-     "README.md"
-    ]
-   },
-   {
-    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/STUDY_GUIDE.md",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/STUDY_GUIDE.md",
-    "ok": true,
-    "found_on": [
-     "planner:expert",
-     "planner:simple"
-    ]
-   },
-   {
-    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/CHEAT_SHEET.md",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/CHEAT_SHEET.md",
-    "ok": true,
-    "found_on": [
-     "planner:expert",
-     "planner:simple"
-    ]
-   },
-   {
-    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/INTERVIEW_QA.md",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/INTERVIEW_QA.md",
-    "ok": true,
-    "found_on": [
-     "planner:expert",
-     "planner:simple"
-    ]
-   },
-   {
-    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/MASTERY_CHECKLIST.md",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/MASTERY_CHECKLIST.md",
-    "ok": true,
-    "found_on": [
-     "planner:expert",
-     "planner:simple"
-    ]
-   },
-   {
-    "url": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/WALKTHROUGH_SCRIPT.md",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/study/WALKTHROUGH_SCRIPT.md",
-    "ok": true,
-    "found_on": [
-     "planner:expert",
-     "planner:simple"
-    ]
-   },
-   {
-    "url": "https://img.shields.io/badge/licence-MIT-B9C8D6",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://img.shields.io/badge/licence-MIT-B9C8D6",
-    "ok": true,
-    "found_on": [
-     "README.md"
-    ]
-   },
-   {
-    "url": "https://img.shields.io/badge/python-3.11%2B-22C7B8",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://img.shields.io/badge/python-3.11%2B-22C7B8",
-    "ok": true,
-    "found_on": [
-     "README.md"
-    ]
-   },
-   {
-    "url": "https://zenodo.org/records/4656021",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://zenodo.org/records/4656021",
-    "ok": true,
-    "found_on": [
-     "forecast:simple",
-     "forecast?pn=GN-21-R001:simple",
-     "method:simple"
-    ]
-   },
-   {
-    "url": "https://zenodo.org/records/4656021/files/car_parts_dataset_without_missing_values.zip",
-    "attempts": 1,
-    "status": 200,
-    "final": "https://zenodo.org/records/4656021/files/car_parts_dataset_without_missing_values.zip",
-    "ok": true,
-    "found_on": [
-     "method:expert",
-     "method:simple",
-     "method?section=next:simple"
-    ]
-   }
-  ],
-  "failed": []
  }
 }

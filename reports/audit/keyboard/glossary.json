@@ -11,11 +11,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 43.9,
+   "ms": 45.2,
    "esc": {
     "opened": [
      "story"
@@ -32,11 +31,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 45.0,
+   "ms": 44.4,
    "esc": {
     "opened": [
      "story"
@@ -53,11 +51,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 45.3,
+   "ms": 44.5,
    "esc": {
     "opened": [
      "story"
@@ -74,11 +71,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 45.6,
+   "ms": 42.3,
    "esc": {
     "opened": [
      "story"
@@ -98,7 +94,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 1.2,
+   "ms": 1.0,
    "esc": {
     "opened": [
      "modal"
@@ -118,7 +114,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 1.5,
+   "ms": 1.8,
    "esc": {
     "opened": [
      "modal"
@@ -135,9 +131,11 @@
   {
    "ok": true,
    "effects": [
+    "navigation",
+    "scroll",
     "dom-mutation"
    ],
-   "ms": 1.1,
+   "ms": 0.8,
    "control": "Downtime and urgency",
    "tag": "a",
    "role": "",
@@ -146,9 +144,11 @@
   {
    "ok": true,
    "effects": [
+    "navigation",
+    "scroll",
     "dom-mutation"
    ],
-   "ms": 0.6,
+   "ms": 0.8,
    "control": "Parts",
    "tag": "a",
    "role": "",
@@ -157,9 +157,9 @@
   {
    "ok": true,
    "effects": [
-    "dom-mutation"
+    "navigation"
    ],
-   "ms": 0.6,
+   "ms": 0.5,
    "control": "Repair",
    "tag": "a",
    "role": "",
@@ -168,9 +168,11 @@
   {
    "ok": true,
    "effects": [
+    "navigation",
+    "scroll",
     "dom-mutation"
    ],
-   "ms": 1.0,
+   "ms": 0.5,
    "control": "Stock and network",
    "tag": "a",
    "role": "",
@@ -179,9 +181,9 @@
   {
    "ok": true,
    "effects": [
-    "dom-mutation"
+    "navigation"
    ],
-   "ms": 0.8,
+   "ms": 0.5,
    "control": "Forecasting",
    "tag": "a",
    "role": "",
@@ -190,7 +192,7 @@
   {
    "ok": true,
    "effects": [
-    "dom-mutation"
+    "navigation"
    ],
    "ms": 0.6,
    "control": "Plans and money",
@@ -201,9 +203,9 @@
   {
    "ok": true,
    "effects": [
-    "dom-mutation"
+    "navigation"
    ],
-   "ms": 0.6,
+   "ms": 0.9,
    "control": "Testing and results",
    "tag": "a",
    "role": "",

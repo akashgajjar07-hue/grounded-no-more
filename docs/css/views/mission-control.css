@@ -162,6 +162,7 @@ a.mc-pr:hover { background: var(--c-teal-a08); }
 .mc-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--gutter); align-items: stretch; }
 .mc-ranges { font-size: var(--fs-14); color: var(--text-faint); }
 .mc-reading { margin: var(--gutter) 0 0; }
+.mc-routes { margin: var(--s-2) 0 0; max-width: 72ch; color: var(--text-muted); }
 
 /* the four plans: plain horizontal bars (HTML, names via nameTag) */
 .mc-bars { display: flex; flex-direction: column; gap: 14px; margin: 4px 0 var(--s-2); }

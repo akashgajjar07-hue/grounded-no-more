@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-27T01:13:35",
+ "generated": "2026-11-27T15:37:10",
  "routes": {
   "about": {
    "owner": "docs/js/views/about.js",
@@ -56,16 +56,16 @@
   },
   "method": {
    "owner": "docs/js/views/data-method.js",
-   "expected": 34,
-   "reached": 34,
+   "expected": 36,
+   "reached": 36,
    "cycled": true,
    "problems": [],
    "warnings": []
   },
   "mission": {
    "owner": "docs/js/views/mission-control.js",
-   "expected": 51,
-   "reached": 51,
+   "expected": 52,
+   "reached": 52,
    "cycled": true,
    "problems": [],
    "warnings": [

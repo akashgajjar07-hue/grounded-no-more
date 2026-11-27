@@ -128,8 +128,8 @@ export async function render(el, ctx) {
     h('div', { class: 'rr-stat-sub' }, sub));
   el.append(h('div', { class: 'rr-stats mt-3', dataset: { story: 'rotable-stats' } },
     stat({ label: byMode('Parts away for repair', 'Units in repair loop'), value: countEl(loop, fmtInt, 'loop'), unit: byMode('parts', 'serials'), sub: fleet ? (S ? `${fmtPct(loop / fleet)} of ${fmtInt(fleet)} parts are broken or in a shop` : `${fmtPct(loop / fleet)} of ${fmtInt(fleet)} active serials are removed (U/S) or in a shop`) : 'Lifecycle counts not exported', chip: prov(r.lifecycle, prov(r.meta)) }),
-    stat({ label: byMode('Open repair jobs', 'Open repair orders'), value: countEl(r.repair_summary?.open ?? openROs.length, fmtInt, 'open'), unit: byMode('jobs', 'ROs'), sub: `${fmtInt(new Set(openROs.map((o) => o.shop)).size)} shops · ${fmtInt(r.repair_summary?.returned_last_8w ?? ros.length - openROs.length)} returned in the last 8 weeks`, chip: prov(r.meta) }),
-    stat({ label: byMode('Repair jobs past due', 'Overdue vs quoted due'), value: countEl(r.repair_summary?.overdue ?? overdueROs.length, fmtInt, 'overdue'), unit: byMode('jobs', 'ROs'), sub: overdueROs.length ? h('span', { class: 'rr-stat-crit' }, overdueROs.some(isCritical) ? icon('alert') : null, `${plural(overdueROs.filter(isCritical).length, byMode('job', 'RO'))} more than ${Math.round(CRITICAL_LATE_D / 7)} weeks late`) : 'None overdue', chip: prov(r.meta) }),
+    stat({ label: byMode('Open repairs', 'Open repair orders'), value: countEl(r.repair_summary?.open ?? openROs.length, fmtInt, 'open'), unit: byMode('repairs', 'ROs'), sub: `${fmtInt(new Set(openROs.map((o) => o.shop)).size)} shops · ${fmtInt(r.repair_summary?.returned_last_8w ?? ros.length - openROs.length)} returned in the last 8 weeks`, chip: prov(r.meta) }),
+    stat({ label: byMode('Repairs past due', 'Overdue vs quoted due'), value: countEl(r.repair_summary?.overdue ?? overdueROs.length, fmtInt, 'overdue'), unit: byMode('repairs', 'ROs'), sub: overdueROs.length ? h('span', { class: 'rr-stat-crit' }, overdueROs.some(isCritical) ? icon('alert') : null, `${plural(overdueROs.filter(isCritical).length, byMode('repair', 'RO'))} more than ${Math.round(CRITICAL_LATE_D / 7)} weeks late`) : 'None overdue', chip: prov(r.meta) }),
     stat({ label: byMode('Actual vs promised repair time', 'Actual / quoted TAT'), value: tatRatio != null ? countEl(tatRatio, (v) => `${fmtNum(v, 2)}×`, 'tat-ratio') : 'not run', sub: lateShare != null ? (S ? `Middle value over ${fmtInt(tatRows.length)} part and shop pairs · ${fmtPct(lateShare, 0)} run late` : `Median over ${fmtInt(tatRows.length)} PN–shop pairs · ${fmtPct(lateShare, 0)} run late`) : 'TAT table not exported', chip: prov(r.tat?.[0], prov(r.meta)) }),
   ));
 
@@ -182,12 +182,12 @@ export async function render(el, ctx) {
   // ---------------------------------------------------------------- open ROs table
   const tableRows = ros.filter((o) => o.open).sort((a, b) => (b.overdue - a.overdue) || ((b.late_d ?? -1e9) - (a.late_d ?? -1e9)));
   el.append(h('div', { class: 'mt-3' }, card({
-    kicker: byMode('Repair jobs', 'Repair orders'), title: S ? `${fmtInt(tableRows.length)} open repair jobs, latest first` : `${fmtInt(tableRows.length)} open repair orders, most days past due first`, prov: prov(r.meta),
+    kicker: byMode('Repairs', 'Repair orders'), title: S ? `${fmtInt(tableRows.length)} open repairs, latest first` : `${fmtInt(tableRows.length)} open repair orders, most days past due first`, prov: prov(r.meta),
     body: dataTable({
       caption: 'Open repair orders', maxHeight: 360, dense: true,
       mobileColumns: ['serial', 'late_d', 'shop', 'ro_id', 'overdue'], stickyFirst: true,
       columns: [
-        { key: 'ro_id', label: byMode('Job', 'RO'), mono: true },
+        { key: 'ro_id', label: byMode('Repair', 'RO'), mono: true },
         { key: 'serial', label: byMode('Part serial', 'Serial'), mono: true },
         { key: 'shop', label: 'Shop', format: shopLabel },
         { key: 'inH', label: byMode('Went in', 'Inducted'), num: true, format: (v) => (v == null ? '—' : fmtWeek(Math.floor(v / HPW))) },
@@ -349,7 +349,7 @@ function renderGantt(host, ros, now, r, ctx) {
   // the serial lives in the chase list below; a hyphenated serial wraps badly inside a headline
   const S = isSimple();
   const head = S
-    ? (!overdue.length ? 'Every open repair job is still inside its promised date' : `${fmtInt(overdue.length)} repair jobs are past their promised date${worst ? `; the worst is ${fmtDays(worst.late_d)} late at ${shopLabel(worst.shop)}` : ''}`)
+    ? (!overdue.length ? 'Every open repair is still inside its promised date' : `${fmtInt(overdue.length)} repairs are past their promised date${worst ? `; the worst is ${fmtDays(worst.late_d)} late at ${shopLabel(worst.shop)}` : ''}`)
     : !overdue.length ? 'Every open repair order is still inside its quoted due date'
       : `${fmtInt(overdue.length)} repair orders are past quoted due${worst ? `; the worst is ${fmtDays(worst.late_d)} late at ${shopLabel(worst.shop)}` : ''}`;
   const f = chartFrame(host, {
@@ -453,7 +453,7 @@ function drawGantt(el, rows, now, w, animate = false) {
   const bandSel = G.bands.selectAll('rect').data(bands, (b) => b.shop).join((en) => en.append('rect').attr('class', 'rr-shop-band').attr('rx', 6).attr('y', (b) => b.y).attr('height', (b) => b.h).style('opacity', 0));
   bandSel.attr('x', -labelW + 4).attr('width', iw + labelW - 4);
   T(bandSel).attr('y', (b) => b.y).attr('height', (b) => b.h).style('opacity', 1);
-  const shopTxt = (b) => { const od = rows.filter((o) => o.shop === b.shop && o.open && o.overdue).length; return `${shopLabel(b.shop)} · ${b.n} ${isSimple() ? 'job' : 'RO'}${b.n === 1 ? '' : 's'}${od && od < b.n ? ` · ${od} ${isSimple() ? 'late' : 'overdue'}` : ''}`; };
+  const shopTxt = (b) => { const od = rows.filter((o) => o.shop === b.shop && o.open && o.overdue).length; return `${shopLabel(b.shop)} · ${b.n} ${isSimple() ? 'repair' : 'RO'}${b.n === 1 ? '' : 's'}${od && od < b.n ? ` · ${od} ${isSimple() ? 'late' : 'overdue'}` : ''}`; };
   const lblSel = G.labels.selectAll('text').data(bands, (b) => b.shop).join((en) => en.append('text').attr('class', 'rr-shop-label').attr('transform', (b) => `translate(0,${b.y + 17})`));
   lblSel.attr('x', -labelW + 12).text(shopTxt);
   T(lblSel).attr('transform', (b) => `translate(0,${b.y + 17})`);
@@ -518,7 +518,7 @@ function renderTatDist(host, r) {
   const f = chartFrame(host, {
     implication: byMode('Shops take longer than they promise, so a spares pool sized on promises comes up short.', 'Shop turnaround runs longer than quoted, so float sized on quotes comes up short.'),
     headline: S ? `${shopLabel(slow.shop)} takes ${fmtDays(slow.mean_d)} on average against ${fmtDays(slow.quoted_mean_d)} promised; one in ten takes over ${fmtDays(slow.p90_d)}` : `${shopLabel(slow.shop)} averages ${fmtDays(slow.mean_d)} against ${fmtDays(slow.quoted_mean_d)} quoted; one in ten takes over ${fmtDays(slow.p90_d)}`,
-    subtitle: S ? `Share of finished repairs by ${termText('tat')}, in ${slow.bin_width_d}-day steps. Solid line = actual average, dashed = promised. ${dists.map((d) => `${shopLabel(d.shop)}: ${fmtInt(d.n)} jobs`).join(' · ')}` : `Share of completed ROs by shop TAT · ${slow.bin_width_d}-day bins · solid = actual mean, dashed = quoted · ${dists.map((d) => `${shopLabel(d.shop)} n=${fmtInt(d.n)}`).join(' · ')}`,
+    subtitle: S ? `Share of finished repairs by ${termText('tat')}, in ${slow.bin_width_d}-day steps. Solid line = actual average, dashed = promised. ${dists.map((d) => `${shopLabel(d.shop)}: ${fmtInt(d.n)} repairs`).join(' · ')}` : `Share of completed ROs by shop TAT · ${slow.bin_width_d}-day bins · solid = actual mean, dashed = quoted · ${dists.map((d) => `${shopLabel(d.shop)} n=${fmtInt(d.n)}`).join(' · ')}`,
     provenance: prov(dists[0], prov(r.meta)), source: 'rotables.json → tat_distribution',
     table: { columns: [{ key: 'shop', label: 'Shop', format: shopLabel }, { key: 'n', label: 'ROs', num: true, format: fmtInt }, { key: 'quoted_mean_d', label: 'Quoted mean', num: true, format: fmtDays }, { key: 'mean_d', label: 'Actual mean', num: true, format: fmtDays }, { key: 'median_d', label: 'Median', num: true, format: fmtDays }, { key: 'p90_d', label: 'p90', num: true, format: fmtDays }], rows: dists },
   });

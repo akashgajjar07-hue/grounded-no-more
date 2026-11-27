@@ -682,8 +682,8 @@ function renderShare(host, n, p, stations, pcBy, hub) {
   const S = isSimple();
   const f = chartFrame(host, {
     implication: share0 != null && share0 < 0.5
-      ? byMode('Most grounded time under the Simple Rulebook is at other airports. Keep urgent spares there, fed from the home base.', 'Most legacy downtime is at outstations holding no no-go stock: position units there, fed from the hub.')
-      : byMode('Shortages at the home base cause most grounded time, so pool and restock there first.', 'Hub shortages drive most legacy downtime, so hub pooling and replenishment come first.'),
+      ? byMode('Most grounded time under the Simple Rulebook is at other airports. Keep urgent spares there, fed from the home base.', 'Most downtime under the starting-point policy is at outstations holding no no-go stock: position units there, fed from the hub.')
+      : byMode('Shortages at the home base cause most grounded time, so pool and restock there first.', 'Hub shortages drive most downtime under the starting-point policy, so hub pooling and replenishment come first.'),
     headline: share0 != null
       ? (S
         ? (share0 < 0.5 ? `${fmtPct(1 - share0, 0)} of the Simple Rulebook's grounded time is at other airports` : `${fmtPct(share0, 0)} of the Simple Rulebook's grounded time is at the ${hub.station} home base`)

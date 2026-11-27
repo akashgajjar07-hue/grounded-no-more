@@ -1,6 +1,6 @@
 {
  "site_capital_mission?section=results": [],
- "generated": "2026-11-26T20:03:57",
+ "generated": "2026-11-27T15:36:51",
  "truth": {
   "capital_rows": {
    "bought": "+68 units ≈ AED 8.4M assumed value",
@@ -148,14 +148,12 @@
  },
  "workbook": {
   "problems": [],
-  "site_data_line": "docs/data/*.json, exported 2026-11-26T12:46:35Z (git f49a029)",
-  "kpis_meta": "2026-11-26T13:02:18Z",
-  "kpis_git": "390aee8"
+  "site_data_line": "docs/data/*.json, exported 2026-11-27T09:22:16Z (git 3ddc918)",
+  "kpis_meta": "2026-11-27T09:22:16Z",
+  "kpis_git": "3ddc918"
  },
  "deck": {
   "files": [
-   "presentations/linkedin_post.md",
-   "presentations/video_script.md",
    "presentations/case_study_deck.pptx"
   ],
   "problems": [],

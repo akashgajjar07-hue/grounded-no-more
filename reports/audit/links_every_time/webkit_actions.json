@@ -1,0 +1,11 @@
+{
+ "route": "actions",
+ "browser": "webkit",
+ "links": 42,
+ "unique_links": 14,
+ "clicks": 210,
+ "failed_clicks": 0,
+ "failures": [],
+ "seconds": 143.3,
+ "generated": "2026-11-27T15:11:25"
+}

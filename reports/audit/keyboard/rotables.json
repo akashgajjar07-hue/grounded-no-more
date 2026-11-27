@@ -22,11 +22,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 45.0,
+   "ms": 43.2,
    "esc": {
     "opened": [
      "story"
@@ -43,11 +42,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 47.8,
+   "ms": 44.5,
    "esc": {
     "opened": [
      "story"
@@ -65,48 +63,48 @@
    "ok": true,
    "effects": [
     "modal",
+    "dom-mutation"
+   ],
+   "ms": 9.6,
+   "esc": {
+    "opened": [
+     "modal"
+    ],
+    "closed": true,
+    "focus": "k18",
+    "returned_to_invoker": true
+   },
+   "control": "Keyboard shortcuts",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "modal",
+    "dom-mutation"
+   ],
+   "ms": 1.1,
+   "esc": {
+    "opened": [
+     "modal"
+    ],
+    "closed": true,
+    "focus": "k18",
+    "returned_to_invoker": true
+   },
+   "control": "Keyboard shortcuts",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
     "dom-mutation"
    ],
    "ms": 0.9,
-   "esc": {
-    "opened": [
-     "modal"
-    ],
-    "closed": true,
-    "focus": "k18",
-    "returned_to_invoker": true
-   },
-   "control": "Keyboard shortcuts",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "modal",
-    "dom-mutation"
-   ],
-   "ms": 0.8,
-   "esc": {
-    "opened": [
-     "modal"
-    ],
-    "closed": true,
-    "focus": "k18",
-    "returned_to_invoker": true
-   },
-   "control": "Keyboard shortcuts",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 0.8,
    "control": "repair time (TAT)",
    "tag": "span",
    "role": "",
@@ -117,7 +115,97 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 3.3,
+   "ms": 0.9,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 1.6,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 1.1,
+   "control": "EU vendor",
+   "tag": "button",
+   "role": "radio",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 0.8,
+   "control": "EU vendor",
+   "tag": "button",
+   "role": "radio",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 0.9,
+   "control": "More",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 0.8,
+   "control": "More",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 1.0,
+   "control": "Each Airport for Itself: 20",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 0.8,
+   "control": "Each Airport for Itself: 20",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 3.9,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -137,99 +225,9 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "chart-update"
    ],
-   "ms": 1.2,
-   "control": "EU vendor",
-   "tag": "button",
-   "role": "radio",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 1.2,
-   "control": "EU vendor",
-   "tag": "button",
-   "role": "radio",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 1.0,
-   "control": "More",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 0.7,
-   "control": "More",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 1.4,
-   "control": "Each Airport for Itself: 20",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 1.1,
-   "control": "Each Airport for Itself: 20",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 2.5,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 1.4,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 1.5,
+   "ms": 0.9,
    "control": "Compare at the Simple Rulebook level (6 spares)",
    "tag": "button",
    "role": "",
@@ -252,7 +250,7 @@
     "dom-mutation"
    ],
    "ms": 0.9,
-   "control": "Job",
+   "control": "Repair",
    "tag": "button",
    "role": "",
    "key": "Enter"
@@ -263,7 +261,7 @@
     "dom-mutation"
    ],
    "ms": 0.9,
-   "control": "Job",
+   "control": "Repair",
    "tag": "button",
    "role": "",
    "key": "Space"

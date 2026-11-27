@@ -25,6 +25,40 @@
  * anything but `false` to update itself instead. Before every view render the router calls resetTermUses(), so a
  * term() shows its grey "(expert term)" bracket on its first use in each view. 1–8 / 0 / S also work while a drawer or modal is open (overlays close first, then the
  * shell navigates). A skip link jumps to the main content.
+ *
+ * v2.2 LINK + SECTION CONTRACT (every internal link works every time)
+ *  1. Section targets. `?section=<name>` on any route names an in-page target. The ROUTER owns the scroll + focus:
+ *     it resolves the target, scrolls it to the top of the viewport (honouring CSS scroll-margin-top) AFTER the view
+ *     has rendered and been revealed, keeps it there while late layout (charts, entry animation) settles (≈0.7 s,
+ *     stops at once on user wheel / touch / key / pointer input), and moves focus to the target heading.
+ *     Target resolution, first hit wins (all inside #view):
+ *       a. the view's optional `export function sectionTarget(section, params, ctx)` → Element | null
+ *       b. `[data-section="<name>"]`          (preferred markup for views)
+ *       c. `#<name>`
+ *       d. the shortest id ending in `-<name>` (e.g. ab-mro), then the shortest id starting with `<name>-`
+ *     Focus goes to the target if it is a heading, else to its first h1–h4, else to the target itself (tabindex=-1 is
+ *     added where needed, focus never scrolls). Views need not scroll for ?section= themselves; if they still do, the
+ *     router runs after them and lands on the same target.
+ *  2. When it happens. After every render (link click, ctx.navigate, location.hash, fresh load, hard refresh,
+ *     Back/Forward), after a same-route query change, and on a repeated click of a link whose href equals the current
+ *     URL (no hashchange fires: the router intercepts the click). history.scrollRestoration is 'manual'.
+ *     Without a section a new route starts at the top with focus on #view (unless an overlay the view opened holds it).
+ *  3. Same-route hook `onParams(params, ctx)`: the router calls it on same-route query changes AND on repeated clicks of
+ *     a link to the current URL (params unchanged). Return `false` to ask for a full re-render. A view that exports
+ *     onParams (or `export const ownsSections = true`) OWNS its section scrolling: the router then never scrolls to a
+ *     section on that route itself (it still resets to the top and reveals the page; the view jumps after the reveal,
+ *     e.g. with views/about/section.js jumpTo(), which waits for the reveal). A view may also catch repeated clicks
+ *     inside its own root and call preventDefault(); the router leaves defaultPrevented clicks alone. Without the hook a
+ *     change of `section` alone never re-renders; any other change (or a repeated click on a link with other params,
+ *     e.g. #/parts?pn=…) re-renders the view. A repeated click on a plain route link (no params) scrolls to the top and
+ *     focuses #view.
+ *  4. In-page anchors (`href="#some-id"`, e.g. the skip link) never reach the hash router: the router scrolls to and
+ *     focuses that element and keeps the route URL. A view that handles its own anchors calls preventDefault().
+ *  5. Hooks for tests and the tour: `window.__gnmRendered()` → Promise that resolves when the current route's render
+ *     (or same-route update) has finished and the view is revealed and scrolled; `window.__gnmRevealSection(name)`
+ *     → re-runs the section scroll on the current view (returns true when a target was found). Tests also use
+ *     `window.__gnmSectionTarget(name)` (the resolved element) and `window.__gnmRenderCount()` (bumps once per finished
+ *     render, same-route update, repeated click or in-page anchor jump).
  */
 import { h, icon, ensureSprite, fixtureChip, disclaimer, modal, kbd, storyMode, stateBlock, closeAllOverlays, openOverlayCount, slidingThumb } from './ui.js';
 import { staggerIn } from './lib/motion.js';
@@ -66,6 +100,18 @@ let renderSeq = 0;
 let current = null; // {id, mod, ctx, seq} of the rendered view
 let helpModal = null;
 let renderedResolve = null;
+// v2.2: window.__gnmRendered() hook: a promise per render, resolved when the view is revealed and scrolled
+let renderedDone = Promise.resolve();
+let renderedDoneResolve = null;
+function beginRendered() {
+  if (!renderedDoneResolve) renderedDone = new Promise((r) => { renderedDoneResolve = r; });
+}
+let renderCount = 0;
+function endRendered() {
+  renderCount += 1;
+  const r = renderedDoneResolve; renderedDoneResolve = null; r?.();
+  renderedResolve?.(); renderedResolve = null;
+}
 
 /** Parse "#/parts?ata=32" → {id:'parts', params:{ata:'32'}} */
 export function parseHash(hash = location.hash) {
@@ -84,7 +130,7 @@ export function buildHash(id, params = {}) {
 /** Navigate (re-renders). Resolves after the target view has rendered. */
 export function navigate(hash) {
   return new Promise((resolve) => {
-    if (location.hash === hash) { resolve(); return; }
+    if (location.hash === hash || sameUrl(hash)) { repeatCurrent().then(resolve, resolve); return; }
     renderedResolve = resolve;
     location.hash = hash;
   });
@@ -95,6 +141,128 @@ function setParams(params, { merge = true } = {}) {
   const cur = parseHash();
   const next = buildHash(cur.id, merge ? { ...cur.params, ...params } : params);
   history.replaceState(null, '', next);
+  if (current) current.params = parseHash(next).params;
+}
+
+/** true when `hash` names exactly the current URL (same route, same params in any order). */
+function sameUrl(hash) {
+  if (!/^#\/?/.test(hash || '') || !location.hash.startsWith('#/')) return false;
+  const path = (x) => x.replace(/^#\/?/, '').split('?')[0];
+  return path(hash) === path(location.hash) && ROUTES.some((r) => r.id === path(hash)) && sameParams(parseHash(hash).params, parseHash().params);
+}
+const sameParams = (a, b, skip = []) => {
+  const ka = Object.keys(a).filter((k) => !skip.includes(k)), kb = Object.keys(b).filter((k) => !skip.includes(k));
+  return ka.length === kb.length && ka.every((k) => a[k] === b[k]);
+};
+
+// --------------------------------------------------------------------------- sections (v2.2 contract §1)
+const HEADING = 'h1, h2, h3, h4, [role="heading"]';
+function sectionTarget(section, params = {}) {
+  const view = $('#view');
+  if (!section || !view) return null;
+  if (current && typeof current.mod?.sectionTarget === 'function') {
+    try { const t = current.mod.sectionTarget(section, params, current.ctx); if (t && t.isConnected) return t; } catch (e) { console.error(e); }
+  }
+  const esc = CSS.escape(section);
+  const byData = view.querySelector(`[data-section="${esc}"]`);
+  if (byData) return byData;
+  const byId = document.getElementById(section);
+  if (byId && view.contains(byId)) return byId;
+  const shortest = (list) => [...list].sort((x, y) => x.id.length - y.id.length)[0] || null;
+  return shortest(view.querySelectorAll(`[id$="-${esc}"]`)) || shortest(view.querySelectorAll(`[id^="${esc}-"]`));
+}
+function focusTargetOf(t) {
+  if (t.id === 'view') return t;
+  if (t.matches(HEADING)) return t;
+  return [...t.querySelectorAll(HEADING)].find((x) => x.getClientRects().length) || t;
+}
+function focusEl(f) {
+  if (!f) return;
+  if (!f.matches('a[href], button, input, select, textarea, summary, [tabindex]')) f.setAttribute('tabindex', '-1');
+  try { f.focus({ preventScroll: true }); } catch { f.focus(); }
+}
+let settleStop = null;
+/** Scroll `t` to the top (scroll-margin aware), focus its heading, and keep it there while late layout settles. */
+function revealTarget(t, { focus = true } = {}) {
+  settleStop?.();
+  const doc = document.documentElement;
+  const prev = doc.style.scrollBehavior;
+  doc.style.scrollBehavior = 'auto';                              // instant jump, never a smooth scroll fighting later clicks
+  t.scrollIntoView({ block: 'start', inline: 'nearest' });
+  if (focus) focusEl(focusTargetOf(t));
+  let expected = t.getBoundingClientRect().top;
+  let stopped = false, raf = 0;
+  const t0 = performance.now();
+  const stop = () => {
+    if (stopped) return; stopped = true; cancelAnimationFrame(raf);
+    ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach((ev) => window.removeEventListener(ev, stop, true));
+    doc.style.scrollBehavior = prev;
+    if (settleStop === stop) settleStop = null;
+  };
+  ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach((ev) => window.addEventListener(ev, stop, { capture: true, passive: true }));
+  const tick = () => {
+    if (stopped) return;
+    if (!t.isConnected || performance.now() - t0 > 700) { stop(); return; }
+    const top = t.getBoundingClientRect().top;
+    if (Math.abs(top - expected) > 2) { t.scrollIntoView({ block: 'start', inline: 'nearest' }); expected = t.getBoundingClientRect().top; }
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  settleStop = stop;
+}
+/** A view that exports onParams (or `ownsSections = true`) scrolls its own sections (contract §3). */
+const ownsSections = (mod) => typeof mod?.onParams === 'function' || mod?.ownsSections === true;
+/** Section scroll for the current params. Returns true when a target was found. */
+function revealSection(params = parseHash().params) {
+  const t = sectionTarget(params.section, params);
+  if (!t) return false;
+  revealTarget(t);
+  return true;
+}
+const overlayHoldsFocus = () => !!document.activeElement?.closest?.('.drawer, .modal, [role="dialog"], .story');
+function toTop({ focus = true } = {}) {
+  settleStop?.();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+  if (focus && !overlayHoldsFocus()) $('#view').focus({ preventScroll: true });
+}
+
+/** Re-run the current URL (repeated click on a link to it, or ctx.navigate to it): contract §2/§3. */
+function repeatCurrent() {
+  const { id, params } = parseHash();
+  if (!current || current.id !== id || current.seq !== renderSeq) return render({ force: true });
+  beginRendered();
+  closeAllOverlays({ reason: 'params' });
+  let handled;
+  if (typeof current.mod?.onParams === 'function') {
+    try { handled = current.mod.onParams(params, { ...current.ctx, params }); } catch (e) { console.error(e); handled = false; }
+  }
+  const other = Object.keys(params).some((k) => k !== 'section');
+  if (handled === false || (handled === undefined && typeof current.mod?.onParams !== 'function' && other)) return render({ force: true });
+  current.params = params;
+  if (params.section && !ownsSections(current.mod) && revealSection(params)) { /* scrolled + focused */ }
+  else if (!other && !params.section) toTop();
+  endRendered();
+  return renderedDone;
+}
+
+/** Click interception (contract §2 and §4): links to the current URL and in-page anchors. */
+function onLinkClick(e) {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  const a = e.target.closest?.('a[href]');
+  if (!a || (a.target && a.target !== '_self') || a.hasAttribute('download')) return;
+  const href = a.getAttribute('href') || '';
+  if (!href.startsWith('#')) return;
+  if (href.startsWith('#/') || href === '#') {
+    if (href === location.hash || sameUrl(href)) { e.preventDefault(); repeatCurrent(); }
+    return;
+  }
+  // in-page anchor: never let it reach the hash router (it would fall back to the default route)
+  let t = null;
+  try { t = document.getElementById(decodeURIComponent(href.slice(1))); } catch { t = null; }
+  e.preventDefault();
+  beginRendered();
+  if (t) revealTarget(t);
+  endRendered();
 }
 
 // --------------------------------------------------------------------------- shell
@@ -150,13 +318,30 @@ async function startStory() {
 
 // --------------------------------------------------------------------------- render
 async function render({ force = false, keepScroll = false } = {}) {
+  // an in-page fragment that reached the hash (typed, or a link a view did not handle): scroll to it, keep the route URL
+  const frag = location.hash.replace(/^#/, '');
+  if (frag && !frag.startsWith('/') && current) {
+    let t = null;
+    try { t = document.getElementById(decodeURIComponent(frag)); } catch { t = null; }
+    if (t) { history.replaceState(null, '', buildHash(current.id, current.params || {})); revealTarget(t); endRendered(); return; }
+  }
   const { id, params } = parseHash();
-  // same-route query change that the view handles itself: no re-render
-  if (!force && current && current.id === id && typeof current.mod?.onParams === 'function' && current.seq === renderSeq) {
-    closeAllOverlays({ reason: 'params' });
-    let handled;
-    try { handled = current.mod.onParams(params, { ...current.ctx, params }); } catch (e) { console.error(e); handled = false; }
-    if (handled !== false) { current.ctx.params = params; renderedResolve?.(); renderedResolve = null; return; }
+  beginRendered();
+  // same-route query change: the view's onParams hook, or (no hook) a change of `section` alone → no re-render
+  if (!force && current && current.id === id && current.seq === renderSeq) {
+    const hook = typeof current.mod?.onParams === 'function';
+    if (hook || sameParams(params, current.params || {}, ['section'])) {
+      closeAllOverlays({ reason: 'params' });
+      let handled = true;
+      if (hook) { try { handled = current.mod.onParams(params, { ...current.ctx, params }); } catch (e) { console.error(e); handled = false; } }
+      if (handled !== false) {
+        current.ctx.params = params; current.params = params;
+        if (params.section && !hook) revealSection(params);
+        else if (!Object.keys(params).length && !hook) toTop();
+        endRendered();
+        return;
+      }
+    }
   }
   const seq = ++renderSeq;
   const route = ROUTES.find((r) => r.id === id);
@@ -190,7 +375,7 @@ async function render({ force = false, keepScroll = false } = {}) {
       route, params, data, load, buildHash, navigate,
       setParams: (p, o) => { if (live() && parseHash().id === id) setParams(p, o); },
     };
-    current = { id, mod, ctx, seq };
+    current = { id, mod, ctx, seq, params };
     resetTermUses();
     // v2.1 CLS: a new page is laid out but not painted while its async render runs (charts and SVGs arrive late),
     // then revealed in one step; same-page re-renders (mode switch) stay visible
@@ -208,10 +393,11 @@ async function render({ force = false, keepScroll = false } = {}) {
   if (seq === renderSeq) {
     view.style.removeProperty('visibility');   // the latest render always ends visible (also after an error)
     if (keepScroll) window.scrollTo({ top: scrollY0 });
-    else if (window.__gnmNavigated) { view.focus({ preventScroll: true }); window.scrollTo({ top: 0 }); }
+    else if (params.section && !ownsSections(current?.mod) && revealSection(params)) { /* contract §1: scrolled to the section, heading focused */ }
+    else toTop({ focus: !!window.__gnmNavigated });
     window.__gnmNavigated = true;
-    renderedResolve?.(); renderedResolve = null;
     document.documentElement.dataset.ready = 'true';
+    endRendered();
   }
 }
 
@@ -265,6 +451,12 @@ function boot() {
   $('#story-btn').addEventListener('click', startStory);
   $('#rail-story')?.addEventListener('click', startStory);
   onFixture(() => { const slot = $('#fixture-slot'); if (!slot.childElementCount) slot.append(fixtureChip()); });
+  try { history.scrollRestoration = 'manual'; } catch { /* ignore */ }
+  window.__gnmRendered = () => renderedDone;
+  window.__gnmRevealSection = (name) => revealSection({ ...parseHash().params, section: name });
+  window.__gnmSectionTarget = (name) => sectionTarget(name, parseHash().params);   // tests: the element a section resolves to
+  window.__gnmRenderCount = () => renderCount;                                      // tests: bumps once per finished render / update
+  document.addEventListener('click', onLinkClick);
   window.addEventListener('hashchange', () => render());
   document.addEventListener('keydown', onKey);
   if (!location.hash) history.replaceState(null, '', `#/${DEFAULT}`);

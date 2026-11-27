@@ -11,11 +11,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 57.1,
+   "ms": 43.0,
    "esc": {
     "opened": [
      "story"
@@ -32,11 +31,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 43.5,
+   "ms": 43.9,
    "esc": {
     "opened": [
      "story"
@@ -53,11 +51,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 12.5,
+   "ms": 44.4,
    "esc": {
     "opened": [
      "story"
@@ -74,11 +71,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 44.3,
+   "ms": 45.0,
    "esc": {
     "opened": [
      "story"
@@ -98,7 +94,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 3.3,
+   "ms": 2.2,
    "esc": {
     "opened": [
      "modal"
@@ -118,7 +114,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 1.1,
+   "ms": 0.9,
    "esc": {
     "opened": [
      "modal"
@@ -137,7 +133,7 @@
    "effects": [
     "download"
    ],
-   "ms": 42.5,
+   "ms": 43.8,
    "control": "Excel planner workbook",
    "tag": "a",
    "role": "",
@@ -148,7 +144,7 @@
    "effects": [
     "download"
    ],
-   "ms": 44.7,
+   "ms": 43.9,
    "control": "Case-study deck (PDF)",
    "tag": "a",
    "role": "",
@@ -159,7 +155,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.6,
+   "ms": 0.7,
    "control": "The Planner Behind the Project",
    "tag": "a",
    "role": "",
@@ -170,7 +166,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.6,
+   "ms": 0.8,
    "control": "Results",
    "tag": "a",
    "role": "",
@@ -179,10 +175,9 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
-    "dom-mutation"
+    "navigation"
    ],
-   "ms": 1.4,
+   "ms": 0.7,
    "control": "Glossary",
    "tag": "a",
    "role": "",
@@ -193,7 +188,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 1.2,
+   "ms": 0.7,
    "control": "How this transfers to an MRO",
    "tag": "a",
    "role": "",
@@ -202,65 +197,11 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll"
    ],
-   "ms": 1.6,
+   "ms": 0.5,
    "control": "What real data would make this useful",
-   "tag": "a",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation"
-   ],
-   "ms": 1.2,
-   "control": "Next experiments",
-   "tag": "a",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation"
-   ],
-   "ms": 1.3,
-   "control": "What real data would make this useful",
-   "tag": "a",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation"
-   ],
-   "ms": 0.8,
-   "control": "Next experiments",
-   "tag": "a",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation"
-   ],
-   "ms": 0.6,
-   "control": "Next experiments",
-   "tag": "a",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation"
-   ],
-   "ms": 0.6,
-   "control": "How this transfers to an MRO",
    "tag": "a",
    "role": "",
    "key": "Enter"
@@ -271,6 +212,63 @@
     "navigation"
    ],
    "ms": 0.5,
+   "control": "Next experiments",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 0.5,
+   "control": "What real data would make this useful",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "scroll"
+   ],
+   "ms": 0.5,
+   "control": "Next experiments",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "scroll"
+   ],
+   "ms": 0.7,
+   "control": "Next experiments",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 0.6,
+   "control": "How this transfers to an MRO",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 0.8,
    "control": "What real data would make this useful",
    "tag": "a",
    "role": "",

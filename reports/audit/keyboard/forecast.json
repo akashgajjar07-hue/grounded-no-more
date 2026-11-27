@@ -31,7 +31,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 48.3,
+   "ms": 44.2,
    "esc": {
     "opened": [
      "story"
@@ -52,7 +52,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 45.2,
+   "ms": 43.1,
    "esc": {
     "opened": [
      "story"
@@ -73,7 +73,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 44.3,
+   "ms": 43.8,
    "esc": {
     "opened": [
      "story"
@@ -94,7 +94,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 43.2,
+   "ms": 42.9,
    "esc": {
     "opened": [
      "story"
@@ -114,7 +114,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 0.8,
+   "ms": 1.4,
    "esc": {
     "opened": [
      "modal"
@@ -134,7 +134,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 0.8,
+   "ms": 0.6,
    "esc": {
     "opened": [
      "modal"
@@ -153,7 +153,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 0.7,
+   "ms": 0.6,
    "control": "forecasting methods for rarely-needed parts (Croston / SBA /",
    "tag": "span",
    "role": "",
@@ -163,9 +163,10 @@
    "ok": true,
    "effects": [
     "navigation",
+    "scroll",
     "dom-mutation"
    ],
-   "ms": 1.5,
+   "ms": 1.2,
    "control": "GN-35-E032",
    "tag": "a",
    "role": "",
@@ -174,10 +175,9 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
-    "dom-mutation"
+    "navigation"
    ],
-   "ms": 1.5,
+   "ms": 0.7,
    "control": "GN-49-C032",
    "tag": "a",
    "role": "",
@@ -186,8 +186,7 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
-    "dom-mutation"
+    "navigation"
    ],
    "ms": 0.9,
    "control": "GN-32-C029",
@@ -211,7 +210,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 2.2,
+   "ms": 0.7,
    "control": "GN-49-C014",
    "tag": "a",
    "role": "",
@@ -222,7 +221,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.8,
+   "ms": 0.7,
    "control": "GN-30-C016",
    "tag": "a",
    "role": "",
@@ -231,8 +230,7 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
-    "dom-mutation"
+    "navigation"
    ],
    "ms": 0.7,
    "control": "GN-49-E015",
@@ -243,10 +241,9 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
-    "dom-mutation"
+    "navigation"
    ],
-   "ms": 1.7,
+   "ms": 1.4,
    "control": "GN-27-R009",
    "tag": "a",
    "role": "",
@@ -255,9 +252,11 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll",
+    "dom-mutation"
    ],
-   "ms": 0.7,
+   "ms": 0.8,
    "control": "GN-21-E001",
    "tag": "a",
    "role": "",
@@ -267,9 +266,10 @@
    "ok": true,
    "effects": [
     "navigation",
+    "scroll",
     "dom-mutation"
    ],
-   "ms": 1.0,
+   "ms": 0.6,
    "control": "GN-32-C008",
    "tag": "a",
    "role": "",
@@ -278,10 +278,9 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
-    "dom-mutation"
+    "navigation"
    ],
-   "ms": 1.5,
+   "ms": 0.8,
    "control": "GN-20-C038",
    "tag": "a",
    "role": "",
@@ -292,7 +291,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.9,
+   "ms": 0.7,
    "control": "GN-29-R012",
    "tag": "a",
    "role": "",
@@ -303,7 +302,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 0.7,
+   "ms": 2.6,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -314,7 +313,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.7,
+   "ms": 2.4,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -326,31 +325,31 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.1,
-   "control": "steady",
-   "tag": "button",
-   "role": "radio",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.7,
-   "control": "steady",
-   "tag": "button",
-   "role": "radio",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
    "ms": 0.9,
+   "control": "steady",
+   "tag": "button",
+   "role": "radio",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 0.7,
+   "control": "steady",
+   "tag": "button",
+   "role": "radio",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 0.7,
    "control": "uneven",
    "tag": "button",
    "role": "radio",
@@ -362,7 +361,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.1,
+   "ms": 0.8,
    "control": "uneven",
    "tag": "button",
    "role": "radio",
@@ -374,7 +373,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.9,
+   "ms": 1.2,
    "control": "now and then, in bursts",
    "tag": "button",
    "role": "radio",
@@ -398,7 +397,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.5,
+   "ms": 0.8,
    "control": "too little history",
    "tag": "button",
    "role": "radio",
@@ -410,7 +409,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 2.0,
+   "ms": 0.8,
    "control": "too little history",
    "tag": "button",
    "role": "radio",

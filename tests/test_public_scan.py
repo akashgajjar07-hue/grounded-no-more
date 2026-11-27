@@ -65,11 +65,6 @@ ALLOW = [
 # Hits routed to their owners in the v2.2 fix run (reports/PUBLIC_SCAN.md). Remove each entry once it is fixed;
 # test_pending_entries_still_needed warns when an entry no longer matches anything.
 PENDING = [
-    ("docs/js/views/rotable-repair.js", "job", "repair job"),                                      # ROUTER
-    ("docs/js/views/rotable-repair.js", "job", "Repair jobs"),                                     # ROUTER
-    ("docs/js/views/rotable-repair.js", "job", "byMode('Job', 'RO')"),                             # ROUTER
-    ("docs/js/views/rotable-repair.js", "job", "'job' : 'RO'"),                                    # ROUTER
-    ("docs/js/views/rotable-repair.js", "job", "jobs`"),                                           # ROUTER
 ]
 
 PRIVATE_PATHS = ["study/", "STUDY_GUIDE.md", "PROGRESS.md", "docs/agent_notes/", "presentations/linkedin_",

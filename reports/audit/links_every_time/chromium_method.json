@@ -1,0 +1,11 @@
+{
+ "route": "method",
+ "browser": "chromium",
+ "links": 48,
+ "unique_links": 16,
+ "clicks": 240,
+ "failed_clicks": 0,
+ "failures": [],
+ "seconds": 154.7,
+ "generated": "2026-11-27T15:13:59"
+}

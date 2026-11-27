@@ -15,7 +15,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 44.9,
+   "ms": 50.4,
    "esc": {
     "opened": [
      "story"
@@ -36,7 +36,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 43.5,
+   "ms": 44.1,
    "esc": {
     "opened": [
      "story"
@@ -57,7 +57,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 45.7,
+   "ms": 45.4,
    "esc": {
     "opened": [
      "story"
@@ -78,7 +78,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 43.5,
+   "ms": 45.5,
    "esc": {
     "opened": [
      "story"
@@ -91,6 +91,26 @@
    "tag": "button",
    "role": "",
    "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "modal",
+    "dom-mutation"
+   ],
+   "ms": 1.2,
+   "esc": {
+    "opened": [
+     "modal"
+    ],
+    "closed": true,
+    "focus": "k18",
+    "returned_to_invoker": true
+   },
+   "control": "Keyboard shortcuts",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
   },
   {
    "ok": true,
@@ -110,26 +130,6 @@
    "control": "Keyboard shortcuts",
    "tag": "button",
    "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "modal",
-    "dom-mutation"
-   ],
-   "ms": 0.7,
-   "esc": {
-    "opened": [
-     "modal"
-    ],
-    "closed": true,
-    "focus": "k18",
-    "returned_to_invoker": true
-   },
-   "control": "Keyboard shortcuts",
-   "tag": "button",
-   "role": "",
    "key": "Space"
   },
   {
@@ -137,7 +137,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 1.7,
+   "ms": 0.7,
    "control": "hours planes sat grounded waiting for a part (material AOG h",
    "tag": "span",
    "role": "",
@@ -148,7 +148,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 4.0,
+   "ms": 0.7,
    "control": "borrowing a part from another of our aircraft (robbery)",
    "tag": "span",
    "role": "",
@@ -159,7 +159,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 0.9,
+   "ms": 0.8,
    "control": "Must be fixed before the next flight (D0)",
    "tag": "span",
    "role": "",
@@ -170,7 +170,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 0.6,
+   "ms": 0.8,
    "control": "Event log · 10 steps, each with its record",
    "tag": "summary",
    "role": "",
@@ -181,7 +181,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 1.0,
+   "ms": 1.3,
    "control": "Event log · 10 steps, each with its record",
    "tag": "summary",
    "role": "",
@@ -192,7 +192,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.1,
+   "ms": 0.8,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -203,7 +203,29 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 1.6,
+   "ms": 1.5,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 0.8,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 1.4,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -215,28 +237,6 @@
     "dom-mutation"
    ],
    "ms": 1.7,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 1.2,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 2.4,
    "control": "Not available (6)No contract, not possible at the time, or a",
    "tag": "summary",
    "role": "",
@@ -258,7 +258,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 1.2,
+   "ms": 0.7,
    "control": "borrowing a part from another of our aircraft (robbery)",
    "tag": "span",
    "role": "",
@@ -280,7 +280,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 1.3,
+   "ms": 1.2,
    "control": "View data",
    "tag": "summary",
    "role": "",

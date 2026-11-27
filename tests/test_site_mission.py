@@ -134,6 +134,30 @@ def test_results_deep_link_and_cta(site, browser):  # noqa: F811
 
 
 @pytest.mark.parametrize("mode", MODES)
+def test_routes_off_line_under_reading_note(site, browser, mode):  # noqa: F811
+    """v2.2: one plain line under the A2 reading note, computed from kpis.headline.honest.routes_off."""
+    ro = KPIS["headline"]["honest"]["routes_off"]
+    approx = lambda v: f"\u2248{round(v):,} h"  # noqa: E731
+    want = ("All four plans rely on emergency sourcing (borrowing from another aircraft, loans, local purchase). "
+            "With those routes switched off, every plan\u2019s downtime rises sharply \u2014 e.g. Network Plan from "
+            f"{approx(ro['central_p2_aog_hours'])} to {approx(ro['p2_aog_hours'])} a year (selection runs). See Limitations.")
+    assert approx(ro["central_p2_aog_hours"]) == "\u2248235 h" and approx(ro["p2_aog_hours"]) == "\u224818,320 h"
+    ctx, page, problems = _open(browser, site + "#/mission?section=results", "1440", mode)
+    try:
+        line = page.locator('#results [data-role="routes-off"]')
+        assert line.count() == 1
+        assert re.sub(r"\s+", " ", line.inner_text()).strip() == want
+        # directly after the A2 reading note
+        assert page.evaluate("document.querySelector('[data-role=\"routes-off\"]').previousElementSibling.classList.contains('mc-reading')")
+        a = line.locator('a[data-role="routes-limitations"]')
+        assert a.get_attribute("href") == "https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/LIMITATIONS.md"
+        assert a.get_attribute("target") == "_blank" and "noopener" in (a.get_attribute("rel") or "")
+        assert not problems, problems
+    finally:
+        ctx.close()
+
+
+@pytest.mark.parametrize("mode", MODES)
 def test_readability_simple(site, browser, mode):  # noqa: F811
     ctx, page, problems = _open(browser, site + "#/mission", "1440", mode)
     try:

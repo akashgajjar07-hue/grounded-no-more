@@ -313,7 +313,9 @@ def normalise(c: dict) -> dict:
             e["ok"] = bool(e.get("effects")) and "esc-did-not-close" not in e.get("effects", []) and not e.get("note", "").startswith(("Timeout", "Error"))
             e["note"] = (e.get("note", "") + " | ignored: request aborted by the harness reload").strip(" |")
         if e["ok"] is False and e["kind"] == "toggle" and not e.get("errors") and e["label"].strip().lower() == c["mode"] and not e.get("effects"):
-            e["ok"], e["note"] = None, "already-selected reading-mode radio (no-op by design)"
+            e["ok"], e["note"] = None, "skipped: already-selected reading-mode radio (no-op by design)"
+        if e["ok"] is None and not (e.get("note") or "").strip():       # v2.2: every skip states its reason
+            e["ok"], e["note"] = False, "skipped without a stated reason"
     allr = c["elements"] + c["shortcuts"]
     c["summary"].update(ok=sum(r["ok"] is True for r in allr), failed=sum(r["ok"] is False for r in allr), skipped=sum(r["ok"] is None for r in allr))
     return c
@@ -326,7 +328,7 @@ def aggregate(label: str | None = None) -> dict:
             cells.append(normalise(json.loads(f.read_text())))
         except Exception:  # noqa: BLE001
             pass
-    fails, by_browser, by_route, by_owner = [], {}, {}, {}
+    fails, by_browser, by_route, by_owner, reasons = [], {}, {}, {}, {}
     totals = {"cells": len(cells), "elements": 0, "ok": 0, "failed": 0, "skipped": 0, "load_errors": 0}
     for c in cells:
         b, r = c["browser"], c["route_id"]
@@ -341,6 +343,9 @@ def aggregate(label: str | None = None) -> dict:
                           "kind": "load", "label": "page load", "selector": "", "note": "; ".join(c["load_errors"])[:400], "errors": c["load_errors"][:5]})
         for e in c["elements"] + c["shortcuts"]:
             key = {True: "ok", False: "failed", None: "skipped"}[e["ok"]]
+            if e["ok"] is None:
+                reason = (e.get("note") or "").split(" | ")[0]
+                reasons[reason] = reasons.get(reason, 0) + 1
             for agg in (bb, rr):
                 agg[key] += 1
             totals[key] += 1
@@ -361,6 +366,7 @@ def aggregate(label: str | None = None) -> dict:
     data = {"generated": time.strftime("%Y-%m-%dT%H:%M:%S"), "label": label or os.environ.get("GNM_AUDIT_LABEL") or prev.get("label") or "run",
             "effect_timeout_ms": AL.EFFECT_TIMEOUT_MS, "matrix": {"targets": TARGETS, "browsers": BROWSERS, "modes": MODES,
             "viewports": [f"{w}x{h}" for w, h in VIEWPORTS]}, "browsers_unavailable": unavailable, "totals": totals, "by_browser": by_browser, "by_route": by_route,
+            "skip_reasons": dict(sorted(reasons.items(), key=lambda kv: -kv[1])),
             "failures_by_owner": dict(sorted(by_owner.items(), key=lambda kv: -kv[1])), "failures": fails,
             "cells": [{"browser": c["browser"], "target": c["target"], "mode": c["mode"], "viewport": c["viewport"], "seconds": c["seconds"],
                        **{k: c["summary"][k] for k in ("total", "ok", "failed", "skipped", "load_errors")}} for c in cells]}

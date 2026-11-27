@@ -51,20 +51,8 @@ function rankActions(list = []) {
     (a.due_week ?? 0) - (b.due_week ?? 0));
 }
 
-/** Scroll the Results section into view (after the router has finished its own scroll reset). */
-function scrollToResults(user = true) {
-  // instant jump (smooth scrolling fought later clicks while still moving; motion stays transform/opacity only).
-  // A user action (onParams) jumps synchronously and moves focus there; after a render, wait for the router's scroll reset.
-  const go = () => { const t = document.getElementById('results'); if (!t) return; t.scrollIntoView({ block: 'start' }); if (user) t.focus?.({ preventScroll: true }); };
-  if (user) go(); else requestAnimationFrame(() => setTimeout(go, 30));
-}
-
-/** Same-route query change (#/mission ↔ #/mission?section=results): scroll instead of re-rendering. */
-export function onParams(params) {
-  if (params.section === 'results') scrollToResults();
-  else window.scrollTo({ top: 0 });
-  return true;
-}
+// v2.2: #/mission?section=results is scrolled and focused by the router (app.js section contract: the section carries
+// data-section="results"); a change of `section` alone never re-renders this view, and a repeated click re-scrolls.
 
 export async function render(el, ctx) {
   await ensureCSS();
@@ -84,7 +72,6 @@ export async function render(el, ctx) {
     const api = storyMode({ steps: s.steps, navigate: ctx.navigate }).start();
     api?.play?.();
   };
-  const toResults = (e) => { e.preventDefault(); ctx.setParams({ section: 'results' }); scrollToResults(); };
   const stats = (L.stats || []).filter((s) => num(s.value));
   const statStrip = h('p', { class: 'mc-stats', dataset: { role: 'landing-stats' }, 'aria-label': L.text || null },
     stats.flatMap((s, i) => [i ? h('span', { class: 'mc-stat-sep', 'aria-hidden': 'true' }, ' · ') : null,
@@ -123,7 +110,7 @@ export async function render(el, ctx) {
         statStrip,
         h('div', { class: 'mc-cta' },
           h('button', { class: 'btn btn--primary', type: 'button', onclick: startTour, dataset: { story: 'mission-start' } }, icon('play'), '60-second tour'),
-          h('a', { class: 'btn btn--ghost', href: ctx.buildHash('mission', { section: 'results' }), onclick: toResults, dataset: { role: 'to-results' } }, 'See the results', icon('chevron-right')),
+          h('a', { class: 'btn btn--ghost', href: ctx.buildHash('mission', { section: 'results' }), dataset: { role: 'to-results' } }, 'See the results', icon('chevron-right')),
           h('a', { class: 'btn btn--ghost', href: '#/method' }, 'How it works', icon('chevron-right'))),
         h('p', { class: 'mc-landing-foot', dataset: { role: 'landing-footer' } }, L.footer || '')),
       // mount slot: the aircraft illustration today; a cutaway may replace the contents of #hero-art later
@@ -187,7 +174,7 @@ export async function render(el, ctx) {
   }).catch(() => fig.replaceChildren(h('p', { class: 'faint t-12' }, 'Aircraft drawing unavailable.')));
 
   // ================================================================ RESULTS
-  const res = h('section', { class: 'mc-results', id: 'results', dataset: { role: 'results', story: 'mission-results' }, 'aria-labelledby': 'results-h', tabindex: '-1' });
+  const res = h('section', { class: 'mc-results', id: 'results', dataset: { role: 'results', story: 'mission-results', section: 'results' }, 'aria-labelledby': 'results-h', tabindex: '-1' });
   el.append(res);
   const head = sectionTitle('Results');
   head.querySelector('h2').id = 'results-h';
@@ -213,6 +200,8 @@ export async function render(el, ctx) {
   const note = readingNote({ cls: 'mc-reading' });
   note.dataset.readability = 'skip';
   res.append(note);
+  const rl = routesLine(kpis.headline?.honest?.routes_off);
+  if (rl) res.append(rl);
 
   // ---- money (A4) + how sure (A6)
   const sw = kpis.stress_worlds || {};
@@ -260,8 +249,21 @@ export async function render(el, ctx) {
   }));
   el.append(ex);
 
-  if (ctx.params?.section === 'results') scrollToResults(false);
   return () => { cleanups.forEach((f) => { try { f?.(); } catch { /* ignore */ } }); };
+}
+
+// ------------------------------------------------------------------ v2.2: emergency-routes line under the A2 note
+const LIMITATIONS_URL = 'https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/LIMITATIONS.md';
+/** One plain line computed from kpis.headline.honest.routes_off (central_p2_aog_hours → p2_aog_hours). */
+function routesLine(ro) {
+  if (!ro || !num(ro.central_p2_aog_hours) || !num(ro.p2_aog_hours)) return null;
+  const approx = (v) => `≈${Math.round(v).toLocaleString('en-GB')} h`;
+  return h('p', { class: 'mc-routes t-13', dataset: { role: 'routes-off', readability: 'skip' } },
+    'All four plans rely on emergency sourcing (borrowing from another aircraft, loans, local purchase). ',
+    'With those routes switched off, every plan’s downtime rises sharply — e.g. Network Plan from ',
+    h('b', { class: 'num' }, approx(ro.central_p2_aog_hours)), ' to ', h('b', { class: 'num' }, approx(ro.p2_aog_hours)),
+    ' a year (selection runs). ',
+    h('a', { href: LIMITATIONS_URL, target: '_blank', rel: 'noopener', dataset: { role: 'routes-limitations' } }, 'See Limitations'), '.');
 }
 
 // ------------------------------------------------------------------ the four plans

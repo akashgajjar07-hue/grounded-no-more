@@ -623,7 +623,7 @@ export async function render(el, ctx) {
     const val = (r, k) => (k === 'other' ? r.other : r.c[k] || 0);
     const r0 = rows[0], rl = rows.at(-1);
     const fr = chartFrame(host, {
-      implication: S ? 'Grounded hours drive most of the starting cost. Holding cost is the price of keeping spares in place.' : 'Downtime penalties dominate the legacy cost; holding cost is the price of positioning stock.',
+      implication: S ? 'Grounded hours drive most of the starting cost. Holding cost is the price of keeping spares in place.' : 'Downtime penalties dominate the starting-point policy’s cost; holding cost is the price of positioning stock.',
       headline: r0.c.aog_penalty != null && rl.c.aog_penalty != null
         ? (S ? fitHeadline(`Grounded hours are ${fmtNum((r0.c.aog_penalty / r0.total) * 100, 0)}% of the ${sn(r0.p.id)}'s yearly cost`, 'Grounded hours drive the starting yearly cost')
           : fitHeadline(`The AOG penalty is ${fmtNum((r0.c.aog_penalty / r0.total) * 100, 0)}% of the ${sn(r0.p.id)}'s annual cost; ${sn(rl.p.id)} cuts it to ${fmtAED(rl.c.aog_penalty)}`,

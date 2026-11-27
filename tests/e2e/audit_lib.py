@@ -20,7 +20,12 @@ CLI:
         --out tests/e2e/reports/about.json [--max 80] [--no-shortcuts] [--reduced]
 
 Each element result has: id, kind, label, selector, action, effects[], ok, ms, note. ok=None means skipped
-(external link, disabled, hidden, re-render removed it); skips are listed and are not failures.
+(disabled, or a re-render removed / hid it); every skip carries its reason in `note` (a skip without a reason is
+counted as failed) and the report lists the reasons with counts (summary.skip_reasons, totals.skip_reasons).
+v2.2: links to the current route (and shortcut keys for the current route) are NOT skippable: they must scroll the
+page or move focus to a target other than the clicked link (the router re-runs the section scroll / scrolls to the top
+and focuses the view), or they count as failed. External links are checked by href only (ok=True, effect
+"external-href"), not skipped.
 """
 from __future__ import annotations
 
@@ -113,6 +118,7 @@ class RouteReport:
         allr = self.elements + self.shortcuts
         return {"total": len(allr), "ok": sum(r.ok is True for r in allr), "failed": sum(r.ok is False for r in allr),
                 "skipped": sum(r.ok is None for r in allr), "load_errors": len(self.load_errors),
+                "skip_reasons": _reasons(allr),
                 "by_kind": {k: {"ok": sum(r.ok is True for r in allr if r.kind == k), "failed": sum(r.ok is False for r in allr if r.kind == k)}
                             for k in sorted({r.kind for r in allr})}}
 
@@ -120,6 +126,15 @@ class RouteReport:
         d = asdict(self)
         d["summary"] = self.summary
         return d
+
+
+def _reasons(results) -> dict:
+    out: dict[str, int] = {}
+    for r in results:
+        if r.ok is None:
+            k = (r.note or "").split(" | ")[0] or "no reason recorded"
+            out[k] = out.get(k, 0) + 1
+    return dict(sorted(out.items(), key=lambda kv: -kv[1]))
 
 
 # --------------------------------------------------------------------------------------------- page-side JS
@@ -198,6 +213,8 @@ STATE_JS = r"""() => ({
   modal: !!document.querySelector('.modal'), drawer: !!document.querySelector('.drawer.is-open'), story: !!document.querySelector('.story'),
   tooltip: !!document.querySelector('.tooltip.is-on, .term-pop.is-on, [role=tooltip]:not([hidden]):not(#gnm-term-defs *)'),
   focus: document.activeElement ? (document.activeElement.id || document.activeElement.className || document.activeElement.tagName) + '' : '',
+  focusIsLink: !!(document.activeElement && document.activeElement.matches && document.activeElement.matches('a[href]')),
+  y: Math.round(window.scrollY),
   ready: document.documentElement.dataset.ready === 'true'
 })"""
 
@@ -273,6 +290,8 @@ def _wait_effect(page, before: dict, timeout_ms: int, download_box: list) -> tup
             eff.append("download")
         if st["hash"] != before["hash"]:
             eff.append("navigation")
+        if abs(st["y"] - before["y"]) > 2:
+            eff.append("scroll")
         for k in ("modal", "drawer", "story", "tooltip"):
             if st[k] and not before[k]:
                 eff.append(k)
@@ -411,6 +430,16 @@ def audit_route(pw, base_url: str, cfg: AuditConfig) -> RouteReport:
                         d = {**d, "selector": '[data-audit-target="1"]'}
                 selected = page.locator(d["selector"]).first.evaluate(
                     "(e) => e.getAttribute('role') === 'radio' && e.getAttribute('aria-checked') === 'true'", timeout=5000)
+                if d["kind"] == "link" and d["href"].startswith("#") and (
+                        not d["href"].startswith("#/") or d["href"].split("?")[0] == page.evaluate("location.hash").split("?")[0]):
+                    # a link to the current route / an in-page anchor has to PROVE it scrolls or moves focus: start
+                    # from a page scrolled away (shell links stay put) with nothing focused; wait out the ~0.8 s
+                    # settle window of an earlier section jump first (it re-focuses its heading)
+                    page.wait_for_timeout(900)
+                    if d["inShell"]:
+                        page.evaluate("window.scrollTo(0, Math.min(400, document.documentElement.scrollHeight - innerHeight))")
+                    page.evaluate("document.activeElement && document.activeElement.blur && document.activeElement.blur()")
+                    page.wait_for_timeout(60)
                 page.evaluate(OBSERVE_JS)
                 before = page.evaluate(STATE_JS)
                 page.wait_for_timeout(60)
@@ -421,11 +450,19 @@ def audit_route(pw, base_url: str, cfg: AuditConfig) -> RouteReport:
                 r.effects, r.ms = _wait_effect(page, before, cfg.timeout_ms, box)
                 if idle and r.effects == ["dom-mutation"]:
                     r.note = f"page mutates while idle ({idle} in 60 ms): effect may be background noise"
-                same_route_link = d["kind"] == "link" and d["href"].split("?")[0] == _hash_of(cfg.route).split("?")[0] and before["hash"] == page.evaluate("location.hash")
-                r.ok = bool(r.effects) or same_route_link or selected
-                if same_route_link and not r.effects:
-                    r.note = "link to the current route (no-op)"
-                elif selected and not r.effects:
+                same_route_link = d["kind"] == "link" and d["href"].startswith("#") and before["hash"] == page.evaluate("location.hash")
+                if same_route_link:
+                    # v2.2: a link to the current URL (or an in-page anchor) must scroll or move focus to a target
+                    # that is not the clicked link itself; a DOM mutation alone does not count
+                    st = page.evaluate(STATE_JS)
+                    moved_focus = st["focus"] != before["focus"] and not st["focusIsLink"]
+                    if moved_focus and "focus-change" not in r.effects:
+                        r.effects.append("focus-change")
+                    r.ok = "scroll" in r.effects or moved_focus
+                    r.note = "link to the current URL: " + ("scrolled / focused its target" if r.ok else "no scroll and no focus move (FAILED)")
+                else:
+                    r.ok = bool(r.effects) or selected
+                if selected and not r.effects:
                     r.note = "option already selected (no-op)"
             except Exception as exc:  # noqa: BLE001
                 if "Execution context was destroyed" in str(exc):
@@ -446,6 +483,12 @@ def audit_route(pw, base_url: str, cfg: AuditConfig) -> RouteReport:
                 _goto(page, base_url, cfg.route)
         if cfg.shortcuts:
             rep.shortcuts = _audit_shortcuts(page, base_url, cfg, errors)
+        for r in rep.elements + rep.shortcuts:     # v2.2: a skip must state its reason
+            if r.ok is None and not r.note.strip():
+                r.ok, r.note = False, "skipped without a stated reason"
+            elif r.ok is None and "skipped:" not in r.note:
+                r.note = f"skipped: {r.note}"
+
     finally:
         rep.seconds = round(time.perf_counter() - t_start, 1)
         ctx.close()
@@ -466,12 +509,21 @@ def _audit_shortcuts(page, base_url: str, cfg: AuditConfig, errors: list) -> lis
         if want == "navigation":
             target = page.evaluate(f"import('./js/app.js').then((m) => (m.ROUTES.find((x) => x.key === '{key}') || {{}}).id || null)")
             if target and _hash_of(cfg.route).split("?")[0] == f"#/{target}":
-                r.ok, r.note = None, "already on that route"
-                out.append(r)
-                continue
+                # v2.2: the key for the current route is not a skip: it must scroll to the top / focus the view
+                want = "same-route"
+                page.evaluate("window.scrollTo(0, Math.min(400, document.documentElement.scrollHeight - innerHeight))")
+                page.wait_for_timeout(80)
+                before = page.evaluate(STATE_JS)
         page.locator("body").press(key)
         r.effects, r.ms = _wait_effect(page, before, cfg.timeout_ms, [])
-        r.ok = want in r.effects
+        if want == "same-route":
+            st = page.evaluate(STATE_JS)
+            if st["focus"] != before["focus"] and "focus-change" not in r.effects:
+                r.effects.append("focus-change")
+            r.ok = "scroll" in r.effects or "focus-change" in r.effects or "navigation" in r.effects
+            r.note = "key for the current route: " + ("scrolled / focused the view" if r.ok else "no scroll and no focus move (FAILED)")
+        else:
+            r.ok = want in r.effects
         if r.ok and want in ("modal", "story"):
             page.keyboard.press("Escape")
             page.wait_for_timeout(150)
@@ -493,6 +545,11 @@ def write_report(reports: list[RouteReport], path: str | Path) -> dict:
     data = {"generated": time.strftime("%Y-%m-%dT%H:%M:%S"), "effect_timeout_ms": EFFECT_TIMEOUT_MS,
             "routes": [r.to_json() for r in reports]}
     data["totals"] = {k: sum(r.summary[k] for r in reports) for k in ("total", "ok", "failed", "skipped", "load_errors")}
+    reasons: dict[str, int] = {}
+    for r in reports:
+        for k, v in r.summary["skip_reasons"].items():
+            reasons[k] = reasons.get(k, 0) + v
+    data["totals"]["skip_reasons"] = dict(sorted(reasons.items(), key=lambda kv: -kv[1]))
     p.write_text(json.dumps(data, indent=1, ensure_ascii=False))
     return data
 
@@ -518,6 +575,8 @@ def main() -> None:
             reps.append(audit_route(pw, base, cfg))
             s = reps[-1].summary
             print(f"{route:12s} {a.browser} {a.viewport} {a.mode}: {s['ok']} ok, {s['failed']} failed, {s['skipped']} skipped ({reps[-1].seconds}s)")
+            for reason, n in s["skip_reasons"].items():
+                print(f"{'':14s}skipped {n} x {reason}")
     d = write_report(reps, a.out)
     print(json.dumps(d["totals"]), "->", a.out)
 

@@ -103,3 +103,16 @@ export function modeToggle({ label = 'Reading mode' } = {}) {
   syncToggle(g);
   return g;
 }
+
+/**
+ * v2.2 shared note for a page whose wording does not change with the reading mode. Put it directly under the page
+ * head: `el.append(pageHead(...), sameInBothModesNote())`. Returns a <p data-role="mode-same">.
+ */
+export const SAME_IN_BOTH_MODES = 'This page reads the same in Simple and Expert.';
+export function sameInBothModesNote(text = SAME_IN_BOTH_MODES) {
+  const p = document.createElement('p');
+  p.className = 'mode-same-note t-13 muted';
+  p.dataset.role = 'mode-same';
+  p.textContent = text;
+  return p;
+}

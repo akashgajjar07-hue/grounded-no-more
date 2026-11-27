@@ -15,26 +15,25 @@
    ]
   }
  ],
- "expected": 51,
- "reached": 51,
- "presses": 61,
+ "expected": 52,
+ "reached": 52,
+ "presses": 62,
  "cycled": true,
  "activation": [
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 0.6,
+   "ms": 0.8,
    "esc": {
     "opened": [
      "story"
     ],
     "closed": true,
-    "focus": "u1",
-    "returned_to_invoker": false
+    "focus": "k10",
+    "returned_to_invoker": true
    },
    "control": "60-second tourS",
    "tag": "button",
@@ -44,18 +43,17 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 0.9,
+   "ms": 1.2,
    "esc": {
     "opened": [
      "story"
     ],
     "closed": true,
-    "focus": "u1",
-    "returned_to_invoker": false
+    "focus": "k10",
+    "returned_to_invoker": true
    },
    "control": "60-second tourS",
    "tag": "button",
@@ -65,7 +63,6 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
@@ -75,8 +72,8 @@
      "story"
     ],
     "closed": true,
-    "focus": "u1",
-    "returned_to_invoker": false
+    "focus": "k17",
+    "returned_to_invoker": true
    },
    "control": "Story",
    "tag": "button",
@@ -86,11 +83,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 2.6,
+   "ms": 0.6,
    "esc": {
     "opened": [
      "story"
@@ -110,7 +106,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 1.8,
+   "ms": 0.7,
    "esc": {
     "opened": [
      "modal"
@@ -130,7 +126,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 1.0,
+   "ms": 0.5,
    "esc": {
     "opened": [
      "modal"
@@ -147,7 +143,6 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
@@ -157,8 +152,8 @@
      "story"
     ],
     "closed": true,
-    "focus": "u1",
-    "returned_to_invoker": false
+    "focus": "k19",
+    "returned_to_invoker": true
    },
    "control": "60-second tour",
    "tag": "button",
@@ -168,18 +163,17 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 2.4,
+   "ms": 0.8,
    "esc": {
     "opened": [
      "story"
     ],
     "closed": true,
-    "focus": "u1",
-    "returned_to_invoker": false
+    "focus": "k19",
+    "returned_to_invoker": true
    },
    "control": "60-second tour",
    "tag": "button",
@@ -191,7 +185,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.7,
+   "ms": 0.5,
    "control": "See the results",
    "tag": "a",
    "role": "",
@@ -202,7 +196,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 1.3,
+   "ms": 0.9,
    "control": "How it works",
    "tag": "a",
    "role": "",
@@ -213,7 +207,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 1.2,
+   "ms": 0.6,
    "control": "Flight controls. Open Parts Intelligence",
    "tag": "g",
    "role": "button",
@@ -224,7 +218,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 1.9,
+   "ms": 0.6,
    "control": "Flight controls. Open Parts Intelligence",
    "tag": "g",
    "role": "button",
@@ -246,7 +240,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.6,
+   "ms": 0.8,
    "control": "Pneumatic. Open Parts Intelligence",
    "tag": "g",
    "role": "button",
@@ -279,7 +273,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.7,
+   "ms": 0.5,
    "control": "Airborne auxiliary power (APU). Open Parts Intelligence",
    "tag": "g",
    "role": "button",
@@ -290,11 +284,22 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.7,
+   "ms": 0.6,
    "control": "Airborne auxiliary power (APU). Open Parts Intelligence",
    "tag": "g",
    "role": "button",
    "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 0.5,
+   "control": "Navigation. Open Parts Intelligence",
+   "tag": "g",
+   "role": "button",
+   "key": "Enter"
   },
   {
    "ok": true,
@@ -305,17 +310,6 @@
    "control": "Navigation. Open Parts Intelligence",
    "tag": "g",
    "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation"
-   ],
-   "ms": 0.7,
-   "control": "Navigation. Open Parts Intelligence",
-   "tag": "g",
-   "role": "button",
    "key": "Space"
   },
   {
@@ -323,7 +317,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.7,
+   "ms": 0.5,
    "control": "Electrical power. Open Parts Intelligence",
    "tag": "g",
    "role": "button",
@@ -334,7 +328,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.7,
+   "ms": 0.5,
    "control": "Electrical power. Open Parts Intelligence",
    "tag": "g",
    "role": "button",
@@ -367,7 +361,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.7,
+   "ms": 0.6,
    "control": "Landing gear: most urgent part GN-32-R014 at AUH. Open Parts",
    "tag": "g",
    "role": "button",
@@ -378,7 +372,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.9,
+   "ms": 0.6,
    "control": "Landing gear: most urgent part GN-32-R014 at AUH. Open Parts",
    "tag": "g",
    "role": "button",
@@ -389,7 +383,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.7,
+   "ms": 0.5,
    "control": "Most urgent part: GN-32-R014 at AUH. Open the planner action",
    "tag": "a",
    "role": "",
@@ -400,7 +394,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.7,
+   "ms": 0.7,
    "control": "stocking plans (policy)",
    "tag": "span",
    "role": "",
@@ -411,7 +405,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 0.6,
+   "ms": 0.5,
    "control": "hours planes sat grounded waiting for a part (material AOG h",
    "tag": "span",
    "role": "",
@@ -422,7 +416,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 0.8,
+   "ms": 0.6,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -433,7 +427,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 1.8,
+   "ms": 1.0,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -444,7 +438,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 0.7,
+   "ms": 0.6,
    "control": "repairable parts (rotable)",
    "tag": "span",
    "role": "",
@@ -477,19 +471,8 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.0,
+   "ms": 0.6,
    "control": "forecasting methods for rarely-needed parts (Croston / SBA /",
-   "tag": "span",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 0.8,
-   "control": "the method picked for repairable parts (SBA)",
    "tag": "span",
    "role": "",
    "key": "Enter"

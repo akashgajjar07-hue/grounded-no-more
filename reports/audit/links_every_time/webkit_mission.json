@@ -1,0 +1,11 @@
+{
+ "route": "mission",
+ "browser": "webkit",
+ "links": 72,
+ "unique_links": 24,
+ "clicks": 360,
+ "failed_clicks": 0,
+ "failures": [],
+ "seconds": 246.2,
+ "generated": "2026-11-27T15:14:48"
+}

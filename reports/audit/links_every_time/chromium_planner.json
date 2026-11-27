@@ -1,0 +1,11 @@
+{
+ "route": "planner",
+ "browser": "chromium",
+ "links": 51,
+ "unique_links": 17,
+ "clicks": 255,
+ "failed_clicks": 0,
+ "failures": [],
+ "seconds": 50.4,
+ "generated": "2026-11-27T15:15:38"
+}

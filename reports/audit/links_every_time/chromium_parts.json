@@ -1,0 +1,11 @@
+{
+ "route": "parts",
+ "browser": "chromium",
+ "links": 45,
+ "unique_links": 15,
+ "clicks": 225,
+ "failed_clicks": 0,
+ "failures": [],
+ "seconds": 157.4,
+ "generated": "2026-11-27T15:09:15"
+}

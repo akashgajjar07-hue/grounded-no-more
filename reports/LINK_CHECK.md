@@ -76,12 +76,10 @@ Some GitHub links are built at run time. These were resolved by hand and checked
 *Written by ROUTER.*
 
 <!-- internal:start (written by tests/e2e/test_links_every_time.py) -->
-## Internal links
-
 Generated 2026-11-27 15:16 by `tests/e2e/test_links_every_time.py` (chromium, webkit, 1440 x 900, Simple mode).
 
 Every internal link found on every route (`a[href^="#/"]` in the shell and the page, plus in-page anchors such as the
-skip link and the glossary group chips) was clicked 5 times from each of 3 starting states (fresh load, coming from
+skip link; the glossary group chips are `?section=` links) was clicked 5 times from each of 3 starting states (fresh load, coming from
 another page, already on the target URL), returning with browser Back between clicks that left the page. After every
 click: the URL equals the link, the target route rendered, and for section links the target heading is in the
 viewport and focused. Links to the current route have no skip allowance.
