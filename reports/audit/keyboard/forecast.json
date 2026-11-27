@@ -9,7 +9,7 @@
     [
      "View data",
      "Repairable",
-     657
+     656
     ],
     [
      "Zenodo record",
@@ -27,11 +27,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 44.2,
+   "ms": 7.0,
    "esc": {
     "opened": [
      "story"
@@ -48,11 +47,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 43.1,
+   "ms": 48.8,
    "esc": {
     "opened": [
      "story"
@@ -69,11 +67,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 43.8,
+   "ms": 49.6,
    "esc": {
     "opened": [
      "story"
@@ -90,11 +87,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 42.9,
+   "ms": 46.9,
    "esc": {
     "opened": [
      "story"
@@ -107,6 +103,26 @@
    "tag": "button",
    "role": "",
    "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "modal",
+    "dom-mutation"
+   ],
+   "ms": 19.8,
+   "esc": {
+    "opened": [
+     "modal"
+    ],
+    "closed": true,
+    "focus": "k18",
+    "returned_to_invoker": true
+   },
+   "control": "Keyboard shortcuts",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
   },
   {
    "ok": true,
@@ -126,26 +142,6 @@
    "control": "Keyboard shortcuts",
    "tag": "button",
    "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "modal",
-    "dom-mutation"
-   ],
-   "ms": 0.6,
-   "esc": {
-    "opened": [
-     "modal"
-    ],
-    "closed": true,
-    "focus": "k18",
-    "returned_to_invoker": true
-   },
-   "control": "Keyboard shortcuts",
-   "tag": "button",
-   "role": "",
    "key": "Space"
   },
   {
@@ -153,9 +149,20 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 0.6,
+   "ms": 8.0,
    "control": "forecasting methods for rarely-needed parts (Croston / SBA /",
    "tag": "span",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 1.8,
+   "control": "GN-35-E032",
+   "tag": "a",
    "role": "",
    "key": "Enter"
   },
@@ -166,18 +173,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 1.2,
-   "control": "GN-35-E032",
-   "tag": "a",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation"
-   ],
-   "ms": 0.7,
+   "ms": 1.1,
    "control": "GN-49-C032",
    "tag": "a",
    "role": "",
@@ -188,7 +184,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.9,
+   "ms": 1.5,
    "control": "GN-32-C029",
    "tag": "a",
    "role": "",
@@ -197,9 +193,11 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll",
+    "dom-mutation"
    ],
-   "ms": 0.7,
+   "ms": 1.8,
    "control": "GN-36-C012",
    "tag": "a",
    "role": "",
@@ -208,9 +206,11 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll",
+    "dom-mutation"
    ],
-   "ms": 0.7,
+   "ms": 1.8,
    "control": "GN-49-C014",
    "tag": "a",
    "role": "",
@@ -221,7 +221,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.7,
+   "ms": 1.4,
    "control": "GN-30-C016",
    "tag": "a",
    "role": "",
@@ -232,7 +232,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.7,
+   "ms": 1.1,
    "control": "GN-49-E015",
    "tag": "a",
    "role": "",
@@ -241,9 +241,11 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll",
+    "dom-mutation"
    ],
-   "ms": 1.4,
+   "ms": 24.9,
    "control": "GN-27-R009",
    "tag": "a",
    "role": "",
@@ -256,7 +258,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 0.8,
+   "ms": 20.3,
    "control": "GN-21-E001",
    "tag": "a",
    "role": "",
@@ -269,7 +271,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 0.6,
+   "ms": 2.3,
    "control": "GN-32-C008",
    "tag": "a",
    "role": "",
@@ -278,9 +280,11 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll",
+    "chart-update"
    ],
-   "ms": 0.8,
+   "ms": 41.7,
    "control": "GN-20-C038",
    "tag": "a",
    "role": "",
@@ -289,9 +293,11 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll",
+    "dom-mutation"
    ],
-   "ms": 0.7,
+   "ms": 2.0,
    "control": "GN-29-R012",
    "tag": "a",
    "role": "",
@@ -302,7 +308,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.6,
+   "ms": 6.9,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -313,7 +319,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.4,
+   "ms": 10.6,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -325,7 +331,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.9,
+   "ms": 23.6,
    "control": "steady",
    "tag": "button",
    "role": "radio",
@@ -337,7 +343,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 5.4,
    "control": "steady",
    "tag": "button",
    "role": "radio",
@@ -349,7 +355,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 58.0,
    "control": "uneven",
    "tag": "button",
    "role": "radio",
@@ -361,7 +367,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.8,
+   "ms": 74.5,
    "control": "uneven",
    "tag": "button",
    "role": "radio",
@@ -373,7 +379,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.2,
+   "ms": 8.4,
    "control": "now and then, in bursts",
    "tag": "button",
    "role": "radio",
@@ -385,7 +391,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 3.3,
    "control": "now and then, in bursts",
    "tag": "button",
    "role": "radio",
@@ -397,7 +403,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.8,
+   "ms": 46.7,
    "control": "too little history",
    "tag": "button",
    "role": "radio",
@@ -409,7 +415,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.8,
+   "ms": 3.5,
    "control": "too little history",
    "tag": "button",
    "role": "radio",
@@ -433,10 +439,10 @@
    "ok": true,
    "invoker": "60-second tourS",
    "focus_after": {
-    "id": "k10",
-    "label": "60-second tourS"
+    "id": "u1",
+    "label": "07 · AOG Response LabAn aircraft is on the ground."
    },
-   "returned_to_invoker": true,
+   "returned_to_invoker": false,
    "note": ""
   },
   {

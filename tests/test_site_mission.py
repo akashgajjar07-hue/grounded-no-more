@@ -84,7 +84,10 @@ def test_results_section(site, browser, vp, mode):  # noqa: F811
         assert "+68 units" in cap.inner_text() and "+AED 0.6M" in cap.inner_text()
         # A6 stress worlds + ranges
         sw = KPIS["stress_worlds"]
-        assert sw["text"] in res.locator('[data-role="stress-worlds"]').inner_text()
+        # v2.2: reading order easier -> tougher, built from the scales (CEO review row 18)
+        sc = sw["scales"]
+        want = f"reliability \u00d7{sc['low_stress']:.2f} (easier) / \u00d7{sc['central']:.2f} / \u00d7{sc['high_stress']:.2f} (tougher) \u2014 a narrow range"
+        assert want in res.locator('[data-role="stress-worlds"]').inner_text()
         assert res.locator('[data-role="ranges-note"]').inner_text().strip() == sw["ranges_note"]
         # donor recount: post-plan, not reconstructible where so, history kept apart
         dr = res.locator('[data-role="donor-recount"]')

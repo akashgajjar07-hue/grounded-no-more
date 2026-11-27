@@ -163,7 +163,7 @@ export async function render(el, ctx) {
     }
     if (items.length) {
       el.append(h('section', { class: 'card fl-findings', dataset: { story: 'forecast-honest' } },
-        h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, S ? 'The honest result' : 'Holdout result'), h('h2', { class: 'card-title' }, S ? 'Forecasting rare parts is hard, and the result says so' : 'Champions mostly did not hold up; history-fitted rates did')), provChip(fprov)),
+        h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, S ? 'Result' : 'Holdout result'), h('h2', { class: 'card-title' }, S ? 'Forecasting rare parts is hard, and the result says so' : 'Champions mostly did not hold up; history-fitted rates did')), provChip(fprov)),
         h('div', { class: 'fl-find-grid' }, items),
         scopeLine({ text: 'across 120 modelled part numbers · simulated · forecast accuracy, not downtime' })));
     }
@@ -296,8 +296,8 @@ export async function render(el, ctx) {
     const policyKey = pc === 'R' && /reliability rate/i.test(F.meta?.notes || '') ? 'reliability' : null;
     boardStop = liveDraw(f.body, (w) => {
       const small = w < 480;
-      const rowH = 34, labelW = small ? 104 : 190;
-      const m = { top: 22, right: small ? 44 : 64, bottom: 30, left: labelW };
+      const rowH = 34, labelW = small ? 104 : w >= 900 ? 236 : 190;   // v2.2: full method names at desktop widths
+      const m = { top: 22, right: small ? 50 : 68, bottom: 30, left: labelW };
       const hgt = m.top + m.bottom + ordered.length * rowH + (zero ? 10 : 0);
       const iw = Math.max(60, w - m.left - m.right), ih = hgt - m.top - m.bottom;
       const svg = svgIn(f.body, w, hgt, byMode('Forecast error by method with likely ranges', 'MASE by method with 95% confidence intervals'));
@@ -322,7 +322,7 @@ export async function render(el, ctx) {
       };
       rowsG.append('text').attr('class', 'fl-mlabel').attr('x', -12).attr('dy', (r) => (subOf(r) ? '-0.18em' : '0.32em')).attr('text-anchor', 'end').text((r) => truncate(isZero(r.method) ? (S ? (small ? 'zero (excl.)' : 'Always zero · yardstick') : small ? 'zero (excl.)' : 'Zero · benchmark only') : `${mKey(r.method) === champKey ? '★ ' : ''}${mNameS(r.method, small)}`, labelW - 16));
       rowsG.filter((r) => !!subOf(r)).append('text').attr('class', 'fl-msub').attr('x', -12).attr('y', 11).attr('text-anchor', 'end').text((r) => subOf(r));
-      rowsG.append('text').attr('class', 'fl-vlabel').attr('x', iw + 10).attr('dy', '0.32em').text((r) => fmtNum(r.mase));
+      rowsG.append('text').attr('class', 'fl-vlabel').attr('x', iw + 10).attr('dy', '0.32em').text((r) => fmtNum(r.mase, 3));   // v2.2: 3 decimals (several methods tie at 2)
       // v2.1 motion: rows re-sort and dots / ranges slide to their new values (keyed by method), never redrawn from zero
       const rk = (r) => mKey(r.method);
       morph(MS, 'board', w, rowsG, rk, { transform: (r, i) => `translate(0,${yPos(i)})` });
@@ -341,7 +341,7 @@ export async function render(el, ctx) {
     champCard.replaceChildren(
       h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, S ? `Chosen in advance · ${dcName(dc)} ${pcName(pc)}` : `Champion · ${dcLabel(dc)} ${PC_NAME[pc]}`), h('h3', { class: 'fl-champ-name' }, champ ? mName(champOf(champ)) : 'not run')), provChip(fprov)),
       champ ? h('dl', { class: 'meta-list' }, ...[
-        [S ? 'Error score (tuning)' : 'Selection MASE', fmtNum(champ.mase ?? champ.mean_mase, 2)],
+        [S ? 'Error score (tuning)' : 'Selection MASE', fmtNum(champ.mase ?? champ.mean_mase, 3)],
         [S ? 'High or low' : 'Bias', champ.mean_bias != null ? `${fmtNum(champ.mean_bias, 3)} units / wk` : null],
         ['Basis', !S && champ.basis ? String(champ.basis).replace(/_/g, ' ') : null],
         [S ? 'Second best' : 'Runner-up', runner ? mName(runner) : null],
@@ -436,14 +436,20 @@ export async function render(el, ctx) {
       const sl = L.service_level ?? (slA ? +slA.value : null);
       const rop = L.reorder_point ?? (sl != null ? rows.find((r) => r.cdf >= sl - 1e-9)?.q ?? rows.at(-1).q : null);
       const mean = L.mean ?? rows.reduce((s2, r) => s2 + r.q * r.p, 0);
+      // v2.2 fill convention (as the deck, workbook and tour): with S spares on the shelf a need during the wait is
+      // filled when fewer than S are already out, so fill(S) = P(X <= S-1). The target S is the quantile + 1.
+      const cdfAt = (q) => (q < 0 ? 0 : rows.filter((r) => r.q <= q).reduce((s2, r) => s2 + r.p, 0));
+      const S0 = rop != null ? rop + 1 : null;
+      const fillS = S0 != null ? cdfAt(S0 - 1) : null, fillS1 = S0 != null && S0 >= 1 ? cdfAt(S0 - 2) : null;
+      const spares = (n) => `${fmtInt(n)} spare${n === 1 ? '' : 's'}`;
       const f = chartFrame(frameHost, {
       implication: byMode('Even at the target level, a small chance of running short remains. That is the planning risk.', 'Stocking to the service-level quantile still leaves a tail; that shortfall chance is the planning risk.'),
         // C8 (wave 4): this is the service-level QUANTILE; the plans position a cost-based number (note under the chart)
-        headline: rop != null && S ? fitN(HALF, `Holding ${fmtInt(rop)} spare${rop === 1 ? '' : 's'}${L.station ? ` at ${L.station}` : ''} covers ${fmtPct(sl, 0)} of resupply waits`, `${fmtInt(rop)} spare${rop === 1 ? '' : 's'} cover ${fmtPct(sl, 0)} of resupply waits`)
-          : rop != null ? fitN(HALF, `${L.pn}'s ${fmtPct(sl, 0)} service-level quantile${L.station ? ` at ${L.station}` : ''} is ${fmtInt(rop)} units`, `${L.pn}: ${fmtPct(sl, 0)} service-level quantile ${fmtInt(rop)} units`, `Covering ${fmtPct(sl, 0)} of lead times at ${L.station || 'the hub'} takes ${fmtInt(rop)} units of ${L.pn} (mean demand ${fmtNum(mean, 1)})`, `${fmtPct(sl, 0)} service-level quantile: ${fmtInt(rop)} units (mean demand ${fmtNum(mean, 1)})`) : `${L.pn}: expected lead-time demand ${fmtNum(mean, 1)} units`,
+        headline: rop != null && S ? fitN(HALF, `${L.station ? `At ${L.station}, ` : ''}${spares(S0)} cover ${fmtPct(fillS, 1)} of resupply waits; ${spares(S0 - 1)} cover${S0 - 1 === 1 ? 's' : ''} ${fmtPct(fillS1, 1)}`, `${spares(S0)} cover ${fmtPct(fillS, 1)} of resupply waits; ${spares(S0 - 1)}: ${fmtPct(fillS1, 1)}`)
+          : rop != null ? fitN(HALF, `${L.pn}${L.station ? ` at ${L.station}` : ''}: fill P(X ≤ S−1) is ${fmtPct(fillS, 1)} at S = ${fmtInt(S0)}, ${fmtPct(fillS1, 1)} at S = ${fmtInt(S0 - 1)}`, `${L.pn}: fill ${fmtPct(fillS, 1)} at S = ${fmtInt(S0)}, ${fmtPct(fillS1, 1)} at S = ${fmtInt(S0 - 1)}`, `Covering ${fmtPct(sl, 0)} of lead times at ${L.station || 'the hub'} takes ${fmtInt(rop)} units of ${L.pn} (mean demand ${fmtNum(mean, 1)})`, `${fmtPct(sl, 0)} service-level quantile: ${fmtInt(rop)} units (mean demand ${fmtNum(mean, 1)})`) : `${L.pn}: expected lead-time demand ${fmtNum(mean, 1)} units`,
         subtitle: S
           ? 'Chance of needing each number of units during the wait for a resupply. The service target is an assumption.'
-          : 'P(demand = q) over the resupply lead time · stocking to the service-level quantile (reorder point) · service target ASSUMED',
+          : 'P(demand = q) over the resupply lead time · fill with S on the shelf = P(X ≤ S−1) · service target ASSUMED',
         provenance: L.provenance || fprov, source: 'forecast.json (ltd_examples), method.json (service_targets)', story: 'forecast-ltd',
         table: { columns: [{ key: 'q', label: 'Units', num: true }, { key: 'p', label: S ? 'Chance of exactly this' : 'P(X = q)', num: true, format: (v) => fmtPct(v, 1) }, { key: 'cdf', label: S ? 'Chance of this or fewer' : 'P(X ≤ q)', num: true, format: (v) => fmtPct(v, 1) }], rows },
       });
@@ -452,10 +458,10 @@ export async function render(el, ctx) {
         : `${L.pn} · ${L.lead_time_days != null ? `${fmtNum(L.lead_time_days, 0)} days` : 'lead time'} · ${L.dist_kind || 'champion'} · rate from ${mName(L.rate_source || L.champion)}${sl != null ? ` · ${part?.deadline} target ${fmtPct(sl, 0)} (${slA?.provenance || 'ASSUMED'})` : ''}`));
       // C8 (wave 4): reconcile the quantile with what the plans actually position at this station
       const placed = L.station ? num(part?.stock_by_station?.[L.station]) : null;
-      if (rop != null && placed != null && placed !== rop) {
+      if (S0 != null && placed != null && placed !== S0) {
         f.body.after(h('p', { class: 'fl-reconcile t-12 muted' }, icon('info'), S
-          ? h('span', {}, `The target level calls for ${fmtInt(rop)}. The ${displayName('P2')}, our core plan, places ${fmtInt(placed)} at ${L.station}. ${placed < rop ? 'It stops short, because one more spare saves less grounded time than it costs to hold.' : 'It adds more, because the cost of a grounded plane pays for the extra spare.'} See the Capital Optimiser.`)
-          : h('span', {}, `Service-level quantile ${fmtInt(rop)} vs positioned ${fmtInt(placed)}: `, nameTag('P2', { tag: 'always' }), `, the core plan, places ${fmtInt(placed)} at ${L.station}. Its cost-based allocation ${placed < rop ? `stops short of the quantile because the next unit's modelled AOG saving is worth less than its holding cost` : `goes past the quantile because the D0 penalty pays for the extra unit`} (see Capital Optimiser).`)));
+          ? h('span', {}, `The target level calls for ${fmtInt(S0)}. The ${displayName('P2')}, our core plan, places ${fmtInt(placed)} at ${L.station}. ${placed < S0 ? 'It stops short, because one more spare saves less grounded time than it costs to hold.' : 'It adds more, because the cost of a grounded plane pays for the extra spare.'} See the Capital Optimiser.`)
+          : h('span', {}, `Target S ${fmtInt(S0)} vs positioned ${fmtInt(placed)}: `, nameTag('P2', { tag: 'always' }), `, the core plan, places ${fmtInt(placed)} at ${L.station}. Its cost-based allocation ${placed < S0 ? `stops short of the target because the next unit's modelled AOG saving is worth less than its holding cost` : `goes past the target because the D0 penalty pays for the extra unit`} (see Capital Optimiser).`)));
       }
       stop = liveDraw(f.body, (w) => {
         const hgt = 260, m = { top: 30, right: 16, bottom: 34, left: 44 };
@@ -480,7 +486,7 @@ export async function render(el, ctx) {
           const rx = x(rop) + x.bandwidth() + (x.step() * x.paddingInner()) / 2;
           const leftSide = rx > iw * 0.55;
           g.append('line').attr('class', 'fl-rop').attr('x1', rx).attr('x2', rx).attr('y1', -16).attr('y2', ih);
-          const ropText = S ? `Hold ${fmtInt(rop)} · covers ${fmtPct(sl, 0)}` : `Reorder point ${fmtInt(rop)} · ${fmtPct(sl, 0)} quantile`;
+          const ropText = S ? `Hold ${fmtInt(S0)} · covers ${fmtPct(fillS, 1)}` : `S = ${fmtInt(S0)} · fill ${fmtPct(fillS, 1)} (target ${fmtPct(sl, 0)})`;
           lab(g, { x: rx + (leftSide ? -6 : 6), y: -20, text: ropText, color: theme.color.text, anchor: leftSide ? 'end' : 'start', strong: true, dy: '0' });
           const tail = rows.filter((r) => r.q > rop).reduce((s2, r) => s2 + r.p, 0);
           if (shown.some((r) => r.q > rop)) {
@@ -618,7 +624,7 @@ export async function render(el, ctx) {
       const setup = Mo.setup || {};
       monCard.append(chips);
       const f = chartFrame(monCard, {
-      implication: byMode('Testing on real public data checks that the ranking is not just a quirk of our simulation.', 'On public data the same methods rank similarly, so the simulated ranking is not an artefact of the simulator.'),
+      implication: best && best.mase > 1 ? byMode('On real car-parts data no method beat the simple guess (all scores above 1.0), and the ranking differs from the simulation. Forecast accuracy alone should not set stock.', 'On the public car-parts data no method beats the naive scale (all MASE above 1.0) and the ranking differs from the simulation: forecast accuracy alone should not set stock.') : byMode('Real car-parts data shows how far the ranking carries outside the simulation. Forecast accuracy alone should not set stock.', 'The public car-parts benchmark shows how far the ranking carries outside the simulator; forecast accuracy alone should not set stock.'),
         headline: S ? fit(`On ${fmtInt(info.n_series)} real car-parts demand series, "${mName(best.method)}" predicted best`, `"${mName(best.method)}" predicted best on real car-parts data`) : fit(`On ${fmtInt(info.n_series)} real car-parts series, ${mName(best.method)} is the best eligible method (MASE ${fmtNum(best.mase)})`, `${mName(best.method)} is the best eligible method on real car-parts data (MASE ${fmtNum(best.mase)})`),
         subtitle: S
           ? `Forecast error compared with a simple guess, with likely range. ${(setup.frequency || 'monthly').replace(/^./, (c) => c.toUpperCase())} data, last ${setup.horizon ?? '—'} ${setup.frequency === 'monthly' ? 'months' : 'periods'} held back. ${fmtInt(info.n_mase_undefined)} series with no usable history left out.`
@@ -630,7 +636,7 @@ export async function render(el, ctx) {
       cleanups.push(responsive(f.body, (w) => {
         const small = w < 480;
         const rowH = 26, labelW = small ? 96 : 160;
-        const m = { top: 8, right: small ? 44 : 60, bottom: 28, left: labelW };
+        const m = { top: 8, right: small ? 44 : 96, bottom: 28, left: labelW };
         const hgt = m.top + m.bottom + ordered.length * rowH + (zero ? 8 : 0);
         const iw = Math.max(60, w - m.left - m.right), ih = hgt - m.top - m.bottom;
         const svg = svgIn(f.body, w, hgt, byMode('Real car-parts data: forecast error by method', 'Monash Car Parts MASE by method'));
@@ -644,9 +650,9 @@ export async function render(el, ctx) {
         rg.append('line').attr('class', 'fl-ci').attr('x1', (r) => x(r.mase_ci_lo ?? r.mase)).attr('x2', (r) => x(r.mase_ci_hi ?? r.mase));
         rg.append('circle').attr('class', 'fl-dot').attr('cx', (r) => x(r.mase)).attr('r', (r) => (r === best ? 5.5 : 4));
         rg.append('text').attr('class', 'fl-mlabel').attr('x', -10).attr('dy', '0.32em').attr('text-anchor', 'end').text((r) => truncate(isZero(r.method) ? (small ? 'Zero (excl.)' : byMode('Always zero · yardstick', 'Zero · not eligible')) : mNameS(r.method, small), labelW - 14));
-        rg.append('text').attr('class', 'fl-vlabel').attr('x', iw + 8).attr('dy', '0.32em').text((r) => fmtNum(r.mase));
+        // v2.2: "best" sits to the right of the value, clear of the top row's whisker
+        rg.append('text').attr('class', 'fl-vlabel').attr('x', iw + 8).attr('dy', '0.32em').text((r) => `${fmtNum(r.mase)}${r === best && !small ? byMode(' · best', ' · best') : ''}`);
         withTooltip(rg, (r) => ({ title: mName(r.method), rows: [[S ? 'Error score' : 'MASE', fmtNum(r.mase, 3)], [termText('ci', { cap: true }), `${fmtNum(r.mase_ci_lo, 3)} – ${fmtNum(r.mase_ci_hi, 3)}`], [S ? 'Middle score' : 'Median MASE', fmtNum(r.mase_median, 3)], [S ? '90% range caught it' : 'Coverage q90', fmtPct(r.cov_q90, 1)]] }));
-        if (best && !small) annotate(g, { x: x(best.mase), y: yPos(0), dx: 28, dy: 4, title: byMode('Best', 'Best eligible') });
       }));
       const mix = info.class_mix ? Object.entries(info.class_mix).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${dcName(k)} ${fmtInt(v)}`).join(' · ') : null;
       const pub = Mo.published_reference;

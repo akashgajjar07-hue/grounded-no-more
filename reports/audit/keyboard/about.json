@@ -3,9 +3,9 @@
  "owner": "docs/js/views/about.js",
  "problems": [],
  "warnings": [],
- "expected": 33,
- "reached": 33,
- "presses": 35,
+ "expected": 39,
+ "reached": 39,
+ "presses": 41,
  "cycled": true,
  "activation": [
   {
@@ -14,7 +14,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 43.0,
+   "ms": 48.2,
    "esc": {
     "opened": [
      "story"
@@ -34,7 +34,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 43.9,
+   "ms": 57.2,
    "esc": {
     "opened": [
      "story"
@@ -54,7 +54,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 44.4,
+   "ms": 89.7,
    "esc": {
     "opened": [
      "story"
@@ -74,7 +74,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 45.0,
+   "ms": 47.3,
    "esc": {
     "opened": [
      "story"
@@ -94,7 +94,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 2.2,
+   "ms": 3.9,
    "esc": {
     "opened": [
      "modal"
@@ -114,7 +114,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 0.9,
+   "ms": 17.3,
    "esc": {
     "opened": [
      "modal"
@@ -133,7 +133,7 @@
    "effects": [
     "download"
    ],
-   "ms": 43.8,
+   "ms": 16.9,
    "control": "Excel planner workbook",
    "tag": "a",
    "role": "",
@@ -144,7 +144,7 @@
    "effects": [
     "download"
    ],
-   "ms": 43.9,
+   "ms": 3.8,
    "control": "Case-study deck (PDF)",
    "tag": "a",
    "role": "",
@@ -155,7 +155,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.7,
+   "ms": 3.4,
    "control": "The Planner Behind the Project",
    "tag": "a",
    "role": "",
@@ -164,9 +164,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "dom-mutation"
    ],
-   "ms": 0.8,
+   "ms": 57.0,
    "control": "Results",
    "tag": "a",
    "role": "",
@@ -175,9 +176,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "dom-mutation"
    ],
-   "ms": 0.7,
+   "ms": 2.7,
    "control": "Glossary",
    "tag": "a",
    "role": "",
@@ -186,9 +188,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll"
    ],
-   "ms": 0.7,
+   "ms": 1.6,
    "control": "How this transfers to an MRO",
    "tag": "a",
    "role": "",
@@ -200,7 +203,7 @@
     "navigation",
     "scroll"
    ],
-   "ms": 0.5,
+   "ms": 5.0,
    "control": "What real data would make this useful",
    "tag": "a",
    "role": "",
@@ -211,7 +214,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.5,
+   "ms": 2.9,
    "control": "Next experiments",
    "tag": "a",
    "role": "",
@@ -222,7 +225,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.5,
+   "ms": 2.4,
    "control": "What real data would make this useful",
    "tag": "a",
    "role": "",
@@ -234,7 +237,7 @@
     "navigation",
     "scroll"
    ],
-   "ms": 0.5,
+   "ms": 5.0,
    "control": "Next experiments",
    "tag": "a",
    "role": "",
@@ -246,7 +249,7 @@
     "navigation",
     "scroll"
    ],
-   "ms": 0.7,
+   "ms": 2.7,
    "control": "Next experiments",
    "tag": "a",
    "role": "",
@@ -257,7 +260,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.6,
+   "ms": 3.3,
    "control": "How this transfers to an MRO",
    "tag": "a",
    "role": "",
@@ -268,8 +271,80 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.8,
+   "ms": 7.8,
    "control": "What real data would make this useful",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "scroll",
+    "dom-mutation"
+   ],
+   "ms": 9.1,
+   "control": "How to handle parts needed only now and then",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 1.5,
+   "control": "Why maximum local stock isn’t the best plan",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 2.9,
+   "control": "How repair time drives the pool of spares",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "scroll",
+    "dom-mutation"
+   ],
+   "ms": 1.6,
+   "control": "Why point accuracy isn’t enough",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "scroll",
+    "dom-mutation"
+   ],
+   "ms": 2.8,
+   "control": "How the planner balances readiness and money",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 2.4,
+   "control": "What data I’d request from a real airline",
    "tag": "a",
    "role": "",
    "key": "Enter"
@@ -292,10 +367,10 @@
    "ok": true,
    "invoker": "60-second tourS",
    "focus_after": {
-    "id": "k10",
-    "label": "60-second tourS"
+    "id": "u1",
+    "label": "07 · AOG Response LabAn aircraft is on the ground."
    },
-   "returned_to_invoker": true,
+   "returned_to_invoker": false,
    "note": ""
   },
   {

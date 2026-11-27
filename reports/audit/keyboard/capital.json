@@ -25,7 +25,7 @@
     [
      "View data",
      "View data",
-     692
+     691
     ]
    ]
   }
@@ -38,11 +38,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 44.0,
+   "ms": 13.8,
    "esc": {
     "opened": [
      "story"
@@ -59,11 +58,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 43.5,
+   "ms": 102.2,
    "esc": {
     "opened": [
      "story"
@@ -80,11 +78,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 42.0,
+   "ms": 6.5,
    "esc": {
     "opened": [
      "story"
@@ -101,11 +98,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 44.6,
+   "ms": 65.6,
    "esc": {
     "opened": [
      "story"
@@ -125,7 +121,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 1.0,
+   "ms": 2.1,
    "esc": {
     "opened": [
      "modal"
@@ -145,7 +141,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 1.4,
+   "ms": 6.3,
    "esc": {
     "opened": [
      "modal"
@@ -164,7 +160,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 0.7,
+   "ms": 6.0,
    "control": "hours planes sat grounded waiting for a part (material AOG h",
    "tag": "span",
    "role": "",
@@ -176,7 +172,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.8,
+   "ms": 49.2,
    "control": "Frontier point B015: AED 28.4M, 5,333 h per year",
    "tag": "path",
    "role": "button",
@@ -188,7 +184,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.0,
+   "ms": 4.5,
    "control": "Frontier point B015: AED 28.4M, 5,333 h per year",
    "tag": "path",
    "role": "button",
@@ -200,7 +196,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.8,
+   "ms": 58.7,
    "control": "Frontier point B020: AED 28.7M, 4,213 h per year",
    "tag": "path",
    "role": "button",
@@ -212,7 +208,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 9.1,
+   "ms": 39.5,
    "control": "Frontier point B020: AED 28.7M, 4,213 h per year",
    "tag": "path",
    "role": "button",
@@ -224,7 +220,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 33.6,
    "control": "Frontier point B030: AED 30.7M, 2,917 h per year",
    "tag": "path",
    "role": "button",
@@ -236,7 +232,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 2.4,
+   "ms": 8.1,
    "control": "Frontier point B030: AED 30.7M, 2,917 h per year",
    "tag": "path",
    "role": "button",
@@ -248,7 +244,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.2,
+   "ms": 4.9,
    "control": "Frontier point B040: AED 33M, 1,911 h per year",
    "tag": "path",
    "role": "button",
@@ -260,7 +256,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.4,
+   "ms": 38.8,
    "control": "Frontier point B040: AED 33M, 1,911 h per year",
    "tag": "path",
    "role": "button",
@@ -272,7 +268,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.0,
+   "ms": 24.9,
    "control": "Frontier point B050: AED 35.7M, 1,314 h per year",
    "tag": "path",
    "role": "button",
@@ -284,7 +280,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.0,
+   "ms": 9.8,
    "control": "Frontier point B050: AED 35.7M, 1,314 h per year",
    "tag": "path",
    "role": "button",
@@ -296,7 +292,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.1,
+   "ms": 4.4,
    "control": "Frontier point B060: AED 38.5M, 926 h per year",
    "tag": "path",
    "role": "button",
@@ -308,7 +304,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.8,
+   "ms": 36.9,
    "control": "Frontier point B060: AED 38.5M, 926 h per year",
    "tag": "path",
    "role": "button",
@@ -320,7 +316,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.9,
+   "ms": 11.6,
    "control": "Frontier point B070: AED 41M, 629 h per year",
    "tag": "path",
    "role": "button",
@@ -332,7 +328,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.1,
+   "ms": 29.2,
    "control": "Frontier point B070: AED 41M, 629 h per year",
    "tag": "path",
    "role": "button",
@@ -344,7 +340,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.1,
+   "ms": 27.3,
    "control": "Frontier point B080: AED 43.6M, 451 h per year",
    "tag": "path",
    "role": "button",
@@ -356,7 +352,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.1,
+   "ms": 3.3,
    "control": "Frontier point B080: AED 43.6M, 451 h per year",
    "tag": "path",
    "role": "button",
@@ -368,7 +364,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 8.3,
+   "ms": 79.8,
    "control": "Frontier point B090: AED 46.4M, 302 h per year",
    "tag": "path",
    "role": "button",
@@ -380,7 +376,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.8,
+   "ms": 31.0,
    "control": "Frontier point B090: AED 46.4M, 302 h per year",
    "tag": "path",
    "role": "button",
@@ -392,7 +388,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.2,
+   "ms": 32.2,
    "control": "Network Plan (P2): AED 49M, 210 h per year",
    "tag": "path",
    "role": "button",
@@ -404,7 +400,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.8,
+   "ms": 3.5,
    "control": "Network Plan (P2): AED 49M, 210 h per year",
    "tag": "path",
    "role": "button",
@@ -416,7 +412,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.2,
+   "ms": 6.6,
    "control": "Frontier point I110: AED 51.8M, 144 h per year",
    "tag": "path",
    "role": "button",
@@ -428,7 +424,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.0,
+   "ms": 22.1,
    "control": "Frontier point I110: AED 51.8M, 144 h per year",
    "tag": "path",
    "role": "button",
@@ -440,7 +436,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.8,
+   "ms": 21.2,
    "control": "Frontier point B110: AED 52M, 133 h per year",
    "tag": "path",
    "role": "button",
@@ -452,7 +448,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.0,
+   "ms": 22.8,
    "control": "Frontier point B110: AED 52M, 133 h per year",
    "tag": "path",
    "role": "button",
@@ -464,7 +460,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.1,
+   "ms": 34.2,
    "control": "Frontier point B150: AED 64.1M, 41 h per year",
    "tag": "path",
    "role": "button",
@@ -476,7 +472,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.9,
+   "ms": 55.3,
    "control": "Frontier point B150: AED 64.1M, 41 h per year",
    "tag": "path",
    "role": "button",
@@ -488,7 +484,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 59.0,
    "control": "Frontier point B250: AED 85.6M, 39 h per year",
    "tag": "path",
    "role": "button",
@@ -500,7 +496,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.1,
+   "ms": 31.0,
    "control": "Frontier point B250: AED 85.6M, 39 h per year",
    "tag": "path",
    "role": "button",
@@ -512,7 +508,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 13.4,
    "control": "Network Plan + Extra Spares (I125): AED 56.7M, 76 h per year",
    "tag": "path",
    "role": "button",
@@ -524,7 +520,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.4,
+   "ms": 36.8,
    "control": "Network Plan + Extra Spares (I125): AED 56.7M, 76 h per year",
    "tag": "path",
    "role": "button",
@@ -535,7 +531,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.2,
+   "ms": 19.6,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -546,7 +542,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 1.7,
+   "ms": 11.7,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -558,7 +554,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 8.9,
    "control": "Tuning",
    "tag": "button",
    "role": "radio",
@@ -570,7 +566,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 25.5,
    "control": "Tuning",
    "tag": "button",
    "role": "radio",
@@ -582,7 +578,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.8,
+   "ms": 3.1,
    "control": "Both",
    "tag": "button",
    "role": "radio",
@@ -594,7 +590,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.8,
+   "ms": 8.1,
    "control": "Both",
    "tag": "button",
    "role": "radio",
@@ -618,10 +614,10 @@
    "ok": true,
    "invoker": "60-second tourS",
    "focus_after": {
-    "id": "k10",
-    "label": "60-second tourS"
+    "id": "u1",
+    "label": "07 · AOG Response LabAn aircraft is on the ground."
    },
-   "returned_to_invoker": true,
+   "returned_to_invoker": false,
    "note": ""
   },
   {

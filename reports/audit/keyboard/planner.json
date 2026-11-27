@@ -14,7 +14,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 44.1,
+   "ms": 52.2,
    "esc": {
     "opened": [
      "story"
@@ -34,7 +34,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 43.3,
+   "ms": 53.7,
    "esc": {
     "opened": [
      "story"
@@ -54,7 +54,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 43.8,
+   "ms": 57.9,
    "esc": {
     "opened": [
      "story"
@@ -74,7 +74,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 46.4,
+   "ms": 49.2,
    "esc": {
     "opened": [
      "story"
@@ -94,7 +94,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 0.5,
+   "ms": 24.8,
    "esc": {
     "opened": [
      "modal"
@@ -114,7 +114,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 0.6,
+   "ms": 3.2,
    "esc": {
     "opened": [
      "modal"
@@ -131,9 +131,11 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll",
+    "dom-mutation"
    ],
-   "ms": 1.0,
+   "ms": 30.8,
    "control": "About this projectSkills, tools, downloads, and how it would",
    "tag": "a",
    "role": "",
@@ -142,9 +144,11 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll",
+    "dom-mutation"
    ],
-   "ms": 0.6,
+   "ms": 28.8,
    "control": "The resultsThe numbers, next to their limits",
    "tag": "a",
    "role": "",
@@ -153,9 +157,11 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll",
+    "dom-mutation"
    ],
-   "ms": 0.6,
+   "ms": 42.0,
    "control": "What real data would make this usefulThe records a real airl",
    "tag": "a",
    "role": "",

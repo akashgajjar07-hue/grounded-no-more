@@ -59,6 +59,14 @@ const SIMPLE_WHY = {
   KIT_SHORTAGE: 'A kit of parts is not complete.',
 };
 export const labelFor = (t) => (isSimple() ? SIMPLE_TYPE[t] || typeLabel(t) : typeLabel(t));
+/** v2.2 Simple mode: record text without system shorthand ("Position 1 unit at BOM (station target 0 -> 1) from AUH stock"
+ *  → "Move 1 spare from AUH to BOM (target 0 → 1)", "capital: + AED 138,105 per unit held" → "+AED 138k per spare held"). */
+function plainRecord(t) {
+  return replaceCodes(tidyEnums(String(t || '')))
+    .replace(/Position (\d+) units? at (\w+) \(station target (\d+) -> (\d+)\)(?: from (\w+) stock)?/g, (_, n, st, a0, a1, src) => `Move ${n} spare${n === '1' ? '' : 's'}${src ? ` from ${src}` : ''} to ${st} (target ${a0} → ${a1})`)
+    .replace(/capital:\s*\+\s*AED\s*([\d,]+)\s*per unit held/gi, (_, v) => `+${fmtAED(+v.replace(/,/g, ''))} per spare held`)
+    .replace(/\s*->\s*/g, ' → ');
+}
 const plur = (n, w) => `${fmtInt(n)} ${+n === 1 ? w : `${w}s`}`;
 /** What to do, in plain words (Simple mode). Built from the exception's own fields; falls back to the expert text. */
 export function simpleAction(a) {
@@ -182,7 +190,7 @@ export function actionFields(a) {
   if (a.source || a.destination) out.push([byMode('From → to', 'Source → destination'), `${a.source ? tidyEnums(a.source) : '—'} → ${a.destination ? tidyEnums(a.destination) : '—'}`, true]);
   if (a.required_by_week != null) out.push([byMode('Needed by', 'Required by'), fmtWeek(a.required_by_week), true]);
   if (ea && (ea.week != null || ea.basis)) out.push([byMode('When it should be ready', 'Expected availability'), `${ea.week != null ? fmtWeek(ea.week) : 'not known'}${ea.basis ? ` · ${ea.basis}` : ''}${ea.past_quote ? ' · already past quote' : ''}`]);
-  if (Array.isArray(a.constraints) && a.constraints.length) out.push([byMode('Limits to keep in mind', 'Constraints'), h('ul', { class: 'pac-list-inline' }, a.constraints.map((c) => h('li', {}, replaceCodes(tidyEnums(c)))))]);
+  if (Array.isArray(a.constraints) && a.constraints.length) out.push([byMode('Limits to keep in mind', 'Constraints'), h('ul', { class: 'pac-list-inline' }, a.constraints.map((c) => h('li', {}, isSimple() ? plainRecord(c) : replaceCodes(tidyEnums(c)))))]);
   if (eb && typeof eb === 'object') {
     const bits = [];
     if (eb.observed_downtime_h_lookback != null) bits.push(`${fmtInt(eb.observed_downtime_h_lookback)} h downtime observed here in the lookback`);
@@ -412,7 +420,7 @@ export async function render(el, ctx) {
   const summaryCard = card({
     cls: 'span-4', kicker: 'This week', title: 'Who owns the work', prov: metaProv,
     body: h('div', { class: 'stack-3' }, ownerList,
-      h('p', { class: 't-12 faint m-0' }, byMode('Click a team to show only its items. Only problems the simulation can produce are raised.', 'Click an owner to filter the inbox. Rules live in config/aog_lab.yaml; only exception types the v2 simulation produces are raised (no document data exists).'))),
+      h('p', { class: 't-12 faint m-0' }, byMode('Click a team to show only its items. Only problems the simulation can produce are raised.', 'Click an owner to filter the inbox. Only exception types the v2 simulation produces are raised (no document data exists).'))),
   });
   const chartCard = h('section', { class: 'card span-8', dataset: { story: 'action-types' } });
   const byType = types.map((t) => ({ t, label: labelFor(t), ...Object.fromEntries(SEV.map((s) => [s, count((a) => a.type === t && a.severity === s)])), n: count((a) => a.type === t) }));
@@ -629,7 +637,7 @@ export async function render(el, ctx) {
           isSimple() ? h('p', { class: 'm-0' }, `${SIMPLE_WHY[a.type] || ''} ${simpleEvidence(a)}`.trim()) : null,
           h('p', { class: isSimple() ? 'm-0 mt-1 t-12 faint pac-record' : 'm-0' }, isSimple() ? `Record: ${replaceCodes(tidyEnums(a.summary))}` : tidyEnums(a.summary))),
         h('div', { class: 'pac-action' }, h('div', { class: 'card-kicker' }, byMode('What to do', 'Recommended action')), h('p', { class: 'm-0' }, actionText(a)),
-          isSimple() && a.recommended_action ? h('p', { class: 'm-0 mt-1 t-12 faint pac-record' }, `Planner’s exact instruction: ${replaceCodes(tidyEnums(a.recommended_action))}`) : null,
+          isSimple() && a.recommended_action ? h('p', { class: 'm-0 mt-1 t-12 faint pac-record' }, `Planner’s exact instruction: ${plainRecord(a.recommended_action)}`) : null,
           // wave B: only the fields the v2 actions.json produces; a field the rule does not fill is left out
           h('dl', { class: 'meta-list mt-2', dataset: { role: 'action-fields' } }, ...actionFields(a).flatMap(([k, v, mono]) => [h('dt', {}, k), h('dd', { class: mono ? 'mono' : '' }, v)]))),
         chart,

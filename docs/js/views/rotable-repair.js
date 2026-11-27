@@ -48,7 +48,8 @@ const respIn = (host, draw) => responsive(host, (w) => { draw(w); drawIn(host, h
 // ----------------------------------------------------------------------------- data helpers
 const num = (v) => (v == null || v === '' || Number.isNaN(+v) ? null : +v);
 const pick = (o, ...keys) => { for (const k of keys) { const v = o?.[k]; if (v != null && v !== '') return v; } return null; };
-const shopLabel = (s) => (s ? fmtEnum(s) : '—');
+const SHOP_NAME = { AUH_INHOUSE: 'AUH in-house shop', EU_VENDOR: 'EU vendor' };   // v2.2: not "AUH inhouse"
+const shopLabel = (s) => (s ? SHOP_NAME[s] || fmtEnum(s) : '—');
 /** An overdue RO is critical (urgent red + alert icon) only when it is more than this many days past quoted due. */
 const CRITICAL_LATE_D = 28;
 const isCritical = (o) => !!(o.open && o.overdue && (o.late_d ?? 0) > CRITICAL_LATE_D);

@@ -100,6 +100,22 @@ export const fmtWeek = (w) => {
   const n = typeof w === 'string' ? +w.replace(/^W/i, '') : +w;
   return Number.isFinite(n) ? `W${Math.round(n)}` : '—';
 };
+/** v2.2: stress-world scales in reading order, easier first: "reliability ×1.08 (easier) / ×1.00 / ×0.96 (tougher) — a narrow range".
+ *  sw = kpis.json / frontier.json stress_worlds ({scales: {low_stress, central, high_stress}, text}). Falls back to sw.text. */
+export function stressWorldsText(sw = {}) {
+  const sc = sw.scales || {};
+  const f = (v) => `${TIMES}${(+v).toFixed(2)}`;
+  if (![sc.low_stress, sc.central, sc.high_stress].every((v) => Number.isFinite(+v) && v != null)) return sw.text || '';
+  return `reliability ${f(sc.low_stress)} (easier) / ${f(sc.central)} / ${f(sc.high_stress)} (tougher) — a narrow range`;
+}
+/** v2.2: strip internal requirement / decision ids from exported prose ("(V2-SIM-5/14, config …)" → "(config …)",
+ *  "(A4)", "(V21-B)") and say "this release" instead of "v2.1". Display-only; the data files are unchanged. */
+export function stripRefs(s) {
+  return String(s ?? '')
+    .replace(/\b(?:V2[0-9]?-[A-Z]+-[\d/]+|V21-[A-Z0-9]+|SIM-\d+)\b,?\s*/g, '')
+    .replace(/\s*\(A\d+\)/g, '').replace(/\s*\(\s*\)/g, '').replace(/\(\s*,\s*/g, '(')
+    .replace(/\bv2\.1\b/g, 'this release');
+}
 /** Week range: fmtWeekRange(104, 155) = "W104–W155". */
 export const fmtWeekRange = (a, b) => `${fmtWeek(a)}–${fmtWeek(b)}`;
 /**

@@ -103,8 +103,8 @@ const reasonText = (c, codes) => (isSimple() && REASON_PLAIN[c]?.[1]) || (codes[
 /** Plain route names (v2.1 C): robbery is "borrowing a part from another of our aircraft". Keyed by option key. */
 const OPT_PLAIN = {
   local: 'Spare on the shelf here', hub_transfer: 'Send a spare from AUH', lateral: 'Send a spare from another airport',
-  local_borrow: 'Borrow a spare at this airport', robbery: 'Borrow the part from another of our aircraft at AUH',
-  exchange_loan: 'Exchange or loan part from an outside supplier', local_buy: 'Buy or borrow the part locally',
+  local_borrow: 'Borrow from another operator here', robbery: 'Borrow the part from another of our aircraft at AUH',
+  exchange_loan: 'Exchange or loan part from an outside supplier', local_buy: 'Buy locally (cheap parts only)',
   inbound: 'Wait for a part already on its way', repair_queue_jump: 'Pay the repair shop to rush ours (estimate)', pool: 'Swap from a parts pool',
 };
 /** Plain names for the route history actually took (aog_lab.route_labels keys). */
@@ -113,7 +113,7 @@ const ROUTE_PLAIN = {
   inbound_transfer: 'Shipment already on its way', inbound_po: 'Normal order arrived', inbound_repair: 'Our part came back from repair',
   inbound_hub_stock: 'Sent from AUH once it was restocked', robbery: 'Borrowed from another of our aircraft at AUH',
   exchange_loan: 'Exchange or loan part from an outside supplier', planned_loan: 'Pre-arranged exchange or loan',
-  local_borrow: 'Borrowed a spare at this airport', local_buy: 'Bought or borrowed locally', unfilled: 'Still waiting at the end of the history',
+  local_borrow: 'Borrowed from another operator here', local_buy: 'Bought locally', unfilled: 'Still waiting at the end of the history',
 };
 const TRIGGER_PLAIN = { D0_no_stock: 'Must fix now, no spare here', deadline_expired: 'Time allowed ran out' };
 const DEADLINE_TERM = { D0: 'd0', D3: 'd3', D10: 'd10' };
@@ -150,6 +150,8 @@ const CHECK_PLAIN = [
 ];
 const plainCheck = (c) => (isSimple() && CHECK_PLAIN.find(([re]) => re.test(c))?.[1]) || c;
 const fitHeadline = (...cands) => { const c = cands.filter(Boolean); return c.find((t) => t.length <= (HEADLINE_MAX || 90)) || c.at(-1); };
+/** v2.2 Simple mode: a source code in plain words ("RO36" → "a unit coming back from repair", "PO…" → "an order on its way"). */
+const plainSource = (src) => (/^RO\d+$/.test(src || '') ? 'a unit coming back from repair' : /^PO\d+$/.test(src || '') ? 'an order on its way' : src);
 const simWeek = (absH) => (absH == null ? null : fmtWeek(Math.floor(absH / 168)));
 const tLabel = (t) => `T${t >= 0 ? '+' : '−'}${fmtHours(Math.abs(t))}`;
 const fmtAEDfull = (v) => (v == null ? '—' : `AED ${Math.round(v).toLocaleString('en-GB')}`);
@@ -308,7 +310,18 @@ export async function render(el, ctx) {
     const twoStage = atAc && fitted && fitted !== atAc;
     const histRouteTxt = (S && ROUTE_PLAIN[cf.actual_route]) || cf.actual_route_label || 'route not recorded';
     const tf = chartFrame(tlCard, {
-      implication: S ? 'Most of the wait is finding the part, not flying it in. Where the spare already sits decides how long the plane stays down.' : 'The wait sits in sourcing, not transport: where the stock already is decides how long the aircraft stays down.',
+      // v2.2: the takeaway is read from this incident's own timeline (getting the part vs fitting it)
+      implication: (() => {
+        const tl = inc.timeline || [];
+        const at = (k) => tl.find((x) => x.step === k)?.t_h;
+        const t0 = at('aog_start') ?? 0, arr = at('arrived') ?? at('sourced'), rel = at('released');
+        if (arr == null || rel == null) return S ? 'Where the spare already sits decides how long the plane stays down.' : 'Where the stock already is decides how long the aircraft stays down.';
+        const getH = Math.max(0, arr - t0), fitH = Math.max(0, rel - arr), stn = inc.station || 'this airport';
+        const flown = tl.some((x) => x.step === 'shipped');
+        return S
+          ? `${flown ? `Here the wait was the ${fmtHours(getH)} flight from ${inc.decision?.source || 'the hub'}` : `Here most of the wait was the ${fmtHours(getH)} it took to get the part`}. With a spare already at ${stn}, only the ${fmtHours(fitH)} of fitting would remain.`
+          : `${flown ? `${fmtHours(getH)} of the downtime was transport from ${inc.decision?.source || 'the hub'}` : `${fmtHours(getH)} of the downtime was sourcing`}; with a unit already at ${stn}, only ${fmtHours(fitH)} of fitting and release would remain.`;
+      })(),
       headline: S && fitted
         ? (twoStage
           ? fitHeadline(`Part at the aircraft after ${fmtHours(atAc.t_h)}; fitted and released at ${fmtHours(fitted.t_h)}`, `Part at aircraft after ${fmtHours(atAc.t_h)}; released at ${fmtHours(fitted.t_h)}`)
@@ -449,13 +462,13 @@ export async function render(el, ctx) {
       implication: S ? 'The desk already picks close to the best route. The bigger lever is putting spares in the right place before they are needed.' : 'Per-incident response is already close to the best route; the remaining lever is positioning stock before the need.',
       headline: S ? (saved > 0
         ? fitHeadline(`The best route each time would have cut grounded hours from ${fmtHours(C.actual_request_aog_h)} to ${fmtHours(C.best_option_request_aog_h)}`, `Best route: ${fmtHours(C.actual_request_aog_h)} → ${fmtHours(C.best_option_request_aog_h)} grounded`)
-        : fitHeadline(`History matched or beat the best route: ${fmtHours(C.actual_request_aog_h)} grounded in total`, 'History matched the best route'))
+        : fitHeadline(`History did better than the best route: ${fmtHours(C.actual_request_aog_h)} grounded vs ${fmtHours(C.best_option_request_aog_h)}`, 'History did better than the best route'))
       : saved > 0
         ? fitHeadline(`Taking the best feasible option at request time would have cut request-level AOG from ${fmtHours(C.actual_request_aog_h)} to ${fmtHours(C.best_option_request_aog_h)}${C.net_exposure_saving_aed != null ? `, ${fmtAED(C.net_exposure_saving_aed)} less exposure` : ''}`,
           `The best feasible option would have cut request-level AOG from ${fmtHours(C.actual_request_aog_h)} to ${fmtHours(C.best_option_request_aog_h)}`,
           `Best option: request-level AOG ${fmtHours(C.actual_request_aog_h)} → ${fmtHours(C.best_option_request_aog_h)}`)
-        : fitHeadline(`History matched or beat the best feasible option: ${fmtHours(C.actual_request_aog_h)} of request-level AOG`, 'History matched the best feasible option'),
-      subtitle: S ? `${fmtInt(C.requests_compared)} requests · history weeks 0–103 under the ${displayName('P0', { mode: 'short' })} · grounded hours per request · total cost in AED` : `${fmtInt(C.requests_compared)} requests · history weeks 0–103 under P0 · AOG hours before merging per incident · exposure in AED`,
+        : fitHeadline(`History beat the best feasible option: ${fmtHours(C.actual_request_aog_h)} vs ${fmtHours(C.best_option_request_aog_h)} of request-level AOG`, 'History beat the best feasible option'),
+      subtitle: S ? `${saved <= 0 && C.history_used_robbery ? `History did better mainly because it borrowed ${fmtInt(C.history_used_robbery)} parts from our own aircraft, a route the lab never recommends. ` : ''}${fmtInt(C.requests_compared)} requests · history weeks 0–103 under the ${displayName('P0', { mode: 'short' })} · grounded hours per request · total cost in AED` : `${saved <= 0 && C.history_used_robbery ? `History used robbery on ${fmtInt(C.history_used_robbery)} requests, a route the lab never recommends · ` : ''}${fmtInt(C.requests_compared)} requests · history weeks 0–103 under P0 · AOG hours before merging per incident · exposure in AED`,
       provenance: prov, source: 'aog_lab.json',
       table: { columns: [{ key: 'label', label: 'Basis' }, { key: 'value', label: S ? 'Hours grounded' : 'AOG h', num: true, format: fmtHours }, { key: 'ex', label: S ? 'Total cost' : 'Exposure', num: true, format: (v) => fmtAED(v) }], rows },
     });
@@ -475,7 +488,7 @@ export async function render(el, ctx) {
     fr.body.after(...[saved > 0 ? h('p', { class: 'aog-cf-foot t-12 m-0' }, S ? `${fmtHours(saved)} fewer grounded hours over two simulated years, checked afterwards.` : `${fmtHours(saved)} fewer AOG hours over two simulated years, scored ex post.`) : null, scopeLine()].filter(Boolean));
     const n = C.requests_compared;
     const cav = card({
-      cls: 'span-5', kicker: 'Honest caveats', title: S ? 'How to read this what-if' : 'How to read this counterfactual', prov,
+      cls: 'span-5', kicker: 'Caveats', title: S ? 'How to read this what-if' : 'How to read this counterfactual', prov,
       body: h('div', { class: 'stack-3' },
         h('dl', { class: 'meta-list' },
           h('dt', {}, S ? 'Best route taken' : 'Best option taken'), h('dd', {}, C.history_took_best_option != null ? `${fmtInt(C.history_took_best_option)} of ${fmtInt(n)} requests (${fmtPct(C.history_took_best_option / n, 0)})` : 'not run'),
@@ -491,7 +504,7 @@ export async function render(el, ctx) {
           h('li', {}, 'Options are ex-ante estimates built on quoted figures. Quoted repair and purchase dates are unreliable in this world, and expedite lead times are a cap, not a supplier quote.'),
           h('li', {}, 'Accelerated repair, expedite and pool were not taken in history, so they keep their estimate; they cannot be realised from the record.'),
           h('li', {}, '“Await inbound” queues behind earlier unfilled requests network-wide; the engine may have allocated units differently.'),
-          h('li', {}, 'Material AOG runs from removal (or the end of the rectification window) to release to service, overnight hours included, so it includes the fitting / release-to-service hours after the part reaches the aircraft (V2-SIM-7). Route waits in the options are sourcing and transport only. Pool exchange is shown for reference only: no contract existed under P0.'))),
+          h('li', {}, 'Material AOG runs from removal (or the end of the rectification window) to release to service, overnight hours included, so it includes the fitting / release-to-service hours after the part reaches the aircraft. Route waits in the options are sourcing and transport only. Pool exchange is shown for reference only: no contract existed under P0.'))),
     });
     summaryHost.replaceChildren(h('div', { class: 'grid-12' }, sc, cav));
     enter(summaryHost, 'slow');
@@ -522,7 +535,7 @@ function optionCard(o, rec, inc, codes, optLabel, slack, note, noneMeets = false
       metric(S ? 'Total cost' : 'Exposure', o.exposure_aed == null ? '—' : fmtMoneyFine(o.exposure_aed)),
       h('div', { class: 'aog-m' }, h('dt', {}, 'Deadline'), h('dd', {}, met))),
     note ? h('p', { class: 'aog-missed-note m-0', dataset: { role: 'missed-note' } }, icon('info'), h('span', {}, note)) : null,
-    o.source ? h('div', { class: 'aog-src mono t-12 faint' }, `${S ? 'From' : 'Source'}: ${o.source}${o.mode ? ` · ${fmtEnum(o.mode).toLowerCase()}` : ''}`) : null,
+    o.source ? h('div', { class: 'aog-src mono t-12 faint' }, `${S ? 'From' : 'Source'}: ${S ? plainSource(o.source) : o.source}${o.mode ? ` · ${fmtEnum(o.mode).toLowerCase()}` : ''}`) : null,
     rc.length ? h('ul', { class: 'aog-codes list-reset' }, rc) : null);
 }
 

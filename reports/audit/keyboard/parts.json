@@ -19,19 +19,18 @@
    ]
   }
  ],
- "expected": 125,
- "reached": 125,
- "presses": 127,
+ "expected": 124,
+ "reached": 124,
+ "presses": 126,
  "cycled": true,
  "activation": [
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 43.9,
+   "ms": 78.4,
    "esc": {
     "opened": [
      "story"
@@ -48,11 +47,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 50.6,
+   "ms": 49.8,
    "esc": {
     "opened": [
      "story"
@@ -71,7 +69,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 0.8,
+   "ms": 1.4,
    "control": "aircraft system group (ATA chapter)",
    "tag": "span",
    "role": "",
@@ -81,34 +79,10 @@
    "ok": true,
    "effects": [
     "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.8,
-   "control": "Widebody",
-   "tag": "button",
-   "role": "radio",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.9,
-   "control": "Widebody",
-   "tag": "button",
-   "role": "radio",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
     "chart-update"
    ],
-   "ms": 1.2,
-   "control": "ATA 21 Air conditioning & pressurisation: OK (system level O",
+   "ms": 12.3,
+   "control": "ATA 36 Pneumatic: OK (system level OK). 5 part numbers, 0 ur",
    "tag": "g",
    "role": "button",
    "key": "Enter"
@@ -119,8 +93,8 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.4,
-   "control": "ATA 21 Air conditioning & pressurisation: OK (system level O",
+   "ms": 4.1,
+   "control": "ATA 36 Pneumatic: OK (system level OK). 5 part numbers, 0 ur",
    "tag": "g",
    "role": "button",
    "key": "Space"
@@ -131,8 +105,8 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
-   "control": "ATA 29 Hydraulic power: OK (system level OK). 12 part number",
+   "ms": 6.8,
+   "control": "ATA 27 Flight controls: URGENT (system level Urgent). 11 par",
    "tag": "g",
    "role": "button",
    "key": "Enter"
@@ -143,8 +117,8 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
-   "control": "ATA 29 Hydraulic power: OK (system level OK). 12 part number",
+   "ms": 21.4,
+   "control": "ATA 27 Flight controls: URGENT (system level Urgent). 11 par",
    "tag": "g",
    "role": "button",
    "key": "Space"
@@ -156,7 +130,7 @@
     "drawer",
     "dom-mutation"
    ],
-   "ms": 10.5,
+   "ms": 4.7,
    "esc": {
     "opened": [
      "drawer"
@@ -165,7 +139,7 @@
     "focus": "k35",
     "returned_to_invoker": true
    },
-   "control": "PS2GN-34-R018Air data module (NB)0",
+   "control": "PS3GN-20-C040Self-locking nut kit0",
    "tag": "button",
    "role": "",
    "key": "Enter"
@@ -176,8 +150,38 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 0.8,
-   "control": "PS2GN-34-R018Air data module (NB)0",
+   "ms": 4.5,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k35",
+    "returned_to_invoker": true
+   },
+   "control": "PS3GN-20-C040Self-locking nut kit0",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 9.9,
+   "control": "Part",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 1.2,
+   "control": "Part",
    "tag": "button",
    "role": "",
    "key": "Space"
@@ -188,8 +192,16 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 0.7,
-   "control": "GN-32-R014Nose wheel steering actuator (NB)100",
+   "ms": 5.1,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k43",
+    "returned_to_invoker": true
+   },
+   "control": "GN-32-R015Main wheel and tyre assembly (NB)78",
    "tag": "tr",
    "role": "",
    "key": "Enter"
@@ -200,8 +212,8 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 0.8,
-   "control": "GN-32-R013Carbon brake assembly (NB)65",
+   "ms": 1.6,
+   "control": "GN-32-R036Carbon brake assembly (WB)64",
    "tag": "tr",
    "role": "",
    "key": "Enter"
@@ -212,8 +224,8 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.1,
-   "control": "21Air conditioning & pressurisation15 parts · top risk 1OK",
+   "ms": 13.6,
+   "control": "24Electrical power11 parts · top risk 1OK",
    "tag": "button",
    "role": "",
    "key": "Enter"
@@ -224,8 +236,8 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.8,
-   "control": "21Air conditioning & pressurisation15 parts · top risk 1OK",
+   "ms": 14.5,
+   "control": "24Electrical power11 parts · top risk 1OK",
    "tag": "button",
    "role": "",
    "key": "Space"
@@ -234,10 +246,11 @@
    "ok": true,
    "effects": [
     "navigation",
+    "scroll",
     "chart-update"
    ],
-   "ms": 3.3,
-   "control": "32Landing gear20 parts · top risk 100Urgent▲ 6 urgent parts",
+   "ms": 5.7,
+   "control": "34Navigation11 parts · top risk 52OK",
    "tag": "button",
    "role": "",
    "key": "Enter"
@@ -246,10 +259,11 @@
    "ok": true,
    "effects": [
     "navigation",
+    "scroll",
     "chart-update"
    ],
-   "ms": 0.8,
-   "control": "32Landing gear20 parts · top risk 100Urgent▲ 6 urgent parts",
+   "ms": 23.2,
+   "control": "34Navigation11 parts · top risk 52OK",
    "tag": "button",
    "role": "",
    "key": "Space"
@@ -258,34 +272,19 @@
    "ok": true,
    "effects": [
     "navigation",
+    "drawer",
     "dom-mutation"
    ],
-   "ms": 0.9,
-   "control": "GN-32-R014 Nose wheel steering actuator (NB), risk 100: open",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.7,
-   "control": "GN-32-R014 Nose wheel steering actuator (NB), risk 100: open",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.9,
-   "control": "GN-32-E027 Brake temperature sensor (WB), risk 0: open part ",
+   "ms": 2.1,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k59",
+    "returned_to_invoker": true
+   },
+   "control": "GN-32-R015 Main wheel and tyre assembly (NB), risk 78: open ",
    "tag": "button",
    "role": "",
    "key": "Enter"
@@ -296,8 +295,8 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 0.8,
-   "control": "GN-32-E027 Brake temperature sensor (WB), risk 0: open part ",
+   "ms": 1.9,
+   "control": "GN-32-R015 Main wheel and tyre assembly (NB), risk 78: open ",
    "tag": "button",
    "role": "",
    "key": "Space"
@@ -308,8 +307,16 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 0.8,
-   "control": "4GN-32-E010Brake temperature sensor (NB)0",
+   "ms": 1.7,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k63",
+    "returned_to_invoker": true
+   },
+   "control": "1GN-32-R014Nose wheel steering actuator (NB)100",
    "tag": "button",
    "role": "",
    "key": "Enter"
@@ -320,8 +327,8 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 0.6,
-   "control": "4GN-32-E010Brake temperature sensor (NB)0",
+   "ms": 1.6,
+   "control": "1GN-32-R014Nose wheel steering actuator (NB)100",
    "tag": "button",
    "role": "",
    "key": "Space"
@@ -332,151 +339,8 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 0.7,
-   "control": "GN-32-C009 steady, ADI 1.05, CV² 0.47",
-   "tag": "circle",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.7,
-   "control": "GN-32-C009 steady, ADI 1.05, CV² 0.47",
-   "tag": "circle",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.8,
-   "control": "GN-32-C030 steady, ADI 1.01, CV² 0.48",
-   "tag": "circle",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.7,
-   "control": "GN-32-C030 steady, ADI 1.01, CV² 0.48",
-   "tag": "circle",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.8,
-   "control": "GN-32-E011 now and then, ADI 2.61, CV² 0.16",
-   "tag": "circle",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.6,
-   "control": "GN-32-E011 now and then, ADI 2.61, CV² 0.16",
-   "tag": "circle",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.8,
-   "control": "GN-32-R014 now and then, ADI 2.38, CV² 0.20",
-   "tag": "circle",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.9,
-   "control": "GN-32-R014 now and then, ADI 2.38, CV² 0.20",
-   "tag": "circle",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.8,
-   "control": "GN-32-R036 now and then, ADI 1.44, CV² 0.27",
-   "tag": "circle",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.6,
-   "control": "GN-32-R036 now and then, ADI 1.44, CV² 0.27",
-   "tag": "circle",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 1.1,
-   "control": "Used once",
-   "tag": "button",
-   "role": "radio",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.6,
-   "control": "Used once",
-   "tag": "button",
-   "role": "radio",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 0.7,
-   "control": "Type",
+   "ms": 3.6,
+   "control": "5GN-32-E027Brake temperature sensor (WB)0",
    "tag": "button",
    "role": "",
    "key": "Enter"
@@ -484,10 +348,20 @@
   {
    "ok": true,
    "effects": [
+    "navigation",
+    "drawer",
     "dom-mutation"
    ],
-   "ms": 0.7,
-   "control": "Type",
+   "ms": 6.8,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k67",
+    "returned_to_invoker": true
+   },
+   "control": "5GN-32-E027Brake temperature sensor (WB)0",
    "tag": "button",
    "role": "",
    "key": "Space"
@@ -498,8 +372,193 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 0.7,
-   "control": "GN-32-R014PS1escalateNose wheel steering actuator (NB)Repair",
+   "ms": 1.9,
+   "control": "GN-32-C010 now and then, ADI 2.45, CV² 0.15",
+   "tag": "circle",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "drawer",
+    "dom-mutation"
+   ],
+   "ms": 2.2,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k71",
+    "returned_to_invoker": true
+   },
+   "control": "GN-32-C010 now and then, ADI 2.45, CV² 0.15",
+   "tag": "circle",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 2.4,
+   "control": "GN-32-C031 now and then, ADI 2.23, CV² 0.37",
+   "tag": "circle",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 13.2,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k75",
+    "returned_to_invoker": true
+   },
+   "control": "GN-32-C031 now and then, ADI 2.23, CV² 0.37",
+   "tag": "circle",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "drawer",
+    "chart-update"
+   ],
+   "ms": 12.8,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k79",
+    "returned_to_invoker": true
+   },
+   "control": "GN-32-E027 now and then, ADI 9.33, CV² 0.09",
+   "tag": "circle",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 2.8,
+   "control": "GN-32-E027 now and then, ADI 9.33, CV² 0.09",
+   "tag": "circle",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "drawer",
+    "dom-mutation"
+   ],
+   "ms": 7.0,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k83",
+    "returned_to_invoker": true
+   },
+   "control": "GN-32-R015 now and then, ADI 1.93, CV² 0.23",
+   "tag": "circle",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 26.8,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k83",
+    "returned_to_invoker": true
+   },
+   "control": "GN-32-R015 now and then, ADI 1.93, CV² 0.23",
+   "tag": "circle",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 4.3,
+   "control": "GN-32-R037 now and then, ADI 4.25, CV² 0.08",
+   "tag": "circle",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 4.0,
+   "control": "GN-32-R037 now and then, ADI 4.25, CV² 0.08",
+   "tag": "circle",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 18.1,
+   "control": "Needed",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 1.8,
+   "control": "Needed",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 1.6,
+   "control": "GN-32-R015Main wheel and tyre assembly (NB)Repairablenext fl",
    "tag": "tr",
    "role": "",
    "key": "Enter"
@@ -508,10 +567,19 @@
    "ok": true,
    "effects": [
     "navigation",
+    "drawer",
     "dom-mutation"
    ],
-   "ms": 0.7,
-   "control": "GN-32-R013flaggedCarbon brake assembly (NB)Repairablenext fl",
+   "ms": 5.4,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k107",
+    "returned_to_invoker": true
+   },
+   "control": "GN-32-R036flaggedCarbon brake assembly (WB)Repairablenext fl",
    "tag": "tr",
    "role": "",
    "key": "Enter"
@@ -523,7 +591,7 @@
    "ok": true,
    "invoker": "Narrowbody",
    "focus_after": {
-    "id": "k22",
+    "id": "k21",
     "label": "Narrowbody"
    },
    "returned_to_invoker": true,
@@ -534,10 +602,10 @@
    "ok": true,
    "invoker": "60-second tourS",
    "focus_after": {
-    "id": "k10",
-    "label": "60-second tourS"
+    "id": "u1",
+    "label": "07 · AOG Response LabAn aircraft is on the ground."
    },
-   "returned_to_invoker": true,
+   "returned_to_invoker": false,
    "note": ""
   },
   {

@@ -217,7 +217,11 @@ def test_v21_capital(site, browser, vp, mode):  # noqa: F811
         assert ins.locator('[data-role="levers"] li').all_inner_texts() == F["insight"]["levers"]
         # A6 under the frontier results
         a6 = page.locator('[data-story="frontier-chart"] [data-role="stress-ranges"]').inner_text()
-        assert F["stress_worlds"]["text"] in a6 and F["stress_worlds"]["ranges_note"] in a6
+        # v2.2: reading order easier -> tougher, built from the scales (CEO review row 18)
+        sc = F["stress_worlds"].get("scales")
+        want = (f"reliability \u00d7{sc['low_stress']:.2f} (easier) / \u00d7{sc['central']:.2f} / \u00d7{sc['high_stress']:.2f} (tougher) \u2014 a narrow range"
+                if sc else F["stress_worlds"]["text"])
+        assert want in a6 and F["stress_worlds"]["ranges_note"] in a6
         # A9: the frontier option's outstation brake rows carry the verbatim flag
         flags = page.locator('[data-role="invalid-allocations"]').inner_text()
         assert F["invalid_allocation_text"] in flags

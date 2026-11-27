@@ -97,6 +97,19 @@ function riskVsOut(s) {
   if (v != null) return v;
   return OUT_MAX && num(s.risk) != null ? num(s.risk) / OUT_MAX : null;
 }
+/** v2.2 Simple mode: incident timeline lines without system shorthand (codes, "->", "T21", "RTS"). */
+function plainEvent(ev) {
+  return String(ev || '')
+    .replace(/(\S+) removed unserviceable from (\S+)(?: \(fictional\))?/, 'Part removed from $2')
+    .replace(/Material request raised: (\d+) x \S+, window D0/, (_, n) => `Request: ${n} part${n === '1' ? '' : 's'}, needed before the next flight`)
+    .replace(/Material request raised: (\d+) x \S+, window (\S+)/, (_, n) => `Request: ${n} part${n === '1' ? '' : 's'}`)
+    .replace(/\s*\((?:emergency|routine),\s*T\d+\)/i, '')
+    .replace(/Stock check (\w+): (\d+) serviceable on hand/, 'Spares at $1: $2')
+    .replace(/Material-related downtime starts: D0 requirement, no serviceable unit at (\w+)/, 'The plane is grounded: no spare at $1')
+    .replace(/fitting \/ release-to-service starts/, 'fitting and release start')
+    .replace(/\(\+(\d+) h fitting\/RTS\)/, '($1 h of fitting and release)')
+    .replace(/\s*->\s*/g, ' → ');
+}
 function riskBand(s) {
   if (s.role !== 'hub') {
     const lv = String(s.outstation_risk_level || '').toLowerCase();
@@ -258,7 +271,7 @@ export async function render(el, ctx) {
   const bandsPresent = ['low', 'watch', 'ok', 'review', 'high', 'urgent'].filter((b) => stations.some((s) => riskBand(s) === b));
   mapF.body.append(mapHost, h('div', { class: 'np-map-foot' }, picker,
     h('div', { class: 'np-legend', 'aria-hidden': 'true' },
-      h('span', { class: 'np-legend-k' }, byMode('Grounded-time ring', 'Exposure ring')),
+      h('span', { class: 'np-legend-k' }, byMode('Ring: share vs worst other airport', 'Ring: share vs worst outstation')),
       ...bandsPresent.map((b) => h('span', { style: { color: RISK[b].color } }, h('i', { class: 'np-ring' }), RISK[b].word.toLowerCase())),
       h('span', { class: 'np-legend-k' }, 'Movements'),
       h('span', { style: { color: SR.neutral } }, h('i', { class: 'np-line' }), byMode('past transfers', 'history transfers')),
@@ -342,7 +355,7 @@ export async function render(el, ctx) {
       const ranked = stations.slice().sort((a, b) => (b.risk ?? 0) - (a.risk ?? 0));
       drill.append(h('div', { class: 'card-head' }, h('div', {}, h('div', { class: 'card-kicker' }, byMode('Airport details', 'Station drill-down')), h('h3', { class: 'card-title' }, byMode('Pick an airport on the map or below', 'Select a station on the map or below'))), provChip(prov(n.meta))),
         h('p', { class: 'muted t-14' }, S
-          ? 'Each airport shows its spares, requests, share of grounded time, transfers and how the three plans do there.'
+          ? 'Each airport shows its spares, requests, share of grounded time, transfers and how three of the plans do there (Extra Spares was tested network-wide only).'
           : ['Each station shows its P2 units, request volume, material shortage exposure, transfer traffic and how ', nameTag('P0'), ', ', nameTag('P1'), ' and ', nameTag('P2'), ' perform there.']),
         h('div', { class: 'np-sub' }, byMode('Largest share of grounded time first', 'Highest material shortage exposure first')),
         h('div', { class: 'np-rank' }, ranked.map((x) => h('button', { type: 'button', class: 'np-rank-item', onclick: () => choose(x.station, true) },
@@ -483,7 +496,7 @@ function renderReplay(host, n, map, byId, isAlive) {
   f.body.append(strip, info);
   if (fo?.timeline?.length) {
     f.body.append(h('div', { class: 'np-sub' }, isSimple() ? `What happened, hour by hour · ${fo.pn} at ${fo.station}` : `${fo.planted ? `${fo.planted} · ` : ''}${fo.incident_id || 'Incident'} timeline · ${fo.pn} at ${fo.station} · hours from removal`),
-      h('ol', { class: 'np-timeline' }, fo.timeline.map((t) => h('li', { class: `is-${t.step || 'event'}` }, h('span', { class: 'np-tl-t mono' }, `T+${fmtNum(t.t_h, 0)} h`), h('span', { class: 'np-tl-st mono' }, t.station || ''), h('span', { class: 'np-tl-ev' }, t.event)))));
+      h('ol', { class: 'np-timeline' }, fo.timeline.map((t) => h('li', { class: `is-${t.step || 'event'}` }, h('span', { class: 'np-tl-t mono' }, `T+${fmtNum(t.t_h, 0)} h`), h('span', { class: 'np-tl-st mono' }, t.station || ''), h('span', { class: 'np-tl-ev' }, isSimple() ? plainEvent(t.event) : t.event)))));
   }
   const setInfo = (e) => {
     info.className = `np-event ${e.kind === 'emergency' ? 'is-emergency' : ''}`;

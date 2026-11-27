@@ -11,11 +11,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
     "dom-mutation"
    ],
-   "ms": 53.2,
+   "ms": 251.2,
    "esc": {
     "opened": [
      "story"
@@ -32,7 +31,46 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
+    "story",
+    "dom-mutation"
+   ],
+   "ms": 83.9,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k10",
+    "returned_to_invoker": true
+   },
+   "control": "60-second tourS",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "story",
+    "dom-mutation"
+   ],
+   "ms": 11.1,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k17",
+    "returned_to_invoker": true
+   },
+   "control": "Story",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
     "story",
     "dom-mutation"
    ],
@@ -42,48 +80,6 @@
      "story"
     ],
     "closed": true,
-    "focus": "k10",
-    "returned_to_invoker": true
-   },
-   "control": "60-second tourS",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "story",
-    "dom-mutation"
-   ],
-   "ms": 43.3,
-   "esc": {
-    "opened": [
-     "story"
-    ],
-    "closed": true,
-    "focus": "k17",
-    "returned_to_invoker": true
-   },
-   "control": "Story",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "story",
-    "dom-mutation"
-   ],
-   "ms": 42.9,
-   "esc": {
-    "opened": [
-     "story"
-    ],
-    "closed": true,
     "focus": "k17",
     "returned_to_invoker": true
    },
@@ -98,7 +94,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 0.7,
+   "ms": 2.5,
    "esc": {
     "opened": [
      "modal"
@@ -118,7 +114,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 0.6,
+   "ms": 2.7,
    "esc": {
     "opened": [
      "modal"
@@ -137,7 +133,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 0.5,
+   "ms": 9.2,
    "control": "hours planes sat grounded waiting for a part (material AOG h",
    "tag": "span",
    "role": "",
@@ -149,7 +145,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 5.3,
    "control": "Station short of a spare: 23 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -161,7 +157,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.6,
+   "ms": 17.7,
    "control": "Station short of a spare: 23 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -173,7 +169,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.4,
+   "ms": 21.5,
    "control": "Repair is late: 15 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -185,7 +181,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.6,
+   "ms": 22.3,
    "control": "Repair is late: 15 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -197,7 +193,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.8,
+   "ms": 4.6,
    "control": "Scrapped part, new one not here yet: 11 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -209,7 +205,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.0,
+   "ms": 17.3,
    "control": "Scrapped part, new one not here yet: 11 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -221,7 +217,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.6,
+   "ms": 18.5,
    "control": "Too much stock, use falling: 7 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -233,7 +229,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.0,
+   "ms": 15.4,
    "control": "Too much stock, use falling: 7 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -245,7 +241,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 32.2,
    "control": "Stock may expire before it is used: 4 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -257,7 +253,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.0,
+   "ms": 12.5,
    "control": "Stock may expire before it is used: 4 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -269,7 +265,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 23.4,
    "control": "Borrowed part not yet given back: 1 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -281,7 +277,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.4,
+   "ms": 3.3,
    "control": "Borrowed part not yet given back: 1 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -293,7 +289,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 1.0,
+   "ms": 2.1,
    "control": "Supplier slower than promised: 1 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -305,7 +301,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.6,
+   "ms": 4.6,
    "control": "Supplier slower than promised: 1 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -317,7 +313,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.6,
+   "ms": 2.3,
    "control": "A plane is still waiting for a part: 1 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -329,7 +325,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 2.7,
    "control": "A plane is still waiting for a part: 1 exceptions; filter",
    "tag": "g",
    "role": "button",
@@ -339,197 +335,214 @@
    "ok": true,
    "effects": [
     "dom-mutation"
+   ],
+   "ms": 8.6,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 2.3,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 1.9,
+   "control": "Materials planning: 34 open, 21 urgent. Filter the inbox",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 6.2,
+   "control": "Materials planning: 34 open, 21 urgent. Filter the inbox",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.4,
+   "control": "Repair control: 15 open, 2 urgent. Filter the inbox",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 6.0,
+   "control": "Repair control: 15 open, 2 urgent. Filter the inbox",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 4.2,
+   "control": "Procurement: 12 open, 1 urgent. Filter the inbox",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 14.3,
+   "control": "Procurement: 12 open, 1 urgent. Filter the inbox",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.6,
+   "control": "AOG desk: 2 open, 1 urgent. Filter the inbox",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 17.7,
+   "control": "AOG desk: 2 open, 1 urgent. Filter the inbox",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "drawer",
+    "chart-update"
+   ],
+   "ms": 40.6,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k33",
+    "returned_to_invoker": true
+   },
+   "control": "Open the full item",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 9.9,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k33",
+    "returned_to_invoker": true
+   },
+   "control": "Open the full item",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 2.8,
+   "control": "Next",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 2.5,
+   "control": "Next",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "download",
+    "dom-mutation"
+   ],
+   "ms": 2.2,
+   "control": "Export CSV",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "download",
+    "dom-mutation"
+   ],
+   "ms": 5.9,
+   "control": "Export CSV",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
    ],
    "ms": 1.8,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 1.0,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.8,
-   "control": "Materials planning: 34 open, 21 urgent. Filter the inbox",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.6,
-   "control": "Materials planning: 34 open, 21 urgent. Filter the inbox",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.6,
-   "control": "Repair control: 15 open, 2 urgent. Filter the inbox",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.9,
-   "control": "Repair control: 15 open, 2 urgent. Filter the inbox",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 1.1,
-   "control": "Procurement: 12 open, 1 urgent. Filter the inbox",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.6,
-   "control": "Procurement: 12 open, 1 urgent. Filter the inbox",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.7,
-   "control": "AOG desk: 2 open, 1 urgent. Filter the inbox",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.7,
-   "control": "AOG desk: 2 open, 1 urgent. Filter the inbox",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.6,
-   "control": "Open the full item",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 0.7,
-   "control": "Open the full item",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 0.7,
-   "control": "Next",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 0.7,
-   "control": "Next",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "download",
-    "dom-mutation"
-   ],
-   "ms": 1.2,
-   "control": "Export CSV",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "download",
-    "dom-mutation"
-   ],
-   "ms": 1.0,
-   "control": "Export CSV",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.6,
    "control": "Urgent 25",
    "tag": "button",
    "role": "radio",
@@ -541,7 +554,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 43.9,
    "control": "Urgent 25",
    "tag": "button",
    "role": "radio",
@@ -553,7 +566,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 7.5,
+   "ms": 22.8,
    "control": "Review 29",
    "tag": "button",
    "role": "radio",
@@ -565,7 +578,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
+   "ms": 3.9,
    "control": "Review 29",
    "tag": "button",
    "role": "radio",

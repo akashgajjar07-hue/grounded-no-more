@@ -1,10 +1,10 @@
 {
- "generated": "2026-11-27T15:37:10",
+ "generated": "2026-11-27T18:24:16",
  "routes": {
   "about": {
    "owner": "docs/js/views/about.js",
-   "expected": 33,
-   "reached": 33,
+   "expected": 39,
+   "reached": 39,
    "cycled": true,
    "problems": [],
    "warnings": []
@@ -74,8 +74,8 @@
   },
   "network": {
    "owner": "docs/js/views/network-positioning.js",
-   "expected": 76,
-   "reached": 76,
+   "expected": 77,
+   "reached": 77,
    "cycled": true,
    "problems": [],
    "warnings": [
@@ -84,8 +84,8 @@
   },
   "parts": {
    "owner": "docs/js/views/parts-intelligence.js",
-   "expected": 125,
-   "reached": 125,
+   "expected": 124,
+   "reached": 124,
    "cycled": true,
    "problems": [],
    "warnings": [

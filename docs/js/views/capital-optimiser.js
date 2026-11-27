@@ -20,7 +20,7 @@ const tx = (sel, { duration = 'base', ease = 'standard', name } = {}) => sel.tra
 import { term, termText, FRONTIER_SUBTITLE } from '../lib/glossary.js';
 import { displayName, nameTag, relabelArchetype } from '../lib/names.js';
 const relabelArchetypeSafe = (t) => (typeof relabelArchetype === 'function' ? relabelArchetype(String(t)) : String(t));
-import { chartFrame, responsive, svgIn, axisBottom, withTooltip, theme, fmtAED, fmtHours, fmtInt, fmtNum, reducedMotion, truncate, HEADLINE_MAX, markerRect, labelAround, fmtMult, refLine } from '../charts/theme.js';
+import { chartFrame, responsive, svgIn, axisBottom, withTooltip, theme, fmtAED, fmtHours, fmtInt, fmtNum, reducedMotion, truncate, HEADLINE_MAX, markerRect, labelAround, fmtMult, refLine, stripRefs, stressWorldsText } from '../charts/theme.js';
 
 export const data = ['frontier', 'policies', 'parts'];
 
@@ -47,6 +47,8 @@ const FACTOR_LABEL_X = { aog_penalty: 'AOG penalty', carrying_cost: 'Carrying co
 const FACTOR_LABEL_S = { aog_penalty: 'Cost per grounded hour', carrying_cost: 'Holding cost', repair_tat: 'Repair time', lead_time: 'Supplier time', aog_desk_expedite: 'Urgent-parts routes' };
 const FACTOR_LABEL = new Proxy({}, { get: (_, k) => (isSimple() ? FACTOR_LABEL_S : FACTOR_LABEL_X)[k] });
 const num = (v) => (v === null || v === undefined || v === '' || Number.isNaN(+v) ? null : +v);
+/** v2.2: both CI bounds in the same unit ("[0.0M, 1.9M]", never "[695, 1.9M]"). */
+const sameUnitM = (v, lo, hi) => (Math.max(Math.abs(lo ?? 0), Math.abs(hi ?? 0)) >= 1e6 ? `${v < 0 ? '−' : ''}${(Math.abs(v) / 1e6).toFixed(1)}M` : fmtAED(v).replace('AED ', ''));
 const ciTxt = (lo, hi, f) => (lo == null || hi == null ? '' : ` [${f(lo)}, ${f(hi)}]`);
 const signH = (v) => (v == null ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmtHours(Math.abs(v))}`);
 const signAED = (v) => fmtAED(v, { sign: true });
@@ -54,6 +56,8 @@ const signAED = (v) => fmtAED(v, { sign: true });
  *  "AED 56.7M − AED 48.4M" always reads "+AED 8.3M" wherever it appears. */
 const rCap = (v) => (Math.abs(v) >= 1e6 ? Math.round(v / 1e5) * 1e5 : Math.round(v / 1e3) * 1e3);
 const dCap = (a, b) => rCap(a) - rCap(b);
+/** Capital vs the Network Plan: the PAIRED frontier value d_capital_vs_P2_aed when exported (CEO review row 13). */
+const capVsP2 = (p, P2) => (p?.dBaseCap?.[0] != null ? p.dBaseCap[0] : dCap(p.cap, P2.cap));
 /** Tornado setting: "x0.5" → "×0.5"; a bare rate "0.15" → "15%"; anything else as exported. */
 const settingTxt = (st) => { const t = String(st ?? '').trim(); const m = t.match(/^[x×]\s*([\d.]+)$/i); if (m) return fmtMult(+m[1], m[1].includes('.') ? (m[1].split('.')[1].length) : 1); if (/^0?\.\d+$/.test(t)) return `${Math.round(+t * 100)}%`; return t; };
 /** First candidate headline that fits the 90-character rule (data-driven copy can vary in length). */
@@ -168,7 +172,7 @@ export async function render(el, ctx) {
 
   // ---- KPI strip (constructed from frontier points; compared with the base policy P2 — 'baseline' is P0 only)
   if (rec && P2) {
-    const capTile = kpiTile({ label: S ? `${recN}: money in spares` : `${recN} simulated capital`, value: rec.cap, baseline: P2.cap, baseline_label: baseN, delta: dCap(rec.cap, P2.cap), better: 'lower', provenance: prov, ci: rec.capCI[0] != null ? rec.capCI : null }, { format: fmtAED, deltaFormat: (v) => fmtAED(v), capital: true });
+    const capTile = kpiTile({ label: S ? `${recN}: money in spares` : `${recN} simulated capital`, value: rec.cap, baseline: P2.cap, baseline_label: baseN, delta: capVsP2(rec, P2), better: 'lower', provenance: prov, ci: rec.capCI[0] != null ? rec.capCI : null }, { format: fmtAED, deltaFormat: (v) => fmtAED(v), capital: true });
     // One AOG tile with both comparisons (vs the base policy and vs P0), instead of the same value twice.
     const aogTile = kpiTile({ label: S ? `${recN}: hours grounded a year` : `${recN} AOG / yr`, value: rec.aog, baseline: P2.aog, baseline_label: baseN, delta: rec.aog - P2.aog, better: 'lower', provenance: prov, ci: rec.ci }, { format: fmtHours });
 
@@ -210,10 +214,10 @@ export async function render(el, ctx) {
   const recVsP2 = rec?.dBaseAog;
   const headline = rec && P2 && P0
     // v2 framing: P2 is the core result; the rule's pick is a frontier option for additional capital
-    ? (S ? fitHeadline(`${fmtAED(dCap(rec.cap, P2.cap))} more in spares than the ${baseN} cuts a further ${fmtHours(Math.abs(P2.aog - rec.aog))} grounded a year`,
-      `${fmtAED(dCap(rec.cap, P2.cap))} more in spares buys ${fmtHours(Math.abs(P2.aog - rec.aog))} less grounded time a year`)
-      : fitHeadline(`If you invest ${fmtAED(dCap(rec.cap, P2.cap))} more than the ${baseN}, ${recN} removes a further ${fmtHours(Math.abs(P2.aog - rec.aog))} of AOG a year`,
-        `${fmtAED(dCap(rec.cap, P2.cap))} more than ${baseN} buys ${recN}: ${fmtHours(Math.abs(P2.aog - rec.aog))} less AOG a year`))
+    ? (S ? fitHeadline(`${fmtAED(capVsP2(rec, P2))} more in spares than the ${baseN} cuts a further ${fmtHours(Math.abs(P2.aog - rec.aog))} grounded a year`,
+      `${fmtAED(capVsP2(rec, P2))} more in spares buys ${fmtHours(Math.abs(P2.aog - rec.aog))} less grounded time a year`)
+      : fitHeadline(`If you invest ${fmtAED(capVsP2(rec, P2))} more than the ${baseN}, ${recN} removes a further ${fmtHours(Math.abs(P2.aog - rec.aog))} of AOG a year`,
+        `${fmtAED(capVsP2(rec, P2))} more than ${baseN} buys ${recN}: ${fmtHours(Math.abs(P2.aog - rec.aog))} less AOG a year`))
     : 'Frontier: capital versus material AOG hours';
   const tableRows = pts.slice().sort((a, b) => a.cap - b.cap).map((p) => ({ id: planName(p.id), kind: KIND_LABEL[p.kind] || p.kind, cap: p.cap, aog: p.aog, lo: p.ci[0], hi: p.ci[1], sel: p.sel?.aog ?? null, front: front.includes(p) ? 'yes' : 'no' }));
   const frame = chartFrame(chartCard, {
@@ -235,7 +239,7 @@ export async function render(el, ctx) {
   // A6 under the frontier: the stress-world range and what the likely ranges do (and do not) cover; then the scope line
   const SW = F.stress_worlds || {};
   frame.body.after(annoteHTML,
-    h('p', { class: 'co-a6 t-12 m-0', dataset: { role: 'stress-ranges' } }, h('span', { dataset: { readability: 'skip' } }, `Stress worlds: ${SW.text || 'not exported'}.`), ' ', SW.ranges_note || ''),
+    h('p', { class: 'co-a6 t-12 m-0', dataset: { role: 'stress-ranges' } }, h('span', { dataset: { readability: 'skip' } }, `Stress worlds: ${stressWorldsText(SW) || 'not exported'}.`), ' ', SW.ranges_note || ''),
     scopeLine());
 
   let chart = null;
@@ -343,7 +347,7 @@ export async function render(el, ctx) {
           [`Frontier option · ${recN}${md === 'selection' ? (S ? ' (tuning runs)' : ' (selection seeds)') : ''}`, 'gnm-annot-text'],
           [`${fmtAED(rp.cap)} · ${fmtHours(rp.aog)}/yr${ciTxt(rp.ci?.[0], rp.ci?.[1], fmtInt)}`, 'gnm-annot-sub'],
         ];
-        if (md !== 'selection' && P2 && rec.dBaseAog) lines.push([`vs ${baseN}: ${signH(rec.dBaseAog[0])}${ciTxt(rec.dBaseAog[1], rec.dBaseAog[2], (v) => fmtInt(v))} h · ${signAED(dCap(rec.cap, P2.cap))}`, 'gnm-annot-sub']);
+        if (md !== 'selection' && P2 && rec.dBaseAog) lines.push([`vs ${baseN}: ${signH(rec.dBaseAog[0])}${ciTxt(rec.dBaseAog[1], rec.dBaseAog[2], (v) => fmtInt(v))} h · ${signAED(capVsP2(rec, P2))}`, 'gnm-annot-sub']);
         if (md !== 'selection' && P0) lines.push([`vs ${p0N}: ${signH(rec.aog - P0.aog)}${rec.dP0Aog ? ciTxt(rec.dP0Aog[1], rec.dP0Aog[2], (v) => fmtInt(v)) : ''} · ${signAED(dCap(rec.cap, P0.cap))}`, 'gnm-annot-sub']);
         // long display names: when the call-out would not fit beside the point, it moves under the chart (HTML), as on phones
         const lineW = d3.max(lines, ([t, c]) => t.length * (c === 'gnm-annot-text' ? 7.2 : 6.6)) + 12;
@@ -424,8 +428,8 @@ export async function render(el, ctx) {
       [S ? 'Runs' : 'Seeds', selMode ? (S ? 'tuning runs' : 'selection 100–119') : (S ? '20 fresh test runs' : `holdout ${holdRange}`.trim())],
       [S ? 'In spares' : 'Capital', `${fmtAED(p.cap)}${p.capCI[0] != null ? ciTxt(p.capCI[0], p.capCI[1], (v) => fmtAED(v).replace('AED ', '')) : ''}`],
       [S ? 'Grounded / yr' : 'AOG / yr', selMode ? `${fmtHours(p.sel.aog)}${ciTxt(p.sel.ci?.[0], p.sel.ci?.[1], fmtInt)}` : `${fmtHours(p.aog)}${ciTxt(p.ci[0], p.ci[1], fmtInt)}`],
-      selMode && P2?.sel?.aog != null && p !== P2 ? [`vs ${baseN}`, `${signH(p.sel.aog - P2.sel.aog)} · ${signAED(dCap(p.cap, P2.cap))}`] : null,
-      !selMode && P2 && p !== P2 ? [`vs ${baseN}`, p.dBaseAog ? `${signH(p.dBaseAog[0])}${ciTxt(p.dBaseAog[1], p.dBaseAog[2], (v) => fmtInt(v))} · ${signAED(dCap(p.cap, P2.cap))}` : `${signH(p.aog - P2.aog)} · ${signAED(dCap(p.cap, P2.cap))}`] : null,
+      selMode && P2?.sel?.aog != null && p !== P2 ? [`vs ${baseN}`, `${signH(p.sel.aog - P2.sel.aog)} · ${signAED(capVsP2(p, P2))}`] : null,
+      !selMode && P2 && p !== P2 ? [`vs ${baseN}`, p.dBaseAog ? `${signH(p.dBaseAog[0])}${ciTxt(p.dBaseAog[1], p.dBaseAog[2], (v) => fmtInt(v))} · ${signAED(capVsP2(p, P2))}` : `${signH(p.aog - P2.aog)} · ${signAED(capVsP2(p, P2))}`] : null,
       !selMode && P0 && p !== P0 ? [`vs ${p0N}`, `${signH(p.aog - P0.aog)} · ${signAED(dCap(p.cap, P0.cap))}`] : null,
       p.total != null ? [S ? 'Yearly cost' : 'Annual cost', `${fmtAED(p.total)}${selMode ? (S ? ' (test runs)' : ' (holdout)') : ''}`] : null,
       selMode ? [S ? 'Test runs' : 'Holdout AOG', `${fmtHours(p.aog)}${ciTxt(p.ci[0], p.ci[1], fmtInt)}`] : p.sel?.aog != null ? [S ? 'Tuning runs' : 'Selection', `${fmtHours(p.sel.aog)}${ciTxt(p.sel.ci?.[0], p.sel.ci?.[1], fmtInt)}`] : null,
@@ -470,7 +474,7 @@ export async function render(el, ctx) {
     const levers = INS.levers || [];
     const insCard = card({
       cls: 'span-6 md-span-12 co-insight', kicker: S ? 'More spares is not the only lever' : 'Frontier insight · A8', story: 'frontier-insight', prov: INS.provenance || prov,
-      title: S ? 'Faster repair can beat buying spares' : 'Faster repair can beat buying spares',
+      title: S ? 'With 25% faster repair, the extra spares no longer clearly pay' : 'With repair TAT ×0.75, the extra spares no longer clearly pay',
       body: h('div', { class: 'stack-2' },
         h('p', { class: 'co-insight-text m-0', dataset: { role: 'insight-text' } }, INS.text || 'Insight not exported.'),
         levers.length ? h('ul', { class: 'co-levers-row list-reset', 'aria-label': 'Levers', dataset: { role: 'levers' } }, levers.map((l, i) => h('li', { class: `co-lever-chip ${i === levers.length - 1 ? 'is-spares' : ''}` }, l))) : null,
@@ -555,7 +559,7 @@ export async function render(el, ctx) {
     const nAll = num(tot?.n_rows) ?? rows.length;
     allocHead.replaceChildren(
       h('div', {}, h('div', { class: 'card-kicker' }, [S ? 'Where the spares go · ' : 'Allocation · ', nameTag(sel.id)]), h('h3', { class: 'card-title co-alloc-title', 'aria-live': 'polite' }, rows.length
-        ? (S ? `${sn(sel.id)} changes ${fmtInt(nAll)} part-and-airport levels vs the ${baseN}: ${fmtInt(Math.abs(units))} ${units >= 0 ? 'more' : 'fewer'} units, ${fmtAED(Math.abs(sumCap))} ${sumCap >= 0 ? 'more' : 'less'} at target units × price` : `${sn(sel.id)} changes ${fmtInt(nAll)} PN-station levels vs ${baseN}: ${fmtInt(Math.abs(units))} ${units >= 0 ? 'more' : 'fewer'} units on top of ${baseN}, ${fmtAED(Math.abs(sumCap))} ${sumCap >= 0 ? 'more' : 'less'} allocation capital (target units × unit cost)`)
+        ? (S ? `${sn(sel.id)} changes ${fmtInt(nAll)} part-and-airport levels vs the ${baseN}: ${fmtInt(Math.abs(units))} ${units >= 0 ? 'more' : 'fewer'} units, ${fmtAED(Math.abs(sumCap))} ${sumCap >= 0 ? 'more' : 'less'} at target units × price (a different basis)` : `${sn(sel.id)} changes ${fmtInt(nAll)} PN-station levels vs ${baseN}: ${fmtInt(Math.abs(units))} ${units >= 0 ? 'more' : 'fewer'} units on top of ${baseN}, ${fmtAED(Math.abs(sumCap))} ${sumCap >= 0 ? 'more' : 'less'} allocation capital (target units × unit cost, a different basis)`)
         : sel === P2 ? `The ${baseN} is the base plan: no changes` : `No allocation rows exported for ${sn(sel.id)}`)),
       h('div', { class: 'row' }, provChip(prov)));
     // keyed, flash-free update: hold the table's height across the swap, then fade in only the rows that are new
@@ -570,7 +574,7 @@ export async function render(el, ctx) {
     allocCard.classList.toggle('has-more', rows.length > 8);
     // C3 (wave 4): two capital bases on one page, each named. Allocation capital = target units × unit cost (this table);
     // simulated capital = the time-average stock value over the run (the KPI and the frontier).
-    const simD = sel !== P2 && num(sel.cap) != null && num(P2?.cap) != null ? dCap(sel.cap, P2.cap) : null;
+    const simD = sel !== P2 && num(sel.cap) != null && num(P2?.cap) != null ? capVsP2(sel, P2) : null;
     const basis = rows.length && simD != null ? (S ? `This table counts target units × unit price. The tiles and the curve use the average value of spares held over the run. That leaves out parts away for repair: ${fmtAED(Math.abs(simD))} ${simD >= 0 ? 'more' : 'less'} than the ${baseN}.` : `Allocation capital is target units × unit cost. The KPI and frontier show simulated capital (the time-average stock value over the run, which nets out units away in repair): ${fmtAED(Math.abs(simD))} ${simD >= 0 ? 'more' : 'less'} than ${baseN}.`) : '';
     const shown = tot && num(tot.n_rows_shown) < num(tot.n_rows) ? (S ? `Showing the ${fmtInt(tot.n_rows_shown)} changes with the biggest effect, out of ${fmtInt(tot.n_rows)}. Totals cover all rows. ` : `Showing the ${fmtInt(tot.n_rows_shown)} changes with the largest modelled effect of ${fmtInt(tot.n_rows)}; totals cover all rows. `) : '';
     allocNote.textContent = `${shown}${basis}`;
@@ -695,7 +699,7 @@ export async function render(el, ctx) {
         : minLo > 0
           ? fitHeadline(`${recN} beats ${baseN} at every one-at-a-time setting: ${fmtAED(vMin)} to ${fmtAED(vMax)} a year net`, `${recN} beats ${baseN} at every one-at-a-time setting`)
           : fitHeadline(`${recN}'s edge over ${baseN} is not clear everywhere: the lowest bound reaches ${fmtAED(minLo)} a year`, `${recN}'s edge over ${baseN} is not clear everywhere`),
-      subtitle: S ? `Yearly net gain of the extra spares (AED). One input changed at a time · tuning runs · base case ${fmtAED(base)} · lines show the likely range` : `Net annual benefit of ${displayName(rec.id, { mode: 'code' })} vs ${displayName(baseId, { mode: 'code' })} (AED/yr) · one factor varied at a time (whole alternative worlds: see Robustness) · paired · selection seeds 100–119 · base case ${fmtAED(base)} · 95% CI whiskers`,
+      subtitle: S ? `Yearly net gain of the extra spares (AED). One input changed at a time · net gain on tuning runs: ${fmtAED(base)}${rec?.total != null && P2?.total != null && P2.total > rec.total ? ` (test runs: ${fmtAED(P2.total - rec.total)} lower yearly cost)` : ''} · lines show the likely range` : `Net annual benefit of ${displayName(rec.id, { mode: 'code' })} vs ${displayName(baseId, { mode: 'code' })} (AED/yr) · one factor varied at a time (whole alternative worlds: see Robustness) · paired · selection seeds 100–119 · base case ${fmtAED(base)} · 95% CI whiskers`,
       provenance: prov, source: 'frontier.json',
       table: { columns: [{ key: 'label', label: S ? 'Input' : 'Factor' }, { key: 'setting', label: 'Setting', format: settingTxt }, { key: 'v', label: S ? 'Net gain' : 'Net benefit', num: true, format: (v) => fmtAED(v) }, { key: 'lo', label: S ? 'Range low' : 'CI lo', num: true, format: (v) => fmtAED(v) }, { key: 'hi', label: S ? 'Range high' : 'CI hi', num: true, format: (v) => fmtAED(v) }, { key: 'saved', label: S ? 'Grounded h saved' : 'AOG h saved', num: true, format: fmtHours }],
         rows: rows.flatMap((r) => r.settings.map((s) => ({ label: r.label, setting: s.setting, v: s.v, lo: num(s.ci?.[0]), hi: num(s.ci?.[1]), saved: s.saved }))) },
@@ -788,7 +792,7 @@ export async function render(el, ctx) {
     const nPn = byPn.size;
     fr.body.after(h('div', { class: 'co-levers' },
       h('div', { class: 'co-lever' }, h('div', { class: 'co-lever-k' }, icon('rotable'), 'Buy another spare'), h('div', { class: 'co-lever-v num' }, bMed != null ? fmtAED(bMed) : 'not run'), h('div', { class: 't-12 faint' }, S ? 'typical AED per grounded hour avoided · holding cost only' : 'median AED per AOG hour avoided · holding cost only')),
-      h('div', { class: 'co-lever' }, h('div', { class: 'co-lever-k' }, icon('wrench'), S ? 'Repair 10 days faster' : 'Cut repair TAT 10 d'), h('div', { class: 'co-lever-v num' }, tMed != null ? fmtAED(tMed) : 'not run'), h('div', { class: 't-12 faint' }, levPt?.dBaseAog ? `${S ? 'tested on the top parts' : 'simulated on top PNs'}: ${signH(levPt.dBaseAog[0])}${ciTxt(levPt.dBaseAog[1], levPt.dBaseAog[2], (v) => fmtInt(v))} vs ${baseN}` : (S ? 'typical AED per grounded hour avoided · rush fee' : 'median AED per AOG hour avoided · acceleration fee'))),
+      h('div', { class: 'co-lever' }, h('div', { class: 'co-lever-k' }, icon('wrench'), S ? 'Repair 10 days faster' : 'Cut repair TAT 10 d'), h('div', { class: 'co-lever-v num' }, tMed != null ? fmtAED(tMed) : 'not run'), h('div', { class: 't-12 faint' }, levPt?.dBaseAog ? (S ? `${fmtHours(Math.abs(levPt.dBaseAog[0]))} a year ${levPt.dBaseAog[0] > 0 ? 'more' : 'less'} grounded than the ${baseN}${levPt.dBaseAog[1] != null ? ` (range ${fmtInt(levPt.dBaseAog[1])} to ${fmtInt(levPt.dBaseAog[2])})` : ''}` : `simulated on top PNs: ${signH(levPt.dBaseAog[0])}${ciTxt(levPt.dBaseAog[1], levPt.dBaseAog[2], (v) => fmtInt(v))} vs ${baseN}`) : (S ? 'typical AED per grounded hour avoided · rush fee' : 'median AED per AOG hour avoided · acceleration fee'))),
       h('div', { class: 'co-lever' }, h('div', { class: 'co-lever-k' }, icon('route'), S ? 'Move existing spares' : 'Reposition stock'), h('div', { class: 'co-lever-v num' }, `${fmtInt(reposHelps)} of ${fmtInt(nPn)}`), h('div', { class: 't-12 faint' }, S ? `parts where moving one spare cuts grounded time at the ${baseN} levels` : `PNs where moving one unit lowers modelled AOG at the ${baseN} allocation`))));
   }
 
@@ -802,12 +806,12 @@ export async function render(el, ctx) {
     if (!rows.length) { host.append(card({ title: 'Stress variants', prov, body: h('p', { class: 'muted m-0' }, 'Variant robustness not run.') })); return; }
     const low = rows.find((r) => r.k === 'low_stress');
     const tbl = dataTable({
-      caption: 'Stress-variant robustness', dense: true, bare: true,
+      caption: S ? 'Easier and tougher worlds' : 'Stress-variant robustness', dense: true, bare: true,
       mobileColumns: ['label', 'nb', 'pick', 'dA', 'rec', 'p2'],
       columns: [
         { key: 'label', label: S ? 'World' : 'Stress' }, { key: 'p2', label: S ? 'Network' : baseId, num: true, format: fmtHours }, { key: 'rec', label: S ? '+ Spares' : rec.id, num: true, format: fmtHours },
         { key: 'dA', label: 'Saved', num: true, render: (r) => h('span', { class: 'co-two' }, fmtHours(r.dA), h('small', {}, ciTxt(r.dAlo, r.dAhi, (v) => fmtNum(v, Math.abs(v) < 20 ? 1 : 0)).trim())) },
-        { key: 'nb', label: 'Net / yr', short: 'Net', num: true, render: (r) => h('span', { class: `co-two ${r.nbhi < 0 ? 'co-neg' : ''}` }, h('span', {}, r.nbhi < 0 ? icon('alert') : null, fmtAED(r.nb)), h('small', {}, ciTxt(r.nblo, r.nbhi, (v) => fmtAED(v).replace('AED ', '')).trim())) },
+        { key: 'nb', label: S ? 'Net / yr (tuning runs)' : 'Net / yr', short: 'Net', num: true, render: (r) => h('span', { class: `co-two ${r.nbhi < 0 ? 'co-neg' : ''}` }, h('span', {}, r.nbhi < 0 ? icon('alert') : null, Math.max(Math.abs(r.nblo ?? 0), Math.abs(r.nbhi ?? 0)) >= 1e6 ? `${r.nb < 0 ? '−' : ''}AED ${sameUnitM(Math.abs(r.nb), r.nblo, r.nbhi)}` : fmtAED(r.nb)), h('small', {}, ciTxt(r.nblo, r.nbhi, (v) => sameUnitM(v, r.nblo, r.nbhi)).trim())) },
         // raw plan codes get a gloss ("B125 · budget point, AED 45.0M"), never a bare code (wave 4)
         { key: 'pick', label: 'Rule picks', short: 'Rule picks', render: (r) => { const q = byId.get(r.pick); return r.pick === '—' || !r.pick ? '—' : h('span', { title: q ? `${KIND_LABEL[q.kind] || q.kind}, ${fmtAED(q.cap)} ${S ? 'in spares' : 'simulated capital'}` : null }, sn(r.pick).replace(/^Frontier point /, ''), q && !isPolicy(q) && q !== rec && !S ? h('span', { class: 'faint t-12' }, ' budget pt') : null); } },
       ],
@@ -834,7 +838,7 @@ export async function render(el, ctx) {
         : `Budget points come from a greedy walk that adds the unit with the largest modelled delay-cost reduction per AED. Greedy finds the best allocation only for separable convex problems; with hub/outstation coupling and the wait cap it is a heuristic. The frontier option is the ${BEST_EVAL}. The analytic model only ranks candidates; the simulator judges every plan.`)),
       h('div', {}, h('h4', {}, icon('alert'), S ? 'It assumes the urgent-parts routes exist' : 'Conditional on the AOG-desk routes'), h('p', {}, S
         ? ['Every plan leans on the urgent-parts routes (AOG-desk routes). They include ', term('robbery', { first: true }), ' at AUH, borrowing at the same airport, and exchange or loan. Without them, grounded hours rise sharply for every plan.']
-        : relabelArchetypeSafe((deskO ? deskO.text : F.aog_desk_dependence) || 'Every policy leans on the simulated AOG-desk routes.').replace(/\bP0\/P1\/P2\b/, `${sn('P0')}, ${sn('P1')} and ${baseN}`)),
+        : stripRefs(relabelArchetypeSafe((deskO ? deskO.text : F.aog_desk_dependence) || 'Every policy leans on the simulated AOG-desk routes.').replace(/\bP0\/P1\/P2\b/, `${sn('P0')}, ${sn('P1')} and ${baseN}`))),
         desk ? h('p', { class: 'mono t-12' }, `${S ? 'Routes off (tuning runs)' : 'AOG-desk routes off (selection seeds)'}: ${p0N} ${fmtHours(num(desk.p0_base_aog_hours))} · ${baseN} ${fmtHours(num(desk.base_aog_hours))} · ${recN} ${fmtHours(num(desk.rec_aog_hours))} a year`) : null),
       h('div', {}, h('h4', {}, icon('capital'), S ? 'Money in spares moves with the plan' : 'Capital is partly endogenous'), h('p', {}, S
         ? 'Money in spares is the average value of parts we own over the run. Borrowed or exchanged parts are never owned, so they add nothing. The ranges cover 20 runs of one world; the tougher and easier worlds show the best stopping point moves.'

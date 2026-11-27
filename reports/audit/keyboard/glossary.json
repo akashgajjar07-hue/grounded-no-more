@@ -14,7 +14,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 45.2,
+   "ms": 51.0,
    "esc": {
     "opened": [
      "story"
@@ -34,7 +34,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 44.4,
+   "ms": 54.2,
    "esc": {
     "opened": [
      "story"
@@ -54,7 +54,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 44.5,
+   "ms": 46.9,
    "esc": {
     "opened": [
      "story"
@@ -74,7 +74,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 42.3,
+   "ms": 85.6,
    "esc": {
     "opened": [
      "story"
@@ -94,7 +94,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 1.0,
+   "ms": 48.9,
    "esc": {
     "opened": [
      "modal"
@@ -114,7 +114,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 1.8,
+   "ms": 23.3,
    "esc": {
     "opened": [
      "modal"
@@ -135,7 +135,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 0.8,
+   "ms": 3.3,
    "control": "Downtime and urgency",
    "tag": "a",
    "role": "",
@@ -148,7 +148,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 0.8,
+   "ms": 3.7,
    "control": "Parts",
    "tag": "a",
    "role": "",
@@ -159,7 +159,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.5,
+   "ms": 1.8,
    "control": "Repair",
    "tag": "a",
    "role": "",
@@ -172,7 +172,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 0.5,
+   "ms": 4.0,
    "control": "Stock and network",
    "tag": "a",
    "role": "",
@@ -181,9 +181,11 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll",
+    "dom-mutation"
    ],
-   "ms": 0.5,
+   "ms": 3.7,
    "control": "Forecasting",
    "tag": "a",
    "role": "",
@@ -194,7 +196,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.6,
+   "ms": 2.1,
    "control": "Plans and money",
    "tag": "a",
    "role": "",
@@ -205,7 +207,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 0.9,
+   "ms": 2.9,
    "control": "Testing and results",
    "tag": "a",
    "role": "",

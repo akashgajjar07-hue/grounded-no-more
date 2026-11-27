@@ -1,11 +1,11 @@
 {
  "route": "about",
  "browser": "chromium",
- "links": 60,
- "unique_links": 20,
- "clicks": 300,
+ "links": 78,
+ "unique_links": 26,
+ "clicks": 390,
  "failed_clicks": 0,
  "failures": [],
- "seconds": 170.2,
- "generated": "2026-11-27T15:14:20"
+ "seconds": 128.1,
+ "generated": "2026-11-27T18:35:11"
 }

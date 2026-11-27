@@ -9,24 +9,23 @@
     [
      "View data",
      "AUHAbu Dhabi InternationalHigh · hub · 30% of all",
-     1295
+     1318
     ]
    ]
   }
  ],
- "expected": 76,
- "reached": 76,
- "presses": 78,
+ "expected": 77,
+ "reached": 77,
+ "presses": 79,
  "cycled": true,
  "activation": [
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 43.0,
+   "ms": 85.9,
    "esc": {
     "opened": [
      "story"
@@ -43,11 +42,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 47.2,
+   "ms": 63.6,
    "esc": {
     "opened": [
      "story"
@@ -64,11 +62,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 43.2,
+   "ms": 79.7,
    "esc": {
     "opened": [
      "story"
@@ -85,11 +82,10 @@
   {
    "ok": true,
    "effects": [
-    "navigation",
     "story",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 46.0,
+   "ms": 48.7,
    "esc": {
     "opened": [
      "story"
@@ -108,7 +104,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 0.7,
+   "ms": 31.7,
    "control": "other airports (outstations)",
    "tag": "span",
    "role": "",
@@ -117,11 +113,42 @@
   {
    "ok": true,
    "effects": [
+    "dom-mutation"
+   ],
+   "ms": 7.9,
+   "control": "More",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 2.3,
+   "control": "More",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
     "navigation",
+    "drawer",
     "chart-update"
    ],
-   "ms": 0.7,
-   "control": "AUH Abu Dhabi International: 146 Network Plan repairable uni",
+   "ms": 71.9,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k23",
+    "returned_to_invoker": true
+   },
+   "control": "LHR London Heathrow: 5 Network Plan repairable units, materi",
    "tag": "g",
    "role": "button",
    "key": "Enter"
@@ -133,16 +160,16 @@
     "drawer",
     "chart-update"
    ],
-   "ms": 1.2,
+   "ms": 15.8,
    "esc": {
     "opened": [
      "drawer"
     ],
     "closed": true,
-    "focus": "k21",
+    "focus": "k23",
     "returned_to_invoker": true
    },
-   "control": "AUH Abu Dhabi International: 146 Network Plan repairable uni",
+   "control": "LHR London Heathrow: 5 Network Plan repairable units, materi",
    "tag": "g",
    "role": "button",
    "key": "Space"
@@ -151,45 +178,10 @@
    "ok": true,
    "effects": [
     "navigation",
+    "drawer",
     "chart-update"
    ],
-   "ms": 0.7,
-   "control": "FRA Frankfurt am Main: 3 Network Plan repairable units, mate",
-   "tag": "g",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.8,
-   "control": "FRA Frankfurt am Main: 3 Network Plan repairable units, mate",
-   "tag": "g",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.9,
-   "control": "JED King Abdulaziz International, Jeddah: 11 Network Plan re",
-   "tag": "g",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.7,
+   "ms": 8.9,
    "esc": {
     "opened": [
      "drawer"
@@ -198,19 +190,7 @@
     "focus": "k25",
     "returned_to_invoker": true
    },
-   "control": "JED King Abdulaziz International, Jeddah: 11 Network Plan re",
-   "tag": "g",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 1.2,
-   "control": "SIN Singapore Changi: 5 Network Plan repairable units, mater",
+   "control": "CAI Cairo International: 9 Network Plan repairable units, ma",
    "tag": "g",
    "role": "button",
    "key": "Enter"
@@ -221,8 +201,41 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.6,
-   "control": "SIN Singapore Changi: 5 Network Plan repairable units, mater",
+   "ms": 2.9,
+   "control": "CAI Cairo International: 9 Network Plan repairable units, ma",
+   "tag": "g",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "drawer",
+    "chart-update"
+   ],
+   "ms": 22.3,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k27",
+    "returned_to_invoker": true
+   },
+   "control": "BOM Chhatrapati Shivaji Maharaj International, Mumbai: 11 Ne",
+   "tag": "g",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 1.9,
+   "control": "BOM Chhatrapati Shivaji Maharaj International, Mumbai: 11 Ne",
    "tag": "g",
    "role": "button",
    "key": "Space"
@@ -233,8 +246,8 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.6,
-   "control": "LHR · ELEVATED",
+   "ms": 6.3,
+   "control": "AUH · HIGH",
    "tag": "button",
    "role": "",
    "key": "Enter"
@@ -245,8 +258,8 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
-   "control": "LHR · ELEVATED",
+   "ms": 4.0,
+   "control": "AUH · HIGH",
    "tag": "button",
    "role": "",
    "key": "Space"
@@ -256,306 +269,9 @@
    "effects": [
     "navigation",
     "chart-update"
-   ],
-   "ms": 0.6,
-   "control": "CAI · HIGH",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 1.0,
-   "control": "CAI · HIGH",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.5,
-   "control": "BOM · HIGH",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.6,
-   "control": "BOM · HIGH",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 0.6,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 1.0,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.8,
-   "control": "AUHAbu Dhabi InternationalHigh · hub · 30% of all",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.7,
-   "control": "AUHAbu Dhabi InternationalHigh · hub · 30% of all",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.5,
-   "control": "BOMChhatrapati Shivaji Maharaj International, MumbaiHigh · 1",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.7,
-   "control": "BOMChhatrapati Shivaji Maharaj International, MumbaiHigh · 1",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.8,
-   "control": "LHRLondon HeathrowElevated · 10% of all",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.6,
-   "control": "LHRLondon HeathrowElevated · 10% of all",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 0.7,
-   "control": "SINSingapore ChangiElevated · 8% of all",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 1.3,
-   "control": "SINSingapore ChangiElevated · 8% of all",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 0.6,
-   "control": "Replay transfer",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 0.5,
-   "control": "Replay transfer",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 0.5,
-   "control": "Replay routine transfer of GN-32-C029 from AUH to SIN in W1",
-   "tag": "g",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 0.6,
-   "control": "Replay routine transfer of GN-32-C029 from AUH to SIN in W1",
-   "tag": "g",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 1.3,
-   "control": "Replay routine transfer of GN-33-C041 from AUH to JED in W2",
-   "tag": "g",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 0.8,
-   "control": "Replay routine transfer of GN-33-C041 from AUH to JED in W2",
-   "tag": "g",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 0.8,
-   "control": "Replay routine transfer of GN-21-C023 from AUH to BOM in W2",
-   "tag": "g",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 0.7,
-   "control": "Replay routine transfer of GN-21-C023 from AUH to BOM in W2",
-   "tag": "g",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 0.8,
-   "control": "Replay emergency transfer of GN-29-R034 from AUH to SIN in W",
-   "tag": "g",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 0.6,
-   "control": "Replay emergency transfer of GN-29-R034 from AUH to SIN in W",
-   "tag": "g",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 0.8,
-   "control": "Replay routine transfer of GN-38-C036 from AUH to SIN in W2",
-   "tag": "g",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 1.0,
-   "control": "Replay routine transfer of GN-38-C036 from AUH to SIN in W2",
-   "tag": "g",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
    ],
    "ms": 1.5,
-   "control": "More",
+   "control": "FRA · ELEVATED",
    "tag": "button",
    "role": "",
    "key": "Enter"
@@ -563,10 +279,11 @@
   {
    "ok": true,
    "effects": [
-    "dom-mutation"
+    "navigation",
+    "chart-update"
    ],
-   "ms": 0.7,
-   "control": "More",
+   "ms": 1.5,
+   "control": "FRA · ELEVATED",
    "tag": "button",
    "role": "",
    "key": "Space"
@@ -577,8 +294,282 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.9,
-   "control": "On the shelf",
+   "ms": 2.6,
+   "control": "JED · HIGH",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.6,
+   "control": "JED · HIGH",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 25.6,
+   "control": "SIN · ELEVATED",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 4.0,
+   "control": "SIN · ELEVATED",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 4.4,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 2.0,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.7,
+   "control": "CAICairo InternationalHigh · 17% of all",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 14.6,
+   "control": "CAICairo InternationalHigh · 17% of all",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 8.8,
+   "control": "JEDKing Abdulaziz International, JeddahHigh · 13% of all",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.8,
+   "control": "JEDKing Abdulaziz International, JeddahHigh · 13% of all",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 17.0,
+   "control": "FRAFrankfurt am MainElevated · 8% of all",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 4.2,
+   "control": "FRAFrankfurt am MainElevated · 8% of all",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 2.2,
+   "control": "Replay all",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 2.9,
+   "control": "Replay all",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 6.9,
+   "control": "Replay routine transfer of GN-21-C025 from AUH to LHR in W2",
+   "tag": "g",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 3.0,
+   "control": "Replay routine transfer of GN-21-C025 from AUH to LHR in W2",
+   "tag": "g",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 2.8,
+   "control": "Replay routine transfer of GN-29-C006 from AUH to CAI in W2",
+   "tag": "g",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 1.7,
+   "control": "Replay routine transfer of GN-29-C006 from AUH to CAI in W2",
+   "tag": "g",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 3.2,
+   "control": "Replay emergency transfer of GN-32-R014 from AUH to BOM in W",
+   "tag": "g",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 2.0,
+   "control": "Replay emergency transfer of GN-32-R014 from AUH to BOM in W",
+   "tag": "g",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 2.6,
+   "control": "Replay routine transfer of GN-24-C021 from AUH to CAI in W2",
+   "tag": "g",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 2.9,
+   "control": "Replay routine transfer of GN-24-C021 from AUH to CAI in W2",
+   "tag": "g",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 2.1,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 3.8,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.7,
+   "control": "Repairable on the shelf",
    "tag": "button",
    "role": "radio",
    "key": "Enter"
@@ -589,32 +580,10 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 0.7,
-   "control": "On the shelf",
+   "ms": 5.4,
+   "control": "Repairable on the shelf",
    "tag": "button",
    "role": "radio",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 0.7,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 1.2,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
    "key": "Space"
   }
  ],
@@ -622,10 +591,10 @@
   {
    "what": "help modal (?)",
    "ok": true,
-   "invoker": "AUH · HIGH",
+   "invoker": "More",
    "focus_after": {
-    "id": "k28",
-    "label": "AUH · HIGH"
+    "id": "k21",
+    "label": "More"
    },
    "returned_to_invoker": true,
    "note": ""
@@ -635,10 +604,10 @@
    "ok": true,
    "invoker": "60-second tourS",
    "focus_after": {
-    "id": "k10",
-    "label": "60-second tourS"
+    "id": "u1",
+    "label": "07 · AOG Response LabAn aircraft is on the ground."
    },
-   "returned_to_invoker": true,
+   "returned_to_invoker": false,
    "note": ""
   },
   {

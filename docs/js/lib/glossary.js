@@ -126,7 +126,7 @@ const ENTRIES = [
     'A supplier ships a loan unit in 24 to 48 hours for a fee.',
     'It is a costly but common rescue when we have no spare.', ['exchange', 'loan', 'exchange/loan']),
   E('local_borrow', 'local borrow', 'borrowing a spare at the same airport', 'Downtime and urgency',
-    'Borrowing a part from another operator or pool at the same small airport. It is quick but not always possible.',
+    'Borrowing a part from another operator or pool at the same airport. It is quick but not always possible.',
     'A spare is found nearby in 4 to 8 hours.',
     'It can save a day of waiting at small airports.'),
   E('local_buy', 'local buy', 'buying a cheap part on the spot', 'Downtime and urgency',

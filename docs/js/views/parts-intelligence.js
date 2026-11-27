@@ -790,9 +790,18 @@ export async function render(el, ctx) {
       h('ul', { class: 'list-reset pi-planted-list' }, ...pl.map((p) => h('li', {}, h('button', { type: 'button', class: 'pi-planted-row', onclick: () => openPart(p.pn) },
         h('span', { class: 'chip chip-mono pi-planted' }, p.planted),
         h('span', { class: 'pi-planted-main' }, h('span', { class: 'mono' }, p.pn), h('span', { class: 'faint', title: p.desc }, p.desc)),
-        riskPill(p), icon('chevron-right'))))),
+        riskPill(p), icon('chevron-right')), h('p', { class: 'pi-planted-found t-12 muted m-0', dataset: { role: 'planted-found', pn: p.pn } })))),
+      pl.some((p) => !p.risk_score) ? h('p', { class: 't-12 faint m-0 mt-1', dataset: { role: 'planted-risk0' } }, byMode('Risk 0 means no grounding risk. Those test cases check repair, demand and lead time, not stock.', 'Risk 0 = no material shortage exposure; those situations test repair, demand and lead-time logic, not stock.')) : null,
       h('div', { class: 'card-foot' }, h('span', {}, byMode('Built into the simulation so the planning can be checked against a known answer. The planner sees only the past orders and repairs.', 'Planted in the simulator so the planning logic can be tested against a known answer. The planner sees only the demand and repair history.'))));
   }
+
+  // v2.2 (CEO review row 26): say where each planted situation was found, from actions.json (loaded on demand)
+  ctx.load?.('actions').then((A) => {
+    plantedCard.querySelectorAll('[data-role="planted-found"]').forEach((el) => {
+      const hit = (A?.actions || []).filter((a) => a.pn === el.dataset.pn).sort((x, y) => (x.severity === 'urgent' ? 0 : 1) - (y.severity === 'urgent' ? 0 : 1))[0];
+      if (hit) el.textContent = `${byMode('Found: raised in the Planner Action Centre as', 'Detected: Action Centre')} “${hit.type_label || hit.type}” (${hit.exception_id})`;
+    });
+  }).catch(() => {});
 
   // ------------------------------------------------------------------ state changes
   async function setAta(a) {
@@ -924,6 +933,18 @@ export async function render(el, ctx) {
       // canonical per-PN AOG metrics, labelled exactly as on Mission and the Action Centre
       ...['aog_h_52w', 'aog_h_52w_max_station'].filter((k) => Number.isFinite(p[k])).map((k) => [P.aog_metric_labels?.[k]?.label || k, `${fmtInt(p[k])} h${k === 'aog_h_52w_max_station' && p.aog_h_52w_max_station_id ? ` (${p.aog_h_52w_max_station_id})` : ''}`]),
     ].flatMap(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])), scopeLine());
+    // v2.2 (CEO review row 23): for a repairable part, reconcile the shelf target with the total spares the Rotable
+    // calculator shows (shelf + units already in the repair loop), read from rotables.json float_examples
+    if (p.cls === 'R' && ctx.load) {
+      const recon = h('p', { class: 't-12 muted m-0 pi-recon', dataset: { role: 'spares-total' } });
+      [...body.querySelectorAll('.meta-list')].at(-1)?.after(recon);
+      ctx.load('rotables').then((R) => {
+        const fe = (R?.float_examples || []).find((x) => x.pn === p.pn);
+        const loop = fe?.loop_units, tot = fe?.spares_total?.[P.stock_basis_id || 'P2'];
+        if (!recon.isConnected || loop == null || tot == null || tot !== p.stock_total + loop) return;
+        recon.textContent = isSimple() ? `${fmtInt(p.stock_total)} on shelves + ${fmtInt(loop)} already in repair = ${fmtInt(tot)} in total.` : `${fmtInt(p.stock_total)} serviceable target + ${fmtInt(loop)} in the repair loop = ${fmtInt(tot)} total float (as in Rotable & Repair).`;
+      }).catch(() => {});
+    }
     const st = Object.entries(p.stock_by_station || {});
     const maxSt = Math.max(1, ...st.map(([, q]) => q));
     // A9: outstation brake units in the frozen plan keep their numbers and carry the invalid-recommendation flag
