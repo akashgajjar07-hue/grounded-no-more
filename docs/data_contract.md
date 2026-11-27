@@ -1,6 +1,6 @@
 # Data contract
 
-This is the contract every module and agent builds against. The code version lives in
+This is the contract every module builds against. The code version lives in
 [`src/gnm/schemas.py`](../src/gnm/schemas.py) (tables, enums, keys) and
 [`src/gnm/contracts.py`](../src/gnm/contracts.py) (in-memory objects). Parameters live
 in [`config/assumptions.yaml`](../config/assumptions.yaml). If this document and the

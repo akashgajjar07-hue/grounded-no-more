@@ -29,7 +29,7 @@ let PLAYED = false; // the draw-in runs once per page load
 
 const ZONES = [
   ['nose', 'Flight deck and nose'], ['avionics', 'Avionics bay'], ['cabin', 'Air conditioning'], ['wing', 'Wing'],
-  ['engine', 'Engine and pylon'], ['gear', 'Landing gear'], ['tail', 'Tail and APU'],
+  ['engine', 'Engine and pylon'], ['gear', 'Gear bay and hydraulics'], ['tail', 'Tail and APU'],
 ];
 
 function roundNice(v) {

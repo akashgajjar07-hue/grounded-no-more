@@ -277,7 +277,7 @@ add `.bp-figure--grid` to show it on its own.
 
 ---
 
-## 5. How a screen agent writes a view
+## 5. How a screen writes a view
 
 ```js
 // docs/js/views/parts-intelligence.js

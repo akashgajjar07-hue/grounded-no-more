@@ -212,7 +212,7 @@ def test_mobile_zoned_list_dots_and_inset(site, browser):  # noqa: F811
     try:
         assert page.locator(".cw-lede-phone").is_visible() and "Tap a number or a row" in page.inner_text(".cw-head")
         heads = page.evaluate("[...document.querySelectorAll('.cw-zone-h')].map((h) => h.textContent)")
-        assert len(heads) >= 6 and "Landing gear" in heads
+        assert len(heads) >= 6 and "Gear bay and hydraulics" in heads
         items = page.locator(".cw-item")
         assert items.count() >= 20
         labels = page.evaluate("[...document.querySelectorAll('.cw-item')].map((b) => b.getAttribute('aria-label'))")
