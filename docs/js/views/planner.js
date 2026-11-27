@@ -1,8 +1,8 @@
 /**
  * The Planner Behind the Project (#/planner) · a first-person essay rendered from docs/content/planner.md (written by
  * the AUTHOR agent) with the safe Markdown renderer in ./about/md.js. Marked DRAFT while the content says so.
- * A pull quote is lifted from the essay itself (no invented words). Links: About, Results, and the study pack files
- * on GitHub. Data: none.
+ * A pull quote is lifted from the essay itself (no invented words). Links: About, Results, and the project documents
+ * on GitHub (methodology, limitations, decision log, model card, validation report). Data: none.
  */
 import { h, icon, intro3, stateBlock } from '../ui.js';
 import { assetURL } from '../data.js';
@@ -12,12 +12,12 @@ import { aboutLink } from './about.js';
 export const data = [];
 
 const REPO = 'https://github.com/akashgajjar07-hue/grounded-no-more';
-const STUDY = [
-  ['Study guide', 'STUDY_GUIDE.md', 'How to learn the project, page by page'],
-  ['Cheat sheet', 'study/CHEAT_SHEET.md', 'The key numbers and ideas on one page'],
-  ['Interview questions', 'study/INTERVIEW_QA.md', 'Questions a reviewer might ask, with answers'],
-  ['Walkthrough script', 'study/WALKTHROUGH_SCRIPT.md', 'A spoken tour of the site'],
-  ['Mastery checklist', 'study/MASTERY_CHECKLIST.md', 'What to be able to explain'],
+const DOCS = [
+  ['Methodology', 'METHODOLOGY.md', 'How the simulation, forecasts and plans work'],
+  ['Limitations', 'LIMITATIONS.md', 'What the model leaves out, and how much it matters'],
+  ['Decision log', 'docs/DECISIONS.md', 'Every modelling choice, with the reason'],
+  ['Model card', 'MODEL_CARD.md', 'What the model is for, and what it is not for'],
+  ['Validation report', 'reports/VALIDATION_REPORT.md', 'How the results were checked'],
 ];
 /** The pull quote: the first essay sentence that matches, so the words are always the author's. */
 const QUOTE_RE = /[^.]*a missing part can mean[^.]*\./i;
@@ -55,7 +55,7 @@ export async function render(el) {
     h('p', { class: 'pl-byline' }, 'Akash Gajjar · materials and inventory planning'));
   el.append(header);
   el.append(intro3({
-    what: 'The person behind this project, why he built it, and what he learned.',
+    what: 'The person behind this project, why it exists, and what it taught.',
     why: 'You can judge the work better when you know the choices and the mistakes behind it.',
     action: 'Read the essay, then check its claims on the Results and About pages.',
   }));
@@ -84,9 +84,9 @@ export async function render(el) {
         h('li', {}, h('a', { href: '#/mission?section=results' }, icon('aircraft'), h('span', {}, h('b', {}, 'The results'), h('small', {}, 'The numbers, next to their limits')))),
         h('li', {}, h('a', { href: '#/about?section=real-data' }, icon('book'), h('span', {}, h('b', {}, 'What real data would make this useful'), h('small', {}, 'The records a real airline would need')))))),
     h('div', { class: 'pl-next-col' },
-      h('h2', { class: 'pl-next-h' }, 'The study pack ', h('span', { class: 'pl-gh' }, 'on GitHub')),
-      h('ul', { class: 'pl-links list-reset', dataset: { role: 'study-pack' } }, STUDY.map(([t, path, d]) => h('li', {},
-        h('a', { href: `${REPO}/blob/main/${path}`, target: '_blank', rel: 'noopener noreferrer' }, icon('download'), h('span', {}, h('b', {}, t), h('small', {}, d)))))))));
+      h('h2', { class: 'pl-next-h' }, 'Project documents ', h('span', { class: 'pl-gh' }, 'on GitHub')),
+      h('ul', { class: 'pl-links list-reset', dataset: { role: 'project-docs' } }, DOCS.map(([t, path, d]) => h('li', {},
+        h('a', { href: `${REPO}/blob/main/${path}`, target: '_blank', rel: 'noopener noreferrer' }, icon('book'), h('span', {}, h('b', {}, t), h('small', {}, d)))))))));
   return null;
 }
 

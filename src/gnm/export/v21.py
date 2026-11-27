@@ -1,4 +1,4 @@
-"""v2.1 final-release additions to the site data (docs/agent_notes/v21_brief.md). Additive only.
+"""v2.1 final-release additions to the site data (internal development notes (kept privately)). Additive only.
 
 * Display names (A3) exported beside every policy / frontier code (mirrors docs/js/lib/names.js).
 * Verbatim texts from the brief (scope line, A1 stat strip, A2, A4 note, A5, A6, A7, A8, A9).

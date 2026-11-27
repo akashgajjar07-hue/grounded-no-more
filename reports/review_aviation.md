@@ -1,6 +1,8 @@
+> **AI-generated review used during development — not a review by a human aviation professional.**
+
 # Aviation domain review: GROUNDED NO MORE
 
-Reviewer stance: a senior airline materials planning manager (hub carrier and MRO background: rotable pools, AOG desk, repair and warranty, line-station stocking) sitting on a hiring panel. Scope: README, METHODOLOGY, LIMITATIONS, STUDY_GUIDE, MODEL_CARD, `config/*.yaml`, `docs/DECISIONS.md`, `docs/agent_notes/*.md`, the exported `docs/data/*.json`, the history parquet tables, and the live UI text of all 8 workspaces plus Data & Method (rendered locally with Playwright from `docs/`).
+Reviewer stance: a senior airline materials planning manager (hub carrier and MRO background: rotable pools, AOG desk, repair and warranty, line-station stocking) sitting on a hiring panel. Scope: README, METHODOLOGY, LIMITATIONS, STUDY_GUIDE, MODEL_CARD, `config/*.yaml`, `docs/DECISIONS.md`, internal development notes (kept privately)*.md`, the exported `docs/data/*.json`, the history parquet tables, and the live UI text of all 8 workspaces plus Data & Method (rendered locally with Playwright from `docs/`).
 
 Numbers quoted below come from the repo's own outputs: holdout P0 2,871 material AOG h/yr, I125 223 h/yr, capital AED 36.8M vs 41.9M; history (P0, weeks 0–103) 180 AOG incidents, 5,507 h.
 

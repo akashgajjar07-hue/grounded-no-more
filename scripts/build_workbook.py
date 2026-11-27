@@ -1178,7 +1178,7 @@ def sheet_routes(wb, d):
 
 
 def text_gate(wb) -> None:
-    """v2.1 text rules (docs/agent_notes/v21_brief.md): scrub every text cell with the exporter's scrub (narrowbody /
+    """v2.1 text rules (internal development notes (kept privately)): scrub every text cell with the exporter's scrub (narrowbody /
     widebody archetype names, forbidden words), then fail the build if anything is left."""
     bad = []
     for ws in wb.worksheets:

@@ -2,7 +2,7 @@
 
 Both dimensions are computed independently and over the TRAINING window only.
 
-Rules (also in docs/agent_notes/forecasting.md)
+Rules (also in internal development notes (kept privately))
 ------------------------------------------------
 * Buckets: weekly demand quantities (int >= 0).
 * ADI  = mean inter-demand interval, in periods, measured between successive

@@ -6,7 +6,7 @@
     python scripts/record_demo.py --url https://akashgajjar07-hue.github.io/grounded-no-more/   # the live site instead
 
 Outputs
-* presentations/demo.webm      1440x900, ~75 s, following presentations/video_script.md: the landing (Mission Control,
+* presentations/demo.webm      1440x900, ~75 s, following the private walkthrough script: the landing (Mission Control,
                                Simple mode) -> the 60-second tour started from its own button and run in the tour's
                                Play mode (auto-advance, no manual presses; the step count is read from
                                docs/data/story.json, six in v2.1) -> Pause at the last step -> Skip tour -> a pass over
@@ -37,7 +37,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 LIVE = "https://akashgajjar07-hue.github.io/grounded-no-more/"
 VIEW = {"width": 1440, "height": 900}
-STEP_MS = 9000  # tour step length for the video (the narration in presentations/video_script.md is timed to it)
+STEP_MS = 9000  # tour step length for the video (the narration in the private walkthrough script is timed to it)
 INTRO_MS = 6000  # landing hold before the tour starts
 
 

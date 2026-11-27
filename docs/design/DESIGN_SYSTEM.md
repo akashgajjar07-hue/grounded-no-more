@@ -20,7 +20,7 @@ dashboard. Everything is self-hosted and needs no build step.
 - **Every workspace starts with `intro3()`.** Every headline KPI carries the scope line (`kpiTile` adds it, and `scopeLine()` provides it elsewhere). Results numbers carry `readingNote()`. Capital uses `capitalTable()`, never the net alone. Anything added after the freeze gets `postPlanBadge()`.
 - **Footer.** Every page shows the disclaimer plus the credit line (`CREDIT_LINE`).
 - **Navigation.** PROJECT now lists the 60-second tour, Data & Method, About, Glossary and The Planner Behind the Project.
-- Full API with examples: `docs/agent_notes/v21_shell.md`.
+- Full API with examples: internal development notes (kept privately).
 
 ## 0. Wave A rules (override anything below that disagrees)
 
@@ -227,7 +227,7 @@ timestamps only), `fmtPct(0.987)` → `98.7%`
 `fmtWeek(104)` → `W104` (simulated calendar; also accepts `'W104'`, rounds, `null` → `—`), `fmtWeekRange(104, 155)` →
 `W104–W155`, `fmtCapitalDelta(5.04e6)` → `+AED 5M more capital`.
 
-Label collision, chips and reference lines (see `docs/agent_notes/design-fix-shared.md` for full examples):
+Label collision, chips and reference lines (see internal development notes (kept privately) for full examples):
 ```js
 const obstacles = dots.map((d) => markerRect(x(d.x), y(d.y), 5));          // marker boxes
 dodge(labels, { gap: 14, obstacles, bounds: { x: 0, y: 0, width: iw, height: ih } }).forEach((l) => directLabel(g, l));

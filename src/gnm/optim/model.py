@@ -24,7 +24,7 @@ Per stock-out of a need with window d (exponential W, route wait R treated as de
 Cost (AED/yr) = downtime h x hourly rate + events x fixed cost per event + routes x route fee, with the
 PN's own (single-archetype, or fleet-mix) rate and event cost.
 
-Approximations (docs/agent_notes/optimiser.md): infinite-server repair, unit demand, no laterals or
+Approximations (internal development notes (kept privately)): infinite-server repair, unit demand, no laterals or
 rebalancing (P2 has both, so the model is conservative there), exponential own-supply wait, a
 deterministic route wait, merged events approximated per need. v2 has no outright AOG buy, so the v1
 "expedite self-healing" drift is OFF by default (`heal=False`). The event simulation is the judge.

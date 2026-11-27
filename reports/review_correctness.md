@@ -1,3 +1,5 @@
+> **AI-generated review used during development — not a review by a human aviation professional.**
+
 # Correctness review — GROUNDED NO MORE
 
 Reviewer: fresh-context correctness auditor (adversarial). Date: 2026-11-26. Repo HEAD `b950c5a`.

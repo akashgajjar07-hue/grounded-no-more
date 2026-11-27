@@ -14,7 +14,7 @@ All methods share ONE interface::
   periods (lead-time demand, LTD). ``Forecast.ltd_dist()`` falls back to a
   Poisson with mean ``sum(mean)`` for point-only methods.
 
-Formulas and references: docs/agent_notes/forecasting.md.
+Formulas and references: internal development notes (kept privately).
 """
 from __future__ import annotations
 

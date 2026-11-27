@@ -1,3 +1,5 @@
+> **AI-generated review used during development — not a review by a human aviation professional.**
+
 # GROUNDED NO MORE: independent design critique
 
 Reviewer stance: principal product designer, data-visualisation studio. Fresh eyes, no prior context.

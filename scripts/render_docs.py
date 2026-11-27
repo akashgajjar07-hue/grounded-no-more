@@ -4,15 +4,14 @@ Templates live in ``docs/templates/<NAME>.md.tmpl`` and carry ``{{RESULT:<key>}}
 This script computes every key from pipeline outputs (``outputs/``, ``docs/data/*.json``, the P0
 history in ``data/processed/history/``, ``reports/junit.xml`` and ``git log``), formats it consistently
 and writes the rendered files to the repository root (README.md, METHODOLOGY.md, MODEL_CARD.md,
-LIMITATIONS.md, STUDY_GUIDE.md) and ``reports/VALIDATION_REPORT.md``.
+LIMITATIONS.md) and ``reports/VALIDATION_REPORT.md``.
 
 Rules:
 * No number is typed by hand: every value is read or computed from an output file.
 * Headline numbers are the v2 HOLDOUT (seeds 2000-2019, central world). Selection numbers are labelled.
 * An unknown placeholder is an error: nothing is written and the script exits non-zero.
-* STUDY_GUIDE keys may be extended by an optional module ``scripts/render_keys_study.py`` exposing
-  ``keys() -> dict[str, str]`` (owned by the study-guide author). A key it returns that this script also
-  computes must carry the same value, otherwise the script fails.
+* The study guide is private (v2.2): it is rendered only when its template and key module are present locally
+  (``docs/templates/STUDY_GUIDE.md.tmpl`` + ``scripts/render_keys_study.py``, both git-ignored here).
 
 Formatting: money "AED 49.0M" (>= 1M) or "AED 2,650"; rates "97.7%"; hours "210 h";
 CIs "[146–274]" ("[−1,629 to −1,332]" when negative values are involved; money CIs in AED M).
@@ -43,7 +42,9 @@ OUT = ROOT / "outputs"
 DATA = ROOT / "docs" / "data"
 HIST = ROOT / "data" / "processed" / "history"
 TEMPLATES = ROOT / "docs" / "templates"
-DOCS = ["README.md", "METHODOLOGY.md", "MODEL_CARD.md", "LIMITATIONS.md", "STUDY_GUIDE.md"]
+DOCS = ["README.md", "METHODOLOGY.md", "MODEL_CARD.md", "LIMITATIONS.md"]
+if (ROOT / "docs" / "templates" / "STUDY_GUIDE.md.tmpl").exists():   # private, local only (v2.2)
+    DOCS.append("STUDY_GUIDE.md")
 VALIDATION = ("VALIDATION_REPORT.md", ROOT / "reports" / "VALIDATION_REPORT.md")
 STUDY_KEYS = ROOT / "scripts" / "render_keys_study.py"
 V2_REVIEW_HEADING = "### v2 reviews"
@@ -988,7 +989,7 @@ def compute() -> dict[str, str]:  # noqa: C901, PLR0915 - one flat list of keys 
 
 
 # ----------------------------------------------------------------------------- v2.1 release wording
-# Verbatim texts from docs/agent_notes/v21_brief.md. Numbers inside them are computed, never typed.
+# Verbatim texts from the v2.1 release brief. Numbers inside them are computed, never typed.
 SCOPE_LINE = "across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part"
 NAMES = {"P0": "Simple Rulebook (naive reference)", "P1": "Each Airport for Itself (simplified local comparator)",
          "P2": "Network Plan", "I125": "Network Plan + Extra Spares", "P2_GUARD": "Network Plan held to guardrails"}
@@ -1021,7 +1022,7 @@ def _first_json(*names: str):
 
 
 def _donor_recount(kpis: dict) -> dict | None:
-    """Post-plan donor recount exported by the DATA agent, if any (docs/agent_notes/v21_data.md)."""
+    """Post-plan donor recount exported by the DATA agent, if any (v2.1 data export)."""
     for src in (kpis.get("headline", {}).get("donor_recount"), kpis.get("donor_recount"),
                 _first_json("donor_recount.json")):
         if src:
@@ -1051,7 +1052,7 @@ def v21_keys(V: dict[str, str], *, kpis, pol, fo, var, sp, pm, cal) -> dict[str,
     rmx = core["remix"]
     cap_net = pol["paired"]["P2-P0"]["spare_capital_aed"]["mean"]
     ct = kpis.get("capital_table")
-    if ct:  # DATA agent export (docs/agent_notes/v21_data.md) must agree with the policy tables
+    if ct:  # DATA agent export (v2.1 data export) must agree with the policy tables
         assert (ct["bought_units"], ct["bought_aed"], ct["removed_units"], ct["removed_aed"]) == (
             rmx["buy_units"], rmx["buy_aed"], rmx["shed_units"], rmx["shed_aed"]), "capital_table vs remix"
         assert abs(ct["net_inventory_change_aed"] - cap_net) < 1, "capital_table net vs paired P2-P0 capital"

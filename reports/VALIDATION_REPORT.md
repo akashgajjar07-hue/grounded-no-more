@@ -1,6 +1,6 @@
 # Validation report
 
-What was checked, how, and what came out. Rendered by `scripts/render_docs.py` from `reports/junit.xml`, `outputs/`, `docs/data/` and `git log`; template `docs/templates/VALIDATION_REPORT.md.tmpl`. Everything here concerns a **simulated** airline (Falcon Hub Airways, fictional). Headline results are the v2 holdout (seeds 2000–2019, central world), across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part. Plan names: **Simple Rulebook (naive reference)** `P0`, **Each Airport for Itself (simplified local comparator)** `P1`, **Network Plan** `P2`, **Network Plan + Extra Spares** `I125`. The subsection "v2 reviews" at the end is written by hand and is preserved when the report is re-rendered.
+What was checked, how, and what came out. Rendered by `scripts/render_docs.py` from `reports/junit.xml`, `outputs/`, `docs/data/` and `git log`; template `docs/templates/VALIDATION_REPORT.md.tmpl`. Everything here concerns a **simulated** airline (Falcon Hub Airways, fictional). Headline results are the v2 holdout (seeds 2000–2019, central world), across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part. Plan names: **Simple Rulebook (naive reference)** `P0`, **Each Airport for Itself (simplified local comparator)** `P1`, **Network Plan** `P2`, **Network Plan + Extra Spares** `I125`. The subsection "v2 reviews" at the end is written by hand and is preserved when the report is re-rendered. The reviews it refers to (`reports/review_*.md`, `reports/cutaway_critique_*.md`) are **AI-generated reviews used during development, not reviews by human aviation professionals.**
 
 ---
 
@@ -237,14 +237,14 @@ AOG reconstruction: 2,564 of 2,564 history material AOG hours reconstructed requ
 
 These reviews were run on the v1 world before it was archived. The aviation review is the reason v1 was archived; the correctness and design findings were fixed in v1 and the fixes carried into v2 where the code survived.
 
-- [`reports/review_aviation.md`](review_aviation.md): Aviation domain review: GROUNDED NO MORE; 4 critical, 11 major, 13 minor.
-- [`reports/review_aviation_v2.md`](review_aviation_v2.md): Aviation domain review: v2 world; see file.
-- [`reports/review_correctness.md`](review_correctness.md): Correctness review — GROUNDED NO MORE; 0 critical, 5 major, 16 minor.
-- [`reports/review_design.md`](review_design.md): GROUNDED NO MORE: independent design critique; overall 3.61 / 5.
-- [`reports/review_design_2.md`](review_design_2.md): GROUNDED NO MORE: second independent design critique; overall 4.23 / 5.
-- [`reports/review_design_3.md`](review_design_3.md): GROUNDED NO MORE: third independent design critique; overall 4.22 / 5.
-- [`reports/review_design_4.md`](review_design_4.md): GROUNDED NO MORE: fourth independent design critique; overall 4.33 / 5.
-- [`reports/review_design_5.md`](review_design_5.md): GROUNDED NO MORE: fifth independent design critique; overall 4.20 / 5.
+- [`reports/review_aviation.md`](review_aviation.md): > **AI-generated review used during development — not a review by a human aviation professional.**; 4 critical, 11 major, 13 minor.
+- [`reports/review_aviation_v2.md`](review_aviation_v2.md): > **AI-generated review used during development — not a review by a human aviation professional.**; see file.
+- [`reports/review_correctness.md`](review_correctness.md): > **AI-generated review used during development — not a review by a human aviation professional.**; 0 critical, 5 major, 16 minor.
+- [`reports/review_design.md`](review_design.md): > **AI-generated review used during development — not a review by a human aviation professional.**; overall 3.61 / 5.
+- [`reports/review_design_2.md`](review_design_2.md): > **AI-generated review used during development — not a review by a human aviation professional.**; overall 4.23 / 5.
+- [`reports/review_design_3.md`](review_design_3.md): > **AI-generated review used during development — not a review by a human aviation professional.**; overall 4.22 / 5.
+- [`reports/review_design_4.md`](review_design_4.md): > **AI-generated review used during development — not a review by a human aviation professional.**; overall 4.33 / 5.
+- [`reports/review_design_5.md`](review_design_5.md): > **AI-generated review used during development — not a review by a human aviation professional.**; overall 4.20 / 5.
 
 ### v2 reviews
 

@@ -2007,7 +2007,7 @@ def build_story(data: dict) -> dict:
         ("#/capital", "frontier-chart", '[data-story="frontier-chart"]', "6 · Business value on the Readiness Frontier", body_value),
     ]
     # phones (<= 480 px): a narrower child to spotlight so the bottom sheet does not cover the subject (wave-3 #4).
-    # Hooks are stable view markup (see docs/agent_notes/wave3-S.md); the UI falls back to `selector` if absent.
+    # Hooks are stable view markup (see internal development notes (kept privately)); the UI falls back to `selector` if absent.
     tl = aog_sel.replace(' [data-story="aog-timeline"]', ' [data-story="aog-timeline"] .chart-body')
     mobile = {
         "network-" + st.lower(): f'[data-story="network-{st.lower()}"] .np-pol',

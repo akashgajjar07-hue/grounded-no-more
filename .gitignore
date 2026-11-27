@@ -31,3 +31,14 @@ docs/design-review/*.png
 reports/audit/cells/
 presentations/*.webm
 presentations/*.mp4
+
+# v2.2 privacy: private material lives in the private repo / ~/grounded-no-more-private (never in this public repo)
+private/
+study/
+STUDY_GUIDE.md
+PROGRESS*.md
+docs/agent_notes/
+presentations/linkedin_*
+presentations/video_script.md
+docs/templates/STUDY_GUIDE.md.tmpl
+scripts/render_keys_study.py

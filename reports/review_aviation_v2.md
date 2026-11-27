@@ -1,3 +1,5 @@
+> **AI-generated review used during development — not a review by a human aviation professional.**
+
 # Aviation domain review: v2 world
 
 **Reviewer stance:** a senior airline materials planning manager on a hiring panel. Background: rotable pools, AOG desk, repair and warranty, line-station stocking, AMOS/SAP-style planning at a Gulf hub carrier and an MRO.

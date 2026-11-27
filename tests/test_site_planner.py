@@ -32,9 +32,10 @@ def test_planner_essay(site, browser, vp, mode):  # noqa: F811
         q = page.locator('[data-role="pull-quote"] p').inner_text().strip()
         assert q and q in SRC.replace("*", "")
         assert page.locator('a[data-role="link-about"]').get_attribute("href") == "#/about"
-        study = page.evaluate("[...document.querySelectorAll('[data-role=study-pack] a')].map(a => a.getAttribute('href'))")
-        assert len(study) == 5 and all(h.startswith("https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/") for h in study)
-        for h in study:
+        docs = page.evaluate("[...document.querySelectorAll('[data-role=project-docs] a')].map(a => a.getAttribute('href'))")
+        assert len(docs) == 5 and all(h.startswith("https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/") for h in docs)
+        assert page.locator('[data-role="study-pack"]').count() == 0   # v2.2: no study material on the public site
+        for h in docs:
             assert (DOCS.parent / h.split("/blob/main/")[1]).exists(), h
         assert page.locator("#view img").count() == 0  # portrait-free
         assert not problems, problems

@@ -1,3 +1,5 @@
+> **AI-generated review used during development — not a review by a human aviation professional.**
+
 # Cutaway critique, round 4
 
 **Page:** `docs/lab/cutaway.html` (drawings `docs/assets/svg/cutaway.svg` and `cutaway-simple.svg`, logic in `docs/lab/cutaway.js`, styles in `docs/lab/cutaway.css`)

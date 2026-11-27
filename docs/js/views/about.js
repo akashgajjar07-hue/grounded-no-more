@@ -63,7 +63,7 @@ const CONTENT = [
   { id: 'next-experiments', file: 'content/next_experiments.md', kicker: 'Proposed, not run', fallback: 'Next experiments' },
 ];
 const LINKS = { 'mro.md': 'mro', 'real_data.md': 'real-data', 'next_experiments.md': 'next-experiments' };
-/** Content links between the .md files become on-page section links; study/ and repo files go to GitHub. */
+/** Content links between the .md files become on-page section links; repo files go to GitHub. */
 export function aboutLink(href) {
   const file = String(href).split('#')[0].split('/').pop();
   if (LINKS[file]) return `#/about?section=${LINKS[file]}`;

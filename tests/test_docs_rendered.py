@@ -13,12 +13,11 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCS = ["README.md", "METHODOLOGY.md", "MODEL_CARD.md", "LIMITATIONS.md", "STUDY_GUIDE.md",
-        "reports/VALIDATION_REPORT.md"]
+DOCS = ["README.md", "METHODOLOGY.md", "MODEL_CARD.md", "LIMITATIONS.md", "reports/VALIDATION_REPORT.md"]
 KPIS = ROOT / "docs" / "data" / "kpis.json"
 MINUS = "−"
 BANNED = ["at every tested setting", "aircraft risk score", "aircraft ready", "approved to fly", "live data"]
-# v2.1 release rules (docs/agent_notes/v21_brief.md)
+# v2.1 release rules
 SCOPE = "across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part"
 NAMES = {"P0": "Simple Rulebook (naive reference)", "P1": "Each Airport for Itself (simplified local comparator)",
          "P2": "Network Plan", "I125": "Network Plan + Extra Spares"}
@@ -47,14 +46,13 @@ def test_no_placeholder_left(name):
     assert "{{RESULT:" not in _read(name)
 
 
-@pytest.mark.parametrize("name", DOCS[:5])
+@pytest.mark.parametrize("name", DOCS[:4])
 def test_template_exists_for_each_doc(name):
     assert (ROOT / "docs" / "templates" / f"{name}.tmpl").exists()
 
 
 @pytest.mark.parametrize("name", DOCS[:4])
 def test_banned_wording_absent(name):
-    """STUDY_GUIDE is excluded: it quotes these phrases in its 'what not to say' table."""
     text = _read(name).lower()
     for phrase in BANNED:
         assert phrase not in text, (name, phrase)
