@@ -1011,16 +1011,16 @@ function dimensions() {
   // with extension lines rising from the nose tip and the tail cone
   const lz = RZ + 1.35, ly = 1.2;
   line3('CONS', [[0, 0, FS(0.001, 0)[2]], [0, ly, lz + 0.3]]); line3('CONS', [[FL, 0, FS(FL - 0.01, 0)[2]], [FL, ly, lz + 0.3]]);
-  dimLine([0, ly, lz], [FL, ly, lz], `LENGTH ${m(FL)} m`, 0.3);
+  dimLine([0, ly, lz], [FL, ly, lz], `LENGTH ≈ ${Math.round(FL * MODEL_SCALE)} m`, 0.3);
   // near semi-span, along (and aft of) the near wing's trailing edge, from the centreline plane to the tip
   const ys = WG.yt + 0.42, zs = wZ(WG.yt) - 0.1;
   const xsOf = (y) => wXle(Math.max(y, WG.y0)) + wC(Math.max(y, WG.y0)) + 1.0;
   line3('CONS', [[wXle(WG.yt) + wC(WG.yt) + 0.1, -ys, zs], [xsOf(WG.yt) + 0.5, -ys, zs]]);
-  dimLine([xsOf(WG.yt), -ys, zs], [xsOf(WG.yt), -RY, zs], `½ SPAN ${m(ys)} m`, 0.45);
+  dimLine([xsOf(WG.yt), -ys, zs], [xsOf(WG.yt), -RY, zs], `½ SPAN ≈ ${Math.round(ys * MODEL_SCALE)} m`, 0.45);
   // height to the fin tip
   const tipZ = fPt(1, 0)[2], xh = FL + 0.9;
   line3('CONS', [[fPt(1, 1)[0], 0, tipZ], [xh + 0.4, 0, tipZ]]); line3('CONS', [[FL, 0, GROUND], [xh + 0.4, 0, GROUND]]);
-  dimLine([xh, 0, GROUND], [xh, 0, tipZ], `${m(tipZ - GROUND)} m`, 0.5);
+  dimLine([xh, 0, GROUND], [xh, 0, tipZ], `≈ ${Math.round((tipZ - GROUND) * MODEL_SCALE)} m`, 0.5);
   return { lines: take('DIM'), specs: labels };
 }
 function dimLabels(specs, avoid) {
@@ -1040,7 +1040,7 @@ function titleBlock(x, y) {
   const w = 600, h = 92;
   const t = 'GROUNDED NO MORE · GENERIC NARROWBODY · SCHEMATIC — NOT ENGINEERING DATA · NTS';
   const span = 2 * (WG.yt + 0.42) * MODEL_SCALE, height = (fPt(1, 0)[2] - GROUND) * MODEL_SCALE;
-  const spec = `LENGTH ${(FL * MODEL_SCALE).toFixed(1)} m · SPAN ${span.toFixed(1)} m · HEIGHT ${height.toFixed(1)} m · 2 × UNDERWING ENGINES`;
+  const spec = `ILLUSTRATIVE PROPORTIONS · ≈ ${Math.round(FL * MODEL_SCALE)} m CLASS · SPAN ≈ ${Math.round(span)} m · 2 × UNDERWING ENGINES`;
   const mono = (tx, ty, s, size = 10.5, fill = C.titanium) => el('text', { x: tx, y: ty, 'font-family': FONT_MONO, 'font-size': size, fill, 'letter-spacing': '.06em' }, esc(s));
   return el('g', { class: 'cw-titleblock', transform: `translate(${x} ${y})` },
     el('rect', { width: w, height: h, fill: C.midnight, 'fill-opacity': 0.94, stroke: C.titanium, 'stroke-opacity': 0.45, 'stroke-width': 1 }),

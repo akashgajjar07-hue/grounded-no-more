@@ -89,7 +89,7 @@ def test_generic_dimensions_and_mono_callouts(site, browser):  # noqa: F811
     ctx, page, problems = _open(browser, site, "1440")
     try:
         svgtext = page.evaluate("[...document.querySelectorAll('#cutaway svg text')].map((t) => t.textContent).join(' | ')")
-        assert "LENGTH 36.8 m" in svgtext and "SPAN 33.9 m" in svgtext and "37.6" not in svgtext
+        assert "LENGTH ≈ 37 m" in svgtext and "SPAN ≈ 34 m" in svgtext and "37.6" not in svgtext  # v2.2: rounded, illustrative (drawing is not to scale)
         fams = page.evaluate("[...new Set([...document.querySelectorAll('.cw-name, .cw-num')].map((t) => getComputedStyle(t).fontFamily))]")
         assert all("Plex Mono" in f for f in fams), fams
         sizes = page.evaluate("[...document.querySelectorAll('.cw-name')].map((t) => t.getBoundingClientRect().height / t.querySelectorAll('tspan').length)")
