@@ -1,7 +1,7 @@
 {
  "meta": {
-  "generated_at": "2026-11-27T13:15:58Z",
-  "git_sha": "75c4cf0",
+  "generated_at": "2026-11-27T14:40:27Z",
+  "git_sha": "a1f00f5",
   "provenance": "DERIVED",
   "source": [
    "gnm.export.build_site_data"
@@ -24,7 +24,7 @@
  ],
  "sizes_bytes": {
   "kpis": 19571,
-  "parts": 139462,
+  "parts": 140034,
   "demand_history": 30812,
   "forecast": 110085,
   "rotables": 204378,
@@ -36,5 +36,5 @@
   "method": 142880,
   "story": 6065
  },
- "total_bytes": 1297051
+ "total_bytes": 1297623
 }

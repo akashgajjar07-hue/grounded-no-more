@@ -275,6 +275,7 @@ export async function render(el, ctx) {
       P.brake_note ? h('p', { class: 'pi-brake-note', dataset: { role: 'brake-note' } }, icon('info'), h('span', {}, P.brake_note)) : null,
       // A9: the frozen plan's outstation brake units stay in the numbers, flagged
       (P.invalid_allocations || []).length ? allocationFlagNote(P.invalid_allocations, { text: P.invalid_allocation_text, compact: true }) : null,
+      P.invalid_allocation_summary?.text ? h('p', { class: 'pi-brake-note t-12', dataset: { role: 'invalid-size' } }, P.invalid_allocation_summary.text) : null,
       scopeLine()));
   el.append(h('div', { class: 'grid-12 mt-3' }, tableCard));
   function refreshTable() {

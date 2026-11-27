@@ -1232,7 +1232,8 @@ def v21_keys(V: dict[str, str], *, kpis, pol, fo, var, sp, pm, cal) -> dict[str,
         f"changed outside the hub in this model**: {W['v21.out_brakes.P2']} in the {NAMES['P2']} `P2` "
         f"({', '.join(out_lines('P2', brakes))}), {W['v21.out_brakes.I125']} in the {NAMES['I125']} `I125` and "
         f"{W['v21.out_brakes.P0']} in the {NAMES['P0']} `P0`. They stay in the frozen results so the numbers are "
-        f"unchanged, but no planner should act on them.")
+        f"unchanged, but no planner should act on them. "
+        f"{json.loads((ROOT / 'docs' / 'data' / 'parts.json').read_text()).get('invalid_allocation_summary', {}).get('text', '')}").rstrip()
     W["v21.wheels_note"] = (
         f"Wheel-and-tyre assemblies are modelled as rare, unscheduled no-go removals (AV2-04), so the "
         f"frozen plans hold {W['v21.out_wheels.P0']} wheel assemblies at outstations under the {NAMES['P0']} `P0` "

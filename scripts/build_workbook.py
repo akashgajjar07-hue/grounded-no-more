@@ -17,6 +17,7 @@ Usage:  python scripts/build_workbook.py [--out PATH]
 from __future__ import annotations
 
 import argparse
+import sys
 from copy import copy
 import json
 import re
@@ -1283,6 +1284,13 @@ def build(out: Path = OUT) -> Path:
     wb.properties.description = DISCLAIMER
     out.parent.mkdir(parents=True, exist_ok=True)
     wb.save(out)
+    # v2.2: store cached results in every formula cell so previews that don't recalculate show values
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from workbook_cache import cache, check
+    stats = cache(out)
+    bad = check(out)
+    if stats["errors"] or bad:
+        raise SystemExit(f"workbook cache: errors {stats['errors'][:5]} problems {bad[:5]}")
     return out
 
 

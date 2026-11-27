@@ -6,15 +6,15 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 
 ## 1. Tests
 
-398 tests, 0 failures, 0 errors, 0 skipped, 109 s, run at 2026-11-27 13:14 UTC (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -m "not browser" -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast and slow suites; the Playwright browser suite (`-m browser`) runs separately and is not counted in this file).
+398 tests, 0 failures, 0 errors, 0 skipped, 70 s, run at 2026-11-27 13:46 UTC (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -m "not browser" -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast and slow suites; the Playwright browser suite (`-m browser`) runs separately and is not counted in this file).
 
 | Area | Test modules | Tests | Failed | Skipped |
 |---|---|---|---|---|
 | Data contracts, leakage, simulator, calibration lock | `test_contracts`, `test_leakage`, `test_leakage_runtime`, `test_sim_engine`, `test_sim_generator`, `test_calibration`, `test_calibration_lock` | 56 | 0 | 0 |
-| Forecasting (incl. Monash benchmark) | `test_forecasting_classify`, `test_forecasting_evaluate`, `test_forecasting_methods`, `test_forecasting_metrics`, `test_forecasting_monash` | 47 | 0 | 0 |
-| Inventory policy and Palm/EBO maths | `test_analytic`, `test_floatcalc_mirror`, `test_policy_economics`, `test_policy_forecast`, `test_policy_slow`, `test_policy_specs` | 83 | 0 | 0 |
-| Optimiser / Readiness Frontier (guardrails, levers) | `test_optim_frontier`, `test_optim_greedy`, `test_optim_levers` | 32 | 0 | 0 |
-| AOG Response Lab and Planner Action Centre | `test_aog_actions`, `test_aog_incidents`, `test_aog_options` | 34 | 0 | 0 |
+| Forecasting (incl. Monash benchmark) | `test_forecasting_classify`, `test_forecasting_evaluate`, `test_forecasting_metrics`, `test_forecasting_monash`, `test_forecasting_methods` | 47 | 0 | 0 |
+| Inventory policy and Palm/EBO maths | `test_analytic`, `test_floatcalc_mirror`, `test_policy_economics`, `test_policy_forecast`, `test_policy_specs`, `test_policy_slow` | 83 | 0 | 0 |
+| Optimiser / Readiness Frontier (guardrails, levers) | `test_optim_greedy`, `test_optim_levers`, `test_optim_frontier` | 32 | 0 | 0 |
+| AOG Response Lab and Planner Action Centre | `test_aog_options`, `test_aog_actions`, `test_aog_incidents` | 34 | 0 | 0 |
 | Freeze and holdout discipline | `test_freeze` | 3 | 0 | 0 |
 | Site data export, reconciliation, rendered docs | `test_reconciliation`, `test_site_data`, `test_docs_rendered` | 75 | 0 | 0 |
 | SQL, workbook, notebooks | `test_sql`, `test_workbook`, `test_notebooks` | 64 | 0 | 0 |
@@ -59,7 +59,7 @@ Applied (V1, fewest changes): `quoted_mtbur_optimism` 1.10, `quoted_mtbur_noise_
 | low stress (×1.08) | AOG 1,200, fill 0.85 | 0.846 / 0.836 | 1,123 / 1,226 | 66 / 63 | no |
 | high stress (×0.96) | AOG 2,700, fill 0.78 | 0.780 / 0.781 | 1,632 / 1,558 | 84 / 76 | yes |
 
-Stress worlds: reliability ×1.08 (easier) / ×1.00 / ×0.96 (tougher) — a narrow range. Band ends: the low-stress world reaches the AOG end of the band (pooled history and selection 1,174 h/yr; band end 1,200) at 0.841 rotable fill, and the high-stress world reaches the fill end (0.781; band end 0.78) at about 1,595 h/yr, well short of the 2,700 h end, because fill binds first. The lock (`outputs/freeze/calibration_lock.json`, 12 hashed files, enforced by `tests/test_calibration_lock.py`) was written at `6083833` and re-written only after the non-calibration fixes V2-SIM-17/18 at `2149d78`.
+Stress worlds: reliability ×1.08 (easier) / ×1.00 / ×0.96 (tougher) — a narrow range. Band ends: the low-stress world reaches the AOG end of the band (pooled history and selection 1,174 h/yr; band end 1,200) at 0.841 rotable fill, and the high-stress world reaches the fill end (0.781; band end 0.78) at about 1,595 h/yr, well short of the 2,700 h end, because fill binds first. The lock (`outputs/freeze/calibration_lock.json`, 12 hashed files, enforced by `tests/test_calibration_lock.py`) was written at `42c02d8` and re-written only after the non-calibration fixes V2-SIM-17/18 at `4a564c6`.
 
 ## 3. Freeze and holdout chain
 
@@ -67,20 +67,17 @@ Frozen at 2026-11-26 08:43:36 UTC: 19 artefacts (forecast champions, P0/P1/P2 pa
 
 v2 commit chain (`git log --oneline`, oldest first). The calibration lock precedes every P1/P2/optimiser commit, the freeze precedes the holdout-results commit, and the post-plan check comes after both:
 
-- `8005c82` Archive v1 (tag v1-archive); start v2 rebuild — D012
-- `db60ee5` v2 simulator (UNCALIBRATED, not locked): type-exclusive catalogue, curated deadlines/QPA/prices, NFF, exchange/loan + local borrow + robbery + local buy (no pool growth), deferred-item sourcing fix, AOG fitting time + per-event cost, OEM Poisson P0; P0 diagnostics only — no P1/P2 run
-- `47e4f77` v2 P0 gap diagnosis: fix P0 ready-rate vs fill-rate mismatch (V2-SIM-10), P0 pipeline transport weighting (V2-SIM-11), reservation blocking bug (V2-SIM-12); raw P0 rerun — still uncalibrated, not locked
-- `8da088c` v2 realism corrections before calibration: wheel/tyre hub shop (2-7 d TAT), brake notice-time supply (V2-SIM-13), AOG route retries (V2-SIM-14), band recorded (V2-SIM-16); raw P0 rerun — not tuned, not locked
-- `09db808` v2 calibration variants V1–V4 measured in memory (nothing applied): V1 quote-accuracy is the only in-band candidate
-- `6083833` v2 CALIBRATION LOCK: V1 quote-accuracy settings (author-approved), stress worlds at band ends, holdout seeds 2000–2019 — locked BEFORE any v2 P1/P2/optimiser run
-- `c96c458` v2: AOG Response Lab + Planner Action Centre rebuilt on v2 history (v2 routes, robbery never ranked, AV-21 queue-jump, no fake quarantine data)
-- `48a3122` v2: forecasting champions + P1/P2 paired selection evaluation (3 worlds), selection seeds only
-- `2149d78` v2 bug fixes before freeze: re-open needs whose earmarked shelf-life units expire on arrival (V2-SIM-17); atomic scenario cache (V2-SIM-18); re-lock; policy results reproduce unchanged
-- `34473cb` v2: Readiness Frontier with AV-09 guardrails (selection only); recommended I125; candidates.json a8a22af8
-- `ae3cd4b` v2 FREEZE: champions, P0/P1/P2 tables, frontier candidates, configs hashed before the v2 holdout (seeds 2000–2019); v1 holdout archived
-- `e3f568e` v2 HOLDOUT: seeds 2000–2019, run once after freeze ae3cd4b (no forced reruns)
-- `8491f07` Post-plan robustness check: frozen I125/P2/P0 on holdout seeds in low/high stress worlds (D015)
-- `304a252` v2 site export: Network Plan headline, Extra Spares as frontier option, brake disclosure.
+- `f02f4eb` Archive v1 (tag v1-archive); start v2 rebuild — D012
+- `45bb651` v2 simulator (UNCALIBRATED, not locked): type-exclusive catalogue, curated deadlines/QPA/prices, NFF, exchange/loan + local borrow + robbery + local buy (no pool growth), deferred-item sourcing fix, AOG fitting time + per-event cost, OEM Poisson P0; P0 diagnostics only — no P1/P2 run
+- `9cd33d7` v2 P0 gap diagnosis: fix P0 ready-rate vs fill-rate mismatch (V2-SIM-10), P0 pipeline transport weighting (V2-SIM-11), reservation blocking bug (V2-SIM-12); raw P0 rerun — still uncalibrated, not locked
+- `38ab2c9` v2 realism corrections before calibration: wheel/tyre hub shop (2-7 d TAT), brake notice-time supply (V2-SIM-13), AOG route retries (V2-SIM-14), band recorded (V2-SIM-16); raw P0 rerun — not tuned, not locked
+- `206f7ac` v2 calibration variants V1–V4 measured in memory (nothing applied): V1 quote-accuracy is the only in-band candidate
+- `42c02d8` v2 CALIBRATION LOCK: V1 quote-accuracy settings (author-approved), stress worlds at band ends, holdout seeds 2000–2019 — locked BEFORE any v2 P1/P2/optimiser run
+- `4a564c6` v2 bug fixes before freeze: re-open needs whose earmarked shelf-life units expire on arrival (V2-SIM-17); atomic scenario cache (V2-SIM-18); re-lock; policy results reproduce unchanged
+- `e57a265` v2 FREEZE: champions, P0/P1/P2 tables, frontier candidates, configs hashed before the v2 holdout (seeds 2000–2019); v1 holdout archived
+- `64e6511` v2 HOLDOUT: seeds 2000–2019, run once after freeze e57a265 (no forced reruns)
+- `37467a6` Post-plan robustness check: frozen I125/P2/P0 on holdout seeds in low/high stress worlds (D015)
+- `392a943` v2 site export: Network Plan headline, Extra Spares as frontier option, brake disclosure.
 
 Holdout runs logged in `outputs/freeze/holdout_log.json` (the archived v1 entries are kept):
 
@@ -135,10 +132,10 @@ Most of them overstated P0's downtime and the size of the improvement. For trans
 
 v1 commit chain:
 
-- `b35d833` Phase 2: simulator + event engine, P0 Simple Rulebook baseline, calibration (P0 only) locked before any P1/P2 run
-- `3cbc96c` Holdout runner (dry-run verified on selection data), freeze script, truth-recovery evaluation
-- `5a1cdda` FREEZE: champions, P0/P1/P2 tables (all variants), frontier candidate set, configs hashed before holdout
-- `94d8796` HOLDOUT: policy (3 variants), frontier candidates, forecast champions on history continuation, truth recovery — run once after freeze (one logged forced rerun of a block that crashed before output; see D010)
+- `024aac2` Phase 2: simulator + event engine, P0 Simple Rulebook baseline, calibration (P0 only) locked before any P1/P2 run
+- `1b5b48f` Holdout runner (dry-run verified on selection data), freeze script, truth-recovery evaluation
+- `13ae8a3` FREEZE: champions, P0/P1/P2 tables (all variants), frontier candidate set, configs hashed before holdout
+- `6c2cbab` HOLDOUT: policy (3 variants), frontier candidates, forecast champions on history continuation, truth recovery — run once after freeze (one logged forced rerun of a block that crashed before output; see D010)
 
 v2 fixed the problems as domain corrections chosen before any v2 result, recalibrated P0 only, locked, and ran on fresh holdout seeds (2000–2019), because the v1 seeds had been seen.
 
@@ -249,7 +246,7 @@ These reviews were run on the v1 world before it was archived. The aviation revi
 ### v2 reviews
 
 **Aviation domain review (fresh, v2): `reports/review_aviation_v2.md`.** 3 critical, 11 major, 11 minor.
-- **Fixed (wording/UI, design wave C, db8890c):** AV2-03 (P2 re-mixes the float: buys 68 rotables ≈ AED 8.4M and sheds 20 ≈ AED 3.1M, net ≈ +AED 0.6M; "positioning the existing float" removed); AV2-10 (v1 leftovers removed); AV2-11 (band wording: "an ASSUMED plausibility band chosen before any policy comparison"); robbery wording (used automatically first at AUH with approval flagged; never ranked by the AOG Lab); AV2-14 (outstation float view uses the resupply time from AUH); consistent MEL-analogue wording; the 120-part scope stated.
+- **Fixed (wording/UI, design wave C, d440e13):** AV2-03 (P2 re-mixes the float: buys 68 rotables ≈ AED 8.4M and sheds 20 ≈ AED 3.1M, net ≈ +AED 0.6M; "positioning the existing float" removed); AV2-10 (v1 leftovers removed); AV2-11 (band wording: "an ASSUMED plausibility band chosen before any policy comparison"); robbery wording (used automatically first at AUH with approval flagged; never ranked by the AOG Lab); AV2-14 (outstation float view uses the resupply time from AUH); consistent MEL-analogue wording; the 120-part scope stated.
 - **Disclosed, not fixed (author decision; LIMITATIONS 29–39):** AV2-01 robbed-donor downtime not counted; AV2-02 P0's outstation stock mostly unusable brakes, no line kit, no re-provisioning; AV2-04 wheels as rare unscheduled removals; AV2-05 phantom brake positioning; AV2-06 hero-part rate and no warranty escalation; AV2-07 robbery as the automatic first route; AV2-08 no cost of deferral; AV2-09 AOG from removal, not departure; AV2-12 exchange/loan merged, no pool contract; AV2-13 unit costs per family; and the minor items. Each is described with its likely direction of bias.
 
-**Design critic (fresh, v2): `reports/review_design_5.md`.** 4.20/5, story mode 4.43. Every functional bug (F1–F9) and top issue (1–12) was fixed in design wave C (db8890c). A further fresh design re-score follows.
+**Design critic (fresh, v2): `reports/review_design_5.md`.** 4.20/5, story mode 4.43. Every functional bug (F1–F9) and top issue (1–12) was fixed in design wave C (d440e13). A further fresh design re-score follows.

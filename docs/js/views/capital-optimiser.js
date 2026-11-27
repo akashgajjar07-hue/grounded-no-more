@@ -585,6 +585,7 @@ export async function render(el, ctx) {
     allocFlags.replaceChildren(...(list.length ? [h('div', { class: 'co-flag-note', role: 'note' }, icon('alert'), h('div', {},
       h('p', { class: 'm-0' }, h('b', {}, `${fmtInt(list.length)} brake ${list.length === 1 ? 'allocation' : 'allocations'} outside the hub: `), h('span', { dataset: { role: 'invalid-text' } }, INVALID_TXT), '.'),
       h('ul', { class: 'co-flag-list list-reset t-12 mono' }, list.map((r) => h('li', {}, `${r.pn} at ${r.station}${r.units != null ? ` (${r.units > 0 ? '+' : ''}${fmtInt(r.units)})` : ''}`))),
+      ctx.data.parts?.invalid_allocation_summary?.text ? h('p', { class: 'm-0 t-12', dataset: { role: 'invalid-size' } }, ctx.data.parts.invalid_allocation_summary.text) : null,
       h('p', { class: 'm-0 t-12 faint' }, S ? 'They stay in the frozen results and are not deleted. Treat them as errors, not advice.' : 'Kept in the frozen results (not deleted); flagged here and in the parts tables.')))] : []));
     allocCard.dataset.point = sel.id;
   }

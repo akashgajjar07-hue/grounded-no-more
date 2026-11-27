@@ -88,7 +88,7 @@ Hours aircraft spent waiting for a part, per year, in the simulation: about 1,69
 - **The starting point was chosen, not measured.** The target range for the starting-point policy was an exploratory assumption chosen after diagnosing the model, not benchmarked against real airline KPIs. A line-kit variant (≈1,052 h) was measured but not adopted because it fell outside that range. All results are conditional on this choice.
 - **The Simple Rulebook is deliberately weak.** Much of the gap to the Network Plan comes from stocking no-go parts at outstations, which a competent operator would already do.
 - **Donor downtime is not in the headline.** When a part is borrowed from another of our aircraft, that aircraft's waiting time is not counted.
-- **Some plan lines are flagged, not removed.** Outstation brake allocations in the frozen plans are flagged as an **invalid recommendation — brakes are not changed outside the hub in this model**: 5 in the Network Plan `P2` (GN-32-R013 at BOM, GN-32-R013 at CAI, GN-32-R013 at JED, GN-32-R036 at LHR, GN-32-R036 at SIN), 7 in the Network Plan + Extra Spares `I125` and 6 in the Simple Rulebook (naive reference) `P0`. They stay in the frozen results so the numbers are unchanged, but no planner should act on them.
+- **Some plan lines are flagged, not removed.** Outstation brake allocations in the frozen plans are flagged as an **invalid recommendation — brakes are not changed outside the hub in this model**: 5 in the Network Plan `P2` (GN-32-R013 at BOM, GN-32-R013 at CAI, GN-32-R013 at JED, GN-32-R036 at LHR, GN-32-R036 at SIN), 7 in the Network Plan + Extra Spares `I125` and 6 in the Simple Rulebook (naive reference) `P0`. They stay in the frozen results so the numbers are unchanged, but no planner should act on them. Network Plan: 5 such lines, 5 units, about AED 0.99M at catalogue price. That is 0.05% of its target units and 3.1% of its target stock value. Network Plan + Extra Spares: 7 lines, 7 units, about AED 1.53M (0.07% and 3.8%). Brakes are never changed at outstations in this model, so these units add capital but no readiness.
 - **Results depend on the emergency routes, the assumed costs and the downtime clock described above.**
 
 The full list, including every finding from the domain review and its status, is in [LIMITATIONS.md](LIMITATIONS.md).
@@ -243,7 +243,7 @@ Method details: [METHODOLOGY.md](METHODOLOGY.md). Model scope: [MODEL_CARD.md](M
 
 **Also run on a public intermittent-demand benchmark (car parts, not aviation).** The forecasting code was also run on a real public dataset. Dataset: Monash Car Parts (without missing values), 2,674 monthly series, licence CC BY 4.0, data provenance REAL (metrics DERIVED). Best eligible method IMAPA with mean MASE 1.056 [1.011–1.109]; the all-zero forecast scores 0.777, which is why zero is never allowed to be a champion. Attribution: Car Parts dataset, Monash Time Series Forecasting Archive (Godahewa, Bergmeir, Webb, Hyndman & Montero-Manso, 2021), Zenodo record 4656021, licensed CC BY 4.0; original data from Hyndman (2015), R package expsmooth.
 
-**Tests:** 398/398 passing, 0 failing, 0 skipped (fast and slow suites, `GNM_RELEASE=1`; the Playwright browser suite runs separately; `reports/junit.xml`, run at 2026-11-27 13:14 UTC).
+**Tests:** 398/398 passing, 0 failing, 0 skipped (fast and slow suites, `GNM_RELEASE=1`; the Playwright browser suite runs separately; `reports/junit.xml`, run at 2026-11-27 13:46 UTC).
 
 ---
 

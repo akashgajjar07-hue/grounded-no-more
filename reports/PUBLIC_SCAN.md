@@ -260,3 +260,10 @@ Nothing marked "fixed" is left. Every remaining hit is exempt, with its reason, 
 | `tests/test_site_planner.py` | personal | 2 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_site_planner.py` | outdated policy wording | 1 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_workbook.py` | outdated policy wording | 1 | exempt: test code (forbidden-word lists, test names, browser assertions) |
+
+## Final re-run (live site + pushed repo, v2.2)
+
+- **Live site** (https://akashgajjar07-hue.github.io/grounded-no-more/): visible text of 53 page views (every route and deep link in Simple and Expert at 1440 px, plus the cutaway lab), all categories: **0 hits**, 0 page errors.
+- **Pushed repo** (fresh clone of `main`, 567 files, 491 text and 76 binary): 325 matches. 320 are in exempt locations (frozen config and outputs, tests including this scan's own word list, labelled AI review records, code comments and identifiers). The other 5 are test names in `reports/junit.xml` containing the word "placeholder" (exempt: test identifiers). **No user-visible hits.**
+- **Files moved out of the public repo:** none present in the clone, and none in the history (`git log --all -- <path>` is empty for every moved path).
+- **Commit messages on GitHub:** 0 matches for the personal-terms and internal-process categories.

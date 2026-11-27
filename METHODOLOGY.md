@@ -176,7 +176,7 @@ Only V1 quote accuracy lands inside the band, and it is also the fewest-changes 
 
 In short, the low-stress world reaches the AOG end of the band (pooled history and selection 1,174 h/yr; band end 1,200) at 0.841 rotable fill, and the high-stress world reaches the fill end (0.781; band end 0.78) at about 1,595 h/yr, well short of the 2,700 h end, because fill binds first. Both are disclosed as they came out (D013).
 
-**Lock.** `outputs/freeze/calibration_lock.json` hashes 12 files (the config, the catalogue, `src/gnm/sim/*.py` and the P0 summary) and `tests/test_calibration_lock.py` enforces it. Locked at commit `6083833`, before any v2 P1/P2/optimiser run; re-locked only after the documented non-calibration fixes V2-SIM-17/18 at `2149d78`, with policy results unchanged.
+**Lock.** `outputs/freeze/calibration_lock.json` hashes 12 files (the config, the catalogue, `src/gnm/sim/*.py` and the P0 summary) and `tests/test_calibration_lock.py` enforces it. Locked at commit `42c02d8`, before any v2 P1/P2/optimiser run; re-locked only after the documented non-calibration fixes V2-SIM-17/18 at `4a564c6`, with policy results unchanged.
 
 ---
 
@@ -382,14 +382,14 @@ Because both plans faced identical removals, repair times, lead times and route 
 1. Forecast champions, every PolicySpec parameter table (all worlds), the frontier candidate set and the configs are fixed using only training data and selection seeds.
 2. `scripts/freeze_all.py` writes `outputs/freeze/manifest.json` with SHA-256 hashes of 19 artefacts.
 3. The holdout runner refuses to start if any hash differs, and `evaluate()` refuses the holdout seeds during selection. `tests/test_freeze.py` checks this.
-4. Git history shows the freeze commit before the holdout-results commit: v1 archived at `8005c82`, calibration locked at `6083833`, freeze at `ae3cd4b`, holdout results at `e3f568e`.
+4. Git history shows the freeze commit before the holdout-results commit: v1 archived at `f02f4eb`, calibration locked at `42c02d8`, freeze at `e57a265`, holdout results at `64e6511`.
 5. The holdout is run once. Every run is appended to `outputs/freeze/holdout_log.json`: 3 main v2 runs and 1 post-plan run, 0 forced.
 
 Manifest hash (SHA-256 of `outputs/freeze/manifest.json`): `407689699aefd27f9969c34d752245353b45269b730937f2801783ffc7fe7205`.
 
 **Fresh seeds.** The v1 holdout seeds (retired v1 holdout (archived)) had been seen, so v2 uses 2000–2019 (D013). The v1 holdout had one disclosed forced rerun of a block that crashed before producing output (D010); its root cause, a non-atomic scenario cache, was fixed in V2-SIM-18 before the v2 freeze.
 
-**Post-plan check (D015).** After the main v2 holdout, the author asked how the frozen central-built I125 does in the stress worlds. P0, P2 and I125 were run once on the holdout seeds in the low- and high-stress worlds, paired against P2, with no re-selection, and logged at `8491f07`: low stress −85 h [−125 to −45] a year and total annual cost −AED 1.7M [−2.9 to −0.4] for +AED 7.7M capital (I125 62 h vs central-built P2 147 h); high stress −184 h [−239 to −128] a year and total annual cost −AED 5.0M [−6.8 to −3.1] for +AED 7.5M capital (I125 76 h vs central-built P2 260 h). It is labelled post-plan because it was not in the frozen run plan.
+**Post-plan check (D015).** After the main v2 holdout, the author asked how the frozen central-built I125 does in the stress worlds. P0, P2 and I125 were run once on the holdout seeds in the low- and high-stress worlds, paired against P2, with no re-selection, and logged at `37467a6`: low stress −85 h [−125 to −45] a year and total annual cost −AED 1.7M [−2.9 to −0.4] for +AED 7.7M capital (I125 62 h vs central-built P2 147 h); high stress −184 h [−239 to −128] a year and total annual cost −AED 5.0M [−6.8 to −3.1] for +AED 7.5M capital (I125 76 h vs central-built P2 260 h). It is labelled post-plan because it was not in the frozen run plan.
 
 ---
 

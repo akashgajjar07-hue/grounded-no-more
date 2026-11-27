@@ -820,6 +820,28 @@ def invalid_brake_allocations() -> list[dict]:
     return rows
 
 
+def invalid_brake_summary() -> dict:
+    """v2.2: size of the flagged outstation brake lines in the frozen plans (no re-simulation). Value at catalogue
+    price; shares are of each plan's target units and target stock value (target units x price)."""
+    st, hub, br = stock_table(), cfg()["network"]["hub"], brake_pns()
+    out = {}
+    for pid in (BASE_POLICY, recommended_id()):
+        bad = st[st.pn.isin(br) & (st.station != hub) & (st[pid] > 0)]
+        units, aed = int(bad[pid].sum()), float((bad[pid] * bad.unit_cost_aed).sum())
+        tot_u, tot_aed = int(st[pid].sum()), float((st[pid] * st.unit_cost_aed).sum())
+        out[pid] = {"lines": int(len(bad)), "units": units, "value_aed": round(aed),
+                    "share_units_pct": round(100 * units / tot_u, 2), "share_value_pct": round(100 * aed / tot_aed, 1)}
+    p2, rec = out[BASE_POLICY], out[recommended_id()]
+    m = lambda x: f"AED {x / 1e6:.2f}M"
+    out["text"] = (f"Network Plan: {p2['lines']} such lines, {p2['units']} units, about {m(p2['value_aed'])} at catalogue price. "
+                   f"That is {p2['share_units_pct']:.2f}% of its target units and {p2['share_value_pct']:.1f}% of its target stock value. "
+                   f"Network Plan + Extra Spares: {rec['lines']} lines, {rec['units']} units, about {m(rec['value_aed'])} "
+                   f"({rec['share_units_pct']:.2f}% and {rec['share_value_pct']:.1f}%). "
+                   f"Brakes are never changed at outstations in this model, so these units add capital but no readiness.")
+    out["provenance"] = "DERIVED"
+    return out
+
+
 def escalation_flags() -> dict:
     """A7: rotables whose history-estimated MTBUR is >= 2x shorter than quoted -> escalate to reliability/warranty first.
     The ratio is mtbur_quoted / mtbur_post (final_forecasts, hub row; estimated on history only). The text quotes the
@@ -964,6 +986,7 @@ def build_parts() -> dict:
         "escalation_rule": {"threshold_ratio": 2.0, "text_template": v21.A7_ESCALATION_TMPL,
                             "pns": sorted(esc), "provenance": "ASSUMED"},
         "invalid_allocations": bad, "invalid_allocation_text": v21.A9_FLAG,
+        "invalid_allocation_summary": invalid_brake_summary(),   # v2.2: lines, units, AED and shares (frozen plans)
         "display_names": names_v21(),
     }
 
