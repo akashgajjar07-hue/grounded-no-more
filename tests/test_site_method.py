@@ -35,6 +35,8 @@ def test_method_renders_clean(site, browser, vp):  # noqa: F811
         # v2.2: the next-experiments links jump to the About sections
         assert page.locator('#next-experiments .dm-next-body a[href="#/about?section=mro"]').count() == 1
         assert page.locator('#next-experiments [data-role="next-back"] a[href="#/about?section=real-data"]').count() == 1
+        # v2.2 review: plain naming of the review, no dev-note wording in the decision records
+        assert "outside-style" not in text.lower() and "author's request" not in text.lower()
         assert "Independent educational simulation" in text
         assert page.locator('[data-story="method-provenance"] svg .dm-box').count() == 6
     finally:

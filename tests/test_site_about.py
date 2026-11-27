@@ -31,7 +31,12 @@ def test_about_content(site, browser, vp, mode):  # noqa: F811
         assert page.locator('[data-role="intro3"]').count() == 1
         assert page.locator('[data-role="ai-note"]').inner_text().strip() == "Built with AI-assisted development; analysis, decisions and validation reviewed by the author."
         assert page.locator('[data-role="why-questions"] .ab-q-item').count() == 6
-        assert page.locator('[data-role="why-note"]').inner_text().strip() == "Author’s answers to follow."
+        # v2.2: no placeholder; each planning question links to where the site answers it, with a one-line answer
+        assert page.locator('[data-role="why-note"]').count() == 0
+        qs = page.evaluate("[...document.querySelectorAll('[data-role=why-questions] .ab-q-item')].map((li) => [li.querySelector('a.ab-q-t')?.getAttribute('href'), (li.querySelector('.ab-q-a')?.textContent || '').trim()])")
+        assert all(h and h.startswith("#/") and len(a) > 20 for h, a in qs), qs
+        assert not re.search(r"answers to follow|portfolio|skills and tools", page.locator("#view").inner_text(), re.I)
+        assert "Methods used" in page.locator("#view").text_content()
         body = page.locator("#view").inner_text()
         for t in ["Akash Gajjar", "University of Liverpool (2025)", "Primark", "Uniqlo"]:
             assert t in body

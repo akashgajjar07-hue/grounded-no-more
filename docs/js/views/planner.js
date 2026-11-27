@@ -49,7 +49,7 @@ export async function render(el) {
   const header = h('header', { class: 'pl-head' },
     h('div', { class: 'pl-eyebrow' }, h('span', {}, 'Project'), h('span', { class: 'pl-dot', 'aria-hidden': 'true' }, '·'), h('span', {}, 'In my own words')),
     h('h1', { class: 'pl-title' }, md.title || 'The Planner Behind the Project'),
-    h('p', { class: 'pl-byline' }, 'Akash Gajjar · materials and inventory planning'),
+    h('p', { class: 'pl-byline' }, 'By Akash Gajjar'),
     h('p', { class: 'mode-same-note pl-mode-note', dataset: { role: 'mode-same' } }, 'This page reads the same in Simple and Expert.'));
   el.append(header);
   el.append(intro3({

@@ -51,3 +51,6 @@
 .ab-md .md-expert > * + * { margin-top: 10px; }
 .ab-md .md-expert .md-h { margin-top: var(--s-2); }
 .ab-md .md-expert-k { display: block; margin-bottom: 4px; font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); }
+/* planning decisions: each question links to where the site answers it */
+.ab-q-item a.ab-q-t { color: var(--primary); font-weight: 500; }
+.ab-q-a { margin-top: 4px; }

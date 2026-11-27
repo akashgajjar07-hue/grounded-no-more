@@ -1,5 +1,5 @@
 /**
- * Glossary (v2.1, PAGE-3). Route: #/glossary · #/glossary?term=<key> scrolls to and highlights one entry (the term
+ * Glossary (v2.1). Route: #/glossary · #/glossary?term=<key> scrolls to and highlights one entry (the term
  * tooltips' "Glossary" link uses it) · #/glossary?section=<group> jumps to a group (the group chips link there) ·
  * #/glossary?q=<text> pre-fills the search.
  * Data: none. Every entry comes from lib/glossary.js glossaryEntries() ({key, expert, simple, definition, example, why,

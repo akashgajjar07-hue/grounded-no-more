@@ -26,7 +26,7 @@ def test_planner_essay(site, browser, vp, mode):  # noqa: F811
         assert page.locator('[data-role="intro3"]').count() == 1
         # v2.2: the essay reads the same in both modes, and says so under the header
         assert page.locator('.pl-head [data-role="mode-same"]').inner_text().strip() == "This page reads the same in Simple and Expert."
-        assert not re.search(r"\bdraft\b|\bagents?\b|interview|linkedin|legacy", page.locator("#view").inner_text(), re.I)
+        assert not re.search(r"\bdraft\b|\bagents?\b|interview|linkedin|legacy|abu dhabi|portfolio|\bwant to work\b", page.locator("#view").inner_text(), re.I)
         assert page.locator('[data-role="draft"]').count() == 0   # v2.2: no status chip on the public essay
         essay = page.locator('[data-role="planner-essay"]')
         heads = [t.strip() for t in essay.locator("h2").all_inner_texts()]

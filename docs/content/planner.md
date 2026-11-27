@@ -4,7 +4,7 @@ I'm Akash Gajjar. I hold an MSc in Supply Chain Management from the University o
 
 ## Why aviation
 
-In a shop, an empty shelf means a lost sale. In aviation, a missing part can mean an aircraft that cannot fly. I could not think of a place where one missing item has a bigger operational consequence. I want to work in materials, inventory or demand planning in Abu Dhabi, a major aviation hub. So I built this project to learn the problem properly.
+In a shop, an empty shelf means a lost sale. In aviation, a missing part can mean an aircraft that cannot fly. I could not think of a place where one missing item has a bigger operational consequence. So I built this project to learn the problem properly.
 
 ## Decisions I made
 

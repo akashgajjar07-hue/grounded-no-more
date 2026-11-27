@@ -76,12 +76,12 @@
 .dm-same { font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); }
 .dm-flow .dm-gate-line { stroke: var(--text-muted); stroke-width: 1.5; stroke-dasharray: 3 3; }
 
-/* wave 3: tests card spans the row (no stretched empty card); checks flow in columns */
+/* tests card spans the row (no stretched empty card); checks flow in columns */
 .dm-tests { display: grid; grid-template-columns: minmax(200px, 240px) minmax(0, 1fr); gap: var(--s-2) var(--s-4); align-items: start; }
 .dm-tests .dm-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px var(--s-3); margin-top: 0; }
 .dm-tests-at { margin-top: var(--s-1); font-family: var(--font-mono); font-size: var(--fs-12); color: var(--text-faint); }
 @media (max-width: 767px) { .dm-tests { grid-template-columns: minmax(0, 1fr); } .dm-tests .dm-checks { grid-template-columns: minmax(0, 1fr); } }
-/* wave 3: stacked register / manifest rows at ≤ 480 px — the key (primary datum) gets its own full-width line and never truncates */
+/* stacked register / manifest rows at ≤ 480 px — the key (primary datum) gets its own full-width line and never truncates */
 .dm-wrap .dts-row { grid-template-columns: minmax(0, 1fr); }
 .dm-wrap .dts-primary { white-space: normal; overflow: visible; overflow-wrap: anywhere; line-height: 1.35; }
 .dm-wrap .dts-metric { justify-self: start; height: auto; min-height: 24px; max-width: 100%; white-space: normal; overflow-wrap: anywhere; padding: 2px 10px; }
@@ -93,7 +93,7 @@
 
 .dm-chain-more summary { cursor: pointer; color: var(--text-faint); font-size: var(--fs-12); margin-top: 2px; }
 .dm-chain-more p { margin-top: 6px; }
-/* wave C: the register fades at its bottom edge so a row is never read as cut mid-cell */
+/* the register fades at its bottom edge so a row is never read as cut mid-cell */
 .dm-wrap .table-wrap[style*="max-height"] { mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent); }
 
 /* v2.1: expanders (closed in Simple mode, open in Expert), verbatim notes, AV2 counts, next experiments */
@@ -134,3 +134,4 @@
 @media (prefers-reduced-motion: reduce) { #view .dm-flow svg, #view .dm-stack figure svg, .dm-xp-body { animation: none; } }
 .dm-next .section-title h2:focus:not(:focus-visible) { outline: none; }
 .dm-next-back { color: var(--text-muted); }
+.dm-chain-src { display: block; margin-top: 2px; font-family: var(--font-mono); }

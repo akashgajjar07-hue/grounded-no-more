@@ -1,9 +1,9 @@
 /**
- * About · the author, the tools, the downloads, an honest note on how it was built, and (v2.1) how the method would
+ * About · the author, the methods used, the downloads, an honest note on how it was built, and how the method would
  * be used for real: E2 "How this transfers to an MRO" (docs/content/mro.md), E3 "What real data would make this
  * useful" (docs/content/real_data.md) and "Next experiments" (docs/content/next_experiments.md), rendered with the
  * small safe Markdown renderer in ./about/md.js. Deep links: #/about?section=mro | real-data | next-experiments.
- * The "Why I made these planning decisions" section holds the questions only: the answers are the author's to write.
+ * "Planning decisions": each question links to the page (or section) that answers it, with a one-line answer.
  * Data: none (static copy + the three content files).
  */
 import { h, pageHead, card, icon, intro3, stateBlock } from '../ui.js';
@@ -23,8 +23,8 @@ const AUTHOR = {
 };
 const REPO = 'https://github.com/akashgajjar07-hue/grounded-no-more';
 
-/** Skills: [heading, [[simple wording, expert wording], …]] */
-const SKILLS = [
+/** Methods used: [heading, [[simple wording, expert wording], …]] — what the project uses. */
+const METHODS = [
   ['Planning methods', [
     ['Forecasting parts that are needed only now and then', 'Intermittent-demand forecasting (Croston, SBA, TSB, bootstrap)'],
     ['Sizing the pool of repairable spares', 'Rotable float sizing (Palm’s theorem, METRIC-inspired)'],
@@ -32,13 +32,13 @@ const SKILLS = [
     ['Weighing money against aircraft readiness', 'Capital-vs-readiness trade-off (greedy marginal allocation)'],
     ['Emergency ways to get a part, and what they cost', 'AOG sourcing options and exposure'],
   ]],
-  ['Analysis and testing', [
+  ['How results are tested', [
     ['A computer model of a fictional airline network', 'Discrete-event simulation of a fictional airline network'],
     ['Fair tests: every plan faces the same events', 'Paired-seed evaluation with a frozen holdout'],
     ['A stated target for the starting point', 'Calibration against stated targets'],
     ['A list of every assumption and where it came from', 'Assumption register with provenance tags'],
   ]],
-  ['Tools', [
+  ['Built with', [
     ['Python (pandas, NumPy)', 'Python (pandas, NumPy)'],
     ['DuckDB and SQL', 'DuckDB / SQL'],
     ['D3 for the interactive charts', 'D3 for the interactive charts'],
@@ -47,15 +47,25 @@ const SKILLS = [
   ]],
 ];
 
-/** The six unanswered questions ([simple, expert] where the wording differs). Wording follows the v2.1 forbidden-word list. */
+/**
+ * Planning decisions: [question (string or [simple, expert]), href, one-line answer (string or [simple, expert])].
+ * Each answer only points at what the linked page already shows.
+ */
 const QUESTIONS = [
-  ['How to handle parts needed only now and then', 'Intermittent demand handling'],
-  'Why maximum local stock isn’t the best plan',
-  ['How repair time drives the pool of spares', 'How TAT drives float'],
-  'Why point accuracy isn’t enough',
-  ['How the planner balances readiness and money', 'How the optimiser balances readiness and capital'],
-  'What data I’d request from a real airline',
+  [['How to handle parts needed only now and then', 'Intermittent demand handling'], '#/forecast',
+    ['The Forecast Lab tests methods made for parts with rare, uneven demand.', 'Forecast Lab: Croston, SBA, TSB and bootstrap compared by demand class.']],
+  ['Why maximum local stock isn’t the best plan', '#/network',
+    ['Network Positioning compares spares at every airport with spares shared across the network.', 'Network Positioning: local stocking against hub pooling, plan by plan.']],
+  [['How repair time drives the pool of spares', 'How TAT drives float'], '#/rotables',
+    ['Rotable & Repair sizes the pool from removals × repair time. You can change the repair time.', 'Rotable & Repair: float from removal rate × TAT (Palm), with a TAT what-if.']],
+  ['Why point accuracy isn’t enough', '#/forecast',
+    ['The Forecast Lab follows each forecast through to the spares it would put on the shelf.', 'Forecast Lab: forecast error carried through to lead-time demand and stock.']],
+  [['How the planner balances readiness and money', 'How the optimiser balances readiness and capital'], '#/capital',
+    ['The Capital Optimiser adds spares one at a time, where each one cuts the most waiting.', 'Capital Optimiser: greedy marginal allocation along the capital-vs-readiness frontier.']],
+  ['What data I’d request from a real airline', '#/about?section=real-data',
+    ['The real-data table below lists each record, why it matters and its first use.', 'Data request: ten record types, each with its first use in a back-test.']],
 ];
+const pick = (v) => (Array.isArray(v) ? byMode(v[0], v[1]) : v);
 
 /** The three content pages rendered on About, in order. */
 const CONTENT = [
@@ -108,7 +118,7 @@ export async function render(el, ctx) {
   el.append(pageHead({
     num: null, eyebrow: 'About',
     title: 'About this project',
-    lede: 'GROUNDED NO MORE is an independent aviation spare-parts planning simulation, built as a portfolio project. Falcon Hub Airways and every part number in it are fictional.',
+    lede: 'GROUNDED NO MORE is an independent simulation project about aviation spare-parts planning. Falcon Hub Airways and every part number in it are fictional.',
   }));
   el.append(intro3({
     what: 'Who built this project, with which tools, and how it could be used for real.',
@@ -142,11 +152,11 @@ export async function render(el, ctx) {
 
   el.append(h('div', { class: 'grid-12 mt-3' },
     card({
-      cls: 'span-12', kicker: 'Skills and tools', title: 'What the project exercises',
-      body: h('div', { class: 'ab-skills' }, SKILLS.map(([head, items]) => h('div', { class: 'ab-skill' }, h('h4', { class: 'ab-h' }, head), h('ul', { class: 'ab-list' }, items.map(([s, x]) => h('li', {}, byMode(s, x))))))),
+      cls: 'span-12', kicker: 'Methods used', title: 'What the project uses',
+      body: h('div', { class: 'ab-skills' }, METHODS.map(([head, items]) => h('div', { class: 'ab-skill' }, h('h4', { class: 'ab-h' }, head), h('ul', { class: 'ab-list' }, items.map(([s, x]) => h('li', {}, byMode(s, x))))))),
     })));
 
-  // E2 / E3 / next experiments: the AUTHOR's content files, rendered safely
+  // E2 / E3 / next experiments: the author's content files, rendered safely
   const docs = await Promise.all(CONTENT.map((c) => fetchMarkdown(assetURL(c.file)).then((src) => ({ c, src }), (err) => ({ c, err }))));
   el.append(h('nav', { class: 'ab-jump', 'aria-label': 'On this page' }, h('span', { class: 'ab-jump-k' }, 'Using it for real:'),
     docs.map(({ c, src }) => h('a', { href: `#/about?section=${c.id}` }, (src && renderMarkdown(src).title) || c.fallback))));
@@ -169,13 +179,13 @@ export async function render(el, ctx) {
     sec.dataset.role = `about-${c.id}`;
   });
 
-  // questions only: the author writes the answers (no pre-written answers here)
+  // each planning question links to where the site already answers it
   el.append(h('div', { class: 'grid-12 mt-3' },
     card({
-      cls: 'span-12 ab-why', kicker: 'Planning decisions', title: 'Why I made these planning decisions',
-      body: h('div', { class: 'stack-2' },
-        h('ol', { class: 'ab-q', dataset: { role: 'why-questions' } }, QUESTIONS.map((q) => h('li', { class: 'ab-q-item' }, h('span', { class: 'ab-q-t' }, Array.isArray(q) ? byMode(q[0], q[1]) : q)))),
-        h('p', { class: 'ab-q-note t-12 faint m-0', dataset: { role: 'why-note' } }, 'Author’s answers to follow.')),
+      cls: 'span-12 ab-why', kicker: 'Planning decisions', title: 'Where each decision is explained',
+      body: h('ol', { class: 'ab-q', dataset: { role: 'why-questions' } }, QUESTIONS.map(([q, href, a]) => h('li', { class: 'ab-q-item' },
+        h('a', { class: 'ab-q-t', href }, pick(q)),
+        h('p', { class: 'ab-q-a t-14 muted m-0' }, pick(a))))),
     })));
 
   if (ctx?.params?.section && navRender) scrollToSection(ctx.params.section);

@@ -48,9 +48,13 @@ function ensureCSS() {
   return link.__ready;
 }
 const up = (p) => String(p || '').toUpperCase();
+/** Decision-log wording shown neutrally: "(author's request, added AFTER the main v2 holdout)" → "added after the main holdout as a post-plan robustness check". */
+const neutralChain = (s) => String(s ?? '')
+  .replace(/^Post-plan robustness check \(author['’]s request, added AFTER the main v2 holdout\)\./i, 'Added after the main holdout as a post-plan robustness check.')
+  .replace(/\s*\(author['’]s request,?\s*/gi, ' (').replace(/\bAFTER\b/g, 'after').replace(/\bFREEZE\b/g, 'freeze');
 const num = (v) => typeof v === 'number' && Number.isFinite(v);
 const stripMd = (s) => String(s ?? '').replace(/`([^`]*)`/g, '$1').replace(/\*([^*]+)\*/g, '$1');
-/** REAL build timestamps → shared fmtStamp ("26 Nov 02:25 UTC"; critic: no raw ISO on screen). */
+/** REAL build timestamps → shared fmtStamp ("26 Nov 02:25 UTC"; no raw ISO on screen). */
 const fmtTime = (iso) => (Number.isFinite(Date.parse(iso)) ? fmtStamp(iso) : String(iso || '—'));
 const fmtDate = (iso) => fmtStamp(iso, { year: true }).replace(/ \d{2}:\d{2} UTC$/, '');
 /** Replace ISO timestamps embedded in exported prose with the readable form. */
@@ -79,7 +83,7 @@ export async function render(el, ctx) {
   const simple = isSimple();
   const cleanups = [];
   const sources = M.source_manifest || [];
-  // wave 5: rows with a real rationale first (stable within each group); site metadata without one (meta.*) sinks to the end
+  // rows with a real rationale first (stable within each group); site metadata without one (meta.*) sinks to the end
   const assumptions = (M.assumptions || []).map((a, i) => ({ a, i })).sort((x, y) => (!x.a.rationale - !y.a.rationale) || x.i - y.i).map(({ a }) => a);
   const countBy = (list) => Object.fromEntries(PROV.map((p) => [p, list.filter((x) => up(x.provenance) === p).length]));
   const srcN = countBy(sources), asmN = countBy(assumptions);
@@ -156,8 +160,9 @@ export async function render(el, ctx) {
     body: h('div', { class: 'stack-3', dataset: { role: 'holdout-chain' } },
       h('ol', { class: 'dm-steps' }, STEPS.map(([t, d]) => h('li', {}, h('b', {}, t), ' ', h('span', {}, d)))),
       chain.length ? xp(byMode(`Show the ${fmtInt(chain.length)} decision records behind it`, `Decision records (${fmtInt(chain.length)})`),
-        // wave C: each entry shows its first sentence; the full DECISIONS.md entry opens in place (no hard truncation)
-        h('ol', { class: 'dm-chain', dataset: { readability: 'skip' } }, chain.map((c) => { const t = replaceCodes(humanISO(stripMd(c.text)), { mode: 'code' }); const first = (t.match(/^.+?[.;](\s|$)/) || [t])[0].trim(); return h('li', {}, h('b', { class: 'mono' }, c.id), h('span', {}, ` ${first}`), first.length < t.length ? h('details', { class: 'dm-chain-more' }, h('summary', {}, 'Full entry'), h('p', { class: 'm-0' }, t)) : null); }))) : null),
+        // each entry shows its first sentence; the full DECISIONS.md entry opens in place (no hard truncation)
+        // the decision code moves to a small source line under each entry
+        h('ol', { class: 'dm-chain', dataset: { readability: 'skip' } }, chain.map((c) => { const t = neutralChain(replaceCodes(humanISO(stripMd(c.text)), { mode: 'code' })); const first = (t.match(/^.+?[.;](\s|$)/) || [t])[0].trim(); return h('li', {}, h('span', {}, first), first.length < t.length ? h('details', { class: 'dm-chain-more' }, h('summary', {}, 'Full entry'), h('p', { class: 'm-0' }, t)) : null, h('span', { class: 'dm-chain-src t-12 faint' }, `Source: decision log ${c.id}`)); }))) : null),
   });
   // A5 calibration note (verbatim) + the calibration chart
   const CN = M.calibration_note || {};
@@ -216,7 +221,7 @@ export async function render(el, ctx) {
     const STATUS = { fixed: ['ok', 'Fixed'], disclosed: ['review', 'Disclosed'], 'next experiment': ['info', 'Next experiment'] };
     const range = `${F[0].id}…${F.at(-1).id}`;
     el.append(card({
-      prov: C.provenance || 'DERIVED', kicker: byMode('An outside-style review found problems', `${range} · ${fmtInt(F.length)} findings`),
+      prov: C.provenance || 'DERIVED', kicker: byMode(`An AI-assisted domain review found ${fmtInt(F.length)} problems`, `AI-assisted domain review · ${range} · ${fmtInt(F.length)} findings`),
       title: byMode(`${fmtInt(F.length)} findings: ${fmtInt(C.fixed)} fixed, ${fmtInt(C.disclosed)} disclosed, ${fmtInt(C['next experiment'])} for the next experiments`, `${fmtInt(C.fixed)} fixed · ${fmtInt(C.disclosed)} disclosed · ${fmtInt(C['next experiment'])} next experiment`),
       body: h('div', { class: 'stack-2', dataset: { role: 'av2' } },
         h('div', { class: 'dm-av2-counts' }, Object.entries(STATUS).map(([k, [tone, lab]]) => h('div', { class: `dm-av2-count dm-av2-count--${k.replace(' ', '-')}` }, h('span', { class: 'dm-av2-n' }, fmtInt(C[k] ?? F.filter((f) => f.status === k).length)), h('span', {}, lab)))),
@@ -320,7 +325,7 @@ export async function render(el, ctx) {
   const table = dataTable({
     caption: 'Assumption register', bare: true, maxHeight: 520, rows: assumptions, mobileColumns: ['key', 'value', 'provenance', 'rationale'],
     columns: [
-      // wave C: keys break only after '.' and '_' (a <wbr> after each), never mid-word
+      // keys break only after '.' and '_' (a <wbr> after each), never mid-word
       { key: 'key', label: 'Key', mono: true, render: (r) => h('span', { class: 'dm-key' }, ...String(r.key).split(/(?<=[._])/).flatMap((t, i) => (i ? [h('wbr'), t] : [t]))) },
       { key: 'value', label: 'Value', mono: true, format: (v, r) => `${v == null || ['null', 'None', ''].includes(String(v)) ? '—' : String(v).replace(/^"(.*)"$/, '$1')}${r.unit ? ` ${r.unit}` : ''}` },
       { key: 'provenance', label: 'Tag', render: (r) => provChip(r.provenance, { force: true }) },
@@ -331,7 +336,7 @@ export async function render(el, ctx) {
     const ql = q.trim().toLowerCase();
     const rows = assumptions.filter((a) => (pf === 'ALL' || up(a.provenance) === pf) && (gf === 'ALL' || (a.group || String(a.key || '').split('.')[0]) === gf) &&
       (!ql || [a.key, a.value, a.rationale, a.source, a.group].some((v) => String(v ?? '').toLowerCase().includes(ql))));
-    // consecutive rows with an identical rationale: print it once, then "same as above" (critic smaller issue)
+    // consecutive rows with an identical rationale: print it once, then "same as above" 
     table.update(rows.map((r, i) => ({ ...r, _same: i > 0 && !!r.rationale && r.rationale === rows[i - 1].rationale })));
     showing.textContent = `Showing ${fmtInt(rows.length)} of ${fmtInt(assumptions.length)}`;
   };
@@ -505,7 +510,7 @@ function consistency(host, kpis) {
   const rows = rows0.map((r) => ({ ...r, ok: r.selection_inside_holdout_ci ?? (r.selection_recommended >= r.holdout_ci[0] && r.selection_recommended <= r.holdout_ci[1]), dSel: rel(r.selection_recommended, r), dLo: rel(r.holdout_ci[0], r), dHi: rel(r.holdout_ci[1], r) }));
   const inside = rows.filter((r) => r.ok);
   const worst = rows.filter((r) => !r.ok).sort((a, b) => Math.abs(b.dSel) - Math.abs(a.dSel))[0];
-  const rec = displayName(kpis?.core_id || 'P2', { mode: isSimple() ? 'short' : 'code' }); // wave C: the consistency rows are the core plan P2 (exporter sel_r = P2)
+  const rec = displayName(kpis?.core_id || 'P2', { mode: isSimple() ? 'short' : 'code' }); // the consistency rows are the core plan P2 (exporter sel_r = P2)
   const f = chartFrame(host, {
     implication: byMode('A big gap between practice runs and fresh runs would mean the plan was tuned to the practice runs.', 'Selection-to-holdout gaps show how much the plan was fitted to the seeds it was chosen on.'),
     headline: rows.length ? byMode(`${fmtInt(inside.length)} of ${fmtInt(rows.length)} practice-run (selection-seed) results fall inside the fresh-run likely range`, `${fmtInt(inside.length)} of ${fmtInt(rows.length)} selection-seed results fall inside the holdout 95% CI`) : 'Selection vs holdout comparison not exported',
