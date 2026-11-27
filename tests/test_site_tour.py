@@ -86,7 +86,10 @@ def test_each_step_moves_card_once_and_never_blank(site, browser, vp):  # noqa: 
             for a, b in zip(frames, frames[1:]):
                 if a["text"] != b["text"]:
                     assert a["cardOp"] < 0.01 or b["cardOp"] < 0.01, ("card text changed while visible", k, a, b)
-            assert any(f["freezes"] == 1 for f in frames), "no still copy held the old page"
+            assert any(f["freezes"] >= 1 for f in frames), "no still copy held the old page"
+            for a, b in zip(frames, frames[1:]):   # the spotlight never moves while the card shows
+                if a["cardOp"] > 0.01 and b["cardOp"] > 0.01:
+                    assert a["spot"] == b["spot"], ("spotlight moved under a visible card", k, a, b)
             assert frames[-1]["freezes"] == 0
             for f in frames:
                 if f["spotOp"] > 0.01 and not f["spotAnim"] and f["phase"] == "steady":

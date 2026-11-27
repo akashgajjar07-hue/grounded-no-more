@@ -55,7 +55,7 @@ COMBOS = [("chromium", 1440, 900), ("chromium", 390, 844), ("webkit", 1440, 900)
 LUM_REL, LUM_ABS = 0.85, 3.0       # a transition frame may not be darker than 85% of the darker steady step, minus 3
 SWING = 0.10                       # ... and between steps (dim kept up) brightness stays within 10% of the two steady steps
 SWING_SWAP = 0.35                  # frames sampled during the ~150 ms content swap inside the spotlight: within 35%
-STEP_CHANGE_MAX = 1100             # ms from the step index changing to the new step being steady (target ~700-800)
+STEP_CHANGE_MAX = 1300             # ms from the step index changing to the new step being steady (card waits for the spotlight to land)
 DUMP: Path | None = None
 STD_REL = 0.6                      # ... nor flatter (blank / displaced page) than 60% of the flatter steady step's contrast
 CLS_MAX, FPS_MIN = 0.001, 58.0
@@ -232,6 +232,11 @@ def check_a(d: dict, engine: str) -> dict:
             if sp[1] < s["bar"] + 1 or sp[1] + sp[3] > low:
                 outside.append({"index": s["index"], "spot": sp, "bar": s["bar"], "band_bottom": low})
     res["c4_spot_inside_band"] = {"bad_samples": outside[:10], "n_bad": len(outside), "pass": not outside}
+    # g: the spotlight never moves (or resizes) while the card is visible
+    spot_moves = [{"index": b["index"], "phase": b["phase"], "from": a["spot"], "to": b["spot"]} for a, b in zip(S, S[1:])
+                  if a["cardOp"] > 0.01 and b["cardOp"] > 0.01 and a["index"] == b["index"] and a["spot"] and b["spot"]
+                  and max(abs(x - y) for x, y in zip(a["spot"], b["spot"])) > 1]
+    res["g_spot_still_while_card_visible"] = {"bad": spot_moves[:10], "n_bad": len(spot_moves), "pass": not spot_moves}
     # e: the card's content (counter, title, Next/Finish, Back) changes only while the card is hidden
     swaps = [{"from": a["cardText"], "to": b["cardText"], "cardOp": [a["cardOp"], b["cardOp"]]} for a, b in zip(S, S[1:])
              if a["cardText"] != b["cardText"] and a["cardOp"] > 0.01 and b["cardOp"] > 0.01]

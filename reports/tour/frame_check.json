@@ -52,6 +52,11 @@
     "n_bad": 0,
     "pass": true
    },
+   "g_spot_still_while_card_visible": {
+    "bad": [],
+    "n_bad": 0,
+    "pass": true
+   },
    "e_card_content_changes_hidden": {
     "bad": [],
     "n_bad": 0,
@@ -59,13 +64,13 @@
    },
    "f_step_change_ms": {
     "per_transition": [
-     701,
-     750,
-     776,
-     700,
-     700
+     1150,
+     1196,
+     1083,
+     1195,
+     1050
     ],
-    "max": 776,
+    "max": 1196,
     "pass": true
    },
    "c3_text_fits": {
@@ -87,8 +92,8 @@
       "clientHeight": 184
      },
      "5": {
-      "scrollHeight": 163,
-      "clientHeight": 163
+      "scrollHeight": 184,
+      "clientHeight": 184
      },
      "6": {
       "scrollHeight": 184,
@@ -101,9 +106,9 @@
     "cls": 0,
     "cls_supported": true,
     "fps": 59.8,
-    "frame_ms_p95": 16.8,
+    "frame_ms_p95": 16.7,
     "frames_over_34ms": 0,
-    "n_frames": 1516,
+    "n_frames": 1673,
     "pass": true,
     "note": null
    },
@@ -125,7 +130,7 @@
      "2": 24.4,
      "3": 19.9,
      "4": 19.8,
-     "5": 19.2,
+     "5": 19.1,
      "6": 25.5
     },
     "steady_contrast": {
@@ -163,12 +168,12 @@
     "pass": true
    },
    "capture": {
-    "video_frames": 249,
+    "video_frames": 278,
     "mean_interval_ms": 100.0
    },
    "strip": {
     "path": "reports/tour/strip_chromium_1440.jpg",
-    "bytes": 186726
+    "bytes": 212035
    },
    "video": "private/tour_videos/tour_chromium_1440.webm",
    "pass": true
@@ -225,6 +230,11 @@
     "n_bad": 0,
     "pass": true
    },
+   "g_spot_still_while_card_visible": {
+    "bad": [],
+    "n_bad": 0,
+    "pass": true
+   },
    "e_card_content_changes_hidden": {
     "bad": [],
     "n_bad": 0,
@@ -232,13 +242,13 @@
    },
    "f_step_change_ms": {
     "per_transition": [
-     750,
-     744,
-     689,
-     699,
-     744
+     1151,
+     1148,
+     1122,
+     1143,
+     1146
     ],
-    "max": 750,
+    "max": 1151,
     "pass": true
    },
    "c3_text_fits": {
@@ -273,10 +283,10 @@
    "d_cls_fps": {
     "cls": 0,
     "cls_supported": true,
-    "fps": 59.8,
-    "frame_ms_p95": 16.7,
+    "fps": 59.9,
+    "frame_ms_p95": 16.8,
     "frames_over_34ms": 0,
-    "n_frames": 1506,
+    "n_frames": 1674,
     "pass": true,
     "note": null
    },
@@ -304,7 +314,7 @@
     "steady_contrast": {
      "1": 24.0,
      "2": 22.2,
-     "3": 26.2,
+     "3": 26.1,
      "4": 29.0,
      "5": 22.0,
      "6": 21.7
@@ -336,12 +346,12 @@
     "pass": true
    },
    "capture": {
-    "video_frames": 250,
+    "video_frames": 279,
     "mean_interval_ms": 100.0
    },
    "strip": {
     "path": "reports/tour/strip_chromium_390.jpg",
-    "bytes": 222353
+    "bytes": 245962
    },
    "video": "private/tour_videos/tour_chromium_390.webm",
    "pass": true
@@ -398,6 +408,11 @@
     "n_bad": 0,
     "pass": true
    },
+   "g_spot_still_while_card_visible": {
+    "bad": [],
+    "n_bad": 0,
+    "pass": true
+   },
    "e_card_content_changes_hidden": {
     "bad": [],
     "n_bad": 0,
@@ -405,13 +420,13 @@
    },
    "f_step_change_ms": {
     "per_transition": [
-     640,
-     630,
-     694,
-     624,
-     602
+     1006,
+     1044,
+     942,
+     1040,
+     1012
     ],
-    "max": 694,
+    "max": 1044,
     "pass": true
    },
    "c3_text_fits": {
@@ -446,10 +461,10 @@
    "d_cls_fps": {
     "cls": 0,
     "cls_supported": true,
-    "fps": 58.8,
+    "fps": 58.0,
     "frame_ms_p95": 18,
-    "frames_over_34ms": 18,
-    "n_frames": 1449,
+    "frames_over_34ms": 23,
+    "n_frames": 1589,
     "pass": true,
     "note": "WebKit: layout-shift API unavailable; fps reported, not gated"
    },
@@ -467,9 +482,9 @@
    ],
    "a_no_dark_frames": {
     "steady_luminance": {
-     "1": 22.6,
+     "1": 22.5,
      "2": 25.2,
-     "3": 20.5,
+     "3": 20.6,
      "4": 20.3,
      "5": 19.6,
      "6": 18.7
@@ -480,7 +495,7 @@
      "3": 21.6,
      "4": 21.9,
      "5": 20.7,
-     "6": 19.6
+     "6": 12.6
     },
     "dark_frames": [],
     "n_dark": 0,
@@ -509,12 +524,12 @@
     "pass": true
    },
    "capture": {
-    "video_frames": 250,
+    "video_frames": 275,
     "mean_interval_ms": 100.0
    },
    "strip": {
     "path": "reports/tour/strip_webkit_1440.jpg",
-    "bytes": 207351
+    "bytes": 252401
    },
    "video": "private/tour_videos/tour_webkit_1440.webm",
    "pass": true
@@ -571,6 +586,11 @@
     "n_bad": 0,
     "pass": true
    },
+   "g_spot_still_while_card_visible": {
+    "bad": [],
+    "n_bad": 0,
+    "pass": true
+   },
    "e_card_content_changes_hidden": {
     "bad": [],
     "n_bad": 0,
@@ -578,13 +598,13 @@
    },
    "f_step_change_ms": {
     "per_transition": [
-     665,
-     653,
-     631,
-     686,
-     689
+     1124,
+     1144,
+     1034,
+     1043,
+     1187
     ],
-    "max": 689,
+    "max": 1187,
     "pass": true
    },
    "c3_text_fits": {
@@ -619,10 +639,10 @@
    "d_cls_fps": {
     "cls": 0,
     "cls_supported": true,
-    "fps": 59.3,
+    "fps": 58.3,
     "frame_ms_p95": 18,
-    "frames_over_34ms": 11,
-    "n_frames": 1471,
+    "frames_over_34ms": 21,
+    "n_frames": 1631,
     "pass": true,
     "note": "WebKit: layout-shift API unavailable; fps reported, not gated"
    },
@@ -640,12 +660,12 @@
    ],
    "a_no_dark_frames": {
     "steady_luminance": {
-     "1": 31.1,
+     "1": 31.0,
      "2": 29.0,
      "3": 25.9,
      "4": 29.0,
      "5": 21.1,
-     "6": 21.0
+     "6": 20.8
     },
     "steady_contrast": {
      "1": 24.7,
@@ -653,7 +673,7 @@
      "3": 26.8,
      "4": 29.7,
      "5": 22.5,
-     "6": 22.5
+     "6": 22.6
     },
     "dark_frames": [],
     "n_dark": 0,
@@ -682,22 +702,22 @@
     "pass": true
    },
    "capture": {
-    "video_frames": 251,
+    "video_frames": 279,
     "mean_interval_ms": 100.0
    },
    "strip": {
     "path": "reports/tour/strip_webkit_390.jpg",
-    "bytes": 248520
+    "bytes": 296428
    },
    "video": "private/tour_videos/tour_webkit_390.webm",
    "pass": true
   }
  },
  "step_ms": 4000,
- "generated": "2026-11-27T11:49:48Z",
+ "generated": "2026-11-27T12:38:58Z",
  "thresholds": {
   "swing": 0.1,
-  "step_change_max_ms": 1100,
+  "step_change_max_ms": 1300,
   "lum_rel": 0.85,
   "lum_abs": 3.0,
   "std_rel": 0.6,

@@ -771,7 +771,7 @@ async function prefetchRoute(route) {
  */
 export function storyMode({ steps, navigate, onExit, stepMs }) {
   const STEP_MS = () => +(stepMs || window.__gnmTourStepMs || MOTION.tourStep);
-  const T_OUT = MOTION.fast, T_FREEZE = 140, T_VIEW_IN = 220, T_GLIDE = 300, T_CARD = 200, T_SHEET = 260, SLOW_MS = 300, RISE = 6;
+  const T_OUT = MOTION.fast, T_FREEZE = 120, T_FREEZE_LEAD = 80, T_VIEW_IN = 220, T_GLIDE = 340, T_OPEN = 300, T_CARD = 200, T_SHEET = 260, SLOW_MS = 300, RISE = 5;
   let i = 0;
   let seq = 0;          // transition token: a newer go() / exit() makes every older await bail out
   let target = null;
@@ -879,44 +879,71 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
   // scrolls unseen, then the copy fades out (150 ms) and the new content fades in with a 6 px rise (220 ms). The shell
   // (sidebar, top bar), the dim and the spotlight never change; the old and new pages are never shown on top of each other.
   const viewEl = () => document.getElementById('view');
-  let viewHidden = false, freezeEl = null;
+  let viewHidden = false;
+  const freezeEls = [];
   function viewOut() {
     const v = viewEl();
     if (!v || viewHidden) return Promise.resolve();
     viewHidden = true;
     const r = v.getBoundingClientRect();
-    if (r.width > 0 && r.height > 0) {
-      const c = v.cloneNode(true);
+    const main = v.closest('.main') || v.parentElement;
+    const m = main ? main.getBoundingClientRect() : r;
+    const strip = (c) => {
       c.removeAttribute('id'); c.removeAttribute('tabindex');
       c.querySelectorAll('[id], [data-story], [data-id]').forEach((e) => { e.removeAttribute('id'); e.removeAttribute('data-story'); e.removeAttribute('data-id'); });
+      return c;
+    };
+    const layer = (cls, box, child, z) => {
+      const w = h('div', { class: `story-freeze ${cls}`, 'aria-hidden': 'true' }, child);
+      w.inert = true;
+      Object.assign(w.style, { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px`, zIndex: String(z) });
+      document.body.append(w);
+      freezeEls.push(w);
+    };
+    if (r.width > 0 && r.height > 0) {
+      // the whole content column, opaque (same fixed blueprint background), so nothing of the new page shows beneath
+      const left = Math.max(0, m.left), right = Math.min(innerWidth, m.right);
+      const c = strip(v.cloneNode(true));
       c.classList.remove('view-enter');
-      Object.assign(c.style, { top: `${Math.round(r.top)}px`, width: `${r.width}px`, height: `${r.height}px` });
-      // a viewport-sized clipping layer holds the copy (a page-tall fixed layer made WebKit drop tiles: white frames)
-      const wrap = h('div', { class: 'story-freeze', 'aria-hidden': 'true' }, c);
-      wrap.inert = true;
-      Object.assign(wrap.style, { left: `${Math.max(0, r.left)}px`, width: `${r.width}px` });
-      v.after(wrap);
-      freezeEl = wrap;
+      Object.assign(c.style, { left: `${Math.round(r.left - left)}px`, top: `${Math.round(r.top)}px`, width: `${r.width}px`, height: `${r.height}px` });
+      layer('story-freeze-view blueprint-bg', { left, top: 0, width: right - left, height: innerHeight }, c, 15);
     }
-    v.style.opacity = '0';
+    // the top bar (breadcrumb) and the sidebar (active item) are held too: they switch in the same frame as the content
+    const bar = document.querySelector('.topbar');
+    const br = bar?.getBoundingClientRect();
+    if (br && br.width > 0 && br.bottom > 0) layer('story-freeze-bar', { left: br.left, top: br.top, width: br.width, height: br.height }, strip(bar.cloneNode(true)), 21);
+    const rail = document.querySelector('.rail');
+    const rr = rail?.getBoundingClientRect();
+    if (rr && rr.width > 0 && rr.right > 4 && rr.left >= -1) {
+      const rc = strip(rail.cloneNode(true));
+      layer('story-freeze-rail blueprint-bg', { left: rr.left, top: rr.top, width: rr.width, height: rr.height }, rc, 16);
+      const sc = rail.scrollTop;
+      if (sc) rc.scrollTop = sc;
+    }
+    // hide the live content with a script animation: it outranks the router's CSS entry animation (inline opacity would not)
+    if (typeof v.animate === 'function') {
+      const a = v.animate([{ opacity: 0 }, { opacity: 0 }], { duration: 1, fill: 'forwards' });
+      a.id = 'gnm-tour-hide';
+    } else v.style.opacity = '0';
     return Promise.resolve();
   }
-  /** The still copy fades out; resolves part-way (≈ when it is mostly gone) so the new content can start rising. */
+  /** The held copies fade out together (opacity only, 120 ms); resolves at 80 ms, when the new content starts rising. */
   function freezeOut() {
-    const c = freezeEl;
-    freezeEl = null;
-    if (!c) return Promise.resolve();
-    if (!smooth() || typeof c.animate !== 'function') { c.remove(); return Promise.resolve(); }
-    const a = c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T_FREEZE, easing: MOTION.ease.standard, fill: 'forwards' });
-    track(a).then(() => c.remove());
-    return sleep(50);   // the new content starts rising as the copy passes ~40%: a short, faint overlap (never 50/50 text)
+    const els = freezeEls.splice(0);
+    if (!els.length) return Promise.resolve();
+    if (!smooth() || typeof els[0].animate !== 'function') { els.forEach((e) => e.remove()); return Promise.resolve(); }
+    // exit easing (slow start): the old content is still ~half there at 80 ms when the new one starts rising, so the
+    // lit area never dips to an empty frame; the two overlap only faintly for ~40 ms
+    els.forEach((e) => { const a = e.animate([{ opacity: 1 }, { opacity: 0 }], { duration: T_FREEZE, easing: MOTION.ease.exit, fill: 'forwards' }); track(a).then(() => e.remove()); });
+    return sleep(T_FREEZE_LEAD);
   }
-  /** The new content comes in: opacity + a 6 px rise (after the still copy has mostly faded: never text over text). */
+  /** The new content comes in: opacity + a 5 px rise. */
   function riseIn() {
     const v = viewEl();
     if (!v || !viewHidden) return Promise.resolve();
     viewHidden = false;
     v.style.removeProperty('opacity');
+    v.getAnimations().filter((a) => a.id === 'gnm-tour-hide').forEach((a) => a.cancel());
     if (!smooth() || typeof v.animate !== 'function') return Promise.resolve();
     const a = v.animate([{ opacity: 0, transform: `translateY(${RISE}px)` }, { opacity: 1, transform: 'none' }], { duration: T_VIEW_IN, easing: MOTION.ease.enter });
     a.id = 'gnm-tour-view';
@@ -925,11 +952,11 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
   function viewReset() {
     const v = viewEl();
     viewHidden = false;
-    freezeEl?.remove(); freezeEl = null;
+    freezeEls.splice(0).forEach((e) => e.remove());
     document.querySelectorAll('.story-freeze').forEach((e) => e.remove());
     if (!v) return;
     v.style.removeProperty('opacity');
-    v.getAnimations().filter((a) => a.id === 'gnm-tour-view').forEach((a) => a.cancel());
+    v.getAnimations().filter((a) => a.id === 'gnm-tour-view' || a.id === 'gnm-tour-hide').forEach((a) => a.cancel());
   }
   function showLoading(on) {
     if (on === !loadEl.classList.contains('is-off')) return;
@@ -1006,11 +1033,23 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
   }
   /** Move the ONE spotlight to its planned box: a 300 ms glide (translate + scale from where it is now), or a fade-in. */
   function spotTo(p) {
-    const wasOn = !spot.classList.contains('is-off') && spotBox;
+    const visible = !spot.classList.contains('is-off');
+    const wasOn = visible && spotBox;
     const from = wasOn ? spot.getBoundingClientRect() : null;
     spot.getAnimations().filter((a) => a.id === 'gnm-spot-glide').forEach((a) => a.cancel());
     apply(p);
     if (!p.spot) return fade(spot, 0, T_OUT);
+    if (visible && !wasOn && smooth() && typeof spot.animate === 'function') {
+      // the scrim is already down with no hole: the ring grows open onto the first target
+      const to = p.spot, k = 0.15;
+      spot.style.transformOrigin = '0 0';
+      const a = spot.animate([
+        { transform: `translate(${to.left + to.width * (1 - k) / 2}px, ${to.top + to.height * (1 - k) / 2}px) scale(${k})` },
+        { transform: `translate(${Math.round(to.left)}px, ${Math.round(to.top)}px)` },
+      ], { duration: T_GLIDE, easing: MOTION.ease.enter });
+      a.id = 'gnm-spot-glide';
+      return track(a);
+    }
     if (!wasOn || !from || !from.width) return fade(spot, 1, MOTION.base, MOTION.ease.enter);
     if (!smooth() || typeof spot.animate !== 'function') return Promise.resolve();
     const to = p.spot;
@@ -1056,7 +1095,7 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
     return query(s.selector);
   }
   /**
-   * Wait until the view is ready and the target is real and stable (same box on 2 checks, 40 ms apart), the fonts are
+   * Wait until the view is ready and the target and its container are real and stable (unchanged over ~100 ms), the fonts are
    * loaded and no stylesheet is pending. onSlow fires once past 300 ms. Gives up after 8 s (→ the best element or null).
    */
   async function waitTarget(s, my, onSlow) {
@@ -1068,16 +1107,18 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
       const waited = performance.now() - t0;
       el = viewReady() ? pick(s, waited) : null;
       if (el && targetOk(el)) {
+        // the target AND its card / list must hold still for ~100 ms (a filtered list can still be reflowing)
         const r = el.getBoundingClientRect();
-        const key = [r.left, r.top + scrollY, r.width, r.height].map(Math.round).join();
+        const box = (el.closest('.card, section, table, ul, ol') || el.parentElement || el).getBoundingClientRect();
+        const key = [r.left, r.top + scrollY, r.width, r.height, box.top + scrollY, box.height, box.width].map(Math.round).join();
         if (key === last) stable += 1; else { last = key; stable = 0; }
-        if (stable >= 1 && fontsOk) return el;
+        if (stable >= 2 && fontsOk) return el;
       } else { last = ''; stable = 0; }
       if (!slow && waited > SLOW_MS) { slow = true; onSlow?.(); }
       // the page could not render (error state) and the target will never come: show the step without a spotlight
       if (waited > SLOW_MS && viewReady() && !el && viewEl()?.querySelector(':scope > .state--error, :scope > .state')) return null;
       if (waited > 8000) return el && el.isConnected ? el : null;
-      await sleep(40);
+      await sleep(50);
     }
     return null;
   }
@@ -1117,6 +1158,12 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
     phase = 'out';
     const cur = location.hash, want = s.route;
     const differs = !!want && (cur.split('?')[0] !== want.split('?')[0] || (want.includes('?') && cur !== want));
+    if (spot.classList.contains('is-off')) {
+      // opening: the scrim comes down over the current page first (no hole yet); the still is taken under it
+      apply({ spot: null, card: null });
+      await fade(spot, 1, T_OPEN, MOTION.ease.standard);
+      if (my !== seq) return;
+    }
     await Promise.all([cardOut(), differs ? viewOut() : null]);
     if (my !== seq) return;
     paintCard();   // content changes only while the card is hidden
@@ -1147,7 +1194,9 @@ export function storyMode({ steps, navigate, onExit, stepMs }) {
     const glide = spotTo(p);
     await freezeOut();
     if (my !== seq) return;
-    await Promise.all([riseIn(), cardIn(), glide]);
+    await Promise.all([riseIn(), glide]);
+    if (my !== seq) return;
+    await cardIn();   // only once the spotlight has landed: it never moves while the card shows
     if (my !== seq) return;
     phase = 'steady';
     root.classList.remove('is-moving');

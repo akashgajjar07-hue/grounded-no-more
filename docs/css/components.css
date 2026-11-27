@@ -396,8 +396,9 @@ html.tour-active { scrollbar-width: none; }
 html.tour-active::-webkit-scrollbar { display: none; }
 html.tour-active .topbar { background: var(--bg); }
 /* the still copy of the outgoing page content the tour changes the page under (ui.js storyMode viewOut) */
-.story-freeze { position: fixed; top: 0; height: 100vh; z-index: 15; pointer-events: none; overflow: hidden; contain: strict; }
-.story-freeze > .view { position: absolute; left: 0; margin: 0; max-width: none; min-height: 0; }
+.story-freeze { position: fixed; pointer-events: none; overflow: hidden; contain: strict; }
+.story-freeze-view > .view { position: absolute; margin: 0; max-width: none; min-height: 0; }
+.story-freeze-bar > .topbar, .story-freeze-rail > .rail { position: static; width: 100%; height: 100%; transform: none; }
 .story-freeze, .story-freeze * { animation: none !important; transition: none !important; }
 /* "Loading next step…": only when a step takes longer than 300 ms to be ready */
 .story-loading {
