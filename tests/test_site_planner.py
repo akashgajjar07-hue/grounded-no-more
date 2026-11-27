@@ -23,7 +23,7 @@ def test_planner_essay(site, browser, vp, mode):  # noqa: F811
             page.wait_for_timeout(500)
         audit(page, problems, min_frames=0)
         assert page.locator("#view h1").inner_text().strip() == "The Planner Behind the Project"
-        assert page.locator('[data-role="intro3"]').count() == 1
+        assert page.locator('[data-role="intro3"]').count() == 0   # v2.2 review: no generic "what to do" panel on the essay
         # v2.2: the essay reads the same in both modes, and says so under the header
         assert page.locator('.pl-head [data-role="mode-same"]').inner_text().strip() == "This page reads the same in Simple and Expert."
         assert not re.search(r"\bdraft\b|\bagents?\b|interview|linkedin|legacy|abu dhabi|portfolio|\bwant to work\b", page.locator("#view").inner_text(), re.I)
@@ -32,8 +32,8 @@ def test_planner_essay(site, browser, vp, mode):  # noqa: F811
         heads = [t.strip() for t in essay.locator("h2").all_inner_texts()]
         expected = [l[3:].strip() for l in SRC.splitlines() if l.startswith("## ")]
         assert heads == expected
-        q = page.locator('[data-role="pull-quote"] p').inner_text().strip()
-        assert q and q in SRC.replace("*", "")
+        assert page.locator('[data-role="pull-quote"]').count() == 0   # v2.2 review: no pull quote repeating the essay
+        assert not re.search(r"\bcells?\b|\bSBA\b|92% claim", page.locator("#view").inner_text())
         assert page.locator('a[data-role="link-about"]').get_attribute("href") == "#/about"
         docs = page.evaluate("[...document.querySelectorAll('[data-role=project-docs] a')].map(a => a.getAttribute('href'))")
         assert len(docs) == 5 and all(h.startswith("https://github.com/akashgajjar07-hue/grounded-no-more/blob/main/") for h in docs)

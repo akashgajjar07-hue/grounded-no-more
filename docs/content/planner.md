@@ -8,10 +8,8 @@ In a shop, an empty shelf means a lost sale. In aviation, a missing part can mea
 
 ## Decisions I made
 
-- I chose aviation spare parts as the subject.
-- I insisted on decision-ready visuals: every screen should help a planner decide something, not just show a chart.
-- When a domain critique found errors in the first version, I archived v1 and its 92% claim instead of polishing it, and rebuilt the model.
-- I kept the unfavourable results visible. The forecasting champions were best in only 3 of 9 cells, and SBA ranked 6th of 9 in its own cell.
+- When a domain critique found errors in the first version, I archived v1 and its headline (a 92% cut in downtime). I rebuilt the model instead of polishing it.
+- I kept the unfavourable results visible. The forecasting champions were best in only 3 of 9 groups, and the method chosen in advance ranked 6th of 9 in its own group.
 - When a later review found weaknesses, I chose to disclose them instead of re-tuning the model until they went away.
 - I removed the savings number from the landing page. It now sits on the results page, next to its limits.
 

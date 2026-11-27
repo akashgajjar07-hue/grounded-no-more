@@ -135,3 +135,4 @@
 .dm-next .section-title h2:focus:not(:focus-visible) { outline: none; }
 .dm-next-back { color: var(--text-muted); }
 .dm-chain-src { display: block; margin-top: 2px; font-family: var(--font-mono); }
+.dm-src-file { display: block; font-family: var(--font-mono); overflow-wrap: anywhere; }

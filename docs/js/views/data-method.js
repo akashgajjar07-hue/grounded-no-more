@@ -12,7 +12,7 @@ import { displayName, nameTag, replaceCodes } from '../lib/names.js';
 import { term } from '../lib/glossary.js';
 import { countUpOnce } from '../lib/motion.js';
 
-/** KPI number that counts up once per session (v2.1 addendum); re-renders print the final value. */
+/** KPI number that counts up once per session ; re-renders print the final value. */
 function countEl(v, key) { const el = h('span', {}, fmtInt(v)); requestAnimationFrame(() => countUpOnce(el, v, fmtInt, { key })); return el; }
 import { chartFrame, responsive, svgIn, theme, truncate, refLine, fmtPct, fmtInt, fmtNum, fmtStamp } from '../charts/theme.js';
 import { assetURL } from '../data.js';
@@ -48,12 +48,20 @@ function ensureCSS() {
   return link.__ready;
 }
 const up = (p) => String(p || '').toUpperCase();
+/** Source landing pages: a Zenodo file → its record page; the OurAirports CSV mirror → ourairports.com/data. */
+const sourcePage = (u) => {
+  const z = String(u).match(/^(https:\/\/zenodo\.org\/records\/\d+)\/files\//);
+  if (z) return z[1];
+  if (/ourairports/i.test(u) && /\.csv$/i.test(u)) return 'https://ourairports.com/data/';
+  return u;
+};
 /** Decision-log wording shown neutrally: "(author's request, added AFTER the main v2 holdout)" → "added after the main holdout as a post-plan robustness check". */
 const neutralChain = (s) => String(s ?? '')
   .replace(/^Post-plan robustness check \(author['’]s request, added AFTER the main v2 holdout\)\./i, 'Added after the main holdout as a post-plan robustness check.')
   .replace(/\s*\(author['’]s request,?\s*/gi, ' (').replace(/\bAFTER\b/g, 'after').replace(/\bFREEZE\b/g, 'freeze');
 const num = (v) => typeof v === 'number' && Number.isFinite(v);
-const stripMd = (s) => String(s ?? '').replace(/`([^`]*)`/g, '$1').replace(/\*([^*]+)\*/g, '$1');
+/** Markdown marks dropped, and bracketed brief IDs such as (A4), (SIM-4), (V21-B), (V2-SIM-10/11) removed from display. */
+const stripMd = (s) => String(s ?? '').replace(/`([^`]*)`/g, '$1').replace(/\*([^*]+)\*/g, '$1').replace(/\s*\((?:A\d+|V21-[A-Z]|SIM-\d+|V2-SIM-[\d/]+)\)/g, '');
 /** REAL build timestamps → shared fmtStamp ("26 Nov 02:25 UTC"; no raw ISO on screen). */
 const fmtTime = (iso) => (Number.isFinite(Date.parse(iso)) ? fmtStamp(iso) : String(iso || '—'));
 const fmtDate = (iso) => fmtStamp(iso, { year: true }).replace(/ \d{2}:\d{2} UTC$/, '');
@@ -93,9 +101,9 @@ export async function render(el, ctx) {
     eyebrow: 'Reference · Data & Method', title: 'Where every number comes from',
     lede: byMode('Every number on this site is labelled with where it came from. The models run offline; the site only shows their results. Falcon Hub Airways (fictional) and its planes do not exist.',
       'Every value on this site carries a provenance tag. Models run offline in Python; the site only loads their exported results. Falcon Hub Airways (fictional) and its fleet do not exist.'),
-    meta: [provChip(M.meta?.provenance || 'DERIVED'), M.meta?.git_sha ? h('span', { class: 'chip chip-mono' }, `build ${String(M.meta.git_sha).slice(0, 7)}`) : null, M.meta?.generated_at ? h('span', { class: 'chip chip-mono', title: `Exported ${fmtTime(M.meta.generated_at)}` }, `exported ${fmtDate(M.meta.generated_at)}`) : null].filter(Boolean),
+    meta: [provChip(M.meta?.provenance || 'DERIVED'), M.meta?.release ? h('span', { class: 'chip chip-mono', dataset: { role: 'release' } }, `release ${M.meta.release}`) : null, M.meta?.generated_at ? h('span', { class: 'chip chip-mono', title: `Exported ${fmtTime(M.meta.generated_at)}` }, `exported ${fmtDate(M.meta.generated_at)}`) : null].filter(Boolean),
   }));
-  // v2.1 (C2): what the page is, in three lines
+  // what the page is, in three lines
   el.append(intro3({
     what: byMode('Where each number comes from, what was assumed, and how the results were checked.', 'Provenance of every input, the assumption register, the calibrate → freeze → holdout chain, review findings and limitations.'),
     why: byMode('Every result here is simulated. You should know what was assumed before you trust a number.', 'All results are conditional on simulated data and stated assumptions; the evaluation chain is what makes the holdout numbers credible.'),
@@ -167,7 +175,7 @@ export async function render(el, ctx) {
   // A5 calibration note (verbatim) + the calibration chart
   const CN = M.calibration_note || {};
   const calCard = h('section', { class: 'card', dataset: { role: 'calibration-note' } });
-  calCard.append(h('div', { class: 'card-kicker mb-1' }, byMode('How the starting point was set', 'Calibration (A5)')),
+  calCard.append(h('div', { class: 'card-kicker mb-1' }, byMode('How the starting point was set', 'Calibration')),
     CN.text ? h('p', { class: 'dm-verbatim', dataset: { readability: 'skip', role: 'a5' } }, CN.text) : h('p', { class: 'faint t-14' }, 'Calibration note not exported.'),
     ...(simple ? [h('p', { class: 't-14 muted mt-1' }, `In short: the ${p0}’s target range was our own choice. Every result depends on it.`)] : []));
   const calChart = h('div', { class: 'mt-2' });
@@ -176,7 +184,7 @@ export async function render(el, ctx) {
   // A6 stress worlds
   const SW = M.stress_worlds || K.stress_worlds || {};
   const swCard = card({
-    prov: SW.provenance || 'ASSUMED', kicker: byMode('Stress tests', 'Stress worlds (A6)'),
+    prov: SW.provenance || 'ASSUMED', kicker: byMode('Stress tests', 'Stress worlds'),
     body: h('div', { class: 'stack-2', dataset: { role: 'stress-worlds' } },
       h('p', { class: 'm-0' }, byMode('The plans were also run in a harder and an easier world: ', 'Stress worlds: '), h('span', { class: 'dm-verbatim-inline', dataset: { role: 'a6' } }, SW.text || 'not exported'), '.'),
       SW.ranges_note ? h('p', { class: 'm-0 t-14 muted', dataset: { role: 'ranges-note' } }, SW.ranges_note) : null,
@@ -213,27 +221,38 @@ export async function render(el, ctx) {
   }) : null;
   el.append(h('div', { class: 'dm-stack', dataset: { story: 'method-validation' } }, chainCard, calCard, swCard, testsCard, conCard, logCard, v1Card));
 
-  // ---------------------------------------------------------------- AV2 review findings (A12)
+  // ---------------------------------------------------------------- AV2 review findings
   const F = M.av2_findings || [];
   const C = M.av2_counts || {};
   if (F.length) {
-    el.append(sectionTitle(byMode('Review findings and what happened to each', 'Aviation review findings (AV2)')));
-    const STATUS = { fixed: ['ok', 'Fixed'], disclosed: ['review', 'Disclosed'], 'next experiment': ['info', 'Next experiment'] };
+    el.append(sectionTitle(byMode('Review findings and what happened to each', 'Aviation review findings')));
+    const STATUS = { fixed: ['ok', 'Fixed'], disclosed: ['review', 'Disclosed'], 'next experiment': ['review', 'Disclosed'] };
     const range = `${F[0].id}…${F.at(-1).id}`;
+    // counts from the data: "next experiment" findings are disclosed too; LIMITATIONS also proposes a next experiment for
+    // AV2-07 and AV2-17 (combined disruption scenarios, MRO-side model), which method.json does not flag yet
+    const NEXT_ALSO = ['AV2-07', 'AV2-17'];
+    const PRESENTATION = ['AV2-10', 'AV2-22'];   // copy / presentation fixes, not domain findings
+    const hasNext = (f) => f.status === 'next experiment' || NEXT_ALSO.includes(f.id);
+    const nFixed = F.filter((f) => f.status === 'fixed').length;
+    const nDisc = F.length - nFixed;
+    const nNext = F.filter(hasNext).length;
+    const nPres = F.filter((f) => PRESENTATION.includes(f.id)).length;
+    const fixV21 = (s) => String(s || '').replace(/\bv2\.1\b:?/g, 'this release:').replace(/^this release:/, 'This release:');
     el.append(card({
       prov: C.provenance || 'DERIVED', kicker: byMode(`An AI-assisted domain review found ${fmtInt(F.length)} problems`, `AI-assisted domain review · ${range} · ${fmtInt(F.length)} findings`),
-      title: byMode(`${fmtInt(F.length)} findings: ${fmtInt(C.fixed)} fixed, ${fmtInt(C.disclosed)} disclosed, ${fmtInt(C['next experiment'])} for the next experiments`, `${fmtInt(C.fixed)} fixed · ${fmtInt(C.disclosed)} disclosed · ${fmtInt(C['next experiment'])} next experiment`),
+      title: byMode(`${fmtInt(F.length)} findings: ${fmtInt(nFixed)} fixed, ${fmtInt(nDisc)} disclosed (${fmtInt(nNext)} with a proposed next experiment)`, `${fmtInt(nFixed)} fixed · ${fmtInt(nDisc)} disclosed (${fmtInt(nNext)} with a proposed next experiment)`),
       body: h('div', { class: 'stack-2', dataset: { role: 'av2' } },
-        h('div', { class: 'dm-av2-counts' }, Object.entries(STATUS).map(([k, [tone, lab]]) => h('div', { class: `dm-av2-count dm-av2-count--${k.replace(' ', '-')}` }, h('span', { class: 'dm-av2-n' }, fmtInt(C[k] ?? F.filter((f) => f.status === k).length)), h('span', {}, lab)))),
-        h('p', { class: 'm-0 t-14 muted' }, byMode('Fixed means changed in this release. Disclosed means written up as a known limit. Next experiment means it needs a new run.', 'Fixed = changed in v2/v2.1; disclosed = LIMITATIONS 29–39; next experiment = needs a new simulation (proposed, not run).')),
+        h('div', { class: 'dm-av2-counts' }, [['fixed', nFixed, 'Fixed'], ['disclosed', nDisc, 'Disclosed'], ['next-experiment', nNext, 'With a next experiment']].map(([k, n, lab]) => h('div', { class: `dm-av2-count dm-av2-count--${k}` }, h('span', { class: 'dm-av2-n' }, fmtInt(n)), h('span', {}, lab)))),
+        h('p', { class: 'm-0 t-14 muted' }, byMode('Fixed means changed in this release. Disclosed means written up as a known limit. Some disclosed findings also have a proposed next experiment: a new run, not done yet.', 'Fixed = changed in v2 or this release; disclosed = LIMITATIONS 29–39; next experiment = a proposed new simulation (not run).')),
+        nPres ? h('p', { class: 'm-0 t-14 muted', dataset: { role: 'av2-presentation' } }, `${fmtInt(nPres)} of the ${fmtInt(F.length)} (${PRESENTATION.join(', ')}) are presentation fixes, not domain findings.`) : null,
         xp(byMode(`Show all ${fmtInt(F.length)} findings`, `Status table (${range})`), h('div', { class: 'dm-wrap' }, dataTable({
           caption: `Review findings ${range}: status`, bare: true, dense: true, rows: F, mobileColumns: ['title', 'status', 'id'],
           columns: [
             { key: 'id', label: 'ID', mono: true },
             { key: 'title', label: 'Finding', render: (r) => replaceCodes(r.title) },
-            { key: 'severity', label: 'Severity', format: (v) => String(v || '—').replace(/^./, (c) => c.toUpperCase()) },
-            { key: 'status', label: 'Status', render: (r) => pill((STATUS[r.status] || ['unknown'])[0], (STATUS[r.status] || [null, r.status])[1]) },
-            { key: 'status_detail', label: 'Detail', render: (r) => [replaceCodes(r.status_detail || '—'), r.limitation ? h('span', { class: 'faint' }, ` · Limitation ${r.limitation}`) : null, r.v21_note ? h('span', { class: 'faint' }, ` · ${replaceCodes(r.v21_note)}`) : null] },
+            { key: 'severity', label: 'Severity', format: (v, r) => (PRESENTATION.includes(r.id) ? 'Presentation fix' : String(v || '—').replace(/^./, (c) => c.toUpperCase())) },
+            { key: 'status', label: 'Status', render: (r) => [pill((STATUS[r.status] || ['unknown'])[0], (STATUS[r.status] || [null, r.status])[1]), hasNext(r) ? h('span', { class: 'faint t-12' }, ' · next experiment proposed') : null] },
+            { key: 'status_detail', label: 'Detail', render: (r) => [replaceCodes(r.status_detail || '—'), r.limitation ? h('span', { class: 'faint' }, ` · Limitation ${r.limitation}`) : null, r.v21_note ? h('span', { class: 'faint' }, ` · ${replaceCodes(fixV21(r.v21_note))}`) : null] },
           ],
         })), { role: 'av2-table' }),
         M.av2_source && !simple ? h('p', { class: 't-12 faint m-0' }, `Source: ${M.av2_source}`) : null),
@@ -289,7 +308,7 @@ export async function render(el, ctx) {
           h('li', {}, `A separate count from the ${p0}’s history is shown on its own. It is never mixed with the test-run numbers.`))
           : h('ul', { class: 'dm-plain-list' },
             HO.robberies_note ? h('li', {}, HO.robberies_note) : null,
-            HO.donor_hours_why ? h('li', {}, `Donor hours: ${HO.donor_hours}. ${HO.donor_hours_why}`) : null,
+            HO.donor_hours_why ? h('li', {}, `Donor hours: ${HO.donor_hours}. ${String(HO.donor_hours_why).replace(/\bv2\.1\b/g, 'this release')}`) : null,
             HO.recipient_hours_note ? h('li', {}, HO.recipient_hours_note) : null,
             HP.label ? h('li', {}, replaceCodes(HP.label, { mode: 'code' })) : null),
         xp(byMode('Show the counts', 'Recount figures'), h('div', { class: 'stack-2' },
@@ -310,7 +329,8 @@ export async function render(el, ctx) {
     body: xp(byMode(`Show the ${fmtInt(sources.length)} sources`, 'Source table'), h('div', { class: 'dm-wrap' }, dataTable({
       caption: 'Source manifest', bare: true, rows: sources, mobileColumns: ['name', 'provenance', 'used_for', 'licence'],
       columns: [
-        { key: 'name', label: 'Source', render: (r) => (r.url ? h('a', { href: r.url, target: '_blank', rel: 'noopener noreferrer' }, r.name) : r.name) },
+        // link to the source's landing page, never a direct file download; the file URL stays visible as text
+        { key: 'name', label: 'Source', render: (r) => { if (!r.url) return r.name; const page = sourcePage(r.url); return [h('a', { href: page, target: '_blank', rel: 'noopener noreferrer' }, r.name), page !== r.url ? h('span', { class: 'dm-src-file t-12 faint', dataset: { readability: 'skip' } }, `File: ${r.url}`) : null]; } },
         { key: 'licence', label: 'Licence' }, { key: 'used_for', label: 'Used for' },
         { key: 'provenance', label: 'Provenance', render: (r) => provChip(r.provenance, { force: true }) },
       ],

@@ -19,7 +19,7 @@
 .gl-entry::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: var(--c-teal-a08, rgba(34, 199, 184, 0.08)); box-shadow: inset 0 0 0 1px var(--c-teal-a24, rgba(34, 199, 184, 0.24)); opacity: 0; pointer-events: none; transition: opacity var(--motion-slow, 450ms) var(--ease-standard, ease); }
 .gl-entry.is-target::before { opacity: 1; }
 .gl-term { margin: 0 0 6px; font-family: var(--font-ui); font-size: var(--fs-16, 16px); font-weight: 600; line-height: 1.35; color: var(--text); overflow-wrap: anywhere; }
-.gl-other { font-weight: 400; font-size: var(--fs-13, 13px); white-space: normal; }
+.gl-other { margin-left: 0.3em; font-weight: 400; font-size: var(--fs-13, 13px); white-space: normal; }
 .gl-def { margin: 0 0 6px; font-size: var(--fs-14, 14px); line-height: 1.5; color: var(--text); }
 .gl-ex, .gl-why { margin: 0 0 4px; font-size: var(--fs-13, 13px); line-height: 1.5; color: var(--text-muted); }
 .gl-k { display: inline-block; margin-right: 8px; font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }

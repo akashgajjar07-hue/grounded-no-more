@@ -1,9 +1,9 @@
 /**
  * The Planner Behind the Project (#/planner) · a first-person essay rendered from docs/content/planner.md (written by
- * the author) with the safe Markdown renderer in ./about/md.js. The page reads the same in Simple and Expert (a note under the header says so). A pull quote is lifted from the essay itself (no invented words). Links: About, Results, and the project documents
+ * the author) with the safe Markdown renderer in ./about/md.js. The page reads the same in Simple and Expert (a note under the header says so). Links: About, Results, and the project documents
  * on GitHub (methodology, limitations, decision log, model card, validation report). Data: none.
  */
-import { h, icon, intro3, stateBlock } from '../ui.js';
+import { h, icon, stateBlock } from '../ui.js';
 import { assetURL } from '../data.js';
 import { renderMarkdown, fetchMarkdown } from './about/md.js';
 import { aboutLink } from './about.js';
@@ -18,8 +18,6 @@ const DOCS = [
   ['Model card', 'MODEL_CARD.md', 'What the model is for, and what it is not for'],
   ['Validation report', 'reports/VALIDATION_REPORT.md', 'How the results were checked'],
 ];
-/** The pull quote: the first essay sentence that matches, so the words are always the author's. */
-const QUOTE_RE = /[^.]*a missing part can mean[^.]*\./i;
 
 function ensureCSS() {
   if (document.querySelector('link[data-view-css="planner"]')) return;
@@ -41,7 +39,6 @@ export async function render(el) {
     if (n.tagName === 'P' && /^written with ai/i.test(t)) { sig = n; return false; }
     return true;
   });
-  const quote = src ? (src.replace(/\*/g, '').match(QUOTE_RE)?.[0] || '').trim() : '';
   // the lede: the essay's opening paragraph sits larger, before the first section
   const firstP = nodes.find((n) => n.tagName === 'P');
   firstP?.classList.add('pl-lede');
@@ -52,23 +49,11 @@ export async function render(el) {
     h('p', { class: 'pl-byline' }, 'By Akash Gajjar'),
     h('p', { class: 'mode-same-note pl-mode-note', dataset: { role: 'mode-same' } }, 'This page reads the same in Simple and Expert.'));
   el.append(header);
-  el.append(intro3({
-    what: 'The person behind this project, why it exists, and what it taught.',
-    why: 'You can judge the work better when you know the choices and the mistakes behind it.',
-    action: 'Read the essay, then check its claims on the Results and About pages.',
-  }));
 
   if (!src) { el.append(stateBlock('error', 'The essay could not load (content/planner.md).')); return null; }
 
   const body = h('div', { class: 'pl-body' });
-  // the pull quote goes before the third section heading (after "Why aviation"), or after the lede
-  const heads = nodes.filter((n) => /^H[2-6]$/.test(n.tagName));
-  const anchor = heads[1] || null;
-  nodes.forEach((n) => {
-    if (n === anchor && quote) body.append(pullQuote(quote));
-    body.append(n);
-  });
-  if (!anchor && quote) firstP?.after(pullQuote(quote));
+  nodes.forEach((n) => body.append(n));
   if (sig) { sig.classList.add('pl-sig'); body.append(h('hr', { class: 'pl-rule', 'aria-hidden': 'true' }), sig); }
 
   el.append(h('article', { class: 'pl-essay', dataset: { role: 'planner-essay' }, 'aria-labelledby': 'pl-title' }, body));
@@ -78,7 +63,7 @@ export async function render(el) {
     h('div', { class: 'pl-next-col' },
       h('h2', { class: 'pl-next-h' }, 'Read next'),
       h('ul', { class: 'pl-links list-reset' },
-        h('li', {}, h('a', { href: '#/about', dataset: { role: 'link-about' } }, icon('info'), h('span', {}, h('b', {}, 'About this project'), h('small', {}, 'Skills, tools, downloads, and how it would work for real')))),
+        h('li', {}, h('a', { href: '#/about', dataset: { role: 'link-about' } }, icon('info'), h('span', {}, h('b', {}, 'About this project'), h('small', {}, 'Methods used, downloads, and how it would work for real')))),
         h('li', {}, h('a', { href: '#/mission?section=results' }, icon('aircraft'), h('span', {}, h('b', {}, 'The results'), h('small', {}, 'The numbers, next to their limits')))),
         h('li', {}, h('a', { href: '#/about?section=real-data' }, icon('book'), h('span', {}, h('b', {}, 'What real data would make this useful'), h('small', {}, 'The records a real airline would need')))))),
     h('div', { class: 'pl-next-col' },
@@ -88,8 +73,3 @@ export async function render(el) {
   return null;
 }
 
-function pullQuote(text) {
-  return h('figure', { class: 'pl-quote', dataset: { role: 'pull-quote' } },
-    h('blockquote', {}, h('p', {}, text)),
-    h('figcaption', {}, '— from the essay'));
-}

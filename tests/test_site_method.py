@@ -157,7 +157,13 @@ def test_v21_method_content(site, browser, vp, mode):  # noqa: F811
         for f in METHOD["av2_findings"]:
             assert f["id"] in tbl, f["id"]
         c = METHOD["av2_counts"]
-        assert f"{c['fixed']} fixed" in text and f"{c['disclosed']} disclosed" in text
+        n_disc = c["disclosed"] + c["next experiment"]   # v2.2 review: next-experiment findings count as disclosed
+        assert f"{c['fixed']} fixed" in text and f"{n_disc} disclosed (4 with a proposed next experiment)" in text
+        assert "2 of the 25 (AV2-10, AV2-22) are presentation fixes" in text
+        # v2.2 review: no brief IDs or old release labels in visible text; sources link to landing pages, not files
+        assert not re.search(r"\((A\d+|V21-[A-Z]|SIM-\d+|AV2)\)|\bv2\.1\b", text), re.findall(r".{30}(?:\(A\d+\)|v2\.1).{10}", text)
+        hrefs = page.evaluate("[...document.querySelectorAll('#view a[href^=http]')].map((a) => a.href)")
+        assert not [h for h in hrefs if h.endswith((".zip", ".csv"))], hrefs
         # next experiments hosted here
         nx = page.locator('[data-role="next-experiments"] .dm-next-item')
         assert nx.count() == len(METHOD["next_experiments"])

@@ -1,5 +1,5 @@
 /**
- * About · the author, the methods used, the downloads, an honest note on how it was built, and how the method would
+ * About · the author, the methods used, the downloads, a note on how it was built, and how the method would
  * be used for real: E2 "How this transfers to an MRO" (docs/content/mro.md), E3 "What real data would make this
  * useful" (docs/content/real_data.md) and "Next experiments" (docs/content/next_experiments.md), rendered with the
  * small safe Markdown renderer in ./about/md.js. Deep links: #/about?section=mro | real-data | next-experiments.
@@ -63,7 +63,7 @@ const QUESTIONS = [
   [['How the planner balances readiness and money', 'How the optimiser balances readiness and capital'], '#/capital',
     ['The Capital Optimiser adds spares one at a time, where each one cuts the most waiting.', 'Capital Optimiser: greedy marginal allocation along the capital-vs-readiness frontier.']],
   ['What data I’d request from a real airline', '#/about?section=real-data',
-    ['The real-data table below lists each record, why it matters and its first use.', 'Data request: ten record types, each with its first use in a back-test.']],
+    ['The real-data table above lists each record, why it matters and its first use.', 'Data request: ten record types, each with its first use in a back-test.']],
 ];
 const pick = (v) => (Array.isArray(v) ? byMode(v[0], v[1]) : v);
 

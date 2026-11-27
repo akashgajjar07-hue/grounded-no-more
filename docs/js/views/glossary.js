@@ -1,5 +1,5 @@
 /**
- * Glossary (v2.1). Route: #/glossary · #/glossary?term=<key> scrolls to and highlights one entry (the term
+ * Glossary. Route: #/glossary · #/glossary?term=<key> scrolls to and highlights one entry (the term
  * tooltips' "Glossary" link uses it) · #/glossary?section=<group> jumps to a group (the group chips link there) ·
  * #/glossary?q=<text> pre-fills the search.
  * Data: none. Every entry comes from lib/glossary.js glossaryEntries() ({key, expert, simple, definition, example, why,
@@ -43,7 +43,7 @@ export async function render(el, ctx) {
     }),
     intro3({
       what: byMode('Every planning word on this site, with a plain meaning, an example and why it matters.', 'Every domain term on the site: expert term, plain wording, definition, example and why it matters.'),
-      why: byMode('Aviation planning uses a lot of short codes and jargon. A shared meaning keeps the numbers honest.', 'Terms like fill rate, EBO and TAT drive the numbers; a shared definition keeps comparisons honest.'),
+      why: byMode('Aviation planning uses a lot of short codes and jargon. A shared meaning keeps the numbers clear.', 'Terms like fill rate, EBO and TAT drive the numbers; a shared definition keeps comparisons honest.'),
       action: byMode('Search for a word, read it, then go back to the page you came from.', 'Search a term or jump to a group; the tooltip on any underlined term links here.'),
     }),
   );
