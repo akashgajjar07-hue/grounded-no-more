@@ -4,7 +4,7 @@
 
 Bar: calm, premium, "Apple-keynote smooth". To pass, both smoothness and polish must score ≥ 4.5.
 
-Method: fresh recordings from `scripts/tour/record_and_check.py` (current `main`, f338214), Chromium and WebKit at 1440×900 and 390×844, Play mode from the "60-second tour" button. Each video was decoded at 10 fps in Chromium (`<video>` + canvas) into 280 JPEG frames, then viewed as labelled contact sheets. Frame numbers below are 10 fps indices (frame N = N/10 s into the video). In all four videos the transitions start at about these frames: open #19–22, 1→2 #65, 2→3 #113, 3→4 #159, 4→5 #206, 5→6 #253.
+Method: fresh recordings from `scripts/tour/record_and_check.py` (current `main`, 1840cca), Chromium and WebKit at 1440×900 and 390×844, Play mode from the "60-second tour" button. Each video was decoded at 10 fps in Chromium (`<video>` + canvas) into 280 JPEG frames, then viewed as labelled contact sheets. Frame numbers below are 10 fps indices (frame N = N/10 s into the video). In all four videos the transitions start at about these frames: open #19–22, 1→2 #65, 2→3 #113, 3→4 #159, 4→5 #206, 5→6 #253.
 
 Checker result for this run: Chromium 1440, Chromium 390 and WebKit 1440 pass. WebKit 390 fails `a_brightness_swing` and `a_no_flat_frames` (see the note under WebKit 390).
 

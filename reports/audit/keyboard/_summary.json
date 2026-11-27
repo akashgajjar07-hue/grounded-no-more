@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-27T18:24:16",
+ "generated": "2026-11-27T19:25:08",
  "routes": {
   "about": {
    "owner": "docs/js/views/about.js",
@@ -19,16 +19,16 @@
   },
   "aog": {
    "owner": "docs/js/views/aog-response-lab.js",
-   "expected": 39,
-   "reached": 39,
+   "expected": 40,
+   "reached": 40,
    "cycled": true,
    "problems": [],
    "warnings": []
   },
   "capital": {
    "owner": "docs/js/views/capital-optimiser.js",
-   "expected": 62,
-   "reached": 62,
+   "expected": 63,
+   "reached": 63,
    "cycled": true,
    "problems": [],
    "warnings": [

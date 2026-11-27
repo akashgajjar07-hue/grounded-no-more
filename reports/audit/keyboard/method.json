@@ -14,7 +14,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 11.3,
+   "ms": 55.3,
    "esc": {
     "opened": [
      "story"
@@ -34,7 +34,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 65.3,
+   "ms": 52.1,
    "esc": {
     "opened": [
      "story"
@@ -54,7 +54,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 52.0,
+   "ms": 5.7,
    "esc": {
     "opened": [
      "story"
@@ -74,7 +74,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 153.0,
+   "ms": 47.2,
    "esc": {
     "opened": [
      "story"
@@ -94,7 +94,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 3.5,
+   "ms": 2.0,
    "esc": {
     "opened": [
      "modal"
@@ -114,7 +114,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 15.1,
+   "ms": 5.1,
    "esc": {
     "opened": [
      "modal"
@@ -133,7 +133,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 17.4,
+   "ms": 3.4,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -144,7 +144,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 7.7,
+   "ms": 10.2,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -155,7 +155,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 3.9,
+   "ms": 3.2,
    "control": "20 fresh test runs the model never saw, each policy facing i",
    "tag": "span",
    "role": "",
@@ -166,40 +166,40 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 6.1,
-   "control": "Show the 4 decision records behind it",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 9.8,
-   "control": "Show the 4 decision records behind it",
-   "tag": "summary",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 5.1,
-   "control": "Show the targets and what was reached",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
    "ms": 7.2,
+   "control": "Show the 4 decision records behind it",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 5.0,
+   "control": "Show the 4 decision records behind it",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 4.5,
+   "control": "Show the targets and what was reached",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 69.7,
    "control": "Show the targets and what was reached",
    "tag": "summary",
    "role": "",
@@ -208,119 +208,121 @@
   {
    "ok": true,
    "effects": [
+    "dom-mutation"
+   ],
+   "ms": 33.7,
+   "control": "Show the 8 pipeline checks",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 3.9,
+   "control": "Show the 8 pipeline checks",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 2.6,
+   "control": "Show the practice-run versus fresh-run check",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 2.4,
+   "control": "Show the practice-run versus fresh-run check",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 3.5,
+   "control": "Show the log (4 runs)",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 4.0,
+   "control": "Show the log (4 runs)",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 25.4,
+   "control": "Show the old v1 numbers",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 14.8,
+   "control": "Show the old v1 numbers",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 66.3,
+   "control": "Show all 25 findings",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 12.2,
+   "control": "Show all 25 findings",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "scroll",
     "dom-mutation"
    ],
    "ms": 3.0,
-   "control": "Show the 8 pipeline checks",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 21.2,
-   "control": "Show the 8 pipeline checks",
-   "tag": "summary",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 21.8,
-   "control": "Show the practice-run versus fresh-run check",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 2.5,
-   "control": "Show the practice-run versus fresh-run check",
-   "tag": "summary",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 4.4,
-   "control": "Show the log (4 runs)",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 15.3,
-   "control": "Show the log (4 runs)",
-   "tag": "summary",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 29.0,
-   "control": "Show the old v1 numbers",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 3.2,
-   "control": "Show the old v1 numbers",
-   "tag": "summary",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 34.3,
-   "control": "Show all 25 findings",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 12.5,
-   "control": "Show all 25 findings",
-   "tag": "summary",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation"
-   ],
-   "ms": 3.2,
    "control": "How this transfers to an MRO",
    "tag": "a",
    "role": "",
@@ -333,7 +335,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 64.1,
+   "ms": 2.3,
    "control": "What real data would make this useful",
    "tag": "a",
    "role": "",
@@ -344,7 +346,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.6,
+   "ms": 3.2,
    "control": "Show the counts",
    "tag": "summary",
    "role": "",
@@ -355,7 +357,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 3.1,
+   "ms": 12.6,
    "control": "Show the counts",
    "tag": "summary",
    "role": "",
@@ -366,7 +368,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 4.0,
+   "ms": 4.2,
    "control": "Show the 4 sources",
    "tag": "summary",
    "role": "",
@@ -377,7 +379,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 5.4,
+   "ms": 3.6,
    "control": "Show the 4 sources",
    "tag": "summary",
    "role": "",
@@ -388,7 +390,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.5,
+   "ms": 10.7,
    "control": "Show and search all 350 assumptions",
    "tag": "summary",
    "role": "",
@@ -399,7 +401,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.1,
+   "ms": 10.2,
    "control": "Show and search all 350 assumptions",
    "tag": "summary",
    "role": "",
@@ -410,7 +412,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 26.6,
+   "ms": 5.0,
    "control": "Show all 41 limitations",
    "tag": "summary",
    "role": "",
@@ -421,7 +423,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 4.3,
+   "ms": 5.2,
    "control": "Show all 41 limitations",
    "tag": "summary",
    "role": "",
@@ -432,7 +434,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 29.0,
+   "ms": 3.3,
    "control": "Show the licences",
    "tag": "summary",
    "role": "",
@@ -443,7 +445,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 3.2,
+   "ms": 3.1,
    "control": "Show the licences",
    "tag": "summary",
    "role": "",

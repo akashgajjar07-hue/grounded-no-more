@@ -76,7 +76,7 @@ Some GitHub links are built at run time. These were resolved by hand and checked
 *Written by ROUTER.*
 
 <!-- internal:start (written by tests/e2e/test_links_every_time.py) -->
-Generated 2026-11-27 19:11 by `tests/e2e/test_links_every_time.py` (chromium, webkit, 1440 x 900, Simple mode).
+Generated 2026-11-27 19:47 by `tests/e2e/test_links_every_time.py` (chromium, webkit, 1440 x 900, Simple mode).
 
 Every internal link found on every route (`a[href^="#/"]` in the shell and the page, plus in-page anchors such as the
 skip link; the glossary group chips are `?section=` links) was clicked 5 times from each of 3 starting states (fresh load, coming from
@@ -88,30 +88,30 @@ viewport and focused. Links to the current route have no skip allowance.
 
 | Browser | Route | Links | Clicks | Failed | Seconds |
 |---|---|---:|---:|---:|---:|
-| chromium | about | 78 | 390 | 0 | 128.1 |
-| chromium | actions | 42 | 210 | 0 | 378.4 |
-| chromium | aog | 42 | 210 | 0 | 379.8 |
-| chromium | capital | 42 | 210 | 0 | 382.3 |
-| chromium | forecast | 78 | 390 | 0 | 693.0 |
-| chromium | glossary | 63 | 315 | 0 | 78.4 |
-| chromium | method | 48 | 240 | 0 | 70.2 |
-| chromium | mission | 72 | 360 | 0 | 639.5 |
-| chromium | network | 42 | 210 | 0 | 386.5 |
-| chromium | parts | 45 | 225 | 0 | 406.2 |
-| chromium | planner | 51 | 255 | 0 | 71.2 |
-| chromium | rotables | 42 | 210 | 0 | 384.8 |
-| webkit | about | 78 | 390 | 0 | 195.6 |
-| webkit | actions | 42 | 210 | 0 | 407.4 |
-| webkit | aog | 42 | 210 | 0 | 406.3 |
-| webkit | capital | 42 | 210 | 0 | 409.4 |
-| webkit | forecast | 78 | 390 | 0 | 277.7 |
-| webkit | glossary | 63 | 315 | 0 | 89.9 |
-| webkit | method | 48 | 240 | 0 | 101.6 |
-| webkit | mission | 72 | 360 | 0 | 293.4 |
-| webkit | network | 42 | 210 | 0 | 410.3 |
-| webkit | parts | 45 | 225 | 0 | 414.6 |
-| webkit | planner | 51 | 255 | 0 | 91.0 |
-| webkit | rotables | 42 | 210 | 0 | 420.5 |
+| chromium | about | 78 | 390 | 0 | 181.7 |
+| chromium | actions | 42 | 210 | 0 | 68.5 |
+| chromium | aog | 42 | 210 | 0 | 68.1 |
+| chromium | capital | 42 | 210 | 0 | 53.8 |
+| chromium | forecast | 78 | 390 | 0 | 195.6 |
+| chromium | glossary | 63 | 315 | 0 | 93.5 |
+| chromium | method | 48 | 240 | 0 | 74.6 |
+| chromium | mission | 72 | 360 | 0 | 168.3 |
+| chromium | network | 42 | 210 | 0 | 50.8 |
+| chromium | parts | 45 | 225 | 0 | 83.1 |
+| chromium | planner | 51 | 255 | 0 | 63.6 |
+| chromium | rotables | 42 | 210 | 0 | 63.5 |
+| webkit | about | 78 | 390 | 0 | 232.4 |
+| webkit | actions | 42 | 210 | 0 | 125.1 |
+| webkit | aog | 42 | 210 | 0 | 95.6 |
+| webkit | capital | 42 | 210 | 0 | 109.4 |
+| webkit | forecast | 78 | 390 | 0 | 273.6 |
+| webkit | glossary | 63 | 315 | 0 | 129.4 |
+| webkit | method | 48 | 240 | 0 | 122.9 |
+| webkit | mission | 72 | 360 | 0 | 188.8 |
+| webkit | network | 42 | 210 | 0 | 74.2 |
+| webkit | parts | 45 | 225 | 0 | 192.7 |
+| webkit | planner | 51 | 255 | 0 | 85.8 |
+| webkit | rotables | 42 | 210 | 0 | 119.3 |
 
 No failures.
 

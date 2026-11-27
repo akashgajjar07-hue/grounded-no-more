@@ -3,7 +3,7 @@
 # Guided tour v2.2: motion critique from the recorded video
 
 Reviewer: an outside motion/UX critic, judging only what the video shows. I did not read the tour code.
-Source: the existing Playwright recordings `private/tour_videos/tour_{chromium,webkit}_{1440,390}.webm` (recorded 16:03–16:07, same commit as `bbe64a4`). I decoded each one at 10 fps with Chromium `<video>` + canvas, the same method `record_and_check.py` uses. That gave 304–307 frames per video. Frame `#n` is t = n/10 s from the start of the video. Frames and contact sheets are in the session scratchpad, not in the repo.
+Source: the existing Playwright recordings `private/tour_videos/tour_{chromium,webkit}_{1440,390}.webm` (recorded 16:03–16:07, same commit as `f7a6588`). I decoded each one at 10 fps with Chromium `<video>` + canvas, the same method `record_and_check.py` uses. That gave 304–307 frames per video. Frame `#n` is t = n/10 s from the start of the video. Frames and contact sheets are in the session scratchpad, not in the repo.
 
 Bar: calm, premium, "Apple-keynote smooth". To pass, both smoothness and polish must score ≥ 4.5.
 

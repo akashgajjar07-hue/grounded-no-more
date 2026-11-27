@@ -9,12 +9,12 @@
     [
      "View data",
      "Repairable",
-     656
+     578
     ],
     [
      "Zenodo record",
      "More",
-     599
+     620
     ]
    ]
   }
@@ -30,7 +30,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 7.0,
+   "ms": 62.4,
    "esc": {
     "opened": [
      "story"
@@ -50,7 +50,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 48.8,
+   "ms": 48.0,
    "esc": {
     "opened": [
      "story"
@@ -70,7 +70,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 49.6,
+   "ms": 58.5,
    "esc": {
     "opened": [
      "story"
@@ -90,7 +90,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 46.9,
+   "ms": 52.9,
    "esc": {
     "opened": [
      "story"
@@ -110,7 +110,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 19.8,
+   "ms": 4.5,
    "esc": {
     "opened": [
      "modal"
@@ -130,7 +130,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 1.4,
+   "ms": 1.8,
    "esc": {
     "opened": [
      "modal"
@@ -149,7 +149,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 8.0,
+   "ms": 1.5,
    "control": "forecasting methods for rarely-needed parts (Croston / SBA /",
    "tag": "span",
    "role": "",
@@ -160,7 +160,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 1.8,
+   "ms": 2.5,
    "control": "GN-35-E032",
    "tag": "a",
    "role": "",
@@ -173,7 +173,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 1.1,
+   "ms": 2.8,
    "control": "GN-49-C032",
    "tag": "a",
    "role": "",
@@ -182,9 +182,11 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll",
+    "chart-update"
    ],
-   "ms": 1.5,
+   "ms": 13.6,
    "control": "GN-32-C029",
    "tag": "a",
    "role": "",
@@ -197,7 +199,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 1.8,
+   "ms": 1.7,
    "control": "GN-36-C012",
    "tag": "a",
    "role": "",
@@ -210,7 +212,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 1.8,
+   "ms": 3.3,
    "control": "GN-49-C014",
    "tag": "a",
    "role": "",
@@ -221,7 +223,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 1.4,
+   "ms": 18.9,
    "control": "GN-30-C016",
    "tag": "a",
    "role": "",
@@ -232,7 +234,7 @@
    "effects": [
     "navigation"
    ],
-   "ms": 1.1,
+   "ms": 1.8,
    "control": "GN-49-E015",
    "tag": "a",
    "role": "",
@@ -245,7 +247,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 24.9,
+   "ms": 2.0,
    "control": "GN-27-R009",
    "tag": "a",
    "role": "",
@@ -258,7 +260,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 20.3,
+   "ms": 2.3,
    "control": "GN-21-E001",
    "tag": "a",
    "role": "",
@@ -271,7 +273,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 2.3,
+   "ms": 2.1,
    "control": "GN-32-C008",
    "tag": "a",
    "role": "",
@@ -282,9 +284,9 @@
    "effects": [
     "navigation",
     "scroll",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 41.7,
+   "ms": 15.1,
    "control": "GN-20-C038",
    "tag": "a",
    "role": "",
@@ -297,7 +299,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 2.0,
+   "ms": 1.5,
    "control": "GN-29-R012",
    "tag": "a",
    "role": "",
@@ -308,7 +310,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 6.9,
+   "ms": 5.7,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -319,7 +321,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 10.6,
+   "ms": 21.0,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -331,7 +333,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 23.6,
+   "ms": 3.8,
    "control": "steady",
    "tag": "button",
    "role": "radio",
@@ -343,7 +345,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 5.4,
+   "ms": 2.8,
    "control": "steady",
    "tag": "button",
    "role": "radio",
@@ -355,7 +357,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 58.0,
+   "ms": 12.1,
    "control": "uneven",
    "tag": "button",
    "role": "radio",
@@ -367,7 +369,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 74.5,
+   "ms": 2.2,
    "control": "uneven",
    "tag": "button",
    "role": "radio",
@@ -379,7 +381,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 8.4,
+   "ms": 1.6,
    "control": "now and then, in bursts",
    "tag": "button",
    "role": "radio",
@@ -391,7 +393,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 3.3,
+   "ms": 2.4,
    "control": "now and then, in bursts",
    "tag": "button",
    "role": "radio",
@@ -403,7 +405,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 46.7,
+   "ms": 2.4,
    "control": "too little history",
    "tag": "button",
    "role": "radio",
@@ -415,7 +417,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 3.5,
+   "ms": 2.3,
    "control": "too little history",
    "tag": "button",
    "role": "radio",
@@ -439,10 +441,10 @@
    "ok": true,
    "invoker": "60-second tourS",
    "focus_after": {
-    "id": "u1",
-    "label": "07 · AOG Response LabAn aircraft is on the ground."
+    "id": "k10",
+    "label": "60-second tourS"
    },
-   "returned_to_invoker": false,
+   "returned_to_invoker": true,
    "note": ""
   },
   {

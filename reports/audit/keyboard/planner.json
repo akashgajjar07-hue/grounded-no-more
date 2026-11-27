@@ -14,7 +14,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 52.2,
+   "ms": 94.4,
    "esc": {
     "opened": [
      "story"
@@ -34,7 +34,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 53.7,
+   "ms": 55.8,
    "esc": {
     "opened": [
      "story"
@@ -54,7 +54,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 57.9,
+   "ms": 61.3,
    "esc": {
     "opened": [
      "story"
@@ -74,7 +74,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 49.2,
+   "ms": 101.8,
    "esc": {
     "opened": [
      "story"
@@ -94,7 +94,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 24.8,
+   "ms": 14.6,
    "esc": {
     "opened": [
      "modal"
@@ -135,8 +135,8 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 30.8,
-   "control": "About this projectSkills, tools, downloads, and how it would",
+   "ms": 10.0,
+   "control": "About this projectMethods used, downloads, and how it would ",
    "tag": "a",
    "role": "",
    "key": "Enter"
@@ -148,7 +148,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 28.8,
+   "ms": 14.8,
    "control": "The resultsThe numbers, next to their limits",
    "tag": "a",
    "role": "",
@@ -161,7 +161,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 42.0,
+   "ms": 5.1,
    "control": "What real data would make this usefulThe records a real airl",
    "tag": "a",
    "role": "",
@@ -172,10 +172,10 @@
   {
    "what": "help modal (?)",
    "ok": true,
-   "invoker": "About this projectSkills, tools, downloa",
+   "invoker": "About this projectMethods used, download",
    "focus_after": {
     "id": "k19",
-    "label": "About this projectSkills, tools, downloads, and ho"
+    "label": "About this projectMethods used, downloads, and how"
    },
    "returned_to_invoker": true,
    "note": ""

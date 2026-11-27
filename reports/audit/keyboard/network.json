@@ -9,7 +9,7 @@
     [
      "View data",
      "AUHAbu Dhabi InternationalHigh · hub · 30% of all",
-     1318
+     1297
     ]
    ]
   }
@@ -25,7 +25,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 85.9,
+   "ms": 6.5,
    "esc": {
     "opened": [
      "story"
@@ -45,7 +45,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 63.6,
+   "ms": 49.2,
    "esc": {
     "opened": [
      "story"
@@ -65,7 +65,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 79.7,
+   "ms": 5.4,
    "esc": {
     "opened": [
      "story"
@@ -85,7 +85,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 48.7,
+   "ms": 50.1,
    "esc": {
     "opened": [
      "story"
@@ -104,7 +104,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 31.7,
+   "ms": 2.9,
    "control": "other airports (outstations)",
    "tag": "span",
    "role": "",
@@ -115,7 +115,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 7.9,
+   "ms": 3.3,
    "control": "More",
    "tag": "button",
    "role": "",
@@ -139,7 +139,7 @@
     "drawer",
     "chart-update"
    ],
-   "ms": 71.9,
+   "ms": 9.2,
    "esc": {
     "opened": [
      "drawer"
@@ -157,10 +157,9 @@
    "ok": true,
    "effects": [
     "navigation",
-    "drawer",
     "chart-update"
    ],
-   "ms": 15.8,
+   "ms": 2.2,
    "esc": {
     "opened": [
      "drawer"
@@ -181,7 +180,7 @@
     "drawer",
     "chart-update"
    ],
-   "ms": 8.9,
+   "ms": 9.3,
    "esc": {
     "opened": [
      "drawer"
@@ -201,7 +200,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 2.9,
+   "ms": 2.4,
    "control": "CAI Cairo International: 9 Network Plan repairable units, ma",
    "tag": "g",
    "role": "button",
@@ -211,10 +210,22 @@
    "ok": true,
    "effects": [
     "navigation",
+    "chart-update"
+   ],
+   "ms": 2.0,
+   "control": "BOM Chhatrapati Shivaji Maharaj International, Mumbai: 11 Ne",
+   "tag": "g",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
     "drawer",
     "chart-update"
    ],
-   "ms": 22.3,
+   "ms": 2.7,
    "esc": {
     "opened": [
      "drawer"
@@ -226,7 +237,125 @@
    "control": "BOM Chhatrapati Shivaji Maharaj International, Mumbai: 11 Ne",
    "tag": "g",
    "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.3,
+   "control": "AUH · HIGH",
+   "tag": "button",
+   "role": "",
    "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.5,
+   "control": "AUH · HIGH",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 3.7,
+   "control": "FRA · ELEVATED",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.3,
+   "control": "FRA · ELEVATED",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.9,
+   "control": "JED · HIGH",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.5,
+   "control": "JED · HIGH",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.6,
+   "control": "SIN · ELEVATED",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "chart-update"
+   ],
+   "ms": 2.6,
+   "control": "SIN · ELEVATED",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 3.2,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 2.8,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
   },
   {
    "ok": true,
@@ -235,136 +364,6 @@
     "chart-update"
    ],
    "ms": 1.9,
-   "control": "BOM Chhatrapati Shivaji Maharaj International, Mumbai: 11 Ne",
-   "tag": "g",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 6.3,
-   "control": "AUH · HIGH",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 4.0,
-   "control": "AUH · HIGH",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 1.5,
-   "control": "FRA · ELEVATED",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 1.5,
-   "control": "FRA · ELEVATED",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 2.6,
-   "control": "JED · HIGH",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 2.6,
-   "control": "JED · HIGH",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 25.6,
-   "control": "SIN · ELEVATED",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 4.0,
-   "control": "SIN · ELEVATED",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 4.4,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 2.0,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "chart-update"
-   ],
-   "ms": 2.7,
    "control": "CAICairo InternationalHigh · 17% of all",
    "tag": "button",
    "role": "",
@@ -376,7 +375,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 14.6,
+   "ms": 4.9,
    "control": "CAICairo InternationalHigh · 17% of all",
    "tag": "button",
    "role": "",
@@ -388,7 +387,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 8.8,
+   "ms": 12.3,
    "control": "JEDKing Abdulaziz International, JeddahHigh · 13% of all",
    "tag": "button",
    "role": "",
@@ -400,7 +399,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 2.8,
+   "ms": 1.8,
    "control": "JEDKing Abdulaziz International, JeddahHigh · 13% of all",
    "tag": "button",
    "role": "",
@@ -412,7 +411,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 17.0,
+   "ms": 5.9,
    "control": "FRAFrankfurt am MainElevated · 8% of all",
    "tag": "button",
    "role": "",
@@ -422,97 +421,97 @@
    "ok": true,
    "effects": [
     "navigation",
+    "chart-update"
+   ],
+   "ms": 2.3,
+   "control": "FRAFrankfurt am MainElevated · 8% of all",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 2.3,
+   "control": "Replay all",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 2.6,
+   "control": "Replay all",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 2.5,
+   "control": "Replay routine transfer of GN-21-C025 from AUH to LHR in W2",
+   "tag": "g",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 1.9,
+   "control": "Replay routine transfer of GN-21-C025 from AUH to LHR in W2",
+   "tag": "g",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 2.1,
+   "control": "Replay routine transfer of GN-29-C006 from AUH to CAI in W2",
+   "tag": "g",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 3.4,
+   "control": "Replay routine transfer of GN-29-C006 from AUH to CAI in W2",
+   "tag": "g",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 2.8,
+   "control": "Replay emergency transfer of GN-32-R014 from AUH to BOM in W",
+   "tag": "g",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
     "chart-update"
    ],
    "ms": 4.2,
-   "control": "FRAFrankfurt am MainElevated · 8% of all",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 2.2,
-   "control": "Replay all",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 2.9,
-   "control": "Replay all",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 6.9,
-   "control": "Replay routine transfer of GN-21-C025 from AUH to LHR in W2",
-   "tag": "g",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 3.0,
-   "control": "Replay routine transfer of GN-21-C025 from AUH to LHR in W2",
-   "tag": "g",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 2.8,
-   "control": "Replay routine transfer of GN-29-C006 from AUH to CAI in W2",
-   "tag": "g",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 1.7,
-   "control": "Replay routine transfer of GN-29-C006 from AUH to CAI in W2",
-   "tag": "g",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 3.2,
-   "control": "Replay emergency transfer of GN-32-R014 from AUH to BOM in W",
-   "tag": "g",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 2.0,
    "control": "Replay emergency transfer of GN-32-R014 from AUH to BOM in W",
    "tag": "g",
    "role": "button",
@@ -523,7 +522,7 @@
    "effects": [
     "chart-update"
    ],
-   "ms": 2.6,
+   "ms": 1.8,
    "control": "Replay routine transfer of GN-24-C021 from AUH to CAI in W2",
    "tag": "g",
    "role": "button",
@@ -534,7 +533,7 @@
    "effects": [
     "chart-update"
    ],
-   "ms": 2.9,
+   "ms": 10.1,
    "control": "Replay routine transfer of GN-24-C021 from AUH to CAI in W2",
    "tag": "g",
    "role": "button",
@@ -545,7 +544,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.1,
+   "ms": 2.2,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -556,7 +555,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 3.8,
+   "ms": 2.2,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -568,7 +567,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 2.7,
+   "ms": 11.0,
    "control": "Repairable on the shelf",
    "tag": "button",
    "role": "radio",
@@ -580,7 +579,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 5.4,
+   "ms": 3.2,
    "control": "Repairable on the shelf",
    "tag": "button",
    "role": "radio",
@@ -604,10 +603,10 @@
    "ok": true,
    "invoker": "60-second tourS",
    "focus_after": {
-    "id": "u1",
-    "label": "07 · AOG Response LabAn aircraft is on the ground."
+    "id": "k10",
+    "label": "60-second tourS"
    },
-   "returned_to_invoker": false,
+   "returned_to_invoker": true,
    "note": ""
   },
   {

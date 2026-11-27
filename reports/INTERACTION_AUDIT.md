@@ -1,57 +1,53 @@
-# Interaction audit — final-v2.1
+# Interaction audit — final-v2.2
 
-Generated 2026-11-27 01:05 from `reports/audit/_summary.json` (matrix generated 2026-11-27T01:05:01), `reports/audit/keyboard/`, `reports/audit/links_downloads.json`, `reports/audit/numbers_reconcile.json` and `reports/perf/perf_summary.json`.
+Generated 2026-11-27 22:02 from `reports/audit/_summary.json` (matrix generated 2026-11-27T22:01:50), `reports/audit/keyboard/`, `reports/audit/links_downloads.json`, `reports/audit/numbers_reconcile.json` and `reports/perf/perf_summary.json`.
 
-**Label: final-v2.1.** Final run on frozen code (commit 7ea0d58), sharded over 8–9 parallel workers. Disabled controls: **none**.
+**Label: final-v2.2.** Run on the frozen v2.2 tree. Stopped at the release time limit: 91 cells completed (Chromium 68, WebKit 23), 0 failed; the cells not run are listed in section 1b.
 
 ## 1. Interaction matrix
 
-Every route + key deep links + lab/cutaway.html. Chromium: × Simple/Expert × 1440/390. WebKit: × Simple/Expert at 1440, plus a 390 smoke of the landing (incl. tour) and the cutaway. Each control must show a visible effect within 1 s; console errors, unhandled rejections and failed requests fail the control. Help-modal and tour controls are audited in an extra overlay phase.
+Every route + key deep links + lab/cutaway.html × Simple/Expert: Chromium at 1440 and 390, WebKit at 1440 plus a 390 phone smoke (Firefox: see note). Each control must show a visible effect within 1 s; console errors, unhandled rejections and failed requests fail the control. Help-modal and tour controls are audited in an extra overlay phase.
 
 > **Firefox not run — local launch failure** (`[pid=86274][err] Could not find profile folder.`; decision V21-FF). Chromium + WebKit only; firefox cells are skipped, not passed.
 
-Cells run: **162** · controls operated: **12853** · ok **12228** · **failed 0** · skipped 625 · load errors 0
+Cells run: **91** · controls operated: **6312** · ok **6072** · **failed 0** · skipped 240 · load errors 0
 
 | Browser | cells | ok | failed | skipped | load errors |
 |---|---:|---:|---:|---:|---:|
-| chromium | 106 | 8070 | 0 | 444 | 0 |
-| webkit | 56 | 4158 | 0 | 181 | 0 |
+| chromium | 68 | 4608 | 0 | 200 | 0 |
+| webkit | 23 | 1464 | 0 | 40 | 0 |
 
 | Route | cells | ok | failed | skipped |
 |---|---:|---:|---:|---:|
-| about | 12 | 628 | 0 | 0 |
-| actions | 18 | 1212 | 0 | 252 |
-| aog | 12 | 820 | 0 | 12 |
-| capital | 12 | 956 | 0 | 12 |
-| forecast | 12 | 902 | 0 | 36 |
+| about | 10 | 586 | 0 | 0 |
+| actions | 11 | 728 | 0 | 173 |
+| aog | 5 | 352 | 0 | 0 |
+| capital | 8 | 643 | 0 | 0 |
+| forecast | 7 | 528 | 0 | 14 |
 | glossary | 12 | 556 | 0 | 0 |
 | cutaway | 4 | 108 | 0 | 0 |
-| method | 12 | 874 | 0 | 12 |
-| mission | 14 | 972 | 0 | 14 |
-| network | 12 | 988 | 0 | 54 |
-| parts | 18 | 2058 | 0 | 152 |
-| planner | 6 | 278 | 0 | 0 |
-| rotables | 18 | 1876 | 0 | 81 |
+| method | 7 | 510 | 0 | 0 |
+| mission | 12 | 858 | 0 | 0 |
+| network | 4 | 338 | 0 | 28 |
+| planner | 5 | 232 | 0 | 0 |
+| rotables | 6 | 633 | 0 | 25 |
 
 **Totals per route × browser** (ok / failed / skipped, summed over modes, widths and deep links of that route):
 
 | Route | chromium | webkit |
 |---|---|---|
-| about | 420 / **0** / 0 (8 cells) | 208 / **0** / 0 (4 cells) |
-| actions | 810 / **0** / 168 (12 cells) | 402 / **0** / 84 (6 cells) |
-| aog | 552 / **0** / 8 (8 cells) | 268 / **0** / 4 (4 cells) |
-| capital | 626 / **0** / 8 (8 cells) | 330 / **0** / 4 (4 cells) |
+| about | 468 / **0** / 0 (8 cells) | 118 / **0** / 0 (2 cells) |
+| actions | 598 / **0** / 141 (9 cells) | 130 / **0** / 32 (2 cells) |
+| aog | 282 / **0** / 0 (4 cells) | 70 / **0** / 0 (1 cells) |
+| capital | 474 / **0** / 0 (6 cells) | 169 / **0** / 0 (2 cells) |
 | cutaway | 54 / **0** / 0 (2 cells) | 54 / **0** / 0 (2 cells) |
-| forecast | 608 / **0** / 24 (8 cells) | 294 / **0** / 12 (4 cells) |
+| forecast | 380 / **0** / 10 (5 cells) | 148 / **0** / 4 (2 cells) |
 | glossary | 372 / **0** / 0 (8 cells) | 184 / **0** / 0 (4 cells) |
-| method | 580 / **0** / 8 (8 cells) | 294 / **0** / 4 (4 cells) |
-| mission | 556 / **0** / 8 (8 cells) | 416 / **0** / 6 (6 cells) |
-| network | 668 / **0** / 36 (8 cells) | 320 / **0** / 18 (4 cells) |
-| parts | 1385 / **0** / 130 (12 cells) | 673 / **0** / 22 (6 cells) |
-| planner | 186 / **0** / 0 (4 cells) | 92 / **0** / 0 (2 cells) |
-| rotables | 1253 / **0** / 54 (12 cells) | 623 / **0** / 27 (6 cells) |
-
-**Disabled controls seen (skipped, not failed):** actions: Back (18 cells); actions: Clear filters (12 cells)
+| method | 357 / **0** / 0 (5 cells) | 153 / **0** / 0 (2 cells) |
+| mission | 572 / **0** / 0 (8 cells) | 286 / **0** / 0 (4 cells) |
+| network | 338 / **0** / 28 (4 cells) | 0 / **0** / 0 (0 cells) |
+| planner | 186 / **0** / 0 (4 cells) | 46 / **0** / 0 (1 cells) |
+| rotables | 527 / **0** / 21 (5 cells) | 106 / **0** / 4 (1 cells) |
 
 **Fixed since the baseline** (2026-11-26T20:25:40: 714 failing control-instances → 0 now): 332 distinct (page, control) pairs no longer fail, e.g. about · Capital Optimiser6; about · Network Positioning5; about · Rotable & Repair4; about · Esc closes story; about · key 3; about · key 4; about?section=mro · Forecast Lab3; about?section=mro · Network Positioning5; about?section=mro · What real data would make this useful; about?section=mro · Esc closes story; about?section=mro · key 4; actions · Rotable & Repair4; actions · Esc closes story; actions · key 3; actions · key 5; actions?id=EX-103-001 · Keyboard shortcuts; actions?id=EX-103-001 · Open navigation; actions?id=EX-103-001 · Capital Optimiser6; actions?id=EX-103-001 · Data & Method0; actions?id=EX-103-001 · GROUNDED NO MORE — Mission Control; actions?id=EX-103-001 · Glossary; actions?id=EX-103-001 · Parts Intelligence2; actions?id=EX-103-001 · Planner Action Centre8; actions?id=EX-103-001 · Rotable & Repair4; actions?id=EX-103-001 · Close …
 
@@ -69,43 +65,119 @@ Cells: `ch`=Chromium `we`=WebKit `fi`=Firefox, `s`/`e` = Simple/Expert, width.
 
 Per-element results (control, expected effect, effect observed, ms, per browser/mode/width) are in `test-results/audit_cells/<browser>/<cell>.json` (local, gitignored).
 
+## 1b. Cells not completed — time limit
+
+The release time limit stopped the run before these cells ran. They are **not completed**, not passed.
+
+**Parts (all cells).** The first parts cells (Chromium 1440/390, WebKit 1440) found a real bug: 7 ATA badges at 1440 and 2 at 390 had a dead gap between the circle and the status word beside it, so a click in that gap did nothing. Fixed in ede9626, which adds a transparent hit area over the circle and the word. Those pre-fix cells are superseded and not counted above. The fix is covered by the 35 passing tests in tests/test_site_parts.py, plus a targeted check: in Chromium and WebKit at 1440 and 390, clicking the centre of each of the 8 badges selects its system, and Playwright's own locator click succeeds. The full parts audit cells were not re-run.
+
+**Chromium: 38 cells not completed — time limit.**
+
+- parts · simple · 1440
+- parts · simple · 390
+- parts · expert · 1440
+- parts · expert · 390
+- parts?pn=GN-21-R001 · simple · 1440
+- parts?pn=GN-21-R001 · simple · 390
+- parts?pn=GN-21-R001 · expert · 1440
+- parts?pn=GN-21-R001 · expert · 390
+- parts?ata=32 · simple · 1440
+- parts?ata=32 · simple · 390
+- parts?ata=32 · expert · 1440
+- parts?ata=32 · expert · 390
+- forecast?pn=GN-21-R001 · simple · 390
+- forecast?pn=GN-21-R001 · expert · 1440
+- forecast?pn=GN-21-R001 · expert · 390
+- rotables?pn=GN-21-R001 · simple · 390
+- rotables?pn=GN-21-R001 · expert · 1440
+- rotables?pn=GN-21-R001 · expert · 390
+- rotables?view=outstation · simple · 1440
+- rotables?view=outstation · simple · 390
+- rotables?view=outstation · expert · 1440
+- rotables?view=outstation · expert · 390
+- network?station=LHR · simple · 1440
+- network?station=LHR · simple · 390
+- network?station=LHR · expert · 1440
+- network?station=LHR · expert · 390
+- capital?view=selection&point=I125 · expert · 1440
+- capital?view=selection&point=I125 · expert · 390
+- aog?incident=AOG-0001 · simple · 1440
+- aog?incident=AOG-0001 · simple · 390
+- aog?incident=AOG-0001 · expert · 1440
+- aog?incident=AOG-0001 · expert · 390
+- actions?severity=urgent · simple · 390
+- actions?severity=urgent · expert · 1440
+- actions?severity=urgent · expert · 390
+- method?section=next · simple · 390
+- method?section=next · expert · 1440
+- method?section=next · expert · 390
+
+**Webkit: 35 cells not completed — time limit.**
+
+- parts · simple · 1440
+- parts · expert · 1440
+- rotables · expert · 1440
+- network · simple · 1440
+- network · expert · 1440
+- aog · expert · 1440
+- about · simple · 1440
+- about · expert · 1440
+- planner · expert · 1440
+- mission?section=results · simple · 1440
+- mission?section=results · expert · 1440
+- parts?pn=GN-21-R001 · simple · 1440
+- parts?pn=GN-21-R001 · expert · 1440
+- parts?ata=32 · simple · 1440
+- parts?ata=32 · expert · 1440
+- forecast?pn=GN-21-R001 · simple · 1440
+- forecast?pn=GN-21-R001 · expert · 1440
+- rotables?pn=GN-21-R001 · simple · 1440
+- rotables?pn=GN-21-R001 · expert · 1440
+- rotables?view=outstation · simple · 1440
+- rotables?view=outstation · expert · 1440
+- network?station=LHR · simple · 1440
+- network?station=LHR · expert · 1440
+- capital?view=selection&point=I125 · simple · 1440
+- capital?view=selection&point=I125 · expert · 1440
+- aog?incident=AOG-0001 · simple · 1440
+- aog?incident=AOG-0001 · expert · 1440
+- actions?id=EX-103-001 · simple · 1440
+- actions?id=EX-103-001 · expert · 1440
+- actions?severity=urgent · simple · 1440
+- actions?severity=urgent · expert · 1440
+- about?section=mro · simple · 1440
+- about?section=mro · expert · 1440
+- method?section=next · simple · 1440
+- method?section=next · expert · 1440
+
 ## 2. Keyboard
 
 Chromium, 1440, Simple. Tab walk reaches every control and cycles (no trap); Enter/Space activate; Esc closes overlays with focus restored.
 
 | Route | tabbable | reached | cycled | problems | warnings |
 |---|---:|---:|---|---:|---|
-| about | 33 | 33 | True | 0 |  |
+| about | 39 | 39 | True | 0 |  |
 | actions | 60 | 60 | True | 0 |  |
-| aog | 39 | 39 | True | 0 |  |
-| capital | 62 | 62 | True | 0 | tab-stops-on-non-semantic-elements, upward-jump>400px |
+| aog | 40 | 40 | True | 0 |  |
+| capital | 63 | 63 | True | 0 | tab-stops-on-non-semantic-elements, upward-jump>400px |
 | forecast | 57 | 57 | True | 0 | upward-jump>400px |
 | glossary | 27 | 27 | True | 0 |  |
-| method | 34 | 34 | True | 0 |  |
-| mission | 50 | 50 | True | 0 | tab-stops-on-non-semantic-elements |
-| network | 76 | 76 | True | 0 | upward-jump>400px |
-| parts | 125 | 125 | True | 5 | upward-jump>400px |
+| method | 36 | 36 | True | 0 |  |
+| mission | 52 | 52 | True | 0 | tab-stops-on-non-semantic-elements |
+| network | 77 | 77 | True | 0 | upward-jump>400px |
+| parts | 124 | 124 | True | 0 | upward-jump>400px |
 | planner | 27 | 27 | True | 0 |  |
 | rotables | 91 | 91 | True | 0 | upward-jump>400px |
-
-| Route | Owner | Problem | Control | Note |
-|---|---|---|---|---|
-| parts | docs/js/views/parts-intelligence.js | Space-no-effect | GN-32-C009 steady, ADI 1.05, CV² 0.47 |  |
-| parts | docs/js/views/parts-intelligence.js | Space-no-effect | GN-32-C030 steady, ADI 1.01, CV² 0.48 |  |
-| parts | docs/js/views/parts-intelligence.js | Space-no-effect | GN-32-E011 now and then, ADI 2.61, CV² 0.16 |  |
-| parts | docs/js/views/parts-intelligence.js | Space-no-effect | GN-32-R014 now and then, ADI 2.38, CV² 0.20 |  |
-| parts | docs/js/views/parts-intelligence.js | Space-no-effect | GN-32-R036 now and then, ADI 1.44, CV² 0.27 |  |
 
 ## 3. Routes, hard refresh, links and downloads
 
 - **Hard refresh (chromium)**: 26 routes/deep links × load/reload/cold-load — 0 problems.
 - **Hard refresh (webkit)**: 26 routes/deep links × load/reload/cold-load — 0 problems.
 - **Internal links**: 59 unique hrefs — 0 problems.
-- **External links**: 14 unique URLs, one request each (retry once on network error/429/5xx) — 0 failed.
 - **downloads on disk**: OK
 - **downloads linked**: OK
 - **download buttons**: OK
-  - downloads/grounded_no_more_planner_workbook.xlsx: 119589 bytes; downloads/case_study_deck.pdf: 1693301 bytes; actions:export-csv: 36103 bytes, 64 CSV rows
+  - downloads/grounded_no_more_planner_workbook.xlsx: 120028 bytes; downloads/case_study_deck.pdf: 1694536 bytes; actions:export-csv: 36103 bytes, 64 CSV rows
 
 ## 4. Numbers reconcile (site ↔ data ↔ README ↔ workbook ↔ deck)
 
@@ -116,7 +188,7 @@ Chromium, 1440, Simple. Tab walk reaches every control and cycles (no trap); Ent
 - **readme**: OK · warnings: ['1,181']
 - **workbook**: OK
 - **deck**: OK · warnings: ["presentations/case_study_deck.pptx: hour figures not found in docs/data (check by hand): ['1,123']"]
-  - workbook 'Site data' line: docs/data/*.json, exported 2026-11-26T12:46:35Z (git f49a029) vs kpis.json 2026-11-26T13:02:18Z (git 390aee8)
+  - workbook 'Site data' line: docs/data/*.json, exported 2026-11-27T13:15:58Z (release v2.2) vs kpis.json 2026-11-27T13:15:58Z (release v2.2)
 
 ## 5. Performance (§2.9)
 

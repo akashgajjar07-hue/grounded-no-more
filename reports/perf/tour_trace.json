@@ -1,5 +1,5 @@
 {
-  "status": "interim baseline (superseded): this trace was taken before the tour fix in commit 14932ad (tour CLS 0.594 -> 0.001); the 'disclaimer' shift it shows no longer occurs. Current tour frame metrics: perf_summary.json animations.",
+  "status": "interim baseline (superseded): this trace was taken before the tour fix in the v2.1 release (tour CLS 0.594 -> 0.001); the 'disclaimer' shift it shows no longer occurs. Current tour frame metrics: perf_summary.json animations.",
   "what": "Guided tour, full Play run (hero \"60-second tour\" button, 6 steps at the default 7 s), 1440x900, Chromium headless, CDP trace",
   "tour_duration_s": 50.2,
   "frames": 3342,

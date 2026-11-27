@@ -3,9 +3,9 @@
  "owner": "docs/js/views/aog-response-lab.js",
  "problems": [],
  "warnings": [],
- "expected": 39,
- "reached": 39,
- "presses": 41,
+ "expected": 40,
+ "reached": 40,
+ "presses": 42,
  "cycled": true,
  "activation": [
   {
@@ -14,7 +14,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 101.0,
+   "ms": 8.1,
    "esc": {
     "opened": [
      "story"
@@ -34,7 +34,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 7.3,
+   "ms": 59.4,
    "esc": {
     "opened": [
      "story"
@@ -54,7 +54,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 179.1,
+   "ms": 5.1,
    "esc": {
     "opened": [
      "story"
@@ -74,7 +74,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 9.2,
+   "ms": 72.0,
    "esc": {
     "opened": [
      "story"
@@ -94,7 +94,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 27.1,
+   "ms": 2.9,
    "esc": {
     "opened": [
      "modal"
@@ -114,7 +114,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 130.8,
+   "ms": 4.9,
    "esc": {
     "opened": [
      "modal"
@@ -133,7 +133,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 3.3,
+   "ms": 2.7,
    "control": "hours planes sat grounded waiting for a part (material AOG h",
    "tag": "span",
    "role": "",
@@ -144,7 +144,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 3.1,
+   "ms": 1.7,
    "control": "borrowing a part from another of our aircraft (robbery)",
    "tag": "span",
    "role": "",
@@ -155,7 +155,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 3.1,
+   "ms": 3.4,
    "control": "Must be fixed before the next flight (D0)",
    "tag": "span",
    "role": "",
@@ -166,7 +166,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 12.5,
+   "ms": 31.7,
    "control": "Event log · 10 steps, each with its record",
    "tag": "summary",
    "role": "",
@@ -177,7 +177,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 10.9,
+   "ms": 5.6,
    "control": "Event log · 10 steps, each with its record",
    "tag": "summary",
    "role": "",
@@ -188,7 +188,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 39.2,
+   "ms": 2.5,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -199,7 +199,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 14.1,
+   "ms": 3.8,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -210,11 +210,22 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 17.0,
+   "ms": 2.2,
    "control": "View data",
    "tag": "summary",
    "role": "",
    "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 3.0,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
   },
   {
    "ok": true,
@@ -222,17 +233,6 @@
     "dom-mutation"
    ],
    "ms": 3.1,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 2.0,
    "control": "Not available (6)No contract, not possible at the time, or a",
    "tag": "summary",
    "role": "",
@@ -243,7 +243,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.7,
+   "ms": 2.4,
    "control": "Not available (6)No contract, not possible at the time, or a",
    "tag": "summary",
    "role": "",
@@ -254,7 +254,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 66.6,
+   "ms": 2.5,
    "control": "borrowing a part from another of our aircraft (robbery)",
    "tag": "span",
    "role": "",
@@ -265,9 +265,9 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 3.5,
-   "control": "View data",
-   "tag": "summary",
+   "ms": 10.0,
+   "control": "More",
+   "tag": "button",
    "role": "",
    "key": "Enter"
   },
@@ -276,9 +276,9 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 2.3,
-   "control": "View data",
-   "tag": "summary",
+   "ms": 2.8,
+   "control": "More",
+   "tag": "button",
    "role": "",
    "key": "Space"
   }
@@ -300,10 +300,10 @@
    "ok": true,
    "invoker": "60-second tourS",
    "focus_after": {
-    "id": "u1",
-    "label": "07 · AOG Response LabAn aircraft is on the ground."
+    "id": "k10",
+    "label": "60-second tourS"
    },
-   "returned_to_invoker": false,
+   "returned_to_invoker": true,
    "note": ""
   },
   {

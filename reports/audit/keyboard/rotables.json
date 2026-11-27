@@ -9,7 +9,7 @@
     [
      "View data",
      "More",
-     807
+     853
     ]
    ]
   }
@@ -25,7 +25,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 12.4,
+   "ms": 55.8,
    "esc": {
     "opened": [
      "story"
@@ -45,7 +45,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 47.9,
+   "ms": 16.2,
    "esc": {
     "opened": [
      "story"
@@ -65,7 +65,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 38.5,
+   "ms": 2.0,
    "esc": {
     "opened": [
      "modal"
@@ -85,7 +85,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 3.4,
+   "ms": 2.5,
    "esc": {
     "opened": [
      "modal"
@@ -104,7 +104,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 26.1,
+   "ms": 2.3,
    "control": "repair time (TAT)",
    "tag": "span",
    "role": "",
@@ -115,7 +115,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 58.9,
+   "ms": 7.8,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -126,7 +126,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 30.4,
+   "ms": 8.2,
    "control": "View data",
    "tag": "summary",
    "role": "",
@@ -138,7 +138,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 49.9,
+   "ms": 4.1,
    "control": "EU vendor",
    "tag": "button",
    "role": "radio",
@@ -149,107 +149,107 @@
    "effects": [
     "navigation",
     "chart-update"
-   ],
-   "ms": 8.7,
-   "control": "EU vendor",
-   "tag": "button",
-   "role": "radio",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 9.8,
-   "control": "More",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 2.3,
-   "control": "More",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 186.3,
-   "control": "Each Airport for Itself: 20",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 3.6,
-   "control": "Each Airport for Itself: 20",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 3.2,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
-   ],
-   "ms": 3.7,
-   "control": "View data",
-   "tag": "summary",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 5.9,
-   "control": "Compare at the Simple Rulebook level (6 spares)",
-   "tag": "button",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "chart-update"
-   ],
-   "ms": 19.5,
-   "control": "Compare at the Simple Rulebook level (6 spares)",
-   "tag": "button",
-   "role": "",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "dom-mutation"
    ],
    "ms": 5.4,
+   "control": "EU vendor",
+   "tag": "button",
+   "role": "radio",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 2.4,
+   "control": "More",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 2.9,
+   "control": "More",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 2.5,
+   "control": "Each Airport for Itself: 20",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 47.6,
+   "control": "Each Airport for Itself: 20",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 2.1,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 2.4,
+   "control": "View data",
+   "tag": "summary",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 2.8,
+   "control": "Compare at the Simple Rulebook level (6 spares)",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "chart-update"
+   ],
+   "ms": 3.3,
+   "control": "Compare at the Simple Rulebook level (6 spares)",
+   "tag": "button",
+   "role": "",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "dom-mutation"
+   ],
+   "ms": 4.2,
    "control": "Repair",
    "tag": "button",
    "role": "",
@@ -260,7 +260,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 5.1,
+   "ms": 5.6,
    "control": "Repair",
    "tag": "button",
    "role": "",
@@ -284,10 +284,10 @@
    "ok": true,
    "invoker": "60-second tourS",
    "focus_after": {
-    "id": "u1",
-    "label": "07 · AOG Response LabAn aircraft is on the ground."
+    "id": "k10",
+    "label": "60-second tourS"
    },
-   "returned_to_invoker": false,
+   "returned_to_invoker": true,
    "note": ""
   },
   {

@@ -14,7 +14,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 51.0,
+   "ms": 66.3,
    "esc": {
     "opened": [
      "story"
@@ -34,7 +34,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 54.2,
+   "ms": 54.7,
    "esc": {
     "opened": [
      "story"
@@ -47,6 +47,26 @@
    "tag": "button",
    "role": "",
    "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "story",
+    "dom-mutation"
+   ],
+   "ms": 65.0,
+   "esc": {
+    "opened": [
+     "story"
+    ],
+    "closed": true,
+    "focus": "k17",
+    "returned_to_invoker": true
+   },
+   "control": "Story",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
   },
   {
    "ok": true,
@@ -66,26 +86,6 @@
    "control": "Story",
    "tag": "button",
    "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "story",
-    "dom-mutation"
-   ],
-   "ms": 85.6,
-   "esc": {
-    "opened": [
-     "story"
-    ],
-    "closed": true,
-    "focus": "k17",
-    "returned_to_invoker": true
-   },
-   "control": "Story",
-   "tag": "button",
-   "role": "",
    "key": "Space"
   },
   {
@@ -94,7 +94,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 48.9,
+   "ms": 8.4,
    "esc": {
     "opened": [
      "modal"
@@ -114,7 +114,7 @@
     "modal",
     "dom-mutation"
    ],
-   "ms": 23.3,
+   "ms": 5.6,
    "esc": {
     "opened": [
      "modal"
@@ -135,21 +135,8 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 3.3,
+   "ms": 4.2,
    "control": "Downtime and urgency",
-   "tag": "a",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "scroll",
-    "dom-mutation"
-   ],
-   "ms": 3.7,
-   "control": "Parts",
    "tag": "a",
    "role": "",
    "key": "Enter"
@@ -159,7 +146,20 @@
    "effects": [
     "navigation"
    ],
-   "ms": 1.8,
+   "ms": 4.9,
+   "control": "Parts",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "scroll",
+    "dom-mutation"
+   ],
+   "ms": 18.7,
    "control": "Repair",
    "tag": "a",
    "role": "",
@@ -172,8 +172,19 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 4.0,
+   "ms": 2.1,
    "control": "Stock and network",
+   "tag": "a",
+   "role": "",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation"
+   ],
+   "ms": 5.1,
+   "control": "Forecasting",
    "tag": "a",
    "role": "",
    "key": "Enter"
@@ -185,18 +196,7 @@
     "scroll",
     "dom-mutation"
    ],
-   "ms": 3.7,
-   "control": "Forecasting",
-   "tag": "a",
-   "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation"
-   ],
-   "ms": 2.1,
+   "ms": 3.1,
    "control": "Plans and money",
    "tag": "a",
    "role": "",
@@ -205,9 +205,11 @@
   {
    "ok": true,
    "effects": [
-    "navigation"
+    "navigation",
+    "scroll",
+    "dom-mutation"
    ],
-   "ms": 2.9,
+   "ms": 2.5,
    "control": "Testing and results",
    "tag": "a",
    "role": "",

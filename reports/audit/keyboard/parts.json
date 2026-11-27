@@ -9,7 +9,7 @@
     [
      "PS4GN-33-E033Emergency light battery pack0",
      "Open the part",
-     1055
+     1105
     ],
     [
      "5GN-32-E027Brake temperature sensor (WB)0",
@@ -30,7 +30,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 78.4,
+   "ms": 56.7,
    "esc": {
     "opened": [
      "story"
@@ -50,7 +50,7 @@
     "story",
     "dom-mutation"
    ],
-   "ms": 49.8,
+   "ms": 50.6,
    "esc": {
     "opened": [
      "story"
@@ -69,7 +69,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 1.4,
+   "ms": 1.8,
    "control": "aircraft system group (ATA chapter)",
    "tag": "span",
    "role": "",
@@ -81,7 +81,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 12.3,
+   "ms": 2.1,
    "control": "ATA 36 Pneumatic: OK (system level OK). 5 part numbers, 0 ur",
    "tag": "g",
    "role": "button",
@@ -93,7 +93,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 4.1,
+   "ms": 85.6,
    "control": "ATA 36 Pneumatic: OK (system level OK). 5 part numbers, 0 ur",
    "tag": "g",
    "role": "button",
@@ -105,7 +105,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 6.8,
+   "ms": 3.6,
    "control": "ATA 27 Flight controls: URGENT (system level Urgent). 11 par",
    "tag": "g",
    "role": "button",
@@ -117,7 +117,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 21.4,
+   "ms": 2.6,
    "control": "ATA 27 Flight controls: URGENT (system level Urgent). 11 par",
    "tag": "g",
    "role": "button",
@@ -128,9 +128,9 @@
    "effects": [
     "navigation",
     "drawer",
-    "dom-mutation"
+    "chart-update"
    ],
-   "ms": 4.7,
+   "ms": 8.6,
    "esc": {
     "opened": [
      "drawer"
@@ -148,9 +148,10 @@
    "ok": true,
    "effects": [
     "navigation",
+    "drawer",
     "dom-mutation"
    ],
-   "ms": 4.5,
+   "ms": 20.3,
    "esc": {
     "opened": [
      "drawer"
@@ -169,7 +170,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 9.9,
+   "ms": 3.4,
    "control": "Part",
    "tag": "button",
    "role": "",
@@ -180,7 +181,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 1.2,
+   "ms": 37.3,
    "control": "Part",
    "tag": "button",
    "role": "",
@@ -190,9 +191,10 @@
    "ok": true,
    "effects": [
     "navigation",
+    "drawer",
     "dom-mutation"
    ],
-   "ms": 5.1,
+   "ms": 6.2,
    "esc": {
     "opened": [
      "drawer"
@@ -212,7 +214,15 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 1.6,
+   "ms": 5.5,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k47",
+    "returned_to_invoker": true
+   },
    "control": "GN-32-R036Carbon brake assembly (WB)64",
    "tag": "tr",
    "role": "",
@@ -224,7 +234,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 13.6,
+   "ms": 22.2,
    "control": "24Electrical power11 parts · top risk 1OK",
    "tag": "button",
    "role": "",
@@ -236,7 +246,7 @@
     "navigation",
     "chart-update"
    ],
-   "ms": 14.5,
+   "ms": 9.1,
    "control": "24Electrical power11 parts · top risk 1OK",
    "tag": "button",
    "role": "",
@@ -249,7 +259,7 @@
     "scroll",
     "chart-update"
    ],
-   "ms": 5.7,
+   "ms": 30.5,
    "control": "34Navigation11 parts · top risk 52OK",
    "tag": "button",
    "role": "",
@@ -262,11 +272,23 @@
     "scroll",
     "chart-update"
    ],
-   "ms": 23.2,
+   "ms": 11.3,
    "control": "34Navigation11 parts · top risk 52OK",
    "tag": "button",
    "role": "",
    "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 2.8,
+   "control": "GN-32-R015 Main wheel and tyre assembly (NB), risk 78: open ",
+   "tag": "button",
+   "role": "",
+   "key": "Enter"
   },
   {
    "ok": true,
@@ -275,7 +297,7 @@
     "drawer",
     "dom-mutation"
    ],
-   "ms": 2.1,
+   "ms": 8.8,
    "esc": {
     "opened": [
      "drawer"
@@ -287,18 +309,6 @@
    "control": "GN-32-R015 Main wheel and tyre assembly (NB), risk 78: open ",
    "tag": "button",
    "role": "",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 1.9,
-   "control": "GN-32-R015 Main wheel and tyre assembly (NB), risk 78: open ",
-   "tag": "button",
-   "role": "",
    "key": "Space"
   },
   {
@@ -307,7 +317,7 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 1.7,
+   "ms": 10.1,
    "esc": {
     "opened": [
      "drawer"
@@ -327,7 +337,7 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 1.6,
+   "ms": 2.6,
    "control": "1GN-32-R014Nose wheel steering actuator (NB)100",
    "tag": "button",
    "role": "",
@@ -337,9 +347,18 @@
    "ok": true,
    "effects": [
     "navigation",
+    "drawer",
     "dom-mutation"
    ],
-   "ms": 3.6,
+   "ms": 12.5,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k67",
+    "returned_to_invoker": true
+   },
    "control": "5GN-32-E027Brake temperature sensor (WB)0",
    "tag": "button",
    "role": "",
@@ -352,7 +371,7 @@
     "drawer",
     "dom-mutation"
    ],
-   "ms": 6.8,
+   "ms": 10.3,
    "esc": {
     "opened": [
      "drawer"
@@ -372,20 +391,7 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 1.9,
-   "control": "GN-32-C010 now and then, ADI 2.45, CV² 0.15",
-   "tag": "circle",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "drawer",
-    "dom-mutation"
-   ],
-   "ms": 2.2,
+   "ms": 2.1,
    "esc": {
     "opened": [
      "drawer"
@@ -397,6 +403,18 @@
    "control": "GN-32-C010 now and then, ADI 2.45, CV² 0.15",
    "tag": "circle",
    "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 2.1,
+   "control": "GN-32-C010 now and then, ADI 2.45, CV² 0.15",
+   "tag": "circle",
+   "role": "button",
    "key": "Space"
   },
   {
@@ -405,7 +423,7 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 2.4,
+   "ms": 3.2,
    "control": "GN-32-C031 now and then, ADI 2.23, CV² 0.37",
    "tag": "circle",
    "role": "button",
@@ -417,15 +435,7 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 13.2,
-   "esc": {
-    "opened": [
-     "drawer"
-    ],
-    "closed": true,
-    "focus": "k75",
-    "returned_to_invoker": true
-   },
+   "ms": 2.4,
    "control": "GN-32-C031 now and then, ADI 2.23, CV² 0.37",
    "tag": "circle",
    "role": "button",
@@ -436,9 +446,9 @@
    "effects": [
     "navigation",
     "drawer",
-    "chart-update"
+    "dom-mutation"
    ],
-   "ms": 12.8,
+   "ms": 3.5,
    "esc": {
     "opened": [
      "drawer"
@@ -458,8 +468,41 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 2.8,
+   "ms": 2.5,
    "control": "GN-32-E027 now and then, ADI 9.33, CV² 0.09",
+   "tag": "circle",
+   "role": "button",
+   "key": "Space"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "dom-mutation"
+   ],
+   "ms": 3.2,
+   "control": "GN-32-R015 now and then, ADI 1.93, CV² 0.23",
+   "tag": "circle",
+   "role": "button",
+   "key": "Enter"
+  },
+  {
+   "ok": true,
+   "effects": [
+    "navigation",
+    "drawer",
+    "chart-update"
+   ],
+   "ms": 20.3,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k83",
+    "returned_to_invoker": true
+   },
+   "control": "GN-32-R015 now and then, ADI 1.93, CV² 0.23",
    "tag": "circle",
    "role": "button",
    "key": "Space"
@@ -471,47 +514,15 @@
     "drawer",
     "dom-mutation"
    ],
-   "ms": 7.0,
+   "ms": 2.6,
    "esc": {
     "opened": [
      "drawer"
     ],
     "closed": true,
-    "focus": "k83",
+    "focus": "k87",
     "returned_to_invoker": true
    },
-   "control": "GN-32-R015 now and then, ADI 1.93, CV² 0.23",
-   "tag": "circle",
-   "role": "button",
-   "key": "Enter"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 26.8,
-   "esc": {
-    "opened": [
-     "drawer"
-    ],
-    "closed": true,
-    "focus": "k83",
-    "returned_to_invoker": true
-   },
-   "control": "GN-32-R015 now and then, ADI 1.93, CV² 0.23",
-   "tag": "circle",
-   "role": "button",
-   "key": "Space"
-  },
-  {
-   "ok": true,
-   "effects": [
-    "navigation",
-    "dom-mutation"
-   ],
-   "ms": 4.3,
    "control": "GN-32-R037 now and then, ADI 4.25, CV² 0.08",
    "tag": "circle",
    "role": "button",
@@ -523,7 +534,7 @@
     "navigation",
     "dom-mutation"
    ],
-   "ms": 4.0,
+   "ms": 3.7,
    "control": "GN-32-R037 now and then, ADI 4.25, CV² 0.08",
    "tag": "circle",
    "role": "button",
@@ -534,7 +545,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 18.1,
+   "ms": 5.6,
    "control": "Needed",
    "tag": "button",
    "role": "",
@@ -545,7 +556,7 @@
    "effects": [
     "dom-mutation"
    ],
-   "ms": 1.8,
+   "ms": 1.4,
    "control": "Needed",
    "tag": "button",
    "role": "",
@@ -555,9 +566,18 @@
    "ok": true,
    "effects": [
     "navigation",
+    "drawer",
     "dom-mutation"
    ],
    "ms": 1.6,
+   "esc": {
+    "opened": [
+     "drawer"
+    ],
+    "closed": true,
+    "focus": "k103",
+    "returned_to_invoker": true
+   },
    "control": "GN-32-R015Main wheel and tyre assembly (NB)Repairablenext fl",
    "tag": "tr",
    "role": "",
@@ -568,9 +588,9 @@
    "effects": [
     "navigation",
     "drawer",
-    "dom-mutation"
+    "chart-update"
    ],
-   "ms": 5.4,
+   "ms": 5.0,
    "esc": {
     "opened": [
      "drawer"
