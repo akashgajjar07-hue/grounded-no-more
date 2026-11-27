@@ -103,7 +103,7 @@ The same sequence and timing as Chromium, within ±1 frame, in all six transitio
 ## Top 5 issues, ranked, each with a fix
 
 1. **The scrim switches off, a lit still of the old page holds, then the scrim comes back, at every step** (e.g. Chromium 1440 #63–73, WebKit 1440 #64–74, every transition).
-   *Fix:* keep the dim layer (and ideally a spotlight placeholder) up for the whole tour. On Next:
+   *Fix:* keep the dim layer (and ideally a spotlight stand-in) up for the whole tour. On Next:
    - fade only the card out (150 ms);
    - run the page change under the scrim, so the spotlight ring shrinks and fades on the old target, then the page changes, then the ring grows on the new target;
    - bring the card in.
