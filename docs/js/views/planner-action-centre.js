@@ -486,8 +486,19 @@ export async function render(el, ctx) {
   const TYPE_ORDER = ['OUTSTATION_DEPLETION', 'DONOR_NOT_REINSTATED', 'OPEN_REQUIREMENT', 'OVERDUE_REPAIR', 'CONDEMNED_AWAITING_REPLACEMENT', 'LEAD_TIME_DRIFT', 'EXCESS_DECLINING_DEMAND', 'EXPIRY_RISK'];
   const walk = [];
   TYPE_ORDER.forEach((t) => { if (walk.length < 5) { const a = all.find((x) => x.type === t); if (a) walk.push(a); } });
+  // v2.2: a deep link with ?station= and/or ?pn= (e.g. the tour's #/actions?station=BOM) starts the walkthrough on the
+  // matching item: highest severity first, then the most grounded hours in the look-back. Without a match: unchanged.
+  const wantSt = ctx.params.station || '', wantPn = ctx.params.pn || '';
+  const focus = wantSt || wantPn
+    ? all.filter((a) => (!wantSt || a.station === wantSt) && (!wantPn || a.pn === wantPn))
+      .sort((x, y) => (SEV_RANK[x.severity] ?? 9) - (SEV_RANK[y.severity] ?? 9) || (y.evidence?.aog_hours_lookback ?? -1) - (x.evidence?.aog_hours_lookback ?? -1))[0]
+    : null;
+  if (focus && !walk.includes(focus)) {
+    const same = walk.findIndex((a) => a.type === focus.type);
+    if (same >= 0) walk[same] = focus; else { walk.unshift(focus); if (walk.length > 5) walk.pop(); }
+  }
   if (walk.length) {
-    let wi = 0;
+    let wi = focus ? Math.max(0, walk.indexOf(focus)) : 0;
     const wBody = h('div', { class: 'pac-walk-body', 'aria-live': 'polite' });
     const wBack = h('button', { type: 'button', class: 'btn btn--ghost btn--sm', onclick: () => showWalk(wi - 1) }, 'Back');
     const wNext = h('button', { type: 'button', class: 'btn btn--primary btn--sm', onclick: () => showWalk(wi + 1) }, 'Next');
@@ -511,7 +522,7 @@ export async function render(el, ctx) {
       title: byMode(`Monday morning: ${fmtInt(walk.length)} typical items from the ${asOf != null ? fmtWeek(asOf) : ''} list, in the order a planner works them`, `Monday morning: ${fmtInt(walk.length)} typical exceptions from the ${asOf != null ? fmtWeek(asOf) : ''} queue, in the order a planner works them`),
       body: h('div', {}, wBody, h('div', { class: 'pac-walk-nav' }, dots, h('div', { class: 'row' }, wBack, wNext))),
     })));
-    showWalk(0);
+    showWalk(wi);
   }
 
   // ---- filters
