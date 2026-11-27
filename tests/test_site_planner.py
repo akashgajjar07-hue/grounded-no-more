@@ -1,7 +1,8 @@
-"""Browser tests for The Planner Behind the Project (#/planner): essay from docs/content/planner.md, DRAFT, links."""
+"""Browser tests for The Planner Behind the Project (#/planner): essay from docs/content/planner.md, links."""
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 
@@ -23,8 +24,10 @@ def test_planner_essay(site, browser, vp, mode):  # noqa: F811
         audit(page, problems, min_frames=0)
         assert page.locator("#view h1").inner_text().strip() == "The Planner Behind the Project"
         assert page.locator('[data-role="intro3"]').count() == 1
-        if "*Draft*" in SRC:
-            assert page.locator('[data-role="draft"]').inner_text().strip() == "DRAFT"
+        # v2.2: the essay reads the same in both modes, and says so under the header
+        assert page.locator('.pl-head [data-role="mode-same"]').inner_text().strip() == "This page reads the same in Simple and Expert."
+        assert not re.search(r"\bdraft\b|\bagents?\b|interview|linkedin|legacy", page.locator("#view").inner_text(), re.I)
+        assert page.locator('[data-role="draft"]').count() == 0   # v2.2: no status chip on the public essay
         essay = page.locator('[data-role="planner-essay"]')
         heads = [t.strip() for t in essay.locator("h2").all_inner_texts()]
         expected = [l[3:].strip() for l in SRC.splitlines() if l.startswith("## ")]

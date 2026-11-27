@@ -16,6 +16,9 @@ import { countUpOnce } from '../lib/motion.js';
 function countEl(v, key) { const el = h('span', {}, fmtInt(v)); requestAnimationFrame(() => countUpOnce(el, v, fmtInt, { key })); return el; }
 import { chartFrame, responsive, svgIn, theme, truncate, refLine, fmtPct, fmtInt, fmtNum, fmtStamp } from '../charts/theme.js';
 import { assetURL } from '../data.js';
+import { inline } from './about/md.js';
+import { aboutLink } from './about.js';
+import { jumpTo, sameRouteLinks } from './about/section.js';
 
 export const data = ['method', 'kpis'];
 const d3 = () => window.d3;
@@ -33,7 +36,7 @@ const PROV_SIMPLE = {
   ASSUMED: 'A planning choice made by the author, with a reason given.',
   SIMULATED: 'Made by the computer model of a made-up airline.',
 };
-const AUTHOR_FALLBACK = { name: 'Akash Gajjar', degree: 'MSc Supply Chain Management, University of Liverpool (2025)', github: 'https://github.com/akashgajjar07-hue', linkedin: '' };
+const AUTHOR_FALLBACK = { name: 'Akash Gajjar', degree: 'MSc Supply Chain Management, University of Liverpool (2025)', github: 'https://github.com/akashgajjar07-hue' };
 
 function ensureCSS() {
   const id = 'css-data-method';
@@ -53,7 +56,23 @@ const fmtDate = (iso) => fmtStamp(iso, { year: true }).replace(/ \d{2}:\d{2} UTC
 /** Replace ISO timestamps embedded in exported prose with the readable form. */
 const humanISO = (s) => String(s ?? '').replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})/g, (m) => fmtTime(m));
 
+/** Data & Method sections reachable by ?section=: next (Next experiments). Focus lands on the section heading. */
+const SECTIONS = { next: 'next-experiments' };
+function jumpToSection(section) {
+  const id = SECTIONS[section];
+  if (!id) return Promise.resolve(false);
+  return jumpTo(() => document.getElementById(id), { heading: (t) => t.querySelector('.section-title h2') || t });
+}
+
+/** #/method?section=… on the same route: jump, no re-render (nothing else on this page reads the URL). */
+export function onParams(params) {
+  if (params.section) jumpToSection(params.section);
+  else window.scrollTo({ top: 0, behavior: 'instant' });
+  return true;
+}
+
 export async function render(el, ctx) {
+  const navRender = el.style.visibility === 'hidden';   // a mode switch re-renders in place: no jump then
   await ensureCSS();
   const M = ctx.data.method || {};
   const K = ctx.data.kpis || {};
@@ -218,11 +237,12 @@ export async function render(el, ctx) {
 
   // ---------------------------------------------------------------- next experiments (hosted here: #/method?section=next)
   const NX = M.next_experiments || [];
-  const nextSec = h('section', { id: 'next-experiments', class: 'dm-next', dataset: { role: 'next-experiments' }, tabindex: '-1' });
+  const nextSec = h('section', { id: 'next-experiments', class: 'dm-next', dataset: { role: 'next-experiments' } });
   el.append(nextSec);
   if (NX.length) {
     const md = await fetch(assetURL('content/next_experiments.md')).then((r) => (r.ok ? r.text() : '')).catch(() => '');
     const parsed = parseNext(md);
+    const plain = (t) => (simple ? String(t).replace(/\s*\(P0\)/g, '') : t);
     nextSec.append(sectionTitle('Next experiments'),
       card({
         prov: 'ASSUMED', kicker: byMode('Ideas to test next', 'Proposed experiments'),
@@ -232,15 +252,19 @@ export async function render(el, ctx) {
           h('ol', { class: 'dm-next-list' }, NX.map((x) => {
             const [code, rest] = /^([A-Z0-9-]+):\s*(.+)$/.test(x.title) ? x.title.match(/^([A-Z0-9-]+):\s*(.+)$/).slice(1) : [null, x.title];
             const body = parsed[x.n];
-            const plain = (t) => (simple ? String(t).replace(/\s*\(P0\)/g, '') : t);
             return h('li', { class: 'dm-next-item', dataset: { n: x.n } },
               h('div', { class: 'row-wrap' }, h('h3', { class: 'dm-next-title' }, rest.replace(/^./, (c) => c.toUpperCase())), code ? h('span', { class: 'mono-tag expert-only' }, code) : null, h('span', { class: 'chip' }, x.status || 'proposed, not run')),
-              // AUTHOR-owned copy, shown as written (docs/content/next_experiments.md)
+              // AUTHOR-owned copy, shown as written (docs/content/next_experiments.md); its links jump to the About sections
               h('div', { class: 'dm-next-body', dataset: { readability: 'skip' } },
-                body ? body.map((b) => (Array.isArray(b) ? h('ul', {}, b.map((li) => h('li', {}, plain(li)))) : h('p', {}, plain(b)))) : h('p', {}, plain(x.summary || ''))));
-          }))),
+                body ? body.map(nextBlock) : h('p', {}, plain(x.summary || ''))));
+          })),
+          parsed.back ? h('p', { class: 'm-0 t-14 dm-next-back', dataset: { role: 'next-back' } }, inline(parsed.back, { link: aboutLink })) : null),
       }));
-    if (ctx.params.section === 'next') requestAnimationFrame(() => { nextSec.scrollIntoView({ block: 'start' }); nextSec.focus({ preventScroll: true }); });
+    function nextBlock(b) {
+      if (b && b.expert) { const n = nextBlock(b.block); n.classList.add('expert-only'); return n; }
+      return Array.isArray(b) ? h('ul', {}, b.map((li) => h('li', {}, inline(plain(li), { link: aboutLink })))) : h('p', {}, inline(plain(b), { link: aboutLink }));
+    }
+    nextSec.querySelector('.section-title h2')?.setAttribute('tabindex', '-1');
   }
 
   // ---------------------------------------------------------------- donor recount (post-plan) — methodology note
@@ -331,31 +355,37 @@ export async function render(el, ctx) {
   const A = { ...AUTHOR_FALLBACK, ...(M.author || {}) };
   const initials = A.name.split(/\s+/).map((s) => s[0]).join('').slice(0, 2);
   const authorCard = card({ cls: 'dm-span-5', kicker: 'Author', body: h('div', { class: 'dm-author' }, h('div', { class: 'dm-avatar', 'aria-hidden': 'true' }, initials), h('div', {}, h('h3', {}, A.name), h('p', { class: 'muted' }, A.degree), h('div', { class: 'dm-links' },
-    A.github ? h('a', { class: 'btn btn--sm', href: A.github, target: '_blank', rel: 'noopener noreferrer' }, 'GitHub', icon('chevron-right')) : null,
-    // LinkedIn is shown only once a real URL exists (no placeholder chip)
-    A.linkedin ? h('a', { class: 'btn btn--sm', href: A.linkedin, target: '_blank', rel: 'noopener noreferrer' }, 'LinkedIn', icon('chevron-right')) : null))) });
+    A.github ? h('a', { class: 'btn btn--sm', href: A.github, target: '_blank', rel: 'noopener noreferrer' }, 'GitHub', icon('chevron-right')) : null))) });
   const licCard = card({ cls: 'dm-span-12', kicker: 'Third-party licences', title: `${fmtInt((M.licences || []).length)} vendored packages and fonts`, prov: 'REAL',
     body: xp(byMode('Show the licences', 'Licence table'), h('div', { class: 'dm-wrap' }, dataTable({ caption: 'Licences', bare: true, dense: true, rows: (M.licences || []).map((r) => ({ ...r, name: stripMd(r.name) })), mobileColumns: ['name', 'licence', 'version'], columns: [{ key: 'name', label: 'Package' }, { key: 'version', label: 'Version', mono: true }, { key: 'licence', label: 'Licence' }] }))) });
   const discCard = card({ cls: 'dm-span-7', bp: true, kicker: 'Disclaimer', body: [h('p', { class: 'dm-disclaimer', dataset: { readability: 'skip' } }, M.disclaimer || DISCLAIMER), h('p', {}, byMode('Falcon Hub Airways, its planes and its part numbers are made up. No real airline names, logos or colours are used. Simulated failure rates are not measured reliability. Urgency classes are made up for teaching, not real airline safety rules.',
     'Falcon Hub Airways, its tails and its part numbers are fictional; no real airline names, logos or liveries are used. Simulated rates are not measured reliability. D0/D3/D10 are hypothetical rectification windows; D3 and D10 are simplified analogues of MEL repair-interval categories B and C, not operator MEL decisions.'))] });
   el.append(h('div', { class: 'dm-grid' }, authorCard, discCard, licCard));
 
+  if (ctx.params.section && navRender) jumpToSection(ctx.params.section);
+  cleanups.push(sameRouteLinks(el, 'method', (p) => (p.section ? jumpToSection(p.section) : window.scrollTo({ top: 0, behavior: 'instant' }))));
   return () => cleanups.forEach((f) => { try { f?.(); } catch { /* ignore */ } });
 }
 
 /** docs/content/next_experiments.md → {n: [paragraph | [bullet…]]} (plain text; markdown emphasis and links stripped). */
 export function parseNext(md) {
   const out = {};
-  const clean = (t) => t.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1').replace(/`([^`]+)`/g, '$1').trim();
+  // links are kept ([text](file.md)) and rendered as section links; bold / italics / code marks are dropped
+  const clean = (t) => t.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1').replace(/`([^`]+)`/g, '$1').trim();
   String(md || '').split(/^## /m).slice(1).forEach((sec) => {
     const m = sec.match(/^(\d+)\.\s+.*\n([\s\S]*)$/);
     if (!m) return;
     const blocks = [];
+    let expert = false;
     m[2].split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean).forEach((b) => {
-      if (/^Back:/.test(b)) return;
+      // <!-- expert --> … <!-- /expert --> blocks: Expert-mode depth (same convention as about/md.js)
+      if (/^<!--\s*expert\s*-->$/.test(b)) { expert = true; return; }
+      if (/^<!--\s*\/expert\s*-->$/.test(b)) { expert = false; return; }
+      if (/^<!--[\s\S]*-->$/.test(b)) return;
+      if (/^Back:/.test(b)) { out.back = clean(b); return; }
       const lines = b.split('\n');
-      if (lines.every((l) => /^\s*-\s+/.test(l))) blocks.push(lines.map((l) => clean(l.replace(/^\s*-\s+/, '').replace(/;$|\.$/, ''))));
-      else blocks.push(clean(lines.join(' ')));
+      const block = lines.every((l) => /^\s*-\s+/.test(l)) ? lines.map((l) => clean(l.replace(/^\s*-\s+/, '').replace(/;$|\.$/, ''))) : clean(lines.join(' '));
+      blocks.push(expert ? { expert: true, block } : block);
     });
     out[+m[1]] = blocks;
   });

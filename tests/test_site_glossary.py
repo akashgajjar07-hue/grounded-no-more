@@ -164,6 +164,8 @@ def test_glossary_keyboard(site, browser, vp):  # noqa: F811
         page.wait_for_timeout(300)
         assert chip.get_attribute("aria-current") == "true"
         assert page.evaluate("document.activeElement.classList.contains('gl-group-title')")
+        # v2.2: the group chips are deep links (the URL updates; Back / reload return to the group)
+        assert page.evaluate("location.hash") == "#/glossary?section=repair"
         page.locator("#gl-search").focus()
         page.keyboard.type("tat")
         page.keyboard.press("Escape")

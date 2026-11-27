@@ -25,6 +25,10 @@ The current stress worlds change one thing at a time, over a narrow range (relia
 - a reliability problem on a top part and reduced loan or exchange availability;
 - higher utilisation in the peak season.
 
+<!-- expert -->
+Design note: run the combined worlds on the frozen policies only, on common random numbers (the same seeds for every policy), and report each plan's change against its own single-factor results, so interaction effects show up.
+<!-- /expert -->
+
 ## 4. An MRO-side model
 
 Model the same ideas from the repair shop's side. That means work orders held for parts, kit readiness, repair induction and shop queues. It also means customer-owned versus company-owned stock. See [How this transfers to an MRO](mro.md).

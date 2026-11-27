@@ -1,7 +1,6 @@
 /**
  * The Planner Behind the Project (#/planner) · a first-person essay rendered from docs/content/planner.md (written by
- * the AUTHOR agent) with the safe Markdown renderer in ./about/md.js. Marked DRAFT while the content says so.
- * A pull quote is lifted from the essay itself (no invented words). Links: About, Results, and the project documents
+ * the author) with the safe Markdown renderer in ./about/md.js. The page reads the same in Simple and Expert (a note under the header says so). A pull quote is lifted from the essay itself (no invented words). Links: About, Results, and the project documents
  * on GitHub (methodology, limitations, decision log, model card, validation report). Data: none.
  */
 import { h, icon, intro3, stateBlock } from '../ui.js';
@@ -35,12 +34,11 @@ export async function render(el) {
   try { src = await fetchMarkdown(assetURL('content/planner.md')); } catch (e) { console.warn('planner.md unavailable', e); }
 
   const md = src ? renderMarkdown(src, { headingBase: 1, dropTitle: true, link: aboutLink, idPrefix: 'pl-' }) : { title: null, nodes: [] };
-  // the "*Draft*" marker line becomes the DRAFT badge; the closing "Drafted with AI…" line becomes the signature note
-  let draft = false, sig = null;
+  // the closing "Written with AI…" line becomes the signature note
+  let sig = null;
   const nodes = md.nodes.filter((n) => {
     const t = n.textContent.trim();
-    if (n.tagName === 'P' && /^draft$/i.test(t)) { draft = true; return false; }
-    if (n.tagName === 'P' && /^drafted with ai/i.test(t)) { sig = n; return false; }
+    if (n.tagName === 'P' && /^written with ai/i.test(t)) { sig = n; return false; }
     return true;
   });
   const quote = src ? (src.replace(/\*/g, '').match(QUOTE_RE)?.[0] || '').trim() : '';
@@ -49,10 +47,10 @@ export async function render(el) {
   firstP?.classList.add('pl-lede');
 
   const header = h('header', { class: 'pl-head' },
-    h('div', { class: 'pl-eyebrow' }, h('span', {}, 'Project'), h('span', { class: 'pl-dot', 'aria-hidden': 'true' }, '·'), h('span', {}, 'In my own words'),
-      draft ? h('span', { class: 'chip pl-draft', dataset: { role: 'draft' }, title: 'This essay is a draft and may change.' }, 'DRAFT') : null),
+    h('div', { class: 'pl-eyebrow' }, h('span', {}, 'Project'), h('span', { class: 'pl-dot', 'aria-hidden': 'true' }, '·'), h('span', {}, 'In my own words')),
     h('h1', { class: 'pl-title' }, md.title || 'The Planner Behind the Project'),
-    h('p', { class: 'pl-byline' }, 'Akash Gajjar · materials and inventory planning'));
+    h('p', { class: 'pl-byline' }, 'Akash Gajjar · materials and inventory planning'),
+    h('p', { class: 'mode-same-note pl-mode-note', dataset: { role: 'mode-same' } }, 'This page reads the same in Simple and Expert.'));
   el.append(header);
   el.append(intro3({
     what: 'The person behind this project, why it exists, and what it taught.',

@@ -29,8 +29,12 @@ def test_method_renders_clean(site, browser, vp):  # noqa: F811
         text = page.locator("#view").inner_text()
         assert "Akash Gajjar" in text and "University of Liverpool" in text
         assert page.locator('a[href="https://github.com/akashgajjar07-hue"]').count() == 1
-        # wave 3: no placeholder chip; LinkedIn appears only once a real URL exists
-        assert "add link" not in text
+        # v2.2: no placeholder chip and no LinkedIn link on the public site
+        assert "add link" not in text and "LinkedIn" not in text
+        assert page.locator('a[href*="linkedin"]').count() == 0
+        # v2.2: the next-experiments links jump to the About sections
+        assert page.locator('#next-experiments .dm-next-body a[href="#/about?section=mro"]').count() == 1
+        assert page.locator('#next-experiments [data-role="next-back"] a[href="#/about?section=real-data"]').count() == 1
         assert "Independent educational simulation" in text
         assert page.locator('[data-story="method-provenance"] svg .dm-box').count() == 6
     finally:
@@ -179,6 +183,7 @@ def test_v21_next_section_deep_link(site, browser):  # noqa: F811
     try:
         top = page.evaluate("document.getElementById('next-experiments').getBoundingClientRect().top")
         assert -5 < top < 300, top
+        assert page.evaluate("document.activeElement.textContent.trim()") == "Next experiments"
         assert not problems, problems
     finally:
         ctx.close()

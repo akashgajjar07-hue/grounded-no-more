@@ -38,3 +38,4 @@
 .gl-group-title:focus { outline: none; }
 .gl-group-title:focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
 .gl-tools, .gl-jump, .gl-search-input { scroll-margin-top: calc(var(--topbar-h, 56px) + 16px); }
+.gl-group-title:focus:not(:focus-visible), .gl-entry:focus:not(:focus-visible) { outline: none; }

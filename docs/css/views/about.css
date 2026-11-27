@@ -42,3 +42,12 @@
 }
 .ab-md .md-table th, .ab-md .md-table td { text-align: left; }
 .ab-doc:focus { outline: none; }
+/* v2.2: section jumps focus the card heading (tabindex=-1); keyboard focus stays visible */
+.ab-doc .card-title { scroll-margin-top: calc(var(--topbar-h) + 16px); }
+.ab-doc .card-title:focus:not(:focus-visible) { outline: none; }
+/* Expert-only depth blocks from the content files (<!-- expert --> … <!-- /expert -->) */
+.ab-md .md-expert { margin-top: var(--s-2); padding: var(--s-2) var(--s-3); border-left: 2px solid var(--line-strong); border-radius: 0 var(--r-control) var(--r-control) 0; }
+.ab-md .md-expert > * { margin: 0; }
+.ab-md .md-expert > * + * { margin-top: 10px; }
+.ab-md .md-expert .md-h { margin-top: var(--s-2); }
+.ab-md .md-expert-k { display: block; margin-bottom: 4px; font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); }

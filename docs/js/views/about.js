@@ -11,6 +11,7 @@ import { assetURL } from '../data.js';
 import { byMode } from '../lib/mode.js';
 import { isPolicyCode } from '../lib/names.js';
 import { renderMarkdown, fetchMarkdown } from './about/md.js';
+import { jumpTo, sameRouteLinks } from './about/section.js';
 
 export const data = [];
 
@@ -86,21 +87,21 @@ function codesExpertOnly(root) {
   });
 }
 
-function scrollToSection(id, user = true) {
-  // instant jump (smooth scrolling fought later clicks while still moving; motion stays transform/opacity only).
-  // A user action (onParams) jumps synchronously and moves focus there; after a render, wait for the router's scroll reset.
-  const go = () => { const t = document.getElementById(`ab-${id}`); if (!t) return; t.scrollIntoView({ block: 'start' }); if (user) t.focus?.({ preventScroll: true }); };
-  if (user) go(); else requestAnimationFrame(() => setTimeout(go, 30));
+/** Jump to an About section (#ab-<id>) once it is rendered; focus lands on its heading. */
+function scrollToSection(id) {
+  return jumpTo(() => document.getElementById(`ab-${id}`), { heading: (t) => t.querySelector('.card-title') || t });
 }
 
-/** #/about?section=… on the same route: scroll, no re-render. */
+/** #/about?section=… on the same route: jump, no re-render. */
 export function onParams(params) {
   if (params.section) scrollToSection(params.section);
-  else window.scrollTo({ top: 0 });
+  else window.scrollTo({ top: 0, behavior: 'instant' });
   return true;
 }
 
 export async function render(el, ctx) {
+  // a navigation render starts hidden (the router reveals it); a mode switch re-renders in place and keeps the scroll
+  const navRender = el.style.visibility === 'hidden';
   if (!document.querySelector('link[data-view-css="about"]')) {
     document.head.append(h('link', { rel: 'stylesheet', href: new URL('../../css/views/about.css', import.meta.url).href, dataset: { viewCss: 'about' } }));
   }
@@ -163,11 +164,12 @@ export async function render(el, ctx) {
     })));
     const sec = el.lastElementChild.querySelector('.card');
     sec.id = `ab-${c.id}`;
-    sec.tabIndex = -1;   // section jumps move focus here (keyboard users land on the section)
+    const head = sec.querySelector('.card-title');
+    if (head) { head.tabIndex = -1; head.id = `ab-${c.id}-h`; sec.setAttribute('aria-labelledby', head.id); }   // section jumps move focus to the heading
     sec.dataset.role = `about-${c.id}`;
   });
 
-  // questions only: the author writes the answers (no drafted text here)
+  // questions only: the author writes the answers (no pre-written answers here)
   el.append(h('div', { class: 'grid-12 mt-3' },
     card({
       cls: 'span-12 ab-why', kicker: 'Planning decisions', title: 'Why I made these planning decisions',
@@ -176,6 +178,7 @@ export async function render(el, ctx) {
         h('p', { class: 'ab-q-note t-12 faint m-0', dataset: { role: 'why-note' } }, 'Author’s answers to follow.')),
     })));
 
-  if (ctx?.params?.section) scrollToSection(ctx.params.section, false);
-  return null;
+  if (ctx?.params?.section && navRender) scrollToSection(ctx.params.section);
+  // a repeat click on the link of the section already in the URL fires no hashchange: jump directly
+  return sameRouteLinks(el, 'about', (p) => (p.section ? scrollToSection(p.section) : window.scrollTo({ top: 0, behavior: 'instant' })));
 }

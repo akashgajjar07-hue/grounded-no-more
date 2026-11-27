@@ -1,7 +1,9 @@
 /**
  * views/about/md.js — a tiny, safe Markdown renderer for the docs/content/*.md pages (About, The Planner).
  * Supports: # headings, paragraphs, - / * and 1. lists (one level), pipe tables, [links](url), *em*, **strong**,
- * `code` and horizontal rules. Everything is built as DOM nodes with text nodes, so no HTML in the source is ever
+ * `code` and horizontal rules, plus mode blocks: a line `<!-- expert -->` … `<!-- /expert -->` wraps the lines between in
+ * `<div class="md-expert expert-only">` (shown only in Expert mode, labelled "Expert detail"); `<!-- simple -->` …
+ * `<!-- /simple -->` wraps them in `.simple-only`. Other single-line `<!-- … -->` comments are dropped. Everything is built as DOM nodes with text nodes, so no HTML in the source is ever
  * interpreted (raw tags show as text). Links: only http(s), mailto, # and relative URLs; the caller can rewrite hrefs
  * (opts.link(href) → new href, or null to drop the link and keep its text).
  *
@@ -58,12 +60,28 @@ const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
  */
 export function renderMarkdown(src, { headingBase = 1, dropTitle = false, link, idPrefix = 'md-' } = {}) {
   const lines = String(src ?? '').replace(/\r\n?/g, '\n').split('\n');
-  const nodes = [];
+  const root = [];
+  let nodes = root;   // where blocks go: the top level, or the children of an open mode block
+  let block = null;
   let title = null, i = 0, para = [];
   const opts = { link };
   const flush = () => { if (para.length) { nodes.push(el('p', {}, inline(para.join(' '), opts))); para = []; } };
+  const close = () => { if (block) { block.el.append(...block.kids); root.push(block.el); block = null; nodes = root; } };
   while (i < lines.length) {
     const line = lines[i];
+    const cm = line.match(/^\s*<!--\s*(\/?)\s*(expert|simple)?\s*-->\s*$/i) || (/^\s*<!--.*-->\s*$/.test(line) ? [line, '', undefined] : null);
+    if (cm) {
+      flush();
+      const kind = cm[2] && cm[2].toLowerCase();
+      if (kind && !cm[1]) {
+        close();
+        const e = el('div', { class: kind === 'expert' ? 'md-expert expert-only' : 'md-simple simple-only', 'data-mode-block': kind });
+        if (kind === 'expert') e.append(el('span', { class: 'md-expert-k' }, 'Expert detail'));
+        block = { el: e, kids: [] };
+        nodes = block.kids;
+      } else if (kind) close();
+      i += 1; continue;
+    }
     const hm = line.match(/^(#{1,6})\s+(.*?)\s*#*\s*$/);
     if (!line.trim()) { flush(); i += 1; continue; }
     if (hm) {
@@ -111,7 +129,8 @@ export function renderMarkdown(src, { headingBase = 1, dropTitle = false, link, 
     i += 1;
   }
   flush();
-  return { title, nodes };
+  close();
+  return { title, nodes: root };
 }
 
 const cache = new Map();

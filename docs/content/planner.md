@@ -1,7 +1,5 @@
 # The Planner Behind the Project
 
-*Draft*
-
 I'm Akash Gajjar. I hold an MSc in Supply Chain Management from the University of Liverpool (2025). My working background is retail inventory at Primark and Uniqlo. There I learned to care about availability, about replenishing before a gap opens, and about what an empty shelf really costs.
 
 ## Why aviation
@@ -27,7 +25,7 @@ Repairable spares are sized by removal rate × repair time. That product tells y
 
 ## How I used AI
 
-Claude Code and AI agents did most of the implementation. I defined the problem, directed the work, reviewed the outputs and approved the key decisions. I'm accountable for every claim in this project.
+Claude Code and other AI tools did most of the implementation. I defined the problem, directed the work, reviewed the outputs and approved the key decisions. I'm accountable for every claim in this project.
 
 ## What real data I would need
 
@@ -46,4 +44,4 @@ To make this useful for a real airline, I would need:
 
 With those, I would start with an offline back-test against real history. Then I would run it in shadow mode, next to the planners, before anyone relied on it.
 
-Drafted with AI assistance from my own decisions; reviewed and edited by me.
+Written with AI assistance from my own decisions; reviewed and edited by me.

@@ -45,6 +45,20 @@ def test_about_content(site, browser, vp, mode):  # noqa: F811
         hrefs = page.evaluate("[...document.querySelectorAll('.ab-md a')].map(a => a.getAttribute('href'))")
         assert "#/about?section=next-experiments" in hrefs and "#/about?section=real-data" in hrefs and "#/about?section=mro" in hrefs
         assert not any(h.endswith(".md") and not h.startswith("https://") for h in hrefs), hrefs
+        # v2.2: Expert adds specialist depth to the content sections (<!-- expert --> blocks); Simple hides it
+        blocks = page.locator(".ab-md .md-expert")
+        assert blocks.count() >= 6
+        docs_text = page.locator("#ab-mro").inner_text() + page.locator("#ab-real-data").inner_text()
+        if mode == "expert":
+            assert all(blocks.nth(i).is_visible() for i in range(blocks.count()))
+            for t in ["Kit-completeness % at work start", "Work-order hold hours", "≈ 3.9 units in repair", "illustrative, not a model output", "Exchange", "no-fault-found"]:
+                assert t in docs_text, t
+        else:
+            assert not any(blocks.nth(i).is_visible() for i in range(blocks.count()))
+            assert "Kit-completeness" not in docs_text and "3.9 units" not in docs_text
+        # section headings take focus on a jump
+        for sid in ["mro", "real-data", "next-experiments"]:
+            assert page.locator(f"#ab-{sid}-h").get_attribute("tabindex") == "-1"
         # policy codes only in Expert mode
         if mode == "simple":
             assert not re.search(r"\(P0\)", page.locator("#ab-next-experiments").inner_text())
@@ -70,6 +84,15 @@ def test_about_section_deep_link(site, browser):  # noqa: F811
         page.wait_for_timeout(1000)
         top = page.evaluate("document.getElementById('ab-next-experiments').getBoundingClientRect().top")
         assert -5 <= top <= 140, top
+        assert page.evaluate("document.activeElement.id") == "ab-next-experiments-h"
+        assert page.evaluate("location.hash") == "#/about?section=next-experiments"
+        # v2.2: a repeat click on the link of the section already in the URL still jumps (no hashchange fires)
+        page.evaluate("window.scrollTo({ top: 0, behavior: 'instant' }); document.activeElement.blur()")
+        page.locator("#ab-real-data a", has_text="Next experiments").click()
+        page.wait_for_timeout(600)
+        top = page.evaluate("document.getElementById('ab-next-experiments').getBoundingClientRect().top")
+        assert -5 <= top <= 140, top
+        assert page.evaluate("document.activeElement.id") == "ab-next-experiments-h"
         assert not problems, problems
     finally:
         ctx.close()
@@ -88,6 +111,17 @@ def test_markdown_renderer_is_safe(site, browser):  # noqa: F811
         assert r["title"] == "T" and r["scripts"] == 0 and "&lt;script&gt;" in r["html"]
         assert r["links"] == ["https://a.b"] and r["li"] == 2 and r["td"] == 1
         assert "<strong>b</strong>" in r["html"] and "<em>i</em>" in r["html"]
+        # v2.2 mode blocks: <!-- expert --> … <!-- /expert --> → .md-expert.expert-only; other comments dropped
+        r = page.evaluate("""async () => {
+          const m = await import('./js/views/about/md.js');
+          const { nodes } = m.renderMarkdown('A\\n\\n<!-- expert -->\\nB **x**\\n\\n- c\\n<!-- /expert -->\\n\\n<!-- note -->\\nD\\n\\n<!-- simple -->\\nE\\n<!-- /simple -->');
+          const d = document.createElement('div'); d.append(...nodes);
+          const ex = d.querySelector('.md-expert');
+          return { top: [...d.children].map((n) => n.tagName + '.' + n.className), ex: ex && ex.classList.contains('expert-only'), exText: ex && ex.textContent,
+                   simple: !!d.querySelector('.md-simple.simple-only'), comment: d.innerHTML.includes('note') };
+        }""")
+        assert r["top"] == ["P.", "DIV.md-expert expert-only", "P.", "DIV.md-simple simple-only"], r
+        assert r["ex"] and "B x" in r["exText"] and r["exText"].endswith("c") and r["simple"] and not r["comment"], r
     finally:
         ctx.close()
 
