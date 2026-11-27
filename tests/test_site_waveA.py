@@ -94,8 +94,11 @@ def test_navigation_groups_and_shortcuts(site, browser):  # noqa: F811
         assert groups == [["Operations", ["mission", "actions", "aog"]], ["Material intelligence", ["parts", "forecast", "rotables"]],
                           ["Strategic planning", ["network", "capital"]], ["Project", ["tour", "method", "about", "glossary", "planner"]]], groups
         for key, route in [("4", "rotables"), ("8", "actions"), ("0", "method"), ("1", "mission")]:
+            n = page.evaluate("window.__gnmRenderCount()")
             page.locator("body").press(key)
-            page.wait_for_function(f"location.hash.startsWith('#/{route}') && document.documentElement.dataset.ready === 'true'")
+            # v2.2: wait for THIS render to finish (data-ready stays 'true' from the previous page), so the help modal
+            # opened next is not closed by a route render still in flight
+            page.wait_for_function(f"location.hash.startsWith('#/{route}') && window.__gnmRenderCount() > {n}")
         page.keyboard.press("?")
         page.wait_for_selector(".modal")
         help_text = page.locator(".modal").inner_text()
@@ -165,9 +168,8 @@ def test_about_route(site, browser, vp):  # noqa: F811
         qs = [t.strip() for t in page.locator('[data-role="why-questions"] .ab-q-t').all_inner_texts()]
         # v2.1: wording follows the forbidden-word rule ("optimal" removed) and Simple-mode phrasing; six questions, no answers
         assert len(qs) == 6 and not any("optimal" in q.lower() for q in qs)
-        # wave C: an intentional list of the questions only (no drafted answers), with the one-line note
-        assert page.locator('[data-role="why-note"]').inner_text().strip() == "Author’s answers to follow."
-        assert page.evaluate("[...document.querySelectorAll('[data-role=\"why-questions\"] .ab-q-item')].every((s) => s.children.length === 1)")
+        # v2.2 (PAGES): each question now links to the page that already answers it, with a one-line pointer
+        assert page.evaluate("[...document.querySelectorAll('[data-role=\"why-questions\"] .ab-q-item')].every((s) => !!s.querySelector('a.ab-q-t[href^=\"#/\"]'))")
         body = page.locator("#view").inner_text()
         for t in ["Akash Gajjar", "University of Liverpool (2025)", "Primark", "Uniqlo"]:
             assert t in body

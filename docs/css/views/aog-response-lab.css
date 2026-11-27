@@ -1,4 +1,4 @@
-/* 07 · AOG Response Lab (screen agent D). Uses design-system tokens only. */
+/* 07 · AOG Response Lab. Uses design-system tokens only. */
 .aog-picker { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--s-1); }
 .aog-tile { display: flex; flex-direction: column; gap: 4px; padding: 12px; min-width: 0; text-align: left; border: 1px solid var(--line); border-radius: var(--r-control); background: var(--panel); transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease); }
 .aog-tile:hover { border-color: var(--line-strong); }

@@ -29,7 +29,7 @@ const ENTRIES = [
   // ---------------------------------------------------------------- C3 table (simple wording is binding)
   E('aog_hours', 'material AOG hours', 'hours planes sat grounded waiting for a part', 'Downtime and urgency',
     'The hours an aircraft could not fly because a needed part was not there in time.',
-    'A brake is needed at 08:00 but arrives at 14:00. That adds 6 hours.',
+    'A brake is removed at 08:00; the part is fitted and the plane released to service at 14:00. That is 6 hours.',
     'It is the main score on this site. Fewer hours means planes fly more.', ['AOG hours', 'material AOG']),
   E('rotable', 'rotable', 'repairable part', 'Parts',
     'A part that is fixed and used again, not thrown away.',

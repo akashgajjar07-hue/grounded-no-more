@@ -1,5 +1,5 @@
 /**
- * 07 · AOG Response Lab — screen agent D.
+ * 07 · AOG Response Lab.
  * Data: aog_lab.json (gnm.aog: incidents, options a–h, decision panel, counterfactual; SIMULATED)
  * Deep links: #/aog?incident=AOG-0001
  * Shows: the 12 showcase incidents, a precise response timeline (removal → request → stock checks →
@@ -244,7 +244,7 @@ export async function render(el, ctx) {
   h('span', { class: 'aog-tile-top' }, h('span', { class: 'mono' }, i.id), h('span', { class: `aog-dl aog-dl--${String(i.deadline).toLowerCase()}` }, i.deadline)),
   h('span', { class: 'aog-tile-pn mono' }, i.pn),
   h('span', { class: 'aog-tile-desc' }, i.desc || ''),
-  h('span', { class: 'aog-tile-foot mono' }, h('span', {}, i.station), h('span', {}, i.aog_hours != null ? `${fmtHours(i.aog_hours)}${S ? ' down' : ''}` : 'AOG h not run'))));
+  h('span', { class: 'aog-tile-foot mono' }, h('span', {}, `${i.station}${i.need_h != null ? ` · ${simWeek(i.need_h)}` : ''}`), h('span', {}, i.aog_hours != null ? `${fmtHours(i.aog_hours)}${S ? ' down' : ''}` : 'AOG h not run'))));
   picker.append(...tiles);
   picker.addEventListener('keydown', (e) => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
@@ -377,7 +377,7 @@ export async function render(el, ctx) {
     const nFeas = feas.length;
     const plainWhy = rec ? [
       `${optLabel(rec)} has the lowest total cost of the ${fmtInt(nFeas)} ${nFeas === 1 ? 'route' : 'routes'} that could work.`,
-      rec.wait_h != null ? ` The part would arrive in about ${fmtHours(rec.wait_h)}${rec.aog_h != null ? `, and the plane would be grounded for about ${fmtHours(rec.aog_h)}` : ''}.` : '',
+      rec.wait_h != null ? ` The part would arrive in about ${fmtHours(rec.wait_h)}${rec.aog_h != null ? `, and the plane would be grounded for about ${fmtHours(rec.aog_h)}` : ''}.${rec.aog_h != null && inc.aog_hours != null && Math.round(inc.aog_hours) !== Math.round(rec.aog_h) ? ` That is the estimate at the time. The record shows ${fmtHours(inc.aog_hours)}.` : ''}` : '',
       rec.exposure_aed != null ? ` Total cost: about ${fmtMoneyFine(rec.exposure_aed)}.` : '',
       runner ? ` Next best: ${lc(optLabel(runner))} (${runner.wait_h != null ? `${fmtHours(runner.wait_h)}, ` : ''}${fmtMoneyFine(runner.exposure_aed)}).` : '',
     ].join('') : null;

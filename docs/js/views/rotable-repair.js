@@ -105,7 +105,7 @@ export async function render(el, ctx) {
     lede: S
       ? h('span', {}, 'Each ', term('rotable'), ' of a fictional airline goes round a loop: fitted, removed, repaired and returned. This page tracks the loop, flags late repairs and sizes the ', term('float'), '.')
       : 'Serialised rotables of Falcon Hub Airways (fictional) cycle through fit, removal, shop and return. This workspace tracks the loop, flags overdue repair orders and sizes the float with a METRIC-inspired (Palm’s theorem) calculator.',
-    meta: [provChip(prov(r.meta)), provChip('DERIVED'), now != null ? h('span', { class: 'chip chip-mono' }, `As of ${fmtWeek(Math.floor(now / HPW))}`) : null].filter(Boolean),
+    meta: [provChip(prov(r.meta)), provChip('DERIVED'), now != null ? h('span', { class: 'chip chip-mono', dataset: { role: 'snapshot' } }, Number.isInteger(now / HPW) ? `Snapshot: end of ${fmtWeek(now / HPW - 1)}` : `Snapshot: ${fmtWeek(Math.floor(now / HPW))}`) : null].filter(Boolean),
   }));
 
   el.append(intro3({
@@ -192,7 +192,7 @@ export async function render(el, ctx) {
         { key: 'shop', label: 'Shop', format: shopLabel },
         { key: 'inH', label: byMode('Went in', 'Inducted'), num: true, format: (v) => (v == null ? '—' : fmtWeek(Math.floor(v / HPW))) },
         { key: 'due', label: byMode('Promised', 'Quoted due'), num: true, format: (v) => (v == null ? '—' : fmtWeek(Math.floor(v / HPW))) },
-        { key: 'late_d', label: 'vs due', short: 'vs due', num: true, format: (v) => (v == null ? '—' : v > 0 ? `+${fmtDays(v)}` : `−${fmtDays(-v)}`) },
+        { key: 'late_d', label: 'vs due', short: 'vs due', num: true, format: (v) => (v == null ? '—' : Math.round(v) === 0 ? '0 d' : v > 0 ? `+${fmtDays(v)}` : `−${fmtDays(-v)}`) },
         { key: 'overdue', label: 'Status', render: (o) => (isCritical(o) ? pill('urgent', o.planted ? `Critical · ${o.planted}` : 'Critical') : o.overdue ? h('span', { class: 'pill pill--unknown rr-pill-late' }, o.planted ? `Overdue · ${o.planted}` : 'Overdue') : h('span', { class: 'pill pill--unknown rr-pill-quote' }, byMode('On time', 'In quote'))) },
       ],
       rows: tableRows, sort: { key: 'late_d', dir: 'desc' }, // F7 (wave 4): the mobile Sort control names the real order
@@ -516,7 +516,14 @@ function renderTatDist(host, r) {
   const slow = dists.slice().sort((a, b) => (b.mean_d / b.quoted_mean_d) - (a.mean_d / a.quoted_mean_d))[0];
   const S = isSimple();
   const f = chartFrame(host, {
-    implication: byMode('Shops take longer than they promise, so a spares pool sized on promises comes up short.', 'Shop turnaround runs longer than quoted, so float sized on quotes comes up short.'),
+    // v2.2: the takeaway follows the numbers: which shops run over their promise, and the long tail that drives float
+    implication: (() => {
+      const over = dists.filter((d) => d.mean_d > d.quoted_mean_d * 1.02), tail = dists.slice().sort((a, b) => b.p90_d - a.p90_d)[0];
+      const who = over.length ? over.map((d) => shopLabel(d.shop)).join(' and ') : null;
+      return S
+        ? `${who ? `${who} runs a little over its promise on average` : 'On average the shops keep their promise'}. But some repairs take far longer: one in ten at ${shopLabel(tail.shop)} takes over ${fmtDays(tail.p90_d)}. Size spares on measured times, not promises.`
+        : `${who ? `${who} runs over quote on average` : 'Mean TAT is inside quote'}; the long tail drives float (${shopLabel(tail.shop)} p90 ${fmtDays(tail.p90_d)}). Size float on measured TAT, not quotes.`;
+    })(),
     headline: S ? `${shopLabel(slow.shop)} takes ${fmtDays(slow.mean_d)} on average against ${fmtDays(slow.quoted_mean_d)} promised; one in ten takes over ${fmtDays(slow.p90_d)}` : `${shopLabel(slow.shop)} averages ${fmtDays(slow.mean_d)} against ${fmtDays(slow.quoted_mean_d)} quoted; one in ten takes over ${fmtDays(slow.p90_d)}`,
     subtitle: S ? `Share of finished repairs by ${termText('tat')}, in ${slow.bin_width_d}-day steps. Solid line = actual average, dashed = promised. ${dists.map((d) => `${shopLabel(d.shop)}: ${fmtInt(d.n)} repairs`).join(' · ')}` : `Share of completed ROs by shop TAT · ${slow.bin_width_d}-day bins · solid = actual mean, dashed = quoted · ${dists.map((d) => `${shopLabel(d.shop)} n=${fmtInt(d.n)}`).join(' · ')}`,
     provenance: prov(dists[0], prov(r.meta)), source: 'rotables.json → tat_distribution',
@@ -952,7 +959,7 @@ function renderFloatCalc(host, r, method, ctx) {
     // C6 (wave 4): highlight the CHEAPER lever per availability point (annual AED / pt)
     const annA = carryingValue(cl.extra_spares.incremental_capital_aed, method);
     const annB = fee != null ? cl.tat_cut.incremental_annual_aed : null;
-    const perPt = (ann, gain) => (ann != null && gain > 1e-9 ? ann / (gain * 100) : null);
+    const perPt = (ann, gain) => (ann != null && gain >= 0.001 ? ann / (gain * 100) : null);   // v2.2: no cost per point on a gain under 0.1 pt
     const cA = perPt(annA, gainA), cB = perPt(annB, gainB);
     const betterA = cA != null && (cB == null || cA < cB - 1e-6), betterB = cB != null && (cA == null || cB < cA - 1e-6);
     const cell = (v, o, better) => h('td', { class: better ? 'is-better' : '', dataset: o ? { out: o } : undefined }, v);
@@ -970,7 +977,7 @@ function renderFloatCalc(host, r, method, ctx) {
         rowC(byMode('Average wait', 'Expected wait'), fmtWait(cl.extra_spares.expected_wait_days), fmtWait(cl.tat_cut.expected_wait_days)),
         rowC(byMode('One-off cost', 'One-off capital'), fmtAED(cl.extra_spares.incremental_capital_aed), fmtAED(0), 'extra_spares_capital'),
         rowC(byMode('Yearly cost', 'Annual cost'), h('span', {}, carrying(cl.extra_spares.incremental_capital_aed, method), h('span', { class: 'fc-gain' }, byMode(' to keep', ' carrying'))), h('span', {}, fee != null ? fmtAED(cl.tat_cut.incremental_annual_aed) : 'not run', h('span', { class: 'fc-gain' }, ' fees')), null, 'tat_cut_annual'),
-        rowC(byMode('Yearly cost per point', 'Annual cost per pt'), cA != null ? fmtAED(cA) : '—', cB != null ? fmtAED(cB) : '—', 'extra_spares_per_pt', 'tat_cut_per_pt'))));
+        cA != null || cB != null ? rowC(byMode('Yearly cost per point', 'Annual cost per pt'), cA != null ? fmtAED(cA) : '—', cB != null ? fmtAED(cB) : '—', 'extra_spares_per_pt', 'tat_cut_per_pt') : null)));
     [['extra_spares_availability', cl.extra_spares.availability], ['tat_cut_availability', cl.tat_cut.availability], ['extra_spares_ebo', cl.extra_spares.ebo], ['tat_cut_ebo', cl.tat_cut.ebo]]
       .forEach(([k, v]) => { const c = leverBox.querySelector(`[data-out="${k}"]`); if (c) c.dataset.value = v; });
     const ann = annA;
@@ -984,7 +991,8 @@ function renderFloatCalc(host, r, method, ctx) {
     if (saturated) {
       // already saturated (e.g. the Recommended S): say so, and offer the level where the levers bite
       verdict.replaceChildren(h('strong', {}, S ? `With ${fmtInt(L.S)} ${sp} the chance is already as high as it gets: neither fix changes it. ` : `At S = ${fmtInt(L.S)} the float is saturated: neither lever moves availability. `),
-        p0S != null && p0S !== Sn ? h('button', { type: 'button', class: 'btn btn--sm btn--ghost fc-try-p0', onclick: () => { state.spares = p0S; sync(null); compute(); } }, S ? `Compare at the Simple Rulebook level (${fmtInt(p0S)} spares)` : `Compare the levers at P0 (S = ${fmtInt(p0S)})`) : null, ' ', annualTxt);
+        annualTxt, ' ',
+        p0S != null && p0S !== Sn ? h('button', { type: 'button', class: 'btn btn--sm btn--ghost fc-try-p0', onclick: () => { state.spares = p0S; sync(null); compute(); } }, S ? `Compare at the Simple Rulebook level (${fmtInt(p0S)} spares)` : `Compare the levers at P0 (S = ${fmtInt(p0S)})`) : null);
       return;
     }
     const cheaper = betterA ? (S ? `Buying ${fmtInt(N)} more spare${N === 1 ? '' : 's'} is the cheaper way to raise the chance` : `Buying ${fmtInt(N)} spare${N === 1 ? '' : 's'} is the cheaper lever per availability point`)
@@ -999,7 +1007,7 @@ function renderFloatCalc(host, r, method, ctx) {
   if (!examples.length) reason.textContent = 'No float examples exported — enter values to explore.';
   return () => { computeRAF.cancel(); pmf.stop(); };
 }
-const fmtPts = (v) => `${v >= 0 ? '+' : '−'}${fmtNum(Math.abs(v) * 100, 1)} pts`;
+const fmtPts = (v) => `${v >= 0 || Math.abs(v) < 0.0005 ? '+' : '−'}${fmtNum(Math.abs(v) * 100, 1)} pts`;
 function carryingValue(capital, method) {
   const a = (method?.assumptions || []).find((x) => /carrying_cost/.test(x.key || ''));
   const rate = num(a?.value);

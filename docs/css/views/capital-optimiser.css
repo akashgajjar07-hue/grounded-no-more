@@ -1,4 +1,4 @@
-/* 06 · Capital Optimiser (screen agent D). Uses design-system tokens only. */
+/* 06 · Capital Optimiser. Uses design-system tokens only. */
 .co-kpis { margin-top: 0; }
 .co-legend { display: flex; flex-wrap: wrap; gap: 6px var(--s-2); color: var(--text-muted); }
 .co-legend span { display: inline-flex; align-items: center; gap: 6px; }

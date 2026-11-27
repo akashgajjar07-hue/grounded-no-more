@@ -64,12 +64,15 @@ const isDev = () => !!window.__gnmDev;
 export const reducedMotion = motionReduced;
 
 // --------------------------------------------------------------------------- formatters
+/** v2.2: display negatives with the true minus sign (U+2212) and never show "−0" / "−0.0" (a value that rounds to zero). */
+const signed = (s) => (/^-0*(?:\.0*)?$/.test(s) ? s.slice(1) : s.replace(/^-/, '\u2212'));
 const trim = (s) => s.replace(/\.0(?=[^\d]|$)/, '');
 /** AED 4.8M / AED 820k / AED 950 (accepts negative values). */
 export function fmtAED(v, { digits = 1, sign = false } = {}) {
   if (v == null || Number.isNaN(+v)) return '—';
   const a = Math.abs(v);
-  const s = v < 0 ? '−' : sign && v > 0 ? '+' : '';
+  const zero = a < 1e3 ? Math.round(a) === 0 : false;
+  const s = zero ? '' : v < 0 ? '−' : sign && v > 0 ? '+' : '';
   // one sign style site-wide (wave 5): the sign leads the currency, "+AED 4.8M" / "−AED 951k"
   if (a >= 1e9) return `${s}AED ${trim((a / 1e9).toFixed(digits))}B`;
   if (a >= 1e6) return `${s}AED ${trim((a / 1e6).toFixed(digits))}M`;
@@ -81,13 +84,13 @@ export const fmtPct = (v, digits = 1) => (v == null || Number.isNaN(+v) ? '—' 
 /** Percentage-point delta: fmtPts(0.034) = "3.4 pts". */
 export const fmtPts = (v, digits = 1) => (v == null ? '—' : `${(Math.abs(v) * 100).toFixed(digits)} pts`);
 /** Hours: fmtHours(124) = "124 h"; fmtHours(3.5) = "3.5 h". */
-export const fmtHours = (v) => (v == null || Number.isNaN(+v) ? '—' : `${Math.abs(v) >= 10 ? Math.round(v).toLocaleString('en-GB') : +(+v).toFixed(1)} h`);
+export const fmtHours = (v) => (v == null || Number.isNaN(+v) ? '—' : `${Math.abs(v) >= 10 ? signed(Math.round(v).toLocaleString('en-GB')) : signed(String(+(+v).toFixed(1)))} h`);
 /** Days: fmtDays(42) = "42 d". */
-export const fmtDays = (v) => (v == null ? '—' : `${Math.round(v)} d`);
+export const fmtDays = (v) => (v == null ? '—' : `${signed(String(Math.round(v)))} d`);
 /** Integer with thousands separators: 12,345. */
-export const fmtInt = (v) => (v == null || Number.isNaN(+v) ? '—' : Math.round(v).toLocaleString('en-GB'));
+export const fmtInt = (v) => (v == null || Number.isNaN(+v) ? '—' : signed(Math.round(v).toLocaleString('en-GB')));
 /** Number with fixed decimals. */
-export const fmtNum = (v, d = 2) => (v == null || Number.isNaN(+v) ? '—' : (+v).toFixed(d));
+export const fmtNum = (v, d = 2) => (v == null || Number.isNaN(+v) ? '—' : signed((+v).toFixed(d)));
 /**
  * Simulated week label — THE one week format on the site: fmtWeek(103) = "W103", fmtWeek('W103') = "W103",
  * fmtWeek(103.6) = "W104", fmtWeek(null) = "—". Simulated calendar, never real dates.

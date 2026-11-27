@@ -1,5 +1,5 @@
 /**
- * 06 · Capital Optimiser — screen agent D.
+ * 06 · Capital Optimiser.
  * Data: frontier.json (+ policies.json for reference-policy cost components when a point lacks them)
  * Deep links: #/capital?point=I125&view=holdout|selection|overlay
  * Shows: the Readiness Frontier (capital vs expected material AOG h/yr, holdout means with 95% CI
@@ -50,6 +50,10 @@ const num = (v) => (v === null || v === undefined || v === '' || Number.isNaN(+v
 const ciTxt = (lo, hi, f) => (lo == null || hi == null ? '' : ` [${f(lo)}, ${f(hi)}]`);
 const signH = (v) => (v == null ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmtHours(Math.abs(v))}`);
 const signAED = (v) => fmtAED(v, { sign: true });
+/** v2.2: one rounding source for capital differences: the difference of the two values AS DISPLAYED (0.1M / 1k), so
+ *  "AED 56.7M − AED 48.4M" always reads "+AED 8.3M" wherever it appears. */
+const rCap = (v) => (Math.abs(v) >= 1e6 ? Math.round(v / 1e5) * 1e5 : Math.round(v / 1e3) * 1e3);
+const dCap = (a, b) => rCap(a) - rCap(b);
 /** Tornado setting: "x0.5" → "×0.5"; a bare rate "0.15" → "15%"; anything else as exported. */
 const settingTxt = (st) => { const t = String(st ?? '').trim(); const m = t.match(/^[x×]\s*([\d.]+)$/i); if (m) return fmtMult(+m[1], m[1].includes('.') ? (m[1].split('.')[1].length) : 1); if (/^0?\.\d+$/.test(t)) return `${Math.round(+t * 100)}%`; return t; };
 /** First candidate headline that fits the 90-character rule (data-driven copy can vary in length). */
@@ -151,8 +155,8 @@ export async function render(el, ctx) {
   el.append(pageHead({
     num: '06', eyebrow: 'Capital Optimiser', title: 'The Readiness Frontier',
     lede: S
-      ? `Every dot is a full stocking plan for a fictional airline, tested in the model. The curve shows the fewest grounded hours you can reach for each amount of money tied up in spares. That money is shown apart from yearly running costs and never added to them.`
-      : `Every dot is a complete stocking plan for Falcon Hub Airways (fictional), simulated on paired seeds. The frontier is the least expected material AOG reachable at each level of spare capital. Capital is a balance-sheet stock, so it is shown apart from annual operating cost and never added to it.`,
+      ? `Every dot is a full stocking plan for a fictional airline, tested in the model. The curve shows the best plans found for each budget (a step-by-step search, then tested in the model). That money is shown apart from yearly running costs and never added to them.`
+      : `Every dot is a complete stocking plan for Falcon Hub Airways (fictional), simulated on paired seeds. The frontier shows the best plans found for each budget (greedy search, then simulated), not a proven best. Capital is a balance-sheet stock, so it is shown apart from annual operating cost and never added to it.`,
     meta: [provChip(prov), h('span', { class: 'chip chip-mono' }, split === 'holdout' ? (S ? '20 fresh test runs · central world' : 'Holdout · central') : `${split} · central`)],
   }));
   el.querySelector('.page-head h1')?.after(h('p', { class: 'co-subtitle', dataset: { role: 'frontier-subtitle' } }, F.subtitle || FRONTIER_SUBTITLE));
@@ -164,7 +168,7 @@ export async function render(el, ctx) {
 
   // ---- KPI strip (constructed from frontier points; compared with the base policy P2 — 'baseline' is P0 only)
   if (rec && P2) {
-    const capTile = kpiTile({ label: S ? `${recN}: money in spares` : `${recN} simulated capital`, value: rec.cap, baseline: P2.cap, baseline_label: baseN, delta: rec.cap - P2.cap, better: 'lower', provenance: prov, ci: rec.capCI[0] != null ? rec.capCI : null }, { format: fmtAED, deltaFormat: (v) => fmtAED(v), capital: true });
+    const capTile = kpiTile({ label: S ? `${recN}: money in spares` : `${recN} simulated capital`, value: rec.cap, baseline: P2.cap, baseline_label: baseN, delta: dCap(rec.cap, P2.cap), better: 'lower', provenance: prov, ci: rec.capCI[0] != null ? rec.capCI : null }, { format: fmtAED, deltaFormat: (v) => fmtAED(v), capital: true });
     // One AOG tile with both comparisons (vs the base policy and vs P0), instead of the same value twice.
     const aogTile = kpiTile({ label: S ? `${recN}: hours grounded a year` : `${recN} AOG / yr`, value: rec.aog, baseline: P2.aog, baseline_label: baseN, delta: rec.aog - P2.aog, better: 'lower', provenance: prov, ci: rec.ci }, { format: fmtHours });
 
@@ -206,10 +210,10 @@ export async function render(el, ctx) {
   const recVsP2 = rec?.dBaseAog;
   const headline = rec && P2 && P0
     // v2 framing: P2 is the core result; the rule's pick is a frontier option for additional capital
-    ? (S ? fitHeadline(`${fmtAED(rec.cap - P2.cap)} more in spares than the ${baseN} cuts a further ${fmtHours(Math.abs(P2.aog - rec.aog))} grounded a year`,
-      `${fmtAED(rec.cap - P2.cap)} more in spares buys ${fmtHours(Math.abs(P2.aog - rec.aog))} less grounded time a year`)
-      : fitHeadline(`If you invest ${fmtAED(rec.cap - P2.cap)} more than the ${baseN}, ${recN} removes a further ${fmtHours(Math.abs(P2.aog - rec.aog))} of AOG a year`,
-        `${fmtAED(rec.cap - P2.cap)} more than ${baseN} buys ${recN}: ${fmtHours(Math.abs(P2.aog - rec.aog))} less AOG a year`))
+    ? (S ? fitHeadline(`${fmtAED(dCap(rec.cap, P2.cap))} more in spares than the ${baseN} cuts a further ${fmtHours(Math.abs(P2.aog - rec.aog))} grounded a year`,
+      `${fmtAED(dCap(rec.cap, P2.cap))} more in spares buys ${fmtHours(Math.abs(P2.aog - rec.aog))} less grounded time a year`)
+      : fitHeadline(`If you invest ${fmtAED(dCap(rec.cap, P2.cap))} more than the ${baseN}, ${recN} removes a further ${fmtHours(Math.abs(P2.aog - rec.aog))} of AOG a year`,
+        `${fmtAED(dCap(rec.cap, P2.cap))} more than ${baseN} buys ${recN}: ${fmtHours(Math.abs(P2.aog - rec.aog))} less AOG a year`))
     : 'Frontier: capital versus material AOG hours';
   const tableRows = pts.slice().sort((a, b) => a.cap - b.cap).map((p) => ({ id: planName(p.id), kind: KIND_LABEL[p.kind] || p.kind, cap: p.cap, aog: p.aog, lo: p.ci[0], hi: p.ci[1], sel: p.sel?.aog ?? null, front: front.includes(p) ? 'yes' : 'no' }));
   const frame = chartFrame(chartCard, {
@@ -339,8 +343,8 @@ export async function render(el, ctx) {
           [`Frontier option · ${recN}${md === 'selection' ? (S ? ' (tuning runs)' : ' (selection seeds)') : ''}`, 'gnm-annot-text'],
           [`${fmtAED(rp.cap)} · ${fmtHours(rp.aog)}/yr${ciTxt(rp.ci?.[0], rp.ci?.[1], fmtInt)}`, 'gnm-annot-sub'],
         ];
-        if (md !== 'selection' && P2 && rec.dBaseAog) lines.push([`vs ${baseN}: ${signH(rec.dBaseAog[0])}${ciTxt(rec.dBaseAog[1], rec.dBaseAog[2], (v) => fmtInt(v))} h · ${signAED(rec.cap - P2.cap)}`, 'gnm-annot-sub']);
-        if (md !== 'selection' && P0) lines.push([`vs ${p0N}: ${signH(rec.aog - P0.aog)}${rec.dP0Aog ? ciTxt(rec.dP0Aog[1], rec.dP0Aog[2], (v) => fmtInt(v)) : ''} · ${signAED(rec.cap - P0.cap)}`, 'gnm-annot-sub']);
+        if (md !== 'selection' && P2 && rec.dBaseAog) lines.push([`vs ${baseN}: ${signH(rec.dBaseAog[0])}${ciTxt(rec.dBaseAog[1], rec.dBaseAog[2], (v) => fmtInt(v))} h · ${signAED(dCap(rec.cap, P2.cap))}`, 'gnm-annot-sub']);
+        if (md !== 'selection' && P0) lines.push([`vs ${p0N}: ${signH(rec.aog - P0.aog)}${rec.dP0Aog ? ciTxt(rec.dP0Aog[1], rec.dP0Aog[2], (v) => fmtInt(v)) : ''} · ${signAED(dCap(rec.cap, P0.cap))}`, 'gnm-annot-sub']);
         // long display names: when the call-out would not fit beside the point, it moves under the chart (HTML), as on phones
         const lineW = d3.max(lines, ([t, c]) => t.length * (c === 'gnm-annot-text' ? 7.2 : 6.6)) + 12;
         const fitsR = ax + 46 + lineW <= iw + m.right - 4, fitsL = ax - 46 - lineW >= -m.left + 4;
@@ -420,9 +424,9 @@ export async function render(el, ctx) {
       [S ? 'Runs' : 'Seeds', selMode ? (S ? 'tuning runs' : 'selection 100–119') : (S ? '20 fresh test runs' : `holdout ${holdRange}`.trim())],
       [S ? 'In spares' : 'Capital', `${fmtAED(p.cap)}${p.capCI[0] != null ? ciTxt(p.capCI[0], p.capCI[1], (v) => fmtAED(v).replace('AED ', '')) : ''}`],
       [S ? 'Grounded / yr' : 'AOG / yr', selMode ? `${fmtHours(p.sel.aog)}${ciTxt(p.sel.ci?.[0], p.sel.ci?.[1], fmtInt)}` : `${fmtHours(p.aog)}${ciTxt(p.ci[0], p.ci[1], fmtInt)}`],
-      selMode && P2?.sel?.aog != null && p !== P2 ? [`vs ${baseN}`, `${signH(p.sel.aog - P2.sel.aog)} · ${signAED(p.cap - P2.cap)}`] : null,
-      !selMode && P2 && p !== P2 ? [`vs ${baseN}`, p.dBaseAog ? `${signH(p.dBaseAog[0])}${ciTxt(p.dBaseAog[1], p.dBaseAog[2], (v) => fmtInt(v))} · ${signAED(p.cap - P2.cap)}` : `${signH(p.aog - P2.aog)} · ${signAED(p.cap - P2.cap)}`] : null,
-      !selMode && P0 && p !== P0 ? [`vs ${p0N}`, `${signH(p.aog - P0.aog)} · ${signAED(p.cap - P0.cap)}`] : null,
+      selMode && P2?.sel?.aog != null && p !== P2 ? [`vs ${baseN}`, `${signH(p.sel.aog - P2.sel.aog)} · ${signAED(dCap(p.cap, P2.cap))}`] : null,
+      !selMode && P2 && p !== P2 ? [`vs ${baseN}`, p.dBaseAog ? `${signH(p.dBaseAog[0])}${ciTxt(p.dBaseAog[1], p.dBaseAog[2], (v) => fmtInt(v))} · ${signAED(dCap(p.cap, P2.cap))}` : `${signH(p.aog - P2.aog)} · ${signAED(dCap(p.cap, P2.cap))}`] : null,
+      !selMode && P0 && p !== P0 ? [`vs ${p0N}`, `${signH(p.aog - P0.aog)} · ${signAED(dCap(p.cap, P0.cap))}`] : null,
       p.total != null ? [S ? 'Yearly cost' : 'Annual cost', `${fmtAED(p.total)}${selMode ? (S ? ' (test runs)' : ' (holdout)') : ''}`] : null,
       selMode ? [S ? 'Test runs' : 'Holdout AOG', `${fmtHours(p.aog)}${ciTxt(p.ci[0], p.ci[1], fmtInt)}`] : p.sel?.aog != null ? [S ? 'Tuning runs' : 'Selection', `${fmtHours(p.sel.aog)}${ciTxt(p.sel.ci?.[0], p.sel.ci?.[1], fmtInt)}`] : null,
     ].filter(Boolean);
@@ -443,7 +447,7 @@ export async function render(el, ctx) {
       body: h('div', { class: 'stack-3' },
         h('div', { class: 'field' }, h('span', { class: 'field-label' }, S ? 'Which runs' : 'Seed set'), modeSeg, h('span', { class: 't-12 faint' }, hasSel ? (S ? 'Tuning runs chose the plan; the 20 fresh test runs judge it.' : `Selection seeds 100–119 chose the plan; ${seedsTxt} judge it.`) : 'Selection-seed values are not in this export.')),
         sl,
-        h('p', { class: 't-12 faint m-0' }, S ? 'The slider walks along the curve. It picks the plan with the fewest grounded hours that fits the budget.' : 'The slider walks the non-dominated plans: it picks the lowest-AOG plan whose capital fits the budget (holdout means).'),
+        h('p', { class: 't-12 faint m-0' }, S ? 'The slider walks along the curve. It picks the best plan found that fits the budget.' : 'The slider walks the non-dominated plans: it picks the lowest-AOG plan whose capital fits the budget (holdout means).'),
         readout),
     }),
   );
@@ -535,14 +539,14 @@ export async function render(el, ctx) {
       { key: 'proposed', label: S ? 'New level' : 'Proposed', num: true, format: (v) => (v == null ? '—' : fmtInt(v)) },
       { key: 'dcap', label: S ? 'Change in spares money' : 'Δ capital', short: S ? 'Spares AED' : 'Δ cap', num: true, format: (v) => (v == null ? '—' : signAED(v)) },
       { key: 'risk', label: S ? 'Grounded h/yr avoided*' : 'AOG h/yr avoided*', short: S ? 'Grounded h avoided' : 'AOG h avoided', num: true, format: (v) => (v == null ? '—' : fmtNum(v, 1)) },
-      { key: 'alt', label: S ? 'Other lever' : 'Alternative', format: altTxt },
+      { key: 'alt', label: S ? 'Cheapest alternative lever' : 'Cheapest alternative lever', short: 'Alternative', render: (r) => h('span', {}, /^buy_/.test(r.alt || '') && r.change > 0 ? (S ? 'Same lever (buying)' : 'Same lever (buy)') : altTxt(r.alt)) },
     ],
     rows: [],
   });
   const allocNote = h('p', { class: 't-12 muted m-0' });
   const allocFlags = h('div', { class: 'co-flags', dataset: { role: 'invalid-allocations' } });
   const allocMore = h('button', { type: 'button', class: 'btn btn--sm co-alloc-more', dataset: { action: 'alloc-more' }, onclick: () => { const on = allocCard.classList.toggle('is-expanded'); allocMore.textContent = on ? 'Show fewer rows' : allocMore.dataset.label; } });
-  allocBody.append(allocFlags, allocTable, allocMore, h('div', { class: 'co-alloc-notes stack-1' }, allocNote, h('p', { class: 't-12 faint m-0' }, S ? `Rows are the changes against the ${baseN} only. * Grounded hours avoided is a quick ranking estimate (a heuristic), not a test-run result. The other lever is the cheapest modelled option for that part.` : `Rows are the changes against the base policy ${baseN} only. * AOG h/yr avoided is a leave-one-out estimate on the analytic model (a ranking heuristic), not a simulated result. Alternative action is the cheapest modelled lever for that PN.`)));
+  allocBody.append(allocFlags, allocTable, allocMore, h('div', { class: 'co-alloc-notes stack-1' }, allocNote, h('p', { class: 't-12 faint m-0' }, S ? `Rows are the changes against the ${baseN} only. * Grounded hours avoided is a quick ranking estimate (a heuristic), not a test-run result. The cheapest alternative lever is the cheapest modelled option for that part; “same lever” means buying is already that option.` : `Rows are the changes against the base policy ${baseN} only. * AOG h/yr avoided is a leave-one-out estimate on the analytic model (a ranking heuristic), not a simulated result. Cheapest alternative lever = the cheapest modelled lever for that PN; “same lever” when that is the buy already in the row.`)));
   function showAlloc() {
     const rows = allocRows(sel.id);
     const tot = F.allocation_totals?.[sel.id];
@@ -551,7 +555,7 @@ export async function render(el, ctx) {
     const nAll = num(tot?.n_rows) ?? rows.length;
     allocHead.replaceChildren(
       h('div', {}, h('div', { class: 'card-kicker' }, [S ? 'Where the spares go · ' : 'Allocation · ', nameTag(sel.id)]), h('h3', { class: 'card-title co-alloc-title', 'aria-live': 'polite' }, rows.length
-        ? (S ? `${sn(sel.id)} changes ${fmtInt(nAll)} part-and-airport levels vs the ${baseN}: ${units >= 0 ? '+' : '−'}${fmtInt(Math.abs(units))} units, ${fmtAED(Math.abs(sumCap))} ${sumCap >= 0 ? 'more' : 'less'} in spares` : `${sn(sel.id)} changes ${fmtInt(nAll)} PN-station levels vs ${baseN}: ${units >= 0 ? '+' : '−'}${fmtInt(Math.abs(units))} units, ${fmtAED(Math.abs(sumCap))} ${sumCap >= 0 ? 'more' : 'less'} allocation capital`)
+        ? (S ? `${sn(sel.id)} changes ${fmtInt(nAll)} part-and-airport levels vs the ${baseN}: ${fmtInt(Math.abs(units))} ${units >= 0 ? 'more' : 'fewer'} units, ${fmtAED(Math.abs(sumCap))} ${sumCap >= 0 ? 'more' : 'less'} at target units × price` : `${sn(sel.id)} changes ${fmtInt(nAll)} PN-station levels vs ${baseN}: ${fmtInt(Math.abs(units))} ${units >= 0 ? 'more' : 'fewer'} units on top of ${baseN}, ${fmtAED(Math.abs(sumCap))} ${sumCap >= 0 ? 'more' : 'less'} allocation capital (target units × unit cost)`)
         : sel === P2 ? `The ${baseN} is the base plan: no changes` : `No allocation rows exported for ${sn(sel.id)}`)),
       h('div', { class: 'row' }, provChip(prov)));
     // keyed, flash-free update: hold the table's height across the swap, then fade in only the rows that are new
@@ -566,7 +570,7 @@ export async function render(el, ctx) {
     allocCard.classList.toggle('has-more', rows.length > 8);
     // C3 (wave 4): two capital bases on one page, each named. Allocation capital = target units × unit cost (this table);
     // simulated capital = the time-average stock value over the run (the KPI and the frontier).
-    const simD = sel !== P2 && num(sel.cap) != null && num(P2?.cap) != null ? sel.cap - P2.cap : null;
+    const simD = sel !== P2 && num(sel.cap) != null && num(P2?.cap) != null ? dCap(sel.cap, P2.cap) : null;
     const basis = rows.length && simD != null ? (S ? `This table counts target units × unit price. The tiles and the curve use the average value of spares held over the run. That leaves out parts away for repair: ${fmtAED(Math.abs(simD))} ${simD >= 0 ? 'more' : 'less'} than the ${baseN}.` : `Allocation capital is target units × unit cost. The KPI and frontier show simulated capital (the time-average stock value over the run, which nets out units away in repair): ${fmtAED(Math.abs(simD))} ${simD >= 0 ? 'more' : 'less'} than ${baseN}.`) : '';
     const shown = tot && num(tot.n_rows_shown) < num(tot.n_rows) ? (S ? `Showing the ${fmtInt(tot.n_rows_shown)} changes with the biggest effect, out of ${fmtInt(tot.n_rows)}. Totals cover all rows. ` : `Showing the ${fmtInt(tot.n_rows_shown)} changes with the largest modelled effect of ${fmtInt(tot.n_rows)}; totals cover all rows. `) : '';
     allocNote.textContent = `${shown}${basis}`;

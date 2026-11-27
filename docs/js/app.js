@@ -77,7 +77,7 @@ export const ROUTES = [
   { id: 'actions', num: '08', label: 'Planner Action Centre', icon: 'inbox', module: './views/planner-action-centre.js' },
   { id: 'method', num: '—', label: 'Data & Method', icon: 'book', module: './views/data-method.js', key: '0' },
   { id: 'about', num: '—', label: 'About', icon: 'info', module: './views/about.js' },
-  // v2.1: owned by the page agents (glossary uses lib/glossary.js glossaryEntries())
+  // v2.1 project pages (glossary uses lib/glossary.js glossaryEntries())
   { id: 'glossary', num: '—', label: 'Glossary', icon: 'book', module: './views/glossary.js' },
   { id: 'planner', num: '—', label: 'The Planner Behind the Project', icon: 'info', module: './views/planner.js' },
 ];

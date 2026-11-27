@@ -111,14 +111,17 @@ export async function render(el, ctx) {
   // ------------------------------------------------------------------ header
   const nUrgent = parts.filter((p) => p.risk_level === 'urgent').length;
   const nIntermittent = parts.filter((p) => ['intermittent', 'lumpy'].includes(p.demand_class)).length;
+  const nInt = parts.filter((p) => p.demand_class === 'intermittent').length, nLumpy = parts.filter((p) => p.demand_class === 'lumpy').length;
+  // v2.2: the same class split as Forecast Lab ("82 now and then, plus 2 in bursts")
+  const sparseTxt = (simple) => (simple ? `${fmtInt(nInt)} are needed now and then, plus ${fmtInt(nLumpy)} in bursts (${fmtInt(nIntermittent)} rarely needed in all)` : `${fmtInt(nInt)} have intermittent and ${fmtInt(nLumpy)} lumpy demand (${fmtInt(nIntermittent)} sparse)`);
   const S = isSimple();
   const PN = (n) => (S ? `part${n === 1 ? '' : 's'}` : `PN${n === 1 ? '' : 's'}`);
   const planName = displayName(P.stock_basis_id || 'P2', { mode: 'short' });
   el.append(pageHead({
     num: '02', eyebrow: 'Parts Intelligence', title: byMode('Which parts could leave a plane waiting on the ground', 'Where material shortage exposure sits on the aircraft'),
     lede: S
-      ? h('span', {}, `${fmtInt(parts.length)} made-up parts for a fictional airline, grouped by `, term('ata'), `. ${fmtInt(nIntermittent)} are `, term('intermittent'), `. ${fmtInt(nUrgent)} are urgent risks. Pick a system on the aircraft or in the list.`)
-      : `${fmtInt(parts.length)} fictional part numbers for Falcon Hub Airways (fictional), mapped to their ATA chapter. ${fmtInt(nIntermittent)} have intermittent or lumpy demand and ${fmtInt(nUrgent)} carry urgent material shortage exposure. Select a system on the aircraft or in the list.`,
+      ? h('span', {}, `${fmtInt(parts.length)} made-up parts for a fictional airline, grouped by `, term('ata'), `. ${sparseTxt(true)}. ${fmtInt(nUrgent)} are urgent risks. Pick a system on the aircraft or in the list.`)
+      : `${fmtInt(parts.length)} fictional part numbers for Falcon Hub Airways (fictional), mapped to their ATA chapter. ${sparseTxt(false)}, and ${fmtInt(nUrgent)} carry urgent material shortage exposure. Select a system on the aircraft or in the list.`,
     meta: [provChip(prov), h('span', { class: 'chip' }, `${fmtInt(parts.length)} ${PN(parts.length)}`), h('span', { class: 'chip' }, `${(P.ata_systems || []).length} ${byMode('aircraft systems', 'ATA chapters')}`)],
   }));
   el.append(intro3({
@@ -373,10 +376,16 @@ export async function render(el, ctx) {
       svg.querySelectorAll(`.pi-pulse-wrap[data-ata="${g.dataset.ata}"] .hs-pulse`).forEach((c) => c.setAttribute('r', R));
       const num = g.querySelector('.hs-badge > text:not(.hs-risk)');
       if (num) num.style.fontSize = `${Math.max(17, 12 * u)}px`;
+      // v2.2: the "indicative zone" text ran into the badge; the legend already says the zones are rough
       const zt = g.querySelector('.hs-zone-t');
-      if (zt) { zt.style.fontSize = `${11 * u}px`; zt.style.strokeWidth = `${4 * u}px`; }
+      if (zt) zt.style.display = 'none';
       const lbl = g.querySelector('.hs-risk');
-      if (lbl) { lbl.setAttribute('x', cx); lbl.setAttribute('y', cy + R + 9 * u); lbl.style.textAnchor = 'middle'; lbl.style.fontSize = `${11 * u}px`; lbl.style.strokeWidth = `${4 * u}px`; }
+      if (lbl) {
+        lbl.style.fontSize = `${11 * u}px`; lbl.style.strokeWidth = `${4 * u}px`;
+        // short status words (OK) sit BESIDE the badge, so they never land on the next zone's outline below it
+        if (/\bOK$/.test(lbl.textContent.trim())) { lbl.setAttribute('x', cx + R + 8 * u); lbl.setAttribute('y', cy + 4 * u); lbl.style.textAnchor = 'start'; }
+        else { lbl.setAttribute('x', cx); lbl.setAttribute('y', cy + R + 9 * u); lbl.style.textAnchor = 'middle'; }
+      }
       const pip = g.querySelector('.hs-pip');
       if (pip) {
         const pd = (R + 6 * u) * 0.8, px = cx + pd, py = cy - pd;
@@ -397,7 +406,7 @@ export async function render(el, ctx) {
       if (!bad()) return;
       const { cx, cy } = g._hs, R = Math.max(19, 12 * u);
       for (const side of [-1, 1]) {
-        lbl.setAttribute('x', cx + side * (R + 6 * u)); lbl.setAttribute('y', cy + (side > 0 ? 8 * u : 0)); lbl.style.textAnchor = side < 0 ? 'end' : 'start';
+        lbl.setAttribute('x', cx + side * (R + 10 * u)); lbl.setAttribute('y', cy + 4 * u); lbl.style.textAnchor = side < 0 ? 'end' : 'start';
         if (!bad()) return;
       }
     });
@@ -555,8 +564,8 @@ export async function render(el, ctx) {
     const headOf = (pts) => {
       const c = countsOf(pts), sparse = c.intermittent + c.lumpy;
       return S
-        ? (sparse * 2 > pts.length ? `Most parts are needed rarely: ${fmtInt(sparse)} of ${fmtInt(pts.length)} only now and then` : `${fmtInt(sparse)} of ${fmtInt(pts.length)} parts are needed only now and then`)
-        : (sparse * 2 > pts.length ? `Most PNs demand rarely: ${fmtInt(sparse)} of ${fmtInt(pts.length)} are intermittent or lumpy` : `${fmtInt(sparse)} of ${fmtInt(pts.length)} classified PNs are intermittent or lumpy`);
+        ? (sparse * 2 > pts.length ? `Most parts are needed rarely: ${fmtInt(c.intermittent)} of ${fmtInt(pts.length)} now and then, ${fmtInt(c.lumpy)} in bursts` : `${fmtInt(c.intermittent)} of ${fmtInt(pts.length)} parts are needed now and then, ${fmtInt(c.lumpy)} in bursts`)
+        : (sparse * 2 > pts.length ? `Most PNs demand rarely: ${fmtInt(c.intermittent)} intermittent + ${fmtInt(c.lumpy)} lumpy of ${fmtInt(pts.length)}` : `${fmtInt(c.intermittent)} intermittent + ${fmtInt(c.lumpy)} lumpy of ${fmtInt(pts.length)} classified PNs`);
     };
     const subOf = (pts) => {
       const nIns = parts.filter(inFleet).length - pts.length;

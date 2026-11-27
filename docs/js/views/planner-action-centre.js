@@ -1,5 +1,5 @@
 /**
- * 08 · Planner Action Centre — screen agent D.
+ * 08 · Planner Action Centre.
  * Data: actions.json (schemas.planner_exceptions + parsed evidence, DERIVED; QUARANTINE_DOCS rows SIMULATED)
  * Deep links: #/actions?id=EX-103-002  ·  filters: &severity=urgent&type=OVERDUE_REPAIR&station=BOM&owner=…
  * Shows: the weekly exception inbox with filters and counts, a "where the work is" chart, an evidence
@@ -64,7 +64,15 @@ const plur = (n, w) => `${fmtInt(n)} ${+n === 1 ? w : `${w}s`}`;
 export function simpleAction(a) {
   const e = a.evidence || {};
   switch (a.type) {
-    case 'OUTSTATION_DEPLETION': return a.quantity != null && a.destination ? `Send ${plur(a.quantity, 'spare')} from ${a.source || 'the hub'} to ${a.destination}.` : 'Send a spare to this station.';
+    case 'OUTSTATION_DEPLETION': {
+      // same branch as the expert text: when the source holds none serviceable, the spares come from repair or exchange
+      if (a.quantity == null || !a.destination) return 'Send a spare to this station.';
+      const src = a.source || 'the hub';
+      const have = e.auh_on_hand ?? e.source_on_hand;
+      if (have === 0 || /none serviceable/i.test(a.recommended_action || '')) return `Get ${plur(a.quantity, 'spare')} for ${a.destination} by repair or exchange. ${src} has none in stock.`;
+      if (have != null && have < a.quantity) return `Send ${plur(have, 'spare')} from ${src} to ${a.destination}. Get the other ${fmtInt(a.quantity - have)} by repair or exchange.`;
+      return `Send ${plur(a.quantity, 'spare')} from ${src} to ${a.destination}.`;
+    }
     case 'OVERDUE_REPAIR': return 'Ask the shop for a firm return date. If spares run low, borrow or swap a unit.';
     case 'CONDEMNED_AWAITING_REPLACEMENT': return 'Confirm the delivery date with the supplier. Line up a loan in case a plane needs one.';
     case 'EXCESS_DECLINING_DEMAND': return 'Lower the reorder levels, stop open orders and move spare stock to where it is used.';
@@ -380,7 +388,7 @@ export async function render(el, ctx) {
       asOf != null ? `${fmtWeek(asOf)}: ${fmtInt(all.length)} exceptions, ${fmtInt(nSev.urgent)} urgent` : `${fmtInt(all.length)} exceptions this week`),
     lede: byMode('The weekly to-do list for Falcon Hub Airways (fictional). Each item shows the numbers behind it, what to do, who owns it and when it is due. It supports a planner. It does not replace engineering, quality or safety judgement.',
       'The weekly exception inbox for Falcon Hub Airways (fictional). Each exception carries the numbers behind it, a recommended action, an owner and a due week. Recommendations support a planner; they do not replace engineering, quality or airworthiness judgement.'),
-    meta: [provChip(metaProv), h('span', { class: 'chip chip-mono' }, asOf != null ? `As of ${fmtWeek(asOf)}` : 'As-of week not exported')],
+    meta: [provChip(metaProv), h('span', { class: 'chip chip-mono' }, asOf != null ? `Snapshot: end of ${fmtWeek(asOf)}` : 'Snapshot week not exported')],
   }));
 
   // v2.1 (C2): the three intro lines
@@ -587,7 +595,7 @@ export async function render(el, ctx) {
     return h('li', { class: `pac-group pac-group--${sevKey}`, dataset: { pn: g.pn } },
       h('div', { class: 'pac-ghead' },
         h('span', { class: 'pac-ghead-pn mono' }, g.pn),
-        h('span', { class: 'pac-ghead-meta' }, `${fmtInt(g.rows.length)} ${byMode('items', 'exceptions')} · ${fmtInt(stations.size)} ${stations.size === 1 ? 'station' : 'stations'}${nU ? ` · ${fmtInt(nU)} urgent` : ''}`, g.aog ? h('span', { class: 'pac-nw', title: `${aogLabel} (${aogShort})` }, ` · worst station ${g.aogSt ? `${g.aogSt} ` : ''}${fmtHours(g.aog)}${g.aogSt && !g.rows.some((a) => a.station === g.aogSt) ? ' (no exception there)' : ''}`) : null),
+        h('span', { class: 'pac-ghead-meta' }, `${fmtInt(g.rows.length)} ${byMode('items', 'exceptions')} · ${fmtInt(stations.size)} ${stations.size === 1 ? 'station' : 'stations'}${nU ? ` · ${fmtInt(nU)} urgent` : ''}`, g.aog ? h('span', { class: 'pac-nw', title: `${aogLabel} (${aogShort})` }, ` · worst station ${g.aogSt ? `${g.aogSt} ` : ''}${fmtHours(g.aog)}/52 wk${g.aogSt && !g.rows.some((a) => a.station === g.aogSt) ? ' (no exception there)' : ''}`) : null),
         g.rows.length > GROUP_PEEK ? toggle : null),
       h('ul', { class: 'list-reset pac-grows' }, g.rows.map((a, i) => { const li = row(a, { inGroup: true }); if (i >= GROUP_PEEK && !isOpen) li.hidden = true; return li; })));
   }
@@ -648,7 +656,9 @@ export async function render(el, ctx) {
     list.replaceChildren(...(rows.length ? gs.slice(0, shownN).map(groupBlock) : [h('li', { class: 'state' }, icon('info'), h('p', {}, 'No exceptions match these filters.'))]));
     gridHead.hidden = !rows.length;
     // wave C (F7): the counter reports the rows actually on screen, and says when the list is truncated
-    const visN = [...list.querySelectorAll('.pac-row')].filter((r) => !r.closest('[hidden]') && r.offsetParent !== null).length || list.querySelectorAll('.pac-row').length;
+    const visRows = [...list.querySelectorAll('.pac-row')].filter((r) => !r.closest('[hidden]') && r.offsetParent !== null);
+    const visN = visRows.length || list.querySelectorAll('.pac-row').length;
+    const visibleIds = new Set((visRows.length ? visRows : [...list.querySelectorAll('.pac-row')]).map((r) => r.dataset.id));
     shown.replaceChildren(...[h('span', { class: 'pac-nw', dataset: { role: 'shown-count' } }, `Showing ${fmtInt(Math.min(visN, rows.length))} of ${fmtInt(rows.length)}`),
       rows.length < all.length ? h('span', { class: 'pac-nw' }, ` matching (${fmtInt(all.length)} in all)`) : null,
       visN < rows.length ? h('span', { class: 'pac-nw' }, ' (expand for all)') : null, ' · ', h('span', { class: 'pac-nw' }, `${fmtInt(nU)} urgent`)].filter((x) => x != null));
@@ -658,8 +668,11 @@ export async function render(el, ctx) {
     moreBtn.hidden = hiddenRows === 0 && !filtered;
     moreBtn.dataset.clear = String(clearMode);
     const word = byMode('items', 'exceptions');
+    // the "more" count reconciles with "Showing N of M": it includes rows folded inside groups already on screen
+    const moreN = Math.max(0, rows.length - Math.min(visN, rows.length));
+    const moreParts = gs.filter((g) => g.rows.some((r) => !visibleIds.has(r.exception_id))).length;
     moreBtn.replaceChildren(icon(expanded && !clearMode ? 'arrow-up' : 'arrow-down'), clearMode ? `Clear filters and show all ${fmtInt(all.length)} ${word}`
-      : expanded ? 'Show the top of the list only' : `Show all ${fmtInt(rows.length)} ${word} (${fmtInt(hiddenRows)} more across ${fmtInt(gs.length - collapsedN)} parts)`);
+      : expanded ? 'Show the top of the list only' : `Show all ${fmtInt(rows.length)} ${word} (${fmtInt(moreN)} more across ${fmtInt(moreParts)} ${moreParts === 1 ? 'part' : 'parts'})`);
     ctx.setParams({ severity: f.severity === 'all' ? '' : f.severity, type: f.type, station: f.station, owner: f.owner });
     drawTypes(frame.body, Math.floor(frame.body.clientWidth) || 600);
   }

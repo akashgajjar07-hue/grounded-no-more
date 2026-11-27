@@ -249,8 +249,8 @@ export async function render(el, ctx) {
         ? `${topAll.station} has the largest share of grounded time (${fmtPct(shareOf(topAll), 0)} of all stations)`
         : 'Hub-and-spoke network',
     subtitle: S
-      ? `Circle size = share of grounded time under the Simple Rulebook. Ring = band. Solid lines = ${fmtInt(totalTransfers)} past transfers. Dashed teal = spares the Network Plan adds at other airports. Labels = Network Plan spares.`
-      : `Node size = material shortage exposure (P0 holdout AOG h, share of all stations) · ring = exposure band · solid lines = ${fmtInt(totalTransfers)} history transfers (width = volume) · dashed teal = outstation rotables P2 adds over P0 · labels: P2 rotable units`,
+      ? `Circle size = share of grounded time under the Simple Rulebook. Ring colour compares each airport with the worst other airport. HIGH = at least 80% of its grounded time; ELEVATED = at least 50%, or urgent actions open. Solid lines = ${fmtInt(totalTransfers)} past transfers. Dashed teal = spares the Network Plan adds at other airports. Labels = Network Plan spares.`
+      : `Node size = material shortage exposure (P0 holdout AOG h, share of all stations) · ring = exposure band vs the riskiest outstation (HIGH ≥ 0.8, ELEVATED ≥ 0.5 or open urgent actions; ASSUMED) · solid lines = ${fmtInt(totalTransfers)} history transfers (width = volume) · dashed teal = outstation rotables P2 adds over P0 · labels: P2 rotable units`,
     provenance: prov(n.meta), source: 'network.json → stations, arcs',
     table: { columns: [{ key: 'from', label: 'From' }, { key: 'to', label: 'To' }, { key: 'transfers', label: 'Transfers', num: true, format: fmtInt }, { key: 'emergency', label: 'Emergency', num: true, format: fmtInt }, { key: 'aog_transport_h', label: S ? 'Transport while grounded' : 'AOG transport', num: true, format: fmtHours }], rows: arcs },
   });
@@ -275,7 +275,7 @@ export async function render(el, ctx) {
     stations, arcs, selected, proposed,
     onSelect: (id) => { choose(id, false); openStation(id); },
     // sub-label sits directly under the IATA code: units, plus the risk word only when it is not low (no glyph, so it never reads as another airport)
-    labelSub: (s) => { const b = riskBand(s); const risk = b === 'ok' || b === 'low' ? '' : ` · ${RISK[b].word}`; return `${fmtInt(p2Units(s))} u${risk}`; },
+    labelSub: (s) => { const b = riskBand(s); const risk = b === 'ok' || b === 'low' ? '' : ` · ${RISK[b].word}`; return `${fmtInt(p2Units(s))} units${risk}`; },
     // wave A: node size = material shortage exposure (P0 holdout AOG h vs the worst station); units are in the label
     nodeRadius: (s) => 4.5 + 11 * Math.sqrt(Math.max(0, num(s.risk) ?? 0)),
     nodeColor: (s) => RISK[riskBand(s)].color,
@@ -283,7 +283,8 @@ export async function render(el, ctx) {
     tooltipRows: (s) => [['Role', S ? (s.role === 'hub' ? 'home base' : 'other airport') : s.role], [S ? 'Network Plan spares' : 'P2 rotable units', fmtInt(p2Units(s))], [S ? 'Value of those spares' : 'P2 stock value', fmtAED(p2Value(s))], ['Requests', fmtInt(s.requests)], [S ? 'Share of grounded time' : 'Material shortage exposure', `${RISK[riskBand(s)].glyph} ${riskText(s, stations)}`]],
     label: 'Network map of Falcon Hub Airways (fictional) stations',
     // the hub's arcs leave to the west and east; its label block sits above-right, clear of them and of the Gulf outstations
-    labelOffsets: hub ? { [hub.station]: [12, -30, 'start'] } : {},
+    // v2.2: the two European stations sit close together: LHR's label goes up-left, FRA's down-right, away from the arcs
+    labelOffsets: { ...(hub ? { [hub.station]: [12, -30, 'start'] } : {}), LHR: [-14, -18, 'end'], FRA: [14, 18, 'start'] },
     // v2.1 addendum: each node gets an invisible, pointer-transparent frame centred on the node and enclosing its label
     // and the hub's radar pulse. The node's box is then centred on the node (a click at its centre lands on the node,
     // not on the land between node and label) and constant while the pulse animates. One getBBox per node per draw.

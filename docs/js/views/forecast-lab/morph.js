@@ -1,5 +1,5 @@
 /**
- * morph.js: keyed "from previous to new" transitions for charts that are rebuilt by responsive() (PAGE-3 views:
+ * morph.js: keyed "from previous to new" transitions for charts that are rebuilt by responsive() (views:
  * forecast-lab, network-positioning). v2.1 addendum 2.4–2.6.
  *
  *   const M = morphStore();

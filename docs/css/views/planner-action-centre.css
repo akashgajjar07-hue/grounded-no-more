@@ -1,4 +1,4 @@
-/* 08 · Planner Action Centre (screen agent D). Uses design-system tokens only. */
+/* 08 · Planner Action Centre. Uses design-system tokens only. */
 
 .pac-filters { display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr)); gap: var(--s-2); align-items: end; }
 .pac-filter { display: flex; flex-direction: column; gap: 6px; min-width: 0; }

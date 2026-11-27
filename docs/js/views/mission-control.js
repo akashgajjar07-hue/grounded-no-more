@@ -92,8 +92,9 @@ export async function render(el, ctx) {
         h('div', { class: 'mc-fault-k' }, byMode('Most urgent part today', `${cap(hot.severity)} part`)),
         h('div', { class: 'mc-fault-sys expert-only' }, `ATA ${hotAta}${hotSysWord ? ` · system ${hotSysWord}` : ''}`),
         h('div', { class: 'mc-fault-pn' }, hot.pn),
-        h('div', { class: 'mc-fault-at' }, h('span', {}, hot.station || 'Network'),
+        h('div', { class: 'mc-fault-at', dataset: { role: 'hot-where' } }, h('span', {}, `${hot.station || 'Network'} · ${byMode(HOT_WHY[hot.type] || 'action needed here', hot.type_label || cap(String(hot.type || '').toLowerCase().replace(/_/g, ' ')))}`),
           num(hotPart?.risk_score) ? h('span', { class: 'mc-fault-risk expert-only', title: 'Part-level shortage exposure, 0–100' }, `risk ${Math.round(hotPart.risk_score * 100)}`) : null),
+        hotMetric(hotPart),
         hotPart?.desc ? h('div', { class: 'mc-fault-d' }, hotPart.desc) : null))
     : null;
   const ataList = h('ul', { class: 'sr-only', 'aria-label': 'Aircraft systems (open Parts Intelligence)' },
@@ -183,7 +184,7 @@ export async function render(el, ctx) {
   res.append(intro3({
     what: ['How four ', term('policy', { label: 'stocking plans' }), ' compare on ', term('aog_hours'), ', and what each one costs.'],
     why: ['A missing part can ground an aircraft. These numbers show which plan keeps aircraft flying, and where the result is weak.'],
-    action: ['Start from the Network Plan. Check its money lines, then the honest findings, before trusting the gap.'],
+    action: ['Start from the Network Plan. Check its money lines, then the known weaknesses, before trusting the gap.'],
   }));
 
   // ---- the four plans (simple bars; likely ranges in Expert mode)
@@ -280,7 +281,8 @@ function plansChart(host, policies) {
   const pct = base && core ? Math.round((1 - core.value / base.value) * 100) : null;
   const ci = termText('ci');
   const f = chartFrame(host, {
-    headline: pct != null ? `Network Plan: ${pct}% fewer ${byMode('hours waiting for parts', 'material AOG hours')} than the Simple Rulebook` : 'Plan comparison not run',
+    // v2.2: hours, not a headline percentage, against a baseline that is deliberately simple
+    headline: pct != null ? `Network Plan ${fmtHours(core.value)} a year${byMode('', ' material AOG')} vs ${fmtHours(base.value)} for the deliberately simple Simple Rulebook` : 'Plan comparison not run',
     subtitle: byMode('Hours a year planes sat grounded waiting for a part · average of 20 fresh test runs', `Material AOG h/yr, mean of ${fmtInt(policies.n_seeds)} holdout seeds (paired) · whiskers = ${ci}`),
     implication: byMode('Placing spares across the network does most of the work. Extra spares help a little more, at extra cost.',
       'Network positioning carries the core result; extra capital (I125) is a secondary option.'),
@@ -364,7 +366,7 @@ function donorCard(D) {
     cls: 'mc-donor', story: 'mission-donor', kicker: byMode('Borrowed parts', 'Donor recount (V21-B)'), prov: 'SIMULATED',
     title: h('span', { class: 'mc-title-row' }, 'Parts borrowed from our other aircraft', postPlanBadge()),
     body: h('div', { class: 'mc-body', dataset: { role: 'donor-recount' } },
-      h('p', {}, 'Sometimes a part is taken from another of our aircraft: ', term('robbery'), '. That second aircraft then waits too. Its hours are not in the results above.'),
+      h('p', {}, 'Sometimes a part is taken from another of our aircraft (', term('robbery', { label: 'robbery' }), '). That second aircraft then waits too. Its hours are not in the results above.'),
       h('p', { class: 'mc-donor-label', dataset: { readability: 'skip' } }, D.label),
       h('div', { class: 'table-wrap mc-donor-table' }, h('table', { class: 'data-table data-table--dense' },
         h('caption', { class: 'sr-only' }, 'Times a year a part was borrowed from another aircraft, 20 fresh test runs'),
@@ -387,11 +389,25 @@ function honestCard(ho) {
   if (ho.routes_off) items.push(['routes', ['Every plan leans on emergency help from outside, such as ', term('exchange'), `. With that switched off, the Network Plan rises from ${fmtHours(ho.routes_off.central_p2_aog_hours)} to ${fmtHours(ho.routes_off.p2_aog_hours)} a year, in `, term('selection_seeds'), '.']]);
   if (!items.length) return null;
   return card({
-    cls: 'mc-honest', story: 'mission-findings', kicker: byMode('Honest findings', 'Unfavourable results, kept visible'), prov: 'SIMULATED',
-    title: 'What did not go our way',
+    cls: 'mc-honest', story: 'mission-findings', kicker: byMode('Limits', 'Unfavourable results'), prov: 'SIMULATED',
+    title: 'Known weaknesses',
     body: h('ul', { class: 'mc-findings list-reset', dataset: { role: 'honest-findings' } }, items.map(([k, t]) => h('li', { class: 'is-caveat', dataset: { finding: k } }, icon('info'), h('span', {}, t)))),
-    foot: [h('span', {}, byMode('These limits are part of the result.', 'Disclosed, not re-tuned (LIMITATIONS)')), h('a', { class: 'card-link', href: '#/method' }, 'Data & Method', icon('chevron-right'))],
+    foot: [h('span', {}, byMode('Read these with the results.', 'Not re-tuned (LIMITATIONS)')), h('a', { class: 'card-link', href: '#/method' }, 'Data & Method', icon('chevron-right'))],
   });
+}
+
+// ------------------------------------------------------------------ hero card: which station, which metric (v2.2)
+const HOT_WHY = {
+  DONOR_NOT_REINSTATED: 'a plane here still waits for its part back', OUTSTATION_DEPLETION: 'too few spares here',
+  OPEN_REQUIREMENT: 'a plane here still waits', OVERDUE_REPAIR: 'a repair is late', CONDEMNED_AWAITING_REPLACEMENT: 'the new part is late',
+};
+/** The part's hours, each with its metric and station named (parts.json aog_h_52w + worst-station split). */
+function hotMetric(p) {
+  if (!p || !num(p.aog_h_52w)) return null;
+  const worst = num(p.aog_h_52w_max_station) && p.aog_h_52w_max_station_id
+    ? byMode(` · most at ${p.aog_h_52w_max_station_id} (${fmtInt(p.aog_h_52w_max_station)} h)`, ` · worst station ${p.aog_h_52w_max_station_id} ${fmtInt(p.aog_h_52w_max_station)} h`) : '';
+  return h('div', { class: 'mc-fault-m', dataset: { role: 'hot-metric' } },
+    byMode(`${fmtInt(p.aog_h_52w)} h waiting for it in the last 52 weeks, all airports`, `AOG ${fmtInt(p.aog_h_52w)} h · last 52 wk · all stations`), worst);
 }
 
 // ------------------------------------------------------------------ planner priorities

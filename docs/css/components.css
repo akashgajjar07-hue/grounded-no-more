@@ -1,6 +1,6 @@
 /* =====================================================================
    components.css — every reusable UI component. Naming: flat BEM-ish
-   classes, no IDs. Screen agents compose these; do not restyle per view.
+   classes, no IDs. Views compose these; do not restyle per view.
    ===================================================================== */
 
 /* ---------- icon ---------- */
@@ -374,15 +374,15 @@ select option { background: var(--panel); color: var(--text); }
 }
 .story-spot.is-empty { width: 0; height: 0; }
 .story-spot.is-off, .story-card.is-off, .story-loading.is-off { opacity: 0; }
-/* v2.2: ONE fixed size per breakpoint (no height animation); the text block takes the room the controls leave */
+/* v2.2: a fixed width, height fitted to the step's text (set while hidden, never animated); controls sit right under the text */
 .story-card {
-  position: fixed; left: 0; top: 0; width: min(360px, calc(100vw - 32px)); height: min(340px, calc(100vh - 96px));
+  position: fixed; left: 0; top: 0; width: min(360px, calc(100vw - 32px)); max-height: calc(100vh - 96px);
   display: flex; flex-direction: column; pointer-events: auto; overflow: hidden;
   background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r-card); box-shadow: var(--shadow-pop);
   padding: 20px;
 }
 .story-card.is-off { pointer-events: none; }
-.story-text { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.story-text { flex: 0 1 auto; min-height: 0; overflow: hidden; }
 .story-lower { flex: none; position: relative; }
 .story-step { font-family: var(--font-mono); font-size: var(--fs-12); letter-spacing: 0.14em; color: var(--primary); }
 .story-card h3 { margin: var(--s-1) 0; font-size: 18px; line-height: 1.3; }
@@ -390,6 +390,15 @@ select option { background: var(--panel); color: var(--text); }
 .story-progress { display: flex; gap: 4px; margin: 12px 0; }
 .story-progress span { flex: 1; height: 2px; border-radius: 2px; background: var(--line-strong); }
 .story-actions { display: flex; justify-content: space-between; gap: var(--s-1); }
+/* during the tour: no scrollbar thumb flashing after the tour's own scrolls, and an opaque top bar (WebKit draws the
+   translucent bar's backdrop blur late, so page text showed through it) */
+html.tour-active { scrollbar-width: none; }
+html.tour-active::-webkit-scrollbar { display: none; }
+html.tour-active .topbar { background: var(--bg); }
+/* the still copy of the outgoing page content the tour changes the page under (ui.js storyMode viewOut) */
+.story-freeze { position: fixed; top: 0; height: 100vh; z-index: 15; pointer-events: none; overflow: hidden; contain: strict; }
+.story-freeze > .view { position: absolute; left: 0; margin: 0; max-width: none; min-height: 0; }
+.story-freeze, .story-freeze * { animation: none !important; transition: none !important; }
 /* "Loading next step…": only when a step takes longer than 300 ms to be ready */
 .story-loading {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px;
@@ -399,7 +408,7 @@ select option { background: var(--panel); color: var(--text); }
 .story-loading-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
 /* ≤ 480 px: a fixed-height bottom sheet (full, or the shorter peek when the full one would cover the target) */
 .story-card.is-sheet {
-  left: 0 !important; right: 0; top: auto !important; bottom: 0; width: 100%; height: 300px; max-height: 60vh;
+  left: 0 !important; right: 0; top: auto !important; bottom: 0; width: 100%; max-height: 60vh;
   border-radius: var(--r-card) var(--r-card) 0 0; border-bottom: 0; padding: var(--s-2) var(--s-2) calc(var(--s-2) + env(safe-area-inset-bottom, 0px));
 }
 .story-card.is-sheet h3 { font-size: var(--fs-16); margin: 4px 0; }
@@ -414,7 +423,7 @@ select option { background: var(--panel); color: var(--text); }
 .story-grab span { display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--line-strong); }
 .story-grab:hover span, .story-grab:focus-visible span { background: var(--text-muted); }
 /* peek: 208 px; the body clamps to 3 lines, progress hides, the actions stay reachable */
-.story-card.is-sheet.is-peek { height: 208px; }
+.story-card.is-sheet.is-peek { max-height: 208px; }
 .story-card.is-sheet.is-peek p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .story-card.is-sheet.is-peek .story-progress { display: none; }
 .story-card.is-sheet.is-peek .story-actions { margin-top: 8px; }
@@ -600,7 +609,7 @@ select option { background: var(--panel); color: var(--text); }
 .sim-indicator { display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px; border-radius: var(--r-chip); border: 1px solid var(--line-strong); background: var(--panel); font-family: var(--font-ui); font-size: var(--fs-13); font-weight: 600; color: var(--text); letter-spacing: 0; text-transform: none; white-space: nowrap; }
 .sim-indicator::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--c-titanium); box-shadow: 0 0 0 3px var(--c-titanium-a10); }
 .sim-indicator .sim-sub { font-family: var(--font-mono); font-weight: 500; font-size: var(--fs-12); color: var(--text-muted); }
-@media (max-width: 767px) { .sim-indicator .sim-sub { display: none; } }
+@media (max-width: 1199px) { .sim-indicator .sim-sub { display: none; } }
 
 /* Wave A navigation: four labelled groups (Operations · Material intelligence · Strategic planning · Project) */
 .nav { gap: var(--s-2); }
@@ -665,3 +674,8 @@ select option { background: var(--panel); color: var(--text); }
 .capital-table-grid tr[data-row='net'] th, .capital-table-grid tr[data-row='net'] td { border-top: 1px solid var(--line-strong); font-weight: 600; }
 .capital-note { font-size: var(--fs-13); color: var(--text-muted); line-height: 1.5; }
 @media (max-width: 480px) { .capital-table-grid th, .capital-table-grid td { padding: 6px; font-size: var(--fs-13); } .capital-table-grid td.is-num { white-space: normal; } }
+
+/* v2.2: phones. The page title already heads the view, so the top-bar title is hidden where it would truncate;
+   keyboard-shortcut hints are hidden on touch / no-hover devices. */
+@media (max-width: 480px) { .topbar .crumbs { display: none; } }
+@media (hover: none), (pointer: coarse) { .nav-key, .rail-hint, #help-btn { display: none; } }
