@@ -424,7 +424,7 @@ def sheet_readme(wb, d):
     srcs = [
         ("World", "v2 simulated world (D012–D015 in docs/DECISIONS.md): calibrated on P0 only, frozen, then a single "
                   "holdout on fresh seeds."),
-        ("Site data", f"docs/data/*.json, exported {meta['generated_at']} (git {meta['git_sha']})"),
+        ("Site data", f"docs/data/*.json, exported {meta['generated_at']} (release {meta.get('release', 'v2.2')})"),
         ("Pipeline outputs", "outputs/forecasting/final_forecasts.parquet, outputs/policies/P1_stock_params.csv, "
                              "outputs/actions/actions.json, outputs/aog_lab/incidents.json"),
         ("Assumptions", "config/assumptions.yaml (service targets, hourly rate, fixed cost per event, rectification "

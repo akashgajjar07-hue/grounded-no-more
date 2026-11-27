@@ -180,7 +180,7 @@ def test_v21_landing_and_verbatim_texts():
                   "stations": 1 + len(c["network"]["outstations"]), "test_runs": hi - lo + 1}
     assert k["landing"]["text"] == "40 aircraft · 120 part numbers · 7 stations · 20 fresh test runs"
     assert k["reading_note"].startswith("How to read these numbers: simulated downtime of the aircraft waiting for the part")
-    assert k["stress_worlds"]["text"] == "reliability scaled ×0.96 / ×1.00 / ×1.08 — a narrow range"
+    assert k["stress_worlds"]["text"] == "reliability ×1.08 (easier) / ×1.00 / ×0.96 (tougher) — a narrow range"
     assert k["stress_worlds"]["ranges_note"] == ("Likely ranges reflect simulation randomness only, not uncertainty in "
                                                  "prices, failure rates, suppliers or contracts.")
     fi = k["frontier_insight"]

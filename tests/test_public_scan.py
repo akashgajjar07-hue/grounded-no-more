@@ -3,7 +3,7 @@
 1. No forbidden word in user-visible text on the product surfaces: the site (docs/index.html, docs/js, docs/css,
    docs/content, docs/data, docs/lab), the rendered docs (README, METHODOLOGY, MODEL_CARD, LIMITATIONS,
    reports/VALIDATION_REPORT.md), the deck text (presentations/case_study_deck.pptx) and the workbook text.
-   Categories: career / personal-prep terms, internal-process terms, placeholder / unfinished markers, OEM / airline
+   Categories: personal terms, internal-process terms, placeholder / unfinished markers, OEM / airline
    names, outdated policy wording. JS/CSS comments are stripped first (they are code, not copy). Code identifiers that
    happen to contain a word (an HTML input attribute) are allowed only through the explicit ALLOW list.
 2. Files moved out of the public repo stay untracked by git.
@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # The type numbers are assembled from fragments so this file does not trip other repo greps.
 _NB, _WB = "A3" + "20", "78" + "7"
-# The career / personal-prep and internal-process terms are stored base64-encoded and decoded at run time. This keeps
+# The personal and internal-process terms are stored base64-encoded and decoded at run time. This keeps
 # the word list itself from being displayed when someone reads this file on GitHub; it is not a secret. Decode with
 # base64.b64decode(...) to review the list.
 _B64 = lambda s: base64.b64decode(s).decode()  # noqa: E731
@@ -34,8 +34,8 @@ _CAREER_I = ["XGJpbnRlcnZpZXc=", "bGlua2VkXHM/aW4=", "XGJyZWNydWl0", "XGJoaXIoPz
 _CAREER_CS = ["XGJDRU9cYg=="]
 _INTERNAL_I = ["cHJvbXB0", "c3ViLT9hZ2VudA==", "YWdlbnRbIF8tXW5vdGVz"]
 TERMS = {
-    **{f"career / personal-prep #{n}": re.compile(_B64(b), re.I) for n, b in enumerate(_CAREER_I, 1)},
-    **{f"career / personal-prep #{n}": re.compile(_B64(b)) for n, b in enumerate(_CAREER_CS, len(_CAREER_I) + 1)},
+    **{f"personal #{n}": re.compile(_B64(b), re.I) for n, b in enumerate(_CAREER_I, 1)},
+    **{f"personal #{n}": re.compile(_B64(b)) for n, b in enumerate(_CAREER_CS, len(_CAREER_I) + 1)},
     **{f"internal-process #{n}": re.compile(_B64(b), re.I) for n, b in enumerate(_INTERNAL_I, 1)},
     "placeholder / unfinished": re.compile(r"\b(?:TODO|FIXME|TBD)\b|add link|\blorem\b|\bDRAFT\b"),
     "placeholder": re.compile(r"placeholder", re.I),

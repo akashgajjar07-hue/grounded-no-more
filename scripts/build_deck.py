@@ -107,6 +107,10 @@ def half_up1(x):
     return f"{-v if x < 0 else v:.1f}"
 
 
+# v2.2 (review #42): one set of part-type names, as the site's Simple mode uses them
+PART_TYPE = {"R": "Repairable", "E": "Throw-away", "C": "Consumable"}
+
+
 def fmt_int(x):
     s = "−" if x < 0 else ""
     return f"{s}{abs(round(x)):,}"
@@ -141,6 +145,17 @@ def fmt_mm(x, dp=1):
 
 def ci_m(ci, dp=1):
     return f"[{ci[0] / 1e6:.{dp}f}, {ci[1] / 1e6:.{dp}f}]".replace("-", "−")
+
+
+def aed_ci(mean, lo, hi, signed=False):
+    """v2.2 (review #20): money with CI on the docs' scale and rounding (render_docs.fmt_aed_ci), deck bracket style:
+    AED 33.9M [37.9, 29.9] for millions, AED 0.36M [−0.75, 1.46] below AED 1M."""
+    big = max(abs(mean), abs(lo), abs(hi))
+    sign = ("+" if mean > 0 else "−" if mean < 0 else "") if signed else ("−" if mean < 0 else "")
+    d = 1 if abs(mean) >= 1e6 else 2 if big >= 1e5 else None
+    if d is None:
+        return f"{sign}AED {abs(mean):,.0f} {ci_txt([lo, hi])}"
+    return f"{sign}AED {abs(mean) / 1e6:.{d}f}M {ci_m([lo, hi], d)}"
 
 
 def ci_h(ci):
@@ -279,6 +294,7 @@ def compute_numbers():
     N["cal_targets"] = lock["targets"]
     N["cal_ach"] = {v: lock["achieved"][v]["history"] for v in ("central", "low_stress", "high_stress")}
     N["meta_sha"] = k["meta"]["git_sha"]
+    N["release"] = k["meta"].get("release", "v2.2")   # shown instead of the hash (review #2)
     N["generated_at"] = k["meta"]["generated_at"]
 
     # v2.1 verbatim texts and display names (v2.1 release brief): read from docs/data, never typed
@@ -801,8 +817,8 @@ class Charts:
         fig = self._fig(wpx, hpx)
         ax = fig.add_axes([0.11, 0.14, 0.86, 0.76])
         rows = [p for p in N["parts"] if p["adi"] is not None and p["cv2"] is not None]
-        for cls, col, mk, lab in [("C", C["titanium"], "o", "Consumables"), ("E", C["slate"], "s", "Expendables"),
-                                  ("R", C["aero_teal"], "D", "Rotables")]:
+        for cls, col, mk, lab in [("C", C["titanium"], "o", PART_TYPE["C"]), ("E", C["slate"], "s", PART_TYPE["E"]),
+                                  ("R", C["aero_teal"], "D", PART_TYPE["R"])]:
             xs = [p["adi"] for p in rows if p["cls"] == cls]
             ys = [p["cv2"] for p in rows if p["cls"] == cls]
             ax.scatter(xs, ys, s=16 if not compact else 22, c=col, marker=mk, alpha=0.85, linewidths=0,
@@ -1250,8 +1266,9 @@ def build_deck(N, A, CH, bg, total=10):
     blocks = [
         ("Hours waiting / yr", fmt_int(pr["aog_hours"]["mean"]),
          ci_txt([pr["aog_hours"]["ci_lo"], pr["aog_hours"]["ci_hi"]]), C["aero_teal"]),
-        ("Annual cost vs naive ref.", fmt_mm(pr["total_annual_cost_aed"]["mean"]),
-         ci_m([pr["total_annual_cost_aed"]["ci_lo"], pr["total_annual_cost_aed"]["ci_hi"]]), C["ice"]),
+        # v2.2 (review #8): no money tile on the results slide; the positioning change instead (from network data)
+        ("Outstation spares", f"{N['out_rot'][bid]} → {N['out_rot'][cid]}", "at outstations",
+         C["ice"]),
         ("Shelf fill, pts", f"−{cm['fill']}", cm["fill_ci"], C["amber"]),
     ]
     xx = 788
@@ -1283,9 +1300,9 @@ def build_deck(N, A, CH, bg, total=10):
                after=0, ls=1.08)])
     s.text(650, 610, 560, 56, [
         bullet([R("The price: ", "body", s=9.2, b=True, c=C["amber"]),
-                R(f"the shelf fill is {cm['fill']} pts lower, in cheap consumables "
+                R(f"the shelf fill is {cm['fill']} pts lower, in cheap consumable "
                   f"({fmt_pct(bc[('P0', 'C')]['immediate_fill_rate'], 2)} → {fmt_pct(bc[('P2', 'C')]['immediate_fill_rate'], 2)}) "
-                  f"and expendables; repairable-part fill rises {fmt_pct(bc[('P0', 'R')]['immediate_fill_rate'])} → "
+                  f"and throw-away parts; repairable-part fill rises {fmt_pct(bc[('P0', 'R')]['immediate_fill_rate'])} → "
                   f"{fmt_pct(bc[('P2', 'R')]['immediate_fill_rate'])}.", "bodym", s=9.2)], col=C["amber"], after=0,
                ls=1.08)])
     s.footer(3, f"Source: simulated holdout, docs/data · {N['seed_txt']}", total)
@@ -1329,7 +1346,7 @@ def build_deck(N, A, CH, bg, total=10):
              total)
     S.append(s)
 
-    # 5 — Forecasting, honestly --------------------------------------------------------------------------------------
+    # 5 — Forecasting --------------------------------------------------------------------------------------
     cc = N["champion_check"]
     n_cells, n_rank1 = len(cc), sum(1 for c in cc if c["champion_rank"] == 1)
     assert (n_rank1, n_cells) == (hon["forecast_champions_best"], hon["forecast_cells"])
@@ -1340,7 +1357,7 @@ def build_deck(N, A, CH, bg, total=10):
     from collections import Counter
     dcls = Counter(p["demand_class"] for p in N["parts"])
     s = Slide(bg=bg)
-    s.header(5, "Forecasting, honestly", f"Methods chosen in advance were best in only {n_rank1} of {n_cells} groups",
+    s.header(5, "Forecasting", f"Methods chosen in advance were best in only {n_rank1} of {n_cells} groups",
              f"{dcls.get('intermittent', 0)} of {N['n_parts']} part numbers are needed only now and then (ADI > 1.32 "
              f"weeks, CV² < 0.49, training weeks 0–{N['split_week'] - 1}). Methods were fixed on earlier runs, then "
              "checked once on the fresh test runs.")
@@ -1359,7 +1376,7 @@ def build_deck(N, A, CH, bg, total=10):
     for c in sorted(cc, key=lambda c: (c["part_class"], c["demand_class"])):
         hit = c["champion_rank"] == 1
         col = C["aero_teal"] if hit else (C["amber"] if c is ir else C["titanium"])
-        s.text(648, yy, 210, 18, P(R(f"{c['part_class']} · {c['demand_class'].replace('_', ' ')} ({c['n_parts']})", "body",
+        s.text(648, yy, 210, 18, P(R(f"{PART_TYPE.get(c['part_class'], c['part_class'])} · {c['demand_class'].replace('_', ' ')} ({c['n_parts']})", "body",
                                      s=8.8, c=C["ice"])))
         s.text(860, yy, 150, 18, P(R(lab.get(c["champion"], c["champion"]).split(" (")[0], "bodym", s=8.8)))
         s.text(1010, yy, 80, 18, P(R(f"{c['champion_rank']} / {c['n_methods']}", "mono", s=8.8, c=col, b=hit)))
@@ -1391,7 +1408,11 @@ def build_deck(N, A, CH, bg, total=10):
     reco = N["reco"]
     rt = fo["repair_tat_x0_75"]
     shifts = {r["setting"]: r["recommended"] for r in fo["rule_shifts"]}
-    pp = {r["variant"]: r for r in fo["postplan_stress"]}
+    # v2.2 (review #20): post-plan numbers from the unrounded frozen file, as render_docs reads them
+    _post = json.loads((ROOT / "outputs" / "holdout" / "postplan_i125_stress.json").read_text())
+    pp = {w: {"aog_hours": {"mean": r["d_aog_hours_vs_base_mean"],
+                            "ci": [r["d_aog_hours_vs_base_lo"], r["d_aog_hours_vs_base_hi"]]}}
+          for w, rows_ in _post["worlds"].items() for r in rows_ if r["id"] == "I125"}
     ins = N["ins"]
     s = Slide(bg=bg)
     s.header(6, "Readiness Frontier · how much readiness each extra dirham buys",
@@ -1414,7 +1435,7 @@ def build_deck(N, A, CH, bg, total=10):
                                 P(R("extra spare capital", "monos", s=8))])
     s.text(788, 258, 422, 104, [
         bullet([R("Total annual cost ", "body", s=9.3, b=True),
-                R(f"{fmt_mm(fo['total_cost_aed']['mean'])}/yr {ci_m(fo['total_cost_aed']['ci'])} vs the {sn(N, cid)}.",
+                R(f"{aed_ci(fo['total_cost_aed']['mean'], *fo['total_cost_aed']['ci'])} a year vs the {sn(N, cid)}.",
                   "bodym", s=9.3)], after=4),
         bullet([R(f"With {sn(N, fid).replace(sn(N, cid), '').strip(' +')}: ", "body", s=9.3, b=True),
                 R(f"{fmt_int(i1['aog_hours'])} h/yr {ci_txt(i1['aog_ci'])} at {fmt_mm(i1['capital_aed'])} "
@@ -1435,7 +1456,7 @@ def build_deck(N, A, CH, bg, total=10):
         xx += w_ + 8
     s.text(788, 520, 422, 146, [
         P(R(f"Repair 25% faster: the extra-spares lead over the {sn(N, cid)} is "
-            f"{fmt_signed(rt['net_benefit_aed']['mean'], fmt_mm)}/yr {ci_m(rt['net_benefit_aed']['ci'], 2)}, "
+            f"{aed_ci(rt['net_benefit_aed']['mean'], *rt['net_benefit_aed']['ci'], signed=True)} a year, "
             f"{'not significant' if not rt['net_benefit_significant'] else 'significant'} (earlier runs, one factor at a "
             "time).", "bodym", s=8.8), after=5, ls=1.08),
         P(R("Post-plan stress check, added after the main test (D015): ", "small", s=8, c=C["titanium"]),
@@ -1491,7 +1512,7 @@ def build_deck(N, A, CH, bg, total=10):
         vals = [(f"{wname(v)} ×{N['sw']['scales'][v]:.2f}", "body", C["ice"]),
                 (f"{fmt_pct(a_['rotable_immediate_fill_rate'])} · {fmt_int(a_['aog_hours_per_year'])} h", "mono", C["ice"]),
                 (f"{fmt_int(wmap[v]['aog_hours']['mean'])} {ci_txt(wmap[v]['aog_hours']['ci'])}", "mono", C["aero_teal"]),
-                (f"{fmt_signed(rv_['net_benefit_aed'], fmt_mm)} {ci_m(rv_['net_benefit_ci'], 2)}", "mono",
+                (f"{aed_ci(rv_['net_benefit_aed'], *rv_['net_benefit_ci'], signed=True)}", "mono",
                  C["aero_teal"] if rv_["net_benefit_ci"][0] > 0 else C["amber"])]
         for c_, (t, sty, col) in zip(cx, vals):
             s.text(c_, yy, 210, 18, P(R(t, sty, s=8.8, c=col)))
@@ -1543,7 +1564,7 @@ def build_deck(N, A, CH, bg, total=10):
         P(R(f"{a1['severity'].upper()} · {a1['owner']} · ", "monos", s=7.8, c=C["red"]), R(a1["summary"], "body", s=9),
           ls=1.05, after=1),
         P(R(f"→ {a1['recommended_action']}", "bodym", s=8.6), ls=1.05, after=8),
-        P(R("AN HONEST NEGATIVE", "label", c=C["amber"]), after=3),
+        P(R("NEGATIVE RESULT", "label", c=C["amber"]), after=3),
         P(R(f"In {cfs['history_took_best_option']} of {cfs['requests_compared']} history requests the desk already took "
             f"the top-ranked option; history did better overall ({fmt_int(cfs['actual_request_aog_h'])} vs "
             f"{fmt_int(cfs['best_option_request_aog_h'])} h), helped by {cfs['history_used_robbery']} borrowed parts the "
@@ -1680,9 +1701,8 @@ def build_deck(N, A, CH, bg, total=10):
         P(R(f"…and {len(reasons) - len(shown)} more (archive/v1/README.md).", "small", s=8.3), after=8),
         P(R("v2 fixed them as domain corrections chosen before any v2 result, recalibrated the starting point only, and "
             "ran its test on fresh seeds. v1 numbers are not findings.", "bodym", s=9.2), after=8, ls=1.08),
-        P(R("Lesson: get the domain review before the headline, not after.", "body", s=9.4, c=C["amber"]), ls=1.08),
     ])
-    s.footer(9, f"Source: docs/data and reports/junit.xml · data build {N['meta_sha']}", total)
+    s.footer(9, f"Source: docs/data and reports/junit.xml · release {N['release']}", total)
     S.append(s)
 
     # 10 — Limitations, honest findings & author ----------------------------------------------------------------------
@@ -1720,14 +1740,14 @@ def build_deck(N, A, CH, bg, total=10):
         s.text(70 + col_i * 366, 190, 344, 300, [P(R(t + " ", "body", s=9.1, b=True), R(d_, "bodym", s=8.8), after=7,
                                                    ls=1.08) for t, d_ in chunk])
     s.line(70, 486, 786, 486, HAIR, 0.6)
-    s.text(70, 496, 700, 16, P(R("FINDINGS THAT DO NOT FLATTER THE METHOD", "label", c=C["faint"])))
+    s.text(70, 496, 700, 16, P(R("FINDINGS AGAINST THE METHOD", "label", c=C["faint"])))
     hs_ = [(f"{hon['forecast_champions_best']}/{hon['forecast_cells']}",
             f"groups where the method chosen in advance was best on the test runs (SBA "
             f"{hon['sba_intermittent_rotables_rank']}th of {hon['sba_intermittent_rotables_n_methods']} for rarely-needed "
             "repairable parts)"),
            (f"{hon['mtbur_history_error'] * 100:.0f}% vs {hon['mtbur_quote_error'] * 100:.0f}%",
             "error in how often a part comes off: own history vs supplier quote"),
-           (f"−{cm['fill']} pts", f"shelf fill, {sn(N, cid)} vs {sn(N, bid)} (cheap consumables and expendables)"),
+           (f"−{cm['fill']} pts", f"shelf fill, {sn(N, cid)} vs {sn(N, bid)} (cheap consumable and throw-away parts)"),
            (f"{fmt_int(ro['central_p2_aog_hours'])}→{fmt_int(ro['p2_aog_hours'])} h",
             f"{sn(N, cid)} hours/yr with the emergency routes switched off")]
     for i, (big_, txt_) in enumerate(hs_):
@@ -1747,7 +1767,7 @@ def build_deck(N, A, CH, bg, total=10):
                                 P(R("CODE", "label", s=7.5, c=C["faint"]), after=2),
                                 P(R(REPO_URL.replace("https://", ""), "mono", s=8.4))])
     s.image(848, 440, 362, 200, A["wb"])
-    s.footer(10, f"Source: simulated runs, docs/data · data build {N['meta_sha']}", total)
+    s.footer(10, f"Source: simulated runs, docs/data · release {N['release']}", total)
     S.append(s)
 
     notes = [
@@ -1759,15 +1779,15 @@ def build_deck(N, A, CH, bg, total=10):
         "(a narrow reliability range), and the verbatim reading note.",
         "Capital and positioning: the capital table (gross lines, net, not cash back), where the stock goes, and Palm "
         "at BOM, computed here from the exported Poisson distribution and checked against the exporter.",
-        "Forecasting honesty: the chosen methods were best in few groups; history beats the supplier's quote.",
+        "Forecasting: the chosen methods were best in few groups; history beats the supplier's quote.",
         "Readiness Frontier: the extra-spares option for additional capital, its paired gain, and the most useful "
         "insight: faster repair can beat buying spares.",
         "What it depends on: one-at-a-time sensitivity, the calibration choice (an assumption), the stress worlds, "
         "and the emergency routes.",
-        "Planner actions, the AOG lab (an honest negative), and the post-plan donor recount kept apart from the "
+        "Planner actions, the AOG lab (a negative result), and the post-plan donor recount kept apart from the "
         "headline; historical donor hours only beside historical counted downtime.",
         "Provenance, calibrate-freeze-test, earlier-runs-to-test consistency, and the v1 to v2 correction.",
-        "Limitations, honest findings and author.",
+        "Limitations, findings against the method, and author.",
     ]
     for s_, n_ in zip(S, notes):
         s_.notes = n_

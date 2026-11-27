@@ -409,9 +409,12 @@ def _stress_scales():
     return g("low_stress"), g("high_stress")
 
 
+RELEASE = "v2.2"   # v2.2 (review #2): the label shown to users instead of a commit hash (history gets rewritten)
+
+
 def meta(provenance: str, sources: list[str], notes: str, **extra) -> dict:
     m = {"generated_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
-         "git_sha": git_sha(), "provenance": provenance, "source": sources, "notes": notes}
+         "git_sha": git_sha(), "release": RELEASE, "provenance": provenance, "source": sources, "notes": notes}
     m.update(extra)
     return m
 
@@ -1823,7 +1826,8 @@ def build_method() -> dict:
             section = line[3:].strip()
         m = re.match(r"\*\*(\d+)\. (.+?)\*\*\s*(.*)", line)
         if m and section:
-            lim.append({"n": int(m.group(1)), "section": section, "title": m.group(2).rstrip("."),
+            lim.append({"n": int(m.group(1)), "section": section,
+                        "title": re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", m.group(2)).rstrip("."),
                         "detail": m.group(3).split(". ")[0].strip()[:220], "provenance": "DERIVED"})
     decisions = {}
     dec_path = ROOT / "docs" / "DECISIONS.md"
@@ -1957,8 +1961,12 @@ def build_story(data: dict) -> dict:
         body2 = (f"{lead} With {int(st_units.P0)} units at {st} under the Simple Rulebook, it caused {fmt_int(part['aog_h_52w'])} AOG h in "
                  f"W52–W103, {fmt_int(part['aog_h_52w_max_station'])} h of them at {st}.")
     else:
+        # v2.2 (review #12): the network total with its split, so it is not pinned on one station
+        _st_h = (act or {}).get("evidence", {}).get("aog_hours_lookback") if act else None
+        _split = (f": {fmt_int(part['aog_h_52w_max_station'])} at {part['aog_h_52w_max_station_id']}"
+                  + (f", {fmt_int(_st_h)} at {st}" if _st_h is not None else "")) if part.get("aog_h_52w_max_station_id") else ""
         body2 = (f"{lead} With {int(st_units.P0)} units at {st} under the Simple Rulebook, it caused {fmt_int(part['aog_h_52w'])} AOG h "
-                 "in the last 52 weeks (W52–W103), all stations.")
+                 f"in W52–W103 across all stations{_split}.")
 
     body3 = (f"Its weekly demand is {part['demand_class']} (ADI {part['adi']:.2f} weeks, CV² {part['cv2']:.2f} on training "
              "weeks W0–W77).")
@@ -2024,12 +2032,14 @@ def build_story(data: dict) -> dict:
     rm6 = core.get("remix") or {}
     aedm = lambda v: f"AED {abs(float(v)) / 1e6:.1f}M"   # noqa: E731
     netc = float(core["capital_aed"]["mean"])
-    cap_txt = (f"It buys {rm6['buy_units']} rotables (≈{aedm(rm6['buy_aed'])}) and removes {rm6['shed_units']} (≈{aedm(rm6['shed_aed'])}); "
-               f"average simulated inventory {'+' if netc >= 0 else '−'}{aedm(netc)}. ") if rm6.get("buy_units") is not None else ""
+    # v2.2 (review #6): explain why the net is small (8.4 − 3.1 is not 0.6): bought units sit in the repair loop
+    cap_txt = (f"It buys {rm6['buy_units']} rotables (≈{aedm(rm6['buy_aed'])}) and removes {rm6['shed_units']} (≈{aedm(rm6['shed_aed'])}). "
+               f"Average stock value {'rises' if netc >= 0 else 'falls'} only ≈{aedm(netc)}, because many bought units sit in the repair loop. "
+               ) if rm6.get("buy_units") is not None else ""
     fo_txt = (f"{displayname(rid)} adds {fmt_aed(fo['extra_capital_aed']['mean'])} for {fmt_int(fo['aog_reduction']['mean'])} h/yr less "
               f"[{fmt_int(fo['aog_reduction']['ci'][0])}–{fmt_int(fo['aog_reduction']['ci'][1])}].")
-    body_value = (f"{scope_txt}, the Network Plan cuts material AOG by {fmt_int(core['aog_reduction']['mean'])} h a year "
-                  f"vs the Simple Rulebook. " + cap_txt + fo_txt)
+    body_value = (f"In this simulation, the Network Plan cuts material AOG by {fmt_int(core['aog_reduction']['mean'])} h/yr. "
+                  + cap_txt + fo_txt)
     if len(body_value) > STORY_BODY_MAX:   # keep the gross + net capital lines; drop the frontier sentence first
         body_value = body_value[: -len(fo_txt)].rstrip()
     steps = [
@@ -2070,9 +2080,14 @@ def build_story(data: dict) -> dict:
     gap_txt = (f"The part arrived after {fmt_int(_at)} hours, and the plane flew again after {fmt_int(_rel)} hours."
                if _at is not None and _rel is not None and _rel > _at else f"It stayed on the ground for {fmt_int(inc['aog_hours'])} hours.")
     s_problem = (f"A plane is stuck at {c_st}. A part it needs before its next flight broke, and no spare was kept there. " + gap_txt)
+    _st_h2 = act.get("evidence", {}).get("aog_hours_lookback") if act else None
+    _mx = part.get("aog_h_52w_max_station_id")
+    _held = "where no spare is held" if p0_st == 0 else f"where {p0_st} spares are held"
     s_diag = (f"The {sys_['name'].lower()} group is the biggest risk, and one part leads it. "
-              f"With {'no spare' if p0_st == 0 else f'{p0_st} spares'} at {c_st}, it kept planes grounded for "
-              f"{fmt_int(part['aog_h_52w'])} hours in the last 52 weeks, all airports.")
+              f"It kept planes grounded {fmt_int(part['aog_h_52w'])} hours in the last 52 weeks across all airports"
+              + (f": {fmt_int(part['aog_h_52w_max_station'])} at {city(_mx)}"
+                 + (f", {fmt_int(_st_h2)} at {c_st}, {_held}." if _st_h2 is not None and _mx != st else f", {_held}.")
+                 if _mx else "."))
     s_pipe = (f"Broken parts spend about {fl['pipeline_days']:.0f} days in repair, so the airline needs spares to cover them. "
               f"The Network Plan keeps {p2_s} in total, so one is almost always on the shelf."
               + (f" At {c_st} it keeps {p2_st}, refilled from {c_hub} in about {rs_d:.0f} days." if rs_d is not None else ""))
@@ -2088,9 +2103,10 @@ def build_story(data: dict) -> dict:
                   + (f"Get {need} for {st} by repair or exchange ({act.get('source') or 'AUH'} has none in stock)." if hub_none
                      else f"The advice is to send {need} there."))
     rm = core.get("remix") or {}
-    s_value = (f"{scope_txt}, the Network Plan cuts grounded time by {fmt_int(core['aog_reduction']['mean'])} hours a year. "
-               + (f"It buys {rm['buy_units']} repairable spares (about {aedm(rm['buy_aed'])}) and removes {rm['shed_units']} (about {aedm(rm['shed_aed'])}), "
-                  f"so stock value rises by about {aedm(netc)}." if rm.get("buy_units") is not None else
+    s_value = (f"In this simulation, the Network Plan saves {fmt_int(core['aog_reduction']['mean'])} grounded hours a year. "
+               + (f"It buys {rm['buy_units']} spares (about {aedm(rm['buy_aed'])}) and removes {rm['shed_units']} (about {aedm(rm['shed_aed'])}). "
+                  f"Average stock value rises only about {aedm(netc)}, because many bought units sit in the repair loop."
+                  if rm.get("buy_units") is not None else
                   f"Spending {fmt_aed(fo['extra_capital_aed']['mean'])} more saves about {fmt_int(fo['aog_reduction']['mean'])} hours more."))
     simple = [("1 · The problem", s_problem), ("2 · Find the cause", s_diag), ("3 · Repairs take time", s_pipe),
               ("4 · Compare the plans", s_trade), ("5 · What to do", s_act), ("6 · Is it worth it?", s_value)]

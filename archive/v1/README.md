@@ -1,10 +1,10 @@
 # v1 world: archived
 
-Git tag: `v1-archive` (commit 06a6280). Archived on 2026-11-26 after the fresh aviation domain review (`reports/review_aviation.md`), which found 4 critical and 11 major domain-realism problems in the v1 simulator. v1 is kept for transparency, not deleted. Every v1 artefact can be recovered with `git checkout v1-archive`.
+Git tag: `v1-archive`. Archived on 2026-11-26 after the fresh aviation domain review (`reports/review_aviation.md`), which found 4 critical and 11 major domain-realism problems in the v1 simulator (the 11 listed below drove the rebuild). v1 is kept for transparency, not deleted. Every v1 artefact can be recovered with `git checkout v1-archive`.
 
 ## What v1 ran
-- Calibration (P0 only) locked at commit 8b7a631, before any P1/P2 code existed.
-- Freeze at 95dfce5, then a single holdout at ccf6f2b on seeds 1000–1019. One block was force-rerun after it crashed before producing output (D010).
+- Calibration (P0 only) locked before any P1/P2 code existed.
+- Freeze, then a single holdout on seeds 1000–1019. One block was force-rerun after it crashed before producing output (D010).
 
 ## v1 holdout headline (central world, seeds 1000–1019)
 | Policy | Material AOG h/yr [95% CI] | Spare capital |

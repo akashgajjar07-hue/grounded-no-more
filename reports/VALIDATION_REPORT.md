@@ -6,7 +6,7 @@ What was checked, how, and what came out. Rendered by `scripts/render_docs.py` f
 
 ## 1. Tests
 
-398 tests, 0 failures, 0 errors, 0 skipped, 45 s, run at 2026-11-27T16:37:18.685541+05:30 (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -m "not browser" -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast and slow suites; the Playwright browser suite (`-m browser`) runs separately and is not counted in this file).
+398 tests, 0 failures, 0 errors, 0 skipped, 109 s, run at 2026-11-27 13:14 UTC (`reports/junit.xml`, from `GNM_RELEASE=1 pytest -m "not browser" -p no:cacheprovider -q --junitxml=reports/junit.xml`, fast and slow suites; the Playwright browser suite (`-m browser`) runs separately and is not counted in this file).
 
 | Area | Test modules | Tests | Failed | Skipped |
 |---|---|---|---|---|
@@ -30,7 +30,7 @@ Doc rendering is verified by `tests/test_docs_rendered.py`: every result key is 
 
 > The target range for the starting-point policy was an exploratory assumption chosen after diagnosing the model, not benchmarked against real airline KPIs. A line-kit variant (≈1,052 h) was measured but not adopted because it fell outside that range. All results are conditional on this choice.
 
-Band (ASSUMED, chosen by the user after the P0 gap diagnosis and before any policy result): P0 network rotable immediate fill 0.78–0.85, material AOG 1,200–2,700 h/yr, AOG events 60–100/yr.
+Band (ASSUMED, chosen by the author after the P0 gap diagnosis and before any policy result): P0 network rotable immediate fill 0.78–0.85, material AOG 1,200–2,700 h/yr, AOG events 60–100/yr.
 
 How P0 got there, central world, history weeks 0–103:
 
@@ -59,7 +59,7 @@ Applied (V1, fewest changes): `quoted_mtbur_optimism` 1.10, `quoted_mtbur_noise_
 | low stress (×1.08) | AOG 1,200, fill 0.85 | 0.846 / 0.836 | 1,123 / 1,226 | 66 / 63 | no |
 | high stress (×0.96) | AOG 2,700, fill 0.78 | 0.780 / 0.781 | 1,632 / 1,558 | 84 / 76 | yes |
 
-Stress worlds: reliability scaled ×0.96 / ×1.00 / ×1.08 — a narrow range. Band ends: the low-stress world reaches the AOG end of the band (pooled history and selection 1,174 h/yr; band end 1,200) at 0.841 rotable fill, and the high-stress world reaches the fill end (0.781; band end 0.78) at about 1,595 h/yr, well short of the 2,700 h end, because fill binds first. The lock (`outputs/freeze/calibration_lock.json`, 12 hashed files, enforced by `tests/test_calibration_lock.py`) was written at `c2ef333` and re-written only after the non-calibration fixes V2-SIM-17/18 at `52410a4`.
+Stress worlds: reliability ×1.08 (easier) / ×1.00 / ×0.96 (tougher) — a narrow range. Band ends: the low-stress world reaches the AOG end of the band (pooled history and selection 1,174 h/yr; band end 1,200) at 0.841 rotable fill, and the high-stress world reaches the fill end (0.781; band end 0.78) at about 1,595 h/yr, well short of the 2,700 h end, because fill binds first. The lock (`outputs/freeze/calibration_lock.json`, 12 hashed files, enforced by `tests/test_calibration_lock.py`) was written at `6083833` and re-written only after the non-calibration fixes V2-SIM-17/18 at `2149d78`.
 
 ## 3. Freeze and holdout chain
 
@@ -67,20 +67,20 @@ Frozen at 2026-11-26 08:43:36 UTC: 19 artefacts (forecast champions, P0/P1/P2 pa
 
 v2 commit chain (`git log --oneline`, oldest first). The calibration lock precedes every P1/P2/optimiser commit, the freeze precedes the holdout-results commit, and the post-plan check comes after both:
 
-- `e6c943f` Archive v1 (tag v1-archive); start v2 rebuild — D012
-- `e55c9d3` v2 simulator (UNCALIBRATED, not locked): type-exclusive catalogue, curated deadlines/QPA/prices, NFF, exchange/loan + local borrow + robbery + local buy (no pool growth), deferred-item sourcing fix, AOG fitting time + per-event cost, OEM Poisson P0; P0 diagnostics only — no P1/P2 run
-- `f65935d` v2 P0 gap diagnosis: fix P0 ready-rate vs fill-rate mismatch (V2-SIM-10), P0 pipeline transport weighting (V2-SIM-11), reservation blocking bug (V2-SIM-12); raw P0 rerun — still uncalibrated, not locked
-- `905988b` v2 realism corrections before calibration: wheel/tyre hub shop (2-7 d TAT), brake notice-time supply (V2-SIM-13), AOG route retries (V2-SIM-14), band recorded (V2-SIM-16); raw P0 rerun — not tuned, not locked
-- `6467e5c` v2 calibration variants V1–V4 measured in memory (nothing applied): V1 quote-accuracy is the only in-band candidate
-- `c2ef333` v2 CALIBRATION LOCK: V1 quote-accuracy settings (user-approved), stress worlds at band ends, holdout seeds 2000–2019 — locked BEFORE any v2 P1/P2/optimiser run
-- `67cd748` v2: AOG Response Lab + Planner Action Centre rebuilt on v2 history (v2 routes, robbery never ranked, AV-21 queue-jump, no fake quarantine data)
-- `2cea63d` v2: forecasting champions + P1/P2 paired selection evaluation (3 worlds), selection seeds only
-- `52410a4` v2 bug fixes before freeze: re-open needs whose earmarked shelf-life units expire on arrival (V2-SIM-17); atomic scenario cache (V2-SIM-18); re-lock; policy results reproduce unchanged
-- `c3330e1` v2: Readiness Frontier with AV-09 guardrails (selection only); recommended I125; candidates.json a8a22af8
-- `2a45af9` v2 FREEZE: champions, P0/P1/P2 tables, frontier candidates, configs hashed before the v2 holdout (seeds 2000–2019); v1 holdout archived
-- `ecad6d8` v2 HOLDOUT: seeds 2000–2019, run once after freeze 2a45af9 (no forced reruns)
-- `c0e43c7` Post-plan robustness check: frozen I125/P2/P0 on holdout seeds in low/high stress worlds (D015)
-- `ced9d6a` v2 site export: P2-led headline framing (vs starting-point OEM-quote P0 with 8 outstation rotables), I125 as frontier option, honest findings, brake disclosure; reconciliation recomputes v2 headline
+- `8005c82` Archive v1 (tag v1-archive); start v2 rebuild — D012
+- `db60ee5` v2 simulator (UNCALIBRATED, not locked): type-exclusive catalogue, curated deadlines/QPA/prices, NFF, exchange/loan + local borrow + robbery + local buy (no pool growth), deferred-item sourcing fix, AOG fitting time + per-event cost, OEM Poisson P0; P0 diagnostics only — no P1/P2 run
+- `47e4f77` v2 P0 gap diagnosis: fix P0 ready-rate vs fill-rate mismatch (V2-SIM-10), P0 pipeline transport weighting (V2-SIM-11), reservation blocking bug (V2-SIM-12); raw P0 rerun — still uncalibrated, not locked
+- `8da088c` v2 realism corrections before calibration: wheel/tyre hub shop (2-7 d TAT), brake notice-time supply (V2-SIM-13), AOG route retries (V2-SIM-14), band recorded (V2-SIM-16); raw P0 rerun — not tuned, not locked
+- `09db808` v2 calibration variants V1–V4 measured in memory (nothing applied): V1 quote-accuracy is the only in-band candidate
+- `6083833` v2 CALIBRATION LOCK: V1 quote-accuracy settings (author-approved), stress worlds at band ends, holdout seeds 2000–2019 — locked BEFORE any v2 P1/P2/optimiser run
+- `c96c458` v2: AOG Response Lab + Planner Action Centre rebuilt on v2 history (v2 routes, robbery never ranked, AV-21 queue-jump, no fake quarantine data)
+- `48a3122` v2: forecasting champions + P1/P2 paired selection evaluation (3 worlds), selection seeds only
+- `2149d78` v2 bug fixes before freeze: re-open needs whose earmarked shelf-life units expire on arrival (V2-SIM-17); atomic scenario cache (V2-SIM-18); re-lock; policy results reproduce unchanged
+- `34473cb` v2: Readiness Frontier with AV-09 guardrails (selection only); recommended I125; candidates.json a8a22af8
+- `ae3cd4b` v2 FREEZE: champions, P0/P1/P2 tables, frontier candidates, configs hashed before the v2 holdout (seeds 2000–2019); v1 holdout archived
+- `e3f568e` v2 HOLDOUT: seeds 2000–2019, run once after freeze ae3cd4b (no forced reruns)
+- `8491f07` Post-plan robustness check: frozen I125/P2/P0 on holdout seeds in low/high stress worlds (D015)
+- `304a252` v2 site export: Network Plan headline, Extra Spares as frontier option, brake disclosure.
 
 Holdout runs logged in `outputs/freeze/holdout_log.json` (the archived v1 entries are kept):
 
@@ -97,7 +97,7 @@ Holdout runs logged in `outputs/freeze/holdout_log.json` (the archived v1 entrie
 
 ### Post-plan check (D015)
 
-Added after the main v2 holdout at the user's request: the frozen central-built P0, P2 and I125 on the holdout seeds in the low- and high-stress worlds, paired against P2, no re-selection, logged once. P2 here is the central-built allocation, not the world-re-planned P2 of the policy holdout.
+Added after the main v2 holdout at the author's request: the frozen central-built P0, P2 and I125 on the holdout seeds in the low- and high-stress worlds, paired against P2, no re-selection, logged once. P2 here is the central-built allocation, not the world-re-planned P2 of the policy holdout.
 
 | World | Plan | Material AOG h/yr [95% CI] | Δ vs central-built P2 [95% CI] | Δ total annual cost vs P2 | Δ capital vs P2 |
 |---|---|---|---|---|---|
@@ -110,7 +110,7 @@ Added after the main v2 holdout at the user's request: the frozen central-built 
 
 ## 4. The v1 archive and why
 
-v1 is archived, not a finding. Tag `v1-archive` (06a6280); see [archive/v1/README.md](../archive/v1/README.md). The archive gives these 11 reasons, all from the aviation domain review (`reports/review_aviation.md`):
+v1 is archived, not a finding. Tag `None` (None); see [archive/v1/README.md](../archive/v1/README.md). The archive gives these 11 reasons, all from the aviation domain review (`reports/review_aviation.md`):
 
 - Parts were shared across the narrowbody and widebody archetypes (AV-01).
 - Cheap consumables were rated D0 and drove 29% of AOG (AV-02).

@@ -58,15 +58,15 @@ Hours aircraft spent waiting for a part, per year, in the simulation: about 1,69
 | Rotables removed | −20 units ≈ AED 3.1M |
 | Net change in average simulated spare inventory | +AED 0.6M |
 
-*Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a discount.* Units and values: target units × assumed unit cost from the policy tables; the net is the paired holdout change in time-averaged simulated spare inventory, so it differs slightly from bought minus removed.
+*Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a discount.* Units and values: target units × assumed unit cost from the policy tables; the net is the paired holdout change in time-averaged simulated spare inventory. Average stock value rises by only about AED 0.6M, not bought minus removed, because many bought units sit in the repair loop rather than on the shelf.
 
-**How wide the test was.** The three simulated worlds differ only in how reliable the parts are: reliability scaled ×0.96 / ×1.00 / ×1.08 — a narrow range. Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, suppliers or contracts.
+**How wide the test was.** The three simulated worlds differ only in how reliable the parts are: reliability ×1.08 (easier) / ×1.00 / ×0.96 (tougher) — a narrow range. Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, suppliers or contracts.
 
 **The most useful insight.** Faster repair can beat buying spares: with 25% shorter repair time, the extra-investment option loses its clear cost advantage. The levers to compare are: faster repair · pool access · better reliability · more spares.
 
 **Donor downtime.** Hours that donor aircraft (aircraft that gave up a part to another) spend waiting for a replacement are not reconstructible from current logs for the frozen test runs, so no per-plan figure is given. What the logs do allow (post-plan, exploratory): parts borrowed from another of our aircraft per year in the test runs, Simple Rulebook (naive reference) `P0` 33.2 [28.5–37.9]; Each Airport for Itself (simplified local comparator) `P1` 31.3 [27.1–35.4]; Network Plan `P2` 22.5 [18.4–26.6]; for the Network Plan + Extra Spares `I125` this is not reconstructible either. For scale only, in the historical record of the Simple Rulebook (naive reference) `P0` (history weeks 0–103, one simulated history, not the test runs), donor aircraft were held about 5,285 h a year, beside 1,282 h a year of counted waiting-for-part downtime in that same history. Gross donor hours are an upper bound: a donor may already be in maintenance or not scheduled to fly.
 
-**Findings that do not flatter the method**, kept visible on purpose:
+**Findings against the method:**
 
 - **The chosen forecasting methods rarely won on the fresh test runs.** The method chosen in advance was best in only 3 of 9 groups of parts. For rarely-needed repairable parts the chosen method (SBA) ranked 6th of 9.
 - **History beats the supplier's quote on reliability.** Estimating how often a part comes off the aircraft from the airline's own history was about 7% off the hidden truth; the supplier quotes were about 14% off.
@@ -115,13 +115,13 @@ The Network Plan is not a free repositioning of the Simple Rulebook (naive refer
 | Rotables removed | −20 units ≈ AED 3.1M |
 | Net change in average simulated spare inventory | +AED 0.6M |
 
-*Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a discount.* Units and values: target units × assumed unit cost from the policy tables; the net is the paired holdout change in time-averaged simulated spare inventory, so it differs slightly from bought minus removed.
+*Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a discount.* Units and values: target units × assumed unit cost from the policy tables; the net is the paired holdout change in time-averaged simulated spare inventory. Average stock value rises by only about AED 0.6M, not bought minus removed, because many bought units sit in the repair loop rather than on the shelf.
 
 **Frontier option: if you invest an additional AED 7.6M**, the frontier point I125 (P2 plus greedy rotable additions) cuts a further 134 h a year [87–181] vs P2 (76 h vs 210 h) and lowers total annual cost by AED 3.3M [1.8–4.8] (holdout, paired). Sensitivity, on the selection seeds and one factor at a time: its cost lead over P2 is not significant if repair is 25% faster (+AED 0.36M [−0.75 to 1.46] a year), and the pre-stated rule moves to I110 at ×0.5 and B150 at ×2 the hourly rate. Post-plan check (D015, added after the main holdout, no re-selection): low stress −85 h [−125 to −45] a year and total annual cost −AED 1.7M [−2.9 to −0.4] for +AED 7.7M capital (I125 62 h vs central-built P2 147 h); high stress −184 h [−239 to −128] a year and total annual cost −AED 5.0M [−6.8 to −3.1] for +AED 7.5M capital (I125 76 h vs central-built P2 260 h).
 
-Faster repair can beat buying spares: with 25% shorter repair time, the extra-investment option loses its clear cost advantage. Levers: faster repair · pool access · better reliability · more spares. Stress worlds: reliability scaled ×0.96 / ×1.00 / ×1.08 — a narrow range. Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, suppliers or contracts.
+Faster repair can beat buying spares: with 25% shorter repair time, the extra-investment option loses its clear cost advantage. Levers: faster repair · pool access · better reliability · more spares. Stress worlds: reliability ×1.08 (easier) / ×1.00 / ×0.96 (tougher) — a narrow range. Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, suppliers or contracts.
 
-**Findings that do not flatter the method**, kept visible on purpose:
+**Findings against the method:**
 
 - **Forecasting champions rarely won on the holdout.** The frozen champion was best in only 3 of 9 demand-class × part-class cells. For intermittent rotables the frozen SBA champion ranked 6th of 9 (TSB was best in hindsight). The policies size rotables on the reliability-exposure rate instead, so they do not depend on that cell's champion.
 - **History beats the vendor quote on reliability.** The history-based MTBUR estimate is about 7% off the hidden truth against about 14% for vendor quotes (median absolute log error, 75 removal-driven parts).
@@ -174,6 +174,8 @@ At week 103 the Planner Action Centre raises 63 actions, 25 urgent. The first th
 
 Holdout: 52 weeks (weeks 104–155), 20 paired seeds (2000–2019), central world, run once after the freeze. Means with 95% confidence intervals (t-interval over seeds). Capital is shown separately and is never added to annual cost. `P2` is the core finding; `I125` is the frontier option for additional capital.
 
+*Scenario cost at an assumed AED 15k per grounded hour (narrowbody; AED 30k widebody) against a deliberately weak baseline; not a savings estimate.*
+
 | KPI | Simple Rulebook (naive reference) `P0` | Each Airport for Itself (simplified local comparator) `P1` | Network Plan `P2` | Network Plan + Extra Spares `I125` |
 |---|---|---|---|---|
 | Immediate fill rate | 98.9% [98.9–99.0] | 97.7% [97.5–97.8] | 97.7% [97.5–97.8] | 97.9% [97.8–98.1] |
@@ -198,6 +200,8 @@ All four plans rely on emergency sourcing (borrowing from another aircraft, loan
 Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, suppliers or contracts.
 
 **P2 across worlds and penalty settings (holdout).** P1 and P2 are re-planned from each world's own history:
+
+*Scenario cost at an assumed AED 15k per grounded hour (narrowbody; AED 30k widebody) against a deliberately weak baseline; not a savings estimate.*
 
 | World | P0 h/yr | P1 h/yr | P2 h/yr | P2 − P0 h/yr [95% CI] | P2 − P0 capital | P2 − P0 total annual cost |
 |---|---|---|---|---|---|---|
@@ -239,7 +243,7 @@ Method details: [METHODOLOGY.md](METHODOLOGY.md). Model scope: [MODEL_CARD.md](M
 
 **Also run on a public intermittent-demand benchmark (car parts, not aviation).** The forecasting code was also run on a real public dataset. Dataset: Monash Car Parts (without missing values), 2,674 monthly series, licence CC BY 4.0, data provenance REAL (metrics DERIVED). Best eligible method IMAPA with mean MASE 1.056 [1.011–1.109]; the all-zero forecast scores 0.777, which is why zero is never allowed to be a champion. Attribution: Car Parts dataset, Monash Time Series Forecasting Archive (Godahewa, Bergmeir, Webb, Hyndman & Montero-Manso, 2021), Zenodo record 4656021, licensed CC BY 4.0; original data from Hyndman (2015), R package expsmooth.
 
-**Tests:** 398/398 passing, 0 failing, 0 skipped (fast and slow suites, `GNM_RELEASE=1`; the Playwright browser suite runs separately; `reports/junit.xml`, run at 2026-11-27 16:37).
+**Tests:** 398/398 passing, 0 failing, 0 skipped (fast and slow suites, `GNM_RELEASE=1`; the Playwright browser suite runs separately; `reports/junit.xml`, run at 2026-11-27 13:14 UTC).
 
 ---
 

@@ -1,3 +1,5 @@
+> AI-generated review used during development — not a review by a human aviation professional.
+
 # Guided tour — motion/UX critique, v2.2 round 2
 
 Bar: calm, premium, "Apple-keynote smooth". To pass, both smoothness and polish must score ≥ 4.5.

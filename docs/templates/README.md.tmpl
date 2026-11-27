@@ -53,7 +53,7 @@ Spare parts are one of the largest capital lines in an airline's engineering bud
 
 {{RESULT:v21.donor}}
 
-**Findings that do not flatter the method**, kept visible on purpose:
+**Findings against the method:**
 
 - **The chosen forecasting methods rarely won on the fresh test runs.** The method chosen in advance was best in only {{RESULT:honest.champions_best}} groups of parts. For rarely-needed repairable parts the chosen method ({{RESULT:honest.ir_champion}}) ranked {{RESULT:honest.ir_rank}}.
 - **History beats the supplier's quote on reliability.** Estimating how often a part comes off the aircraft from the airline's own history was about {{RESULT:honest.mtbur_hist}} off the hidden truth; the supplier quotes were about {{RESULT:honest.mtbur_quote}} off.
@@ -102,7 +102,7 @@ The {{RESULT:v21.plain.P2}} is not a free repositioning of the {{RESULT:v21.plai
 
 {{RESULT:v21.insight}} Levers: {{RESULT:v21.levers}}. Stress worlds: {{RESULT:v21.stress_worlds}}. {{RESULT:v21.ranges}}
 
-**Findings that do not flatter the method**, kept visible on purpose:
+**Findings against the method:**
 
 - **Forecasting champions rarely won on the holdout.** The frozen champion was best in only {{RESULT:honest.champions_best}} demand-class × part-class cells. For intermittent rotables the frozen {{RESULT:honest.ir_champion}} champion ranked {{RESULT:honest.ir_rank}} ({{RESULT:honest.ir_best}} was best in hindsight). The policies size rotables on the reliability-exposure rate instead, so they do not depend on that cell's champion.
 - **History beats the vendor quote on reliability.** The history-based MTBUR estimate is about {{RESULT:honest.mtbur_hist}} off the hidden truth against about {{RESULT:honest.mtbur_quote}} for vendor quotes (median absolute log error, {{RESULT:honest.mtbur_n}} removal-driven parts).
@@ -155,6 +155,8 @@ At week {{RESULT:actions.week.as_of}} the Planner Action Centre raises {{RESULT:
 
 Holdout: 52 weeks (weeks {{RESULT:seeds.kpi_weeks}}), {{RESULT:seeds.n}} paired seeds ({{RESULT:seeds.holdout}}), central world, run once after the freeze. Means with 95% confidence intervals (t-interval over seeds). Capital is shown separately and is never added to annual cost. `P2` is the core finding; `I125` is the frontier option for additional capital.
 
+{{RESULT:v21.cost_scenario}}
+
 | KPI | {{RESULT:v21.plain.P0}} `P0` | {{RESULT:v21.plain.P1}} `P1` | {{RESULT:v21.plain.P2}} `P2` | {{RESULT:v21.plain.I125}} `I125` |
 |---|---|---|---|---|
 | Immediate fill rate | {{RESULT:policies.P0.immediate_fill_rate}} {{RESULT:policies.P0.immediate_fill_rate_ci}} | {{RESULT:policies.P1.immediate_fill_rate}} {{RESULT:policies.P1.immediate_fill_rate_ci}} | {{RESULT:policies.P2.immediate_fill_rate}} {{RESULT:policies.P2.immediate_fill_rate_ci}} | {{RESULT:policies.I125.immediate_fill_rate}} {{RESULT:policies.I125.immediate_fill_rate_ci}} |
@@ -179,6 +181,8 @@ Holdout: 52 weeks (weeks {{RESULT:seeds.kpi_weeks}}), {{RESULT:seeds.n}} paired 
 {{RESULT:v21.ranges}}
 
 **P2 across worlds and penalty settings (holdout).** P1 and P2 are re-planned from each world's own history:
+
+{{RESULT:v21.cost_scenario}}
 
 {{RESULT:core.worlds_table}}
 

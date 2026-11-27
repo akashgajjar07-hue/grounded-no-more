@@ -197,6 +197,14 @@ def junit_counts() -> tuple[Counter, Counter, Counter, dict]:
     return n, bad, skip, suite
 
 
+def junit_utc(ts: str) -> str:
+    """'2026-11-27 11:07 UTC' from the junit timestamp (local time with offset)."""
+    import datetime as _dt
+    t = _dt.datetime.fromisoformat(ts)
+    t = t.astimezone(_dt.timezone.utc) if t.tzinfo else t
+    return t.strftime("%Y-%m-%d %H:%M UTC")
+
+
 def junit_scope(n: Counter) -> dict[str, str]:
     """Describe the suites actually present in reports/junit.xml (v2.2: the file may hold the non-browser run only)."""
     browser = any(m.startswith("test_site_") and m != "test_site_data" for m in n)
@@ -1013,7 +1021,7 @@ def compute() -> dict[str, str]:  # noqa: C901, PLR0915 - one flat list of keys 
     tot_n, tot_bad, tot_skip = sum(n.values()), sum(bad.values()), sum(skip.values())
     V["tests.summary"] = (f"{tot_n - tot_bad - tot_skip}/{tot_n} passing, {tot_bad} failing, {tot_skip} skipped "
                           f"({junit_scope(n)['short']}; `reports/junit.xml`, run at "
-                          f"{suite['timestamp'][:16].replace('T', ' ')})")
+                          f"{junit_utc(suite['timestamp'])})")
     V.update(v21_keys(V, kpis=kpis, pol=pol, fo=fo, var=var, sp=sp, pm=pm, cal=cal))
     return V
 
@@ -1108,8 +1116,14 @@ def v21_keys(V: dict[str, str], *, kpis, pol, fo, var, sp, pm, cal) -> dict[str,
         f"| Rotables removed | {W['v21.capital.removed']} |",
         f"| Net change in average simulated spare inventory | {W['v21.capital.net']} |",
         "", f"*{W['v21.capital.note']}* Units and values: target units × assumed unit cost from the policy tables; the "
-            "net is the paired holdout change in time-averaged simulated spare inventory, so it differs slightly from "
-            "bought minus removed."])
+            "net is the paired holdout change in time-averaged simulated spare inventory. Average stock value rises by "
+            f"only about {W['v21.capital.net'].lstrip('+')}, not bought minus removed, because many bought units sit in "
+            "the repair loop rather than on the shelf."])
+    # v2.2 (review #8): the AED cost columns are a scenario, never a savings estimate
+    _pen = cfg["economics"]["aog_penalty_aed_per_hour"]
+    W["v21.cost_scenario"] = (f"*Scenario cost at an assumed AED {_pen['narrowbody'] / 1000:g}k per grounded hour (narrowbody; "
+                              f"AED {_pen['widebody'] / 1000:g}k widebody) against a deliberately weak baseline; not a savings "
+                              "estimate.*")
 
     # ---- A5 calibration (verbatim; the line-kit hours come from the variants file)
     v3 = next(v for k, v in var.items() if k.startswith("V3"))
@@ -1123,7 +1137,8 @@ def v21_keys(V: dict[str, str], *, kpis, pol, fo, var, sp, pm, cal) -> dict[str,
     # ---- A6 stress worlds
     sv = cal["settings_used"]["generator.variants"]
     scales = sorted([sv["low_stress"]["true_mtbur_scale"], 1.0, sv["high_stress"]["true_mtbur_scale"]])
-    W["v21.stress_worlds"] = "reliability scaled " + " / ".join(f"×{s:.2f}" for s in scales) + " — a narrow range"
+    W["v21.stress_worlds"] = (f"reliability ×{scales[2]:.2f} (easier) / ×{scales[1]:.2f} / ×{scales[0]:.2f} (tougher) — "
+                              "a narrow range")
     W["v21.ranges"] = ("Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, "
                        "suppliers or contracts.")
 
@@ -1296,7 +1311,7 @@ def validation_values(V: dict[str, str]) -> dict[str, str]:
     W["val.tests_table"] = "\n".join(rows)
     W["val.tests_how"] = junit_scope(n)["how"]
     W["val.tests_suite"] = (f"{suite['tests']} tests, {suite['failures']} failures, {suite['errors']} errors, "
-                            f"{suite['skipped']} skipped, {float(suite['time']):.0f} s, run at {suite['timestamp']}")
+                            f"{suite['skipped']} skipped, {float(suite['time']):.0f} s, run at {junit_utc(suite['timestamp'])}")
     failed = [f"`{tc.get('classname').split('.')[-1]}::{tc.get('name')}`" for tc in junit_root().iter("testcase")
               if any(ch.tag in ("failure", "error") for ch in tc)]
     W["val.failed_list"] = ("No test failed." if not failed else
@@ -1310,8 +1325,12 @@ def validation_values(V: dict[str, str]) -> dict[str, str]:
                "v2 CALIBRATION LOCK", "v2: forecasting champions", "v2: AOG Response Lab", "v2 bug fixes before freeze",
                "v2: Readiness Frontier", "v2 FREEZE", "v2 HOLDOUT", "Post-plan robustness check", "v2 site export",
                "v2 regeneration brief")
-    v1c = [f"- `{h}` {s}" for i, (h, s) in enumerate(log) if i < i_arch and s.startswith(keys_v1)]
-    v2c = [f"- `{h}` {s}" for i, (h, s) in enumerate(log) if i >= i_arch and s.startswith(keys_v2)]
+    def _subj(s_: str) -> str:   # v2.2 (review #5): commit subjects in plain author wording
+        if s_.startswith("v2 site export"):
+            return "v2 site export: Network Plan headline, Extra Spares as frontier option, brake disclosure."
+        return s_.replace("(user-approved)", "(author-approved)").replace("user-approved", "author-approved")
+    v1c = [f"- `{h}` {_subj(s)}" for i, (h, s) in enumerate(log) if i < i_arch and s.startswith(keys_v1)]
+    v2c = [f"- `{h}` {_subj(s)}" for i, (h, s) in enumerate(log) if i >= i_arch and s.startswith(keys_v2)]
     W["val.git_chain_v1"] = "\n".join(v1c)
     W["val.git_chain_v2"] = "\n".join(v2c)
     hl = jload(OUT / "freeze" / "holdout_log.json")

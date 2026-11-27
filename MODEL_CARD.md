@@ -12,7 +12,7 @@ Result values are computed from `outputs/` and `docs/data/` by `scripts/render_d
 |---|---|
 | Project | GROUNDED NO MORE, an independent simulation project |
 | Author | Akash Gajjar |
-| Version | v2.2 (Python package 0.1.0; data export at git 017788c) |
+| Version | v2.2 (Python package 0.1.0) |
 | Data | Fully synthetic airline, Falcon Hub Airways (fictional). Station coordinates REAL (OurAirports). |
 | Status | Demonstration. Not verified against any operator's data. |
 | Scope of headline numbers | across 120 modelled part numbers · simulated · downtime of the aircraft waiting for the part |
@@ -119,7 +119,7 @@ Recommend rotable floats, consumable and expendable reorder points, and hub-vers
 | Rotables removed | −20 units ≈ AED 3.1M |
 | Net change in average simulated spare inventory | +AED 0.6M |
 
-*Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a discount.* Units and values: target units × assumed unit cost from the policy tables; the net is the paired holdout change in time-averaged simulated spare inventory, so it differs slightly from bought minus removed.
+*Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a discount.* Units and values: target units × assumed unit cost from the policy tables; the net is the paired holdout change in time-averaged simulated spare inventory. Average stock value rises by only about AED 0.6M, not bought minus removed, because many bought units sit in the repair loop rather than on the shelf.
 
 - **Core finding:** **Network Plan `P2` vs Simple Rulebook (naive reference) `P0`: −1,480 h a year [−1,629 to −1,332]** of material AOG (paired over the 20 holdout seeds 2000–2019, 95% t-interval), from 1,690 h to 210 h. The Network Plan holds 44 rotables at the six outstations instead of 8, pools the rest at the hub. The lead over the Simple Rulebook (naive reference) holds in all three stress worlds and across the ×0.5–×2 range of the hourly AOG cost.
 - **Across worlds** (P1/P2 re-planned per world): low stress −1,263 h [−1,443 to −1,084] at −AED 1.0M capital; central −1,480 h [−1,629 to −1,332] at +AED 0.6M capital; high stress −1,619 h [−1,800 to −1,438] at +AED 3.0M capital.
@@ -130,7 +130,7 @@ Recommend rotable floats, consumable and expendable reorder points, and hub-vers
 
 ### Caveats
 
-- Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, suppliers or contracts. Stress worlds: reliability scaled ×0.96 / ×1.00 / ×1.08 — a narrow range.
+- Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, suppliers or contracts. Stress worlds: reliability ×1.08 (easier) / ×1.00 / ×0.96 (tougher) — a narrow range.
 - The target range for the starting-point policy was an exploratory assumption chosen after diagnosing the model, not benchmarked against real airline KPIs. A line-kit variant (≈1,052 h) was measured but not adopted because it fell outside that range. All results are conditional on this choice.
 - The downtime clock starts when the part is removed (for no-go items; for deferrable items, when the rectification window runs out), not at the next scheduled departure, and overnight and other non-flying hours count in full. Fitting and release-to-service time is included. A departure-based count would be lower for every plan.
 - Outstation brake allocations in the frozen plans are flagged as an **invalid recommendation — brakes are not changed outside the hub in this model**: 5 in the Network Plan `P2` (GN-32-R013 at BOM, GN-32-R013 at CAI, GN-32-R013 at JED, GN-32-R036 at LHR, GN-32-R036 at SIN), 7 in the Network Plan + Extra Spares `I125` and 6 in the Simple Rulebook (naive reference) `P0`. They stay in the frozen results so the numbers are unchanged, but no planner should act on them.

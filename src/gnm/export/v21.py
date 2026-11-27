@@ -79,9 +79,10 @@ E4_FOOTER = "Built by Akash Gajjar with AI-assisted development (Claude Code). F
 
 
 def a6_text(lo: float, mid: float, hi: float) -> str:
-    """'reliability scaled ×0.96 / ×1.00 / ×1.08 — a narrow range' from the config scales (sorted ascending)."""
-    a, b, c = sorted([lo, mid, hi])
-    return f"reliability scaled ×{a:.2f} / ×{b:.2f} / ×{c:.2f} — a narrow range"
+    """v2.2 (review #18), reading order easier first: 'reliability ×1.08 (easier) / ×1.00 / ×0.96 (tougher) — a narrow
+    range' (a higher MTBUR scale means fewer removals, so the easier world)."""
+    c, b, a = sorted([lo, mid, hi])
+    return f"reliability ×{a:.2f} (easier) / ×{b:.2f} / ×{c:.2f} (tougher) — a narrow range"
 
 
 # ---------------------------------------------------------------------------------------------- AV2 findings (A12)

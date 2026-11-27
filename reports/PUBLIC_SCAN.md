@@ -6,7 +6,7 @@ A full scan of the public repo for wording that does not belong on a public proj
 
 - **Files.** Every file in `git ls-files` that holds text: Markdown, code, JSON, CSV, YAML, templates, SQL, notebooks, XML and SVG. The text inside the deck (PPTX and both PDFs) and the planner workbook is included.
 - **Categories:**
-  - **career / personal-prep terms**: words about job applications and personal preparation;
+  - **personal terms**: words about job applications and personal preparation;
   - **internal-process terms**: words about how the project was produced (tooling instructions, working notes);
   - **placeholder / unfinished markers**: to-do markers, "fill in later" text, draft labels, filler text;
   - **OEM / airline names**: real manufacturer, airline and aircraft-type names (numbers such as coordinates do not count);
@@ -20,7 +20,7 @@ A full scan of the public repo for wording that does not belong on a public proj
 - **The gate.** `tests/test_public_scan.py` applies the same categories to the product surfaces on every run:
   - site, rendered docs, deck text and workbook text;
   - comments are stripped first, and a 4-entry allow-list covers HTML input attributes;
-  - the career / personal-prep and internal-process word lists are stored base64-encoded so that they are not shown in the file;
+  - the personal and internal-process word lists are stored base64-encoded so that they are not shown in the file;
   - the test also asserts that the files moved out of the public repo stay untracked.
 
 ## Totals
@@ -55,9 +55,9 @@ Most routed hits were fixed during the run by their owners: ROUTER, PAGES and th
 
 | File | Category | Hits | Action |
 |---|---|---|---|
-| `.github/workflows/ci.yml` | career / personal-prep | 1 | exempt: YAML key `jobs:` |
+| `.github/workflows/ci.yml` | personal | 1 | exempt: YAML key `jobs:` |
 | `.gitignore` | internal-process | 1 | exempt: ignore rules that keep the private paths out of git |
-| `.gitignore` | career / personal-prep | 1 | exempt: ignore rules that keep the private paths out of git |
+| `.gitignore` | personal | 1 | exempt: ignore rules that keep the private paths out of git |
 | `LIMITATIONS.md` | outdated policy wording | 3 | fixed (DOCS) |
 | `METHODOLOGY.md` | outdated policy wording | 5 | fixed (DOCS) |
 | `README.md` | outdated policy wording | 1 | fixed (DOCS) |
@@ -70,7 +70,7 @@ Most routed hits were fixed during the run by their owners: ROUTER, PAGES and th
 | `data/ground_truth/planted.json` | outdated policy wording | 1 | exempt: frozen artefact / frozen simulator code |
 | `docs/DECISIONS.md` | outdated policy wording | 4 | routed: lead (DECISIONS.md is lead-written) |
 | `docs/DECISIONS.md` | placeholder / unfinished | 1 | routed: lead (DECISIONS.md is lead-written) |
-| `docs/DECISIONS.md` | career / personal-prep | 2 | routed: lead (DECISIONS.md is lead-written) |
+| `docs/DECISIONS.md` | personal | 2 | routed: lead (DECISIONS.md is lead-written) |
 | `docs/DECISIONS.md` | OEM / airline names | 1 | routed: lead (DECISIONS.md is lead-written) |
 | `docs/assets/readme/pipeline.svg` | outdated policy wording | 1 | routed: lead (unowned assets; aria text and README image) |
 | `docs/assets/svg/aircraft-narrowbody.svg` | OEM / airline names | 1 | routed: lead (unowned assets; aria text and README image) |
@@ -83,14 +83,14 @@ Most routed hits were fixed during the run by their owners: ROUTER, PAGES and th
 | `docs/data/method.json` | outdated policy wording | 1 | fixed (DOCS) |
 | `docs/design-review/REVIEW_LOG.md` | placeholder / unfinished | 3 | routed: lead (AI review records; move to the private repo or reword) |
 | `docs/design-review/REVIEW_LOG.md` | outdated policy wording | 1 | routed: lead (AI review records; move to the private repo or reword) |
-| `docs/design-review/REVIEW_LOG.md` | career / personal-prep | 1 | routed: lead (AI review records; move to the private repo or reword) |
+| `docs/design-review/REVIEW_LOG.md` | personal | 1 | routed: lead (AI review records; move to the private repo or reword) |
 | `docs/design/DESIGN_SYSTEM.md` | outdated policy wording | 1 | routed: lead (design-system gallery sample copy) |
 | `docs/design/gallery.js` | outdated policy wording | 1 | routed: lead (design-system gallery sample copy) |
 | `docs/design/gallery.js` | placeholder / unfinished | 1 | routed: lead (design-system gallery sample copy) |
 | `docs/js/charts/theme.js` | outdated policy wording | 1 | exempt: code comment |
 | `docs/js/ui.js` | placeholder / unfinished | 1 | exempt: code comment |
 | `docs/js/views/capital-optimiser.js` | outdated policy wording | 1 | fixed by ROUTER during this run |
-| `docs/js/views/data-method.js` | career / personal-prep | 3 | fixed by PAGES during this run (chip and comment removed) |
+| `docs/js/views/data-method.js` | personal | 3 | fixed by PAGES during this run (chip and comment removed) |
 | `docs/js/views/data-method.js` | placeholder / unfinished | 1 | exempt: HTML `placeholder` attribute (ALLOW list) |
 | `docs/js/views/data-method.js` | placeholder / unfinished | 1 | fixed by PAGES during this run (chip and comment removed) |
 | `docs/js/views/glossary.js` | placeholder / unfinished | 1 | exempt: HTML `placeholder` attribute (ALLOW list) |
@@ -98,13 +98,13 @@ Most routed hits were fixed during the run by their owners: ROUTER, PAGES and th
 | `docs/js/views/network-positioning.js` | outdated policy wording | 2 | fixed by ROUTER during this run |
 | `docs/js/views/parts-intelligence.js` | placeholder / unfinished | 1 | exempt: HTML `placeholder` attribute (ALLOW list) |
 | `docs/js/views/planner.js` | placeholder / unfinished | 3 | fixed by PAGES during this run (badge removed) |
-| `docs/js/views/rotable-repair.js` | career / personal-prep | 7 | routed: ROUTER (Simple-mode labels use a career / personal-prep word) |
+| `docs/js/views/rotable-repair.js` | personal | 7 | routed: ROUTER (Simple-mode labels use a personal word) |
 | `docs/templates/LIMITATIONS.md.tmpl` | outdated policy wording | 3 | fixed (DOCS) |
 | `docs/templates/METHODOLOGY.md.tmpl` | outdated policy wording | 4 | fixed (DOCS) |
 | `docs/templates/README.md.tmpl` | outdated policy wording | 1 | fixed (DOCS) |
 | `docs/templates/VALIDATION_REPORT.md.tmpl` | placeholder / unfinished | 1 | fixed (DOCS) |
 | `docs/templates/VALIDATION_REPORT.md.tmpl` | outdated policy wording | 1 | fixed (DOCS) |
-| `notebooks/01_simulation_audit.ipynb` | career / personal-prep | 1 | fixed (DOCS): career-framing sentence reworded |
+| `notebooks/01_simulation_audit.ipynb` | personal | 1 | fixed (DOCS): career-framing sentence reworded |
 | `notebooks/01_simulation_audit.ipynb` | outdated policy wording | 2 | exempt: recorded cell output printing a frozen artefact's variant key |
 | `outputs/calibration/v2_p0_gap_diagnosis.json` | outdated policy wording | 1 | exempt: frozen artefact / frozen simulator code |
 | `outputs/calibration/v2_p0_gap_diagnosis.md` | outdated policy wording | 6 | exempt: frozen artefact / frozen simulator code |
@@ -112,39 +112,39 @@ Most routed hits were fixed during the run by their owners: ROUTER, PAGES and th
 | `outputs/calibration/v2_p0_variants.json` | outdated policy wording | 1 | exempt: frozen artefact / frozen simulator code |
 | `outputs/holdout/truth_recovery.json` | outdated policy wording | 1 | exempt: frozen artefact / frozen simulator code |
 | `outputs/policies/tuning_v1/iter0_policies.json` | outdated policy wording | 1 | exempt: frozen artefact / frozen simulator code |
-| `reports/RELEASE_GATES.md` | career / personal-prep | 1 | routed: lead (stale claim: the drafts are no longer in presentations/) |
+| `reports/RELEASE_GATES.md` | personal | 1 | routed: lead (stale claim: the drafts are no longer in presentations/) |
 | `reports/VALIDATION_REPORT.md` | placeholder / unfinished | 1 | fixed (DOCS) |
 | `reports/VALIDATION_REPORT.md` | outdated policy wording | 7 | fixed (DOCS) |
-| `reports/audit/keyboard/rotables.json` | career / personal-prep | 2 | routed: ROUTER (regenerate the audit file or mark it superseded) |
-| `reports/audit/links_downloads.json` | career / personal-prep | 2 | routed: ROUTER (regenerate the audit file or mark it superseded) |
-| `reports/audit/numbers_reconcile.json` | career / personal-prep | 1 | routed: ROUTER (regenerate the audit file or mark it superseded) |
+| `reports/audit/keyboard/rotables.json` | personal | 2 | routed: ROUTER (regenerate the audit file or mark it superseded) |
+| `reports/audit/links_downloads.json` | personal | 2 | routed: ROUTER (regenerate the audit file or mark it superseded) |
+| `reports/audit/numbers_reconcile.json` | personal | 1 | routed: ROUTER (regenerate the audit file or mark it superseded) |
 | `reports/cutaway_critique_r1.md` | OEM / airline names | 3 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/cutaway_critique_r2.md` | OEM / airline names | 2 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/junit.xml` | placeholder / unfinished | 1 | regenerated (old run with 1 failure replaced) |
-| `reports/review_aviation.md` | career / personal-prep | 4 | routed: lead (AI review records; move to the private repo or reword) |
+| `reports/review_aviation.md` | personal | 4 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/review_aviation.md` | OEM / airline names | 3 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/review_aviation.md` | outdated policy wording | 4 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/review_aviation.md` | placeholder / unfinished | 1 | routed: lead (AI review records; move to the private repo or reword) |
-| `reports/review_aviation_v2.md` | career / personal-prep | 3 | routed: lead (AI review records; move to the private repo or reword) |
+| `reports/review_aviation_v2.md` | personal | 3 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/review_aviation_v2.md` | outdated policy wording | 3 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/review_aviation_v2.md` | OEM / airline names | 9 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/review_correctness.md` | placeholder / unfinished | 5 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/review_correctness.md` | outdated policy wording | 1 | routed: lead (AI review records; move to the private repo or reword) |
-| `reports/review_correctness.md` | career / personal-prep | 1 | routed: lead (AI review records; move to the private repo or reword) |
-| `reports/review_design.md` | career / personal-prep | 3 | routed: lead (AI review records; move to the private repo or reword) |
-| `reports/review_design_2.md` | career / personal-prep | 4 | routed: lead (AI review records; move to the private repo or reword) |
+| `reports/review_correctness.md` | personal | 1 | routed: lead (AI review records; move to the private repo or reword) |
+| `reports/review_design.md` | personal | 3 | routed: lead (AI review records; move to the private repo or reword) |
+| `reports/review_design_2.md` | personal | 4 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/review_design_2.md` | placeholder / unfinished | 5 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/review_design_2.md` | outdated policy wording | 2 | routed: lead (AI review records; move to the private repo or reword) |
-| `reports/review_design_3.md` | career / personal-prep | 2 | routed: lead (AI review records; move to the private repo or reword) |
+| `reports/review_design_3.md` | personal | 2 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/review_design_3.md` | outdated policy wording | 1 | routed: lead (AI review records; move to the private repo or reword) |
-| `reports/review_design_5.md` | career / personal-prep | 2 | routed: lead (AI review records; move to the private repo or reword) |
+| `reports/review_design_5.md` | personal | 2 | routed: lead (AI review records; move to the private repo or reword) |
 | `scripts/build_deck.py` | placeholder / unfinished | 9 | fixed (DOCS): carousel and post generator moved to private/scripts/build_social.py (git-ignored) |
-| `scripts/build_deck.py` | career / personal-prep | 8 | fixed (DOCS): carousel and post generator moved to private/scripts/build_social.py (git-ignored) |
-| `scripts/build_deck.py` | career / personal-prep | 2 | exempt: local variable `jobs` |
+| `scripts/build_deck.py` | personal | 8 | fixed (DOCS): carousel and post generator moved to private/scripts/build_social.py (git-ignored) |
+| `scripts/build_deck.py` | personal | 2 | exempt: local variable `jobs` |
 | `scripts/build_deck.py` | outdated policy wording | 1 | exempt: stale-label gate list in code |
 | `scripts/dev/make_fixtures.mjs` | placeholder / unfinished | 14 | exempt: dev-only layout fixtures (never exported or deployed) |
 | `scripts/dev/make_fixtures.mjs` | outdated policy wording | 1 | exempt: dev-only layout fixtures (never exported or deployed) |
-| `scripts/notebooks/nb01.py` | career / personal-prep | 1 | routed: lead (notebook generator; the notebook itself is fixed) |
+| `scripts/notebooks/nb01.py` | personal | 1 | routed: lead (notebook generator; the notebook itself is fixed) |
 | `scripts/render_data_dictionary.py` | OEM / airline names | 4 | exempt: relabel table (code identifiers that remove these names) |
 | `scripts/render_docs.py` | placeholder / unfinished | 6 | exempt: code identifier (`PLACEHOLDER` regex) and docstring |
 | `scripts/render_docs.py` | outdated policy wording | 4 | fixed (DOCS) |
@@ -160,7 +160,7 @@ Most routed hits were fixed during the run by their owners: ROUTER, PAGES and th
 | `src/gnm/export/build_site_data.py` | outdated policy wording | 2 | fixed (DOCS) |
 | `src/gnm/export/v21.py` | outdated policy wording | 1 | exempt: scrub/gate patterns that remove these words |
 | `src/gnm/policy/evaluate_policies.py` | outdated policy wording | 1 | exempt: code comment / docstring (not a product surface) |
-| `src/gnm/sim/engine.py` | career / personal-prep | 4 | exempt: frozen artefact / frozen simulator code |
+| `src/gnm/sim/engine.py` | personal | 4 | exempt: frozen artefact / frozen simulator code |
 | `src/gnm/sim/generator.py` | outdated policy wording | 1 | exempt: frozen artefact / frozen simulator code |
 | `tests/test_docs_rendered.py` | placeholder / unfinished | 2 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_docs_rendered.py` | outdated policy wording | 1 | exempt: test code (forbidden-word lists, test names, browser assertions) |
@@ -171,7 +171,7 @@ Most routed hits were fixed during the run by their owners: ROUTER, PAGES and th
 | `tests/test_site_cutaway.py` | outdated policy wording | 1 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_site_cutaway.py` | OEM / airline names | 5 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_site_data.py` | OEM / airline names | 5 | exempt: test code (forbidden-word lists, test names, browser assertions) |
-| `tests/test_site_method.py` | career / personal-prep | 1 | exempt: test code (forbidden-word lists, test names, browser assertions) |
+| `tests/test_site_method.py` | personal | 1 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_site_method.py` | placeholder / unfinished | 2 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_site_optimiser.py` | OEM / airline names | 5 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_site_optimiser.py` | outdated policy wording | 1 | exempt: test code (forbidden-word lists, test names, browser assertions) |
@@ -184,9 +184,9 @@ Nothing marked "fixed" is left. Every remaining hit is exempt, with its reason, 
 
 | File | Category | Hits | Action |
 |---|---|---|---|
-| `.github/workflows/ci.yml` | career / personal-prep | 1 | exempt: YAML key `jobs:` |
+| `.github/workflows/ci.yml` | personal | 1 | exempt: YAML key `jobs:` |
 | `.gitignore` | internal-process | 1 | exempt: ignore rules that keep the private paths out of git |
-| `.gitignore` | career / personal-prep | 1 | exempt: ignore rules that keep the private paths out of git |
+| `.gitignore` | personal | 1 | exempt: ignore rules that keep the private paths out of git |
 | `config/assumptions.yaml` | OEM / airline names | 4 | exempt: frozen config (cannot be edited) |
 | `config/assumptions.yaml` | outdated policy wording | 3 | exempt: frozen config (cannot be edited) |
 | `config/assumptions.yaml` | internal-process | 1 | exempt: frozen config (cannot be edited) |
@@ -221,7 +221,7 @@ Nothing marked "fixed" is left. Every remaining hit is exempt, with its reason, 
 | `reports/review_correctness.md` | outdated policy wording | 1 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/review_design_2.md` | placeholder / unfinished | 3 | routed: lead (AI review records; move to the private repo or reword) |
 | `reports/review_design_2.md` | outdated policy wording | 2 | routed: lead (AI review records; move to the private repo or reword) |
-| `scripts/build_deck.py` | career / personal-prep | 2 | exempt: local variable `jobs` |
+| `scripts/build_deck.py` | personal | 2 | exempt: local variable `jobs` |
 | `scripts/build_deck.py` | outdated policy wording | 1 | exempt: stale-label gate list in code |
 | `scripts/dev/make_fixtures.mjs` | placeholder / unfinished | 14 | exempt: dev-only layout fixtures (never exported or deployed) |
 | `scripts/dev/make_fixtures.mjs` | outdated policy wording | 1 | exempt: dev-only layout fixtures (never exported or deployed) |
@@ -239,7 +239,7 @@ Nothing marked "fixed" is left. Every remaining hit is exempt, with its reason, 
 | `src/gnm/export/build_site_data.py` | outdated policy wording | 1 | exempt: code comment |
 | `src/gnm/export/v21.py` | outdated policy wording | 7 | exempt: scrub/gate patterns that remove these words |
 | `src/gnm/policy/evaluate_policies.py` | outdated policy wording | 1 | exempt: code comment / docstring (not a product surface) |
-| `src/gnm/sim/engine.py` | career / personal-prep | 4 | exempt: frozen artefact / frozen simulator code |
+| `src/gnm/sim/engine.py` | personal | 4 | exempt: frozen artefact / frozen simulator code |
 | `src/gnm/sim/generator.py` | outdated policy wording | 1 | exempt: frozen artefact / frozen simulator code |
 | `tests/test_docs_rendered.py` | placeholder / unfinished | 2 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_docs_rendered.py` | outdated policy wording | 1 | exempt: test code (forbidden-word lists, test names, browser assertions) |
@@ -253,10 +253,10 @@ Nothing marked "fixed" is left. Every remaining hit is exempt, with its reason, 
 | `tests/test_site_cutaway.py` | outdated policy wording | 1 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_site_cutaway.py` | OEM / airline names | 5 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_site_data.py` | OEM / airline names | 5 | exempt: test code (forbidden-word lists, test names, browser assertions) |
-| `tests/test_site_method.py` | career / personal-prep | 3 | exempt: test code (forbidden-word lists, test names, browser assertions) |
+| `tests/test_site_method.py` | personal | 3 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_site_method.py` | placeholder / unfinished | 2 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_site_optimiser.py` | OEM / airline names | 5 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_site_optimiser.py` | outdated policy wording | 1 | exempt: test code (forbidden-word lists, test names, browser assertions) |
-| `tests/test_site_planner.py` | career / personal-prep | 2 | exempt: test code (forbidden-word lists, test names, browser assertions) |
+| `tests/test_site_planner.py` | personal | 2 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_site_planner.py` | outdated policy wording | 1 | exempt: test code (forbidden-word lists, test names, browser assertions) |
 | `tests/test_workbook.py` | outdated policy wording | 1 | exempt: test code (forbidden-word lists, test names, browser assertions) |

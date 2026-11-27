@@ -76,7 +76,7 @@ Some GitHub links are built at run time. These were resolved by hand and checked
 *Written by ROUTER.*
 
 <!-- internal:start (written by tests/e2e/test_links_every_time.py) -->
-Generated 2026-11-27 17:12 by `tests/e2e/test_links_every_time.py` (chromium, webkit, 1440 x 900, Simple mode).
+Generated 2026-11-27 18:43 by `tests/e2e/test_links_every_time.py` (chromium, webkit, 1440 x 900, Simple mode).
 
 Every internal link found on every route (`a[href^="#/"]` in the shell and the page, plus in-page anchors such as the
 skip link; the glossary group chips are `?section=` links) was clicked 5 times from each of 3 starting states (fresh load, coming from
@@ -84,35 +84,53 @@ another page, already on the target URL), returning with browser Back between cl
 click: the URL equals the link, the target route rendered, and for section links the target heading is in the
 viewport and focused. Links to the current route have no skip allowance.
 
-**Totals: 1254 link checks, 6270 clicks, 0 failed.**
+**Totals: 1290 link checks, 6450 clicks, 15 failed.**
 
 | Browser | Route | Links | Clicks | Failed | Seconds |
 |---|---|---:|---:|---:|---:|
-| chromium | about | 60 | 300 | 0 | 170.2 |
-| chromium | actions | 42 | 210 | 0 | 170.4 |
-| chromium | aog | 42 | 210 | 0 | 172.4 |
-| chromium | capital | 42 | 210 | 0 | 172.1 |
-| chromium | forecast | 78 | 390 | 0 | 322.0 |
-| chromium | glossary | 63 | 315 | 0 | 160.0 |
-| chromium | method | 48 | 240 | 0 | 154.7 |
-| chromium | mission | 72 | 360 | 0 | 290.5 |
-| chromium | network | 42 | 210 | 0 | 173.1 |
-| chromium | parts | 45 | 225 | 0 | 184.5 |
-| chromium | planner | 51 | 255 | 0 | 50.4 |
-| chromium | rotables | 42 | 210 | 0 | 173.3 |
-| webkit | about | 60 | 300 | 0 | 202.2 |
-| webkit | actions | 42 | 210 | 0 | 178.0 |
-| webkit | aog | 42 | 210 | 0 | 174.8 |
-| webkit | capital | 42 | 210 | 0 | 179.5 |
-| webkit | forecast | 78 | 390 | 0 | 159.6 |
-| webkit | glossary | 63 | 315 | 0 | 153.2 |
-| webkit | method | 48 | 240 | 0 | 178.6 |
-| webkit | mission | 72 | 360 | 0 | 160.7 |
-| webkit | network | 42 | 210 | 0 | 177.6 |
-| webkit | parts | 45 | 225 | 0 | 185.5 |
-| webkit | planner | 51 | 255 | 0 | 53.8 |
-| webkit | rotables | 42 | 210 | 0 | 186.9 |
+| chromium | about | 78 | 390 | 0 | 128.1 |
+| chromium | actions | 42 | 210 | 0 | 87.4 |
+| chromium | aog | 42 | 210 | 0 | 113.4 |
+| chromium | capital | 42 | 210 | 0 | 83.4 |
+| chromium | forecast | 78 | 390 | 0 | 173.5 |
+| chromium | glossary | 63 | 315 | 15 | 80.0 |
+| chromium | method | 48 | 240 | 0 | 70.2 |
+| chromium | mission | 72 | 360 | 0 | 172.2 |
+| chromium | network | 42 | 210 | 0 | 51.1 |
+| chromium | parts | 45 | 225 | 0 | 68.9 |
+| chromium | planner | 51 | 255 | 0 | 71.2 |
+| chromium | rotables | 42 | 210 | 0 | 78.3 |
+| webkit | about | 78 | 390 | 0 | 195.6 |
+| webkit | actions | 42 | 210 | 0 | 77.3 |
+| webkit | aog | 42 | 210 | 0 | 86.9 |
+| webkit | capital | 42 | 210 | 0 | 121.5 |
+| webkit | forecast | 78 | 390 | 0 | 219.3 |
+| webkit | glossary | 63 | 315 | 0 | 89.9 |
+| webkit | method | 48 | 240 | 0 | 101.6 |
+| webkit | mission | 72 | 360 | 0 | 154.5 |
+| webkit | network | 42 | 210 | 0 | 130.5 |
+| webkit | parts | 45 | 225 | 0 | 112.8 |
+| webkit | planner | 51 | 255 | 0 | 91.0 |
+| webkit | rotables | 42 | 210 | 0 | 85.1 |
 
-No failures.
+### Failures
+
+| Browser | Route | Link | State / click | Problem |
+|---|---|---|---|---|
+| chromium | glossary | `#/capital` (shell) | fresh #1 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | fresh #2 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | fresh #3 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | fresh #4 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | fresh #5 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | other #1 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | other #2 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | other #3 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | other #4 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | other #5 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | same #1 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | same #2 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | same #3 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | same #4 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
+| chromium | glossary | `#/capital` (shell) | same #5 | view not rendered (ready=True error=True empty=False); console.error: SyntaxError: Unexpected token '}' |
 
 <!-- internal:end -->

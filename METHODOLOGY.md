@@ -166,7 +166,7 @@ A removed core travels to AUH, then to its shop (the AUH in-house shop, the whee
 
 Only V1 quote accuracy lands inside the band, and it is also the fewest-changes option (the rule chosen before calibration), so it was applied: `quoted_mtbur_optimism` 1.10, `quoted_mtbur_noise_sd_log` 0.20, `quoted_tat_optimism` 0.95, `quoted_tat_noise_sd_log` 0.10. The AOG-market settings and the line-station kit were not applied, and the P0 rule is unchanged.
 
-**Stress worlds.** Only the true MTBUR is scaled: ×1.08 (low stress) and ×0.96 (high stress), aiming each at one end of the band. Read together that is reliability scaled ×0.96 / ×1.00 / ×1.08 — a narrow range. Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, suppliers or contracts.
+**Stress worlds.** Only the true MTBUR is scaled: ×1.08 (low stress) and ×0.96 (high stress), aiming each at one end of the band. Read together that is reliability ×1.08 (easier) / ×1.00 / ×0.96 (tougher) — a narrow range. Likely ranges reflect simulation randomness only, not uncertainty in prices, failure rates, suppliers or contracts.
 
 | World (true-MTBUR scale) | Target | Rotable fill, history / selection | Material AOG h/yr, history / selection | Events/yr, history / selection | In the central band |
 |---|---|---|---|---|---|
@@ -176,7 +176,7 @@ Only V1 quote accuracy lands inside the band, and it is also the fewest-changes 
 
 In short, the low-stress world reaches the AOG end of the band (pooled history and selection 1,174 h/yr; band end 1,200) at 0.841 rotable fill, and the high-stress world reaches the fill end (0.781; band end 0.78) at about 1,595 h/yr, well short of the 2,700 h end, because fill binds first. Both are disclosed as they came out (D013).
 
-**Lock.** `outputs/freeze/calibration_lock.json` hashes 12 files (the config, the catalogue, `src/gnm/sim/*.py` and the P0 summary) and `tests/test_calibration_lock.py` enforces it. Locked at commit `c2ef333`, before any v2 P1/P2/optimiser run; re-locked only after the documented non-calibration fixes V2-SIM-17/18 at `52410a4`, with policy results unchanged.
+**Lock.** `outputs/freeze/calibration_lock.json` hashes 12 files (the config, the catalogue, `src/gnm/sim/*.py` and the P0 summary) and `tests/test_calibration_lock.py` enforces it. Locked at commit `6083833`, before any v2 P1/P2/optimiser run; re-locked only after the documented non-calibration fixes V2-SIM-17/18 at `2149d78`, with policy results unchanged.
 
 ---
 
@@ -357,7 +357,7 @@ The AOG penalty and carrying cost re-cost the simulated KPIs; repair TAT and lea
 | Rotables removed | −20 units ≈ AED 3.1M |
 | Net change in average simulated spare inventory | +AED 0.6M |
 
-*Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a discount.* Units and values: target units × assumed unit cost from the policy tables; the net is the paired holdout change in time-averaged simulated spare inventory, so it differs slightly from bought minus removed.
+*Removed stock is not cash back — it may be redeployed, consumed, exchanged or sold at a discount.* Units and values: target units × assumed unit cost from the policy tables; the net is the paired holdout change in time-averaged simulated spare inventory. Average stock value rises by only about AED 0.6M, not bought minus removed, because many bought units sit in the repair loop rather than on the shelf.
 
 ---
 
@@ -382,14 +382,14 @@ Because both plans faced identical removals, repair times, lead times and route 
 1. Forecast champions, every PolicySpec parameter table (all worlds), the frontier candidate set and the configs are fixed using only training data and selection seeds.
 2. `scripts/freeze_all.py` writes `outputs/freeze/manifest.json` with SHA-256 hashes of 19 artefacts.
 3. The holdout runner refuses to start if any hash differs, and `evaluate()` refuses the holdout seeds during selection. `tests/test_freeze.py` checks this.
-4. Git history shows the freeze commit before the holdout-results commit: v1 archived at `e6c943f`, calibration locked at `c2ef333`, freeze at `2a45af9`, holdout results at `ecad6d8`.
+4. Git history shows the freeze commit before the holdout-results commit: v1 archived at `8005c82`, calibration locked at `6083833`, freeze at `ae3cd4b`, holdout results at `e3f568e`.
 5. The holdout is run once. Every run is appended to `outputs/freeze/holdout_log.json`: 3 main v2 runs and 1 post-plan run, 0 forced.
 
 Manifest hash (SHA-256 of `outputs/freeze/manifest.json`): `407689699aefd27f9969c34d752245353b45269b730937f2801783ffc7fe7205`.
 
 **Fresh seeds.** The v1 holdout seeds (retired v1 holdout (archived)) had been seen, so v2 uses 2000–2019 (D013). The v1 holdout had one disclosed forced rerun of a block that crashed before producing output (D010); its root cause, a non-atomic scenario cache, was fixed in V2-SIM-18 before the v2 freeze.
 
-**Post-plan check (D015).** After the main v2 holdout, the user asked how the frozen central-built I125 does in the stress worlds. P0, P2 and I125 were run once on the holdout seeds in the low- and high-stress worlds, paired against P2, with no re-selection, and logged at `c0e43c7`: low stress −85 h [−125 to −45] a year and total annual cost −AED 1.7M [−2.9 to −0.4] for +AED 7.7M capital (I125 62 h vs central-built P2 147 h); high stress −184 h [−239 to −128] a year and total annual cost −AED 5.0M [−6.8 to −3.1] for +AED 7.5M capital (I125 76 h vs central-built P2 260 h). It is labelled post-plan because it was not in the frozen run plan.
+**Post-plan check (D015).** After the main v2 holdout, the author asked how the frozen central-built I125 does in the stress worlds. P0, P2 and I125 were run once on the holdout seeds in the low- and high-stress worlds, paired against P2, with no re-selection, and logged at `8491f07`: low stress −85 h [−125 to −45] a year and total annual cost −AED 1.7M [−2.9 to −0.4] for +AED 7.7M capital (I125 62 h vs central-built P2 147 h); high stress −184 h [−239 to −128] a year and total annual cost −AED 5.0M [−6.8 to −3.1] for +AED 7.5M capital (I125 76 h vs central-built P2 260 h). It is labelled post-plan because it was not in the frozen run plan.
 
 ---
 

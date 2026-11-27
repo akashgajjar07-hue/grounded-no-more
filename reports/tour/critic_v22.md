@@ -1,3 +1,5 @@
+> AI-generated review used during development — not a review by a human aviation professional.
+
 # Guided tour v2.2: motion critique from the recorded video
 
 Reviewer: an outside motion/UX critic, judging only what the video shows. I did not read the tour code.
